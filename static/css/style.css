@@ -3541,17 +3541,14 @@ th.sorted-desc .sort-arrow {
 /* Header de modal */
 .modal-header,
 .modal-header-medium {
-    width: 100% !important;
-    max-width: 100% !important;
-    margin: 0 !important;
-    padding: 1.25rem 2rem;
-    box-sizing: border-box;
+    padding: 1rem 2rem;
+    background: linear-gradient(to right, #1e293b, #334155);
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    border-top-left-radius: 0.75rem;
-    border-top-right-radius: 0.75rem;
-    position: relative;
+    justify-content: space-between;
+    flex-shrink: 0;
+    border-top-left-radius: var(--border-radius);
+    border-top-right-radius: var(--border-radius);
 }
 
 .modal-header-gradient {
@@ -3560,7 +3557,7 @@ th.sorted-desc .sort-arrow {
     color: white;
 }
 
-.modal-header-refined {
+.modal-header {
     padding: 1rem 2rem;
     background: linear-gradient(to right, #1e293b, #334155);
     display: flex;

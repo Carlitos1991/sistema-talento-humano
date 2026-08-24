@@ -3,87 +3,92 @@
 {% block title %}Ayuda | SIGETH{% endblock %}
 
 {% block content %}
-<div class="header-card">
-    <div>
-        <h1>Ayuda y Mensajería</h1>
-        <p>Consulta, responde y envía mensajes a cualquier usuario del sistema.</p>
-    </div>
-    <button type="button" class="btn btn-save" onclick="helpMessagesActions.openCreate()">
-        <i class="fa-solid fa-plus"></i> Nuevo Mensaje
-    </button>
-</div>
-
-<div class="stats-row">
-    <div class="stat-card color-one">
-        <div class="stat-left">
-            <h3>Total</h3>
-            <div class="number">{{ messages_total|default:'0' }}</div>
+    <div class="header-card">
+        <div>
+            <h1>Ayuda y Mensajería</h1>
+            <p>Consulta, responde y envía mensajes a cualquier usuario del sistema.</p>
         </div>
-        <i class="fa-solid fa-envelope stat-icon"></i>
-    </div>
-    <div class="stat-card color-two opacity-low">
-        <div class="stat-left">
-            <h3>Pendientes</h3>
-            <div class="number">{{ messages_unread|default:'0' }}</div>
-        </div>
-        <i class="fa-solid fa-triangle-exclamation stat-icon"></i>
-    </div>
-    <div class="stat-card color-three opacity-low">
-        <div class="stat-left">
-            <h3>Leídos</h3>
-            <div class="number">{{ messages_read|default:'0' }}</div>
-        </div>
-        <i class="fa-solid fa-eye stat-icon"></i>
-    </div>
-    <div class="stat-card color-four opacity-low">
-        <div class="stat-left">
-            <h3>Atendidos</h3>
-            <div class="number">{{ messages_attended|default:'0' }}</div>
-        </div>
-        <i class="fa-solid fa-circle-check stat-icon"></i>
-    </div>
-</div>
-
-<div class="content-table">
-    <div class="table-controls">
-        <div class="message-tabs" role="tablist" aria-label="Filtro de conversaciones">
-            <a href="?tab=received{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"
-               class="message-tab {% if active_tab == 'received' %}is-active{% endif %}">
-                Recibidos ({{ messages_received|default:'0' }})
-            </a>
-            <a href="?tab=sent{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"
-               class="message-tab {% if active_tab == 'sent' %}is-active{% endif %}">
-                Enviados ({{ messages_sent|default:'0' }})
-            </a>
-            <a href="?tab=attended{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"
-               class="message-tab {% if active_tab == 'attended' %}is-active{% endif %}">
-                Atendidos
-            </a>
-        </div>
-        <form method="get" class="search-box" style="min-width: 340px; width: 100%; max-width: 520px;">
-            <input type="hidden" name="tab" value="{{ active_tab|default:'received' }}">
-            <input type="text" name="q" class="input-field" placeholder="Buscar por asunto, detalle o usuario" value="{{ request.GET.q }}">
-        </form>
+        <button type="button" class="btn-secondary" onclick="helpMessagesActions.openCreate()">
+            <i class="fa-solid fa-plus"></i> Nuevo Mensaje
+        </button>
     </div>
 
-    <div id="table-content-wrapper">
-        {% include 'security/help_messages/partials/partial_help_message_table.html' %}
+    <div class="stats-row">
+        <div class="stat-card color-one">
+            <div class="stat-left">
+                <h3>Total</h3>
+                <div class="number">{{ messages_total|default:'0' }}</div>
+            </div>
+            <i class="fa-solid fa-envelope stat-icon"></i>
+        </div>
+        <div class="stat-card color-two opacity-low">
+            <div class="stat-left">
+                <h3>Pendientes</h3>
+                <div class="number">{{ messages_unread|default:'0' }}</div>
+            </div>
+            <i class="fa-solid fa-triangle-exclamation stat-icon"></i>
+        </div>
+        <div class="stat-card color-three opacity-low">
+            <div class="stat-left">
+                <h3>Leídos</h3>
+                <div class="number">{{ messages_read|default:'0' }}</div>
+            </div>
+            <i class="fa-solid fa-eye stat-icon"></i>
+        </div>
+        <div class="stat-card color-four opacity-low">
+            <div class="stat-left">
+                <h3>Atendidos</h3>
+                <div class="number">{{ messages_attended|default:'0' }}</div>
+            </div>
+            <i class="fa-solid fa-circle-check stat-icon"></i>
+        </div>
     </div>
 
-    {% if is_paginated %}
-        <div class="pagination-container">
-            <span class="pagination-info">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
-            <ul class="pagination-list">
-                {% if page_obj.has_previous %}
-                    <li><a class="page-btn" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}&tab={{ active_tab|default:'received' }}"><i class="fas fa-chevron-left"></i></a></li>
-                {% endif %}
-                {% if page_obj.has_next %}
-                    <li><a class="page-btn" href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}&tab={{ active_tab|default:'received' }}"><i class="fas fa-chevron-right"></i></a></li>
-                {% endif %}
-            </ul>
+    <div class="content-table">
+        <div class="table-controls">
+            <div class="message-tabs" role="tablist" aria-label="Filtro de conversaciones">
+                <a href="?tab=received{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"
+                   class="message-tab {% if active_tab == 'received' %}is-active{% endif %}">
+                    Recibidos ({{ messages_received|default:'0' }})
+                </a>
+                <a href="?tab=sent{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"
+                   class="message-tab {% if active_tab == 'sent' %}is-active{% endif %}">
+                    Enviados ({{ messages_sent|default:'0' }})
+                </a>
+                <a href="?tab=attended{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"
+                   class="message-tab {% if active_tab == 'attended' %}is-active{% endif %}">
+                    Atendidos
+                </a>
+            </div>
+            <form method="get" class="search-box" style="min-width: 340px; width: 100%; max-width: 520px;">
+                <input type="hidden" name="tab" value="{{ active_tab|default:'received' }}">
+                <input type="text" name="q" class="input-field" placeholder="Buscar por asunto, detalle o usuario"
+                       value="{{ request.GET.q }}">
+            </form>
         </div>
-    {% endif %}
-</div>
+
+        <div id="table-content-wrapper">
+            {% include 'security/help_messages/partials/partial_help_message_table.html' %}
+        </div>
+
+        {% if is_paginated %}
+            <div class="pagination-container">
+                <span class="pagination-info">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+                <ul class="pagination-list">
+                    {% if page_obj.has_previous %}
+                        <li><a class="page-btn" href="?page=
+                                {{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}&tab={{ active_tab|default:'received' }}"><i
+                                class="fas fa-chevron-left"></i></a></li>
+                    {% endif %}
+                    {% if page_obj.has_next %}
+                        <li><a class="page-btn" href="?page=
+                                {{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}&tab={{ active_tab|default:'received' }}"><i
+                                class="fas fa-chevron-right"></i></a></li>
+                    {% endif %}
+                </ul>
+            </div>
+        {% endif %}
+    </div>
 {% endblock %}
 
 {% block extra_css %}
