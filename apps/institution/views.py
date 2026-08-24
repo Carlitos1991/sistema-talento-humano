@@ -523,25 +523,15 @@ class LevelListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     def get_queryset(self):
         qs = OrganizationalLevel.objects.all().order_by('level_order')
         q = self.request.GET.get('q')
-        status = self.request.GET.get('status')
         show_inactive = self.request.GET.get('show_inactive')
 
         if q:
             qs = qs.filter(name__icontains=q)
-
-        # Priorizar parámetro show_inactive: si es 'true' mostramos solo inactivos
+            
         if show_inactive == 'true':
             qs = qs.filter(is_active=False)
         else:
-            # Si se pasa explicitamente status lo respetamos
-            if status == 'true':
-                qs = qs.filter(is_active=True)
-            elif status == 'false':
-                qs = qs.filter(is_active=False)
-            else:
-                # Por defecto: solo activos
-                qs = qs.filter(is_active=True)
-
+            qs = qs.filter(is_active=True)
         return qs
 
     def get_context_data(self, **kwargs):

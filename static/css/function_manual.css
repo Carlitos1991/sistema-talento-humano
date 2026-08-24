@@ -962,14 +962,6 @@ body.no-scroll {
     }
 }
 
-.modal-header-gradient {
-    background: linear-gradient(135deg, #0f172a 0%, #334155 100%);
-    padding: 1rem 1.4rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
 .modal-title {
     margin: 0;
     font-size: 0.97rem;

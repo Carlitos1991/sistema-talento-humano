@@ -1,37 +1,19 @@
-// Función para abrir el modal de creación (Estático)
-document.addEventListener('DOMContentLoaded', function () {
-    const btnAdd = document.getElementById('btn-add-level');
-    if (btnAdd) {
-        btnAdd.addEventListener('click', function () {
-            const modal = document.getElementById('levelModal');
-            modal.classList.remove('hidden');
-        });
-    }
-});
+/**
+ * LÓGICA ESPECÍFICA DE NIVELES
+ */
 
-// Función para abrir el modal de edición (Vía AJAX para cargar datos)
-window.openEditLevel = function (id) {
-    // Si prefieres cargar el formulario con datos ya llenos desde el servidor:
-    const url = `/institution/levels/edit/${id}/`; // Ajusta a tu URL real
-    openAjaxModal(url, '#levelModal');
-};
-
-// Función para cerrar el modal (si no usas la de main.js)
-window.closeLevelModal = function () {
-    document.getElementById('levelModal').classList.add('hidden');
-};
-
-// Función para cambiar estado (Activar/Desactivar)
-window.toggleLevelStatus = function (btn, url, name) {
-    const action = btn.title.toLowerCase();
+window.toggleLevelStatus = function (url, name) {
     Swal.fire({
-        title: `¿${action.charAt(0).toUpperCase() + action.slice(1)} nivel?`,
-        text: `Vas a cambiar el estado de: ${name}`,
-        icon: 'question',
+        title: `¿Cambiar estado?`,
+        text: `Estás modificando el nivel: ${name}`,
+        icon: 'warning',
         showCancelButton: true,
         confirmButtonText: 'Sí, cambiar',
         cancelButtonText: 'Cancelar',
-        confirmButtonColor: '#059669'
+        // --- SOLUCIÓN AL SALTO DE PANTALLA ---
+        scrollbarPadding: false,
+        heightAuto: false,
+        // -------------------------------------
     }).then((result) => {
         if (result.isConfirmed) {
             fetch(url, {
@@ -44,9 +26,43 @@ window.toggleLevelStatus = function (btn, url, name) {
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
-                        Swal.fire('¡Hecho!', data.message, 'success').then(() => location.reload());
+                        Swal.fire({
+                            title: 'Éxito',
+                            text: data.message,
+                            icon: 'success',
+                            scrollbarPadding: false,
+                            heightAuto: false
+                        }).then(() => location.reload());
+                    } else {
+                        Swal.fire('Error', data.message, 'error');
                     }
                 });
         }
     });
+};
+
+window.toggleInactiveLevels = function (isChecked) {
+    // 1. Obtenemos la URL actual y añadimos el parámetro
+    const url = new URL(window.location.href);
+    url.searchParams.set('show_inactive', isChecked);
+
+    // 2. Pedimos a Django el HTML de la tabla filtrada vía AJAX
+    fetch(url, {
+        headers: {'X-Requested-With': 'XMLHttpRequest'}
+    })
+        .then(res => res.json())
+        .then(data => {
+            // 3. Reemplazamos el contenido de la tabla
+            const wrapper = document.getElementById('table-content-wrapper');
+            if (wrapper) {
+                wrapper.innerHTML = data.html;
+
+                // Reinicializar TableManager si existe en tu sistema
+                if (typeof TableManager !== 'undefined') {
+                    const table = wrapper.querySelector('.managed-table');
+                    if (table) new TableManager(table);
+                }
+            }
+        })
+        .catch(err => console.error("Error filtrando niveles:", err));
 };

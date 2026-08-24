@@ -171,11 +171,6 @@
     flex-direction: column !important;
 }
 
-/* El encabezado se queda arriba */
-.modal-header-medium {
-    flex: 0 0 auto;
-}
-
 /* El cuerpo tiene el scroll */
 .modal-body-custom {
     flex: 1 1 auto;

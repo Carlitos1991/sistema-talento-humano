@@ -29,24 +29,30 @@
                         {% if perms.institution.change_organizationallevel %}
                             <td class="actions text-center">
                                 <div class="actions-wrapper">
-                                    <button class="btn-seventh" onclick="openEditLevel({{ lvl.id }})"
-                                            title="Editar">
+                                    <button class="btn-seventh"
+                                            onclick="openAjaxModal('{% url 'institution:level_update' lvl.id %}')">
                                         <i class="fas fa-pencil"></i>
                                     </button>
 
-                                    {% if lvl.is_active %}
-                                        <button class="btn-sixth"
-                                                onclick="toggleLevelStatus(this, '{% url 'institution:level_toggle' lvl.id %}', '{{ lvl.name|escapejs }}')"
-                                                title="Desactivar">
-                                            <i class="fas fa-power-off"></i>
-                                        </button>
-                                    {% else %}
-                                        <button class="btn-eleventh"
-                                                onclick="toggleLevelStatus(this, '{% url 'institution:level_toggle' lvl.id %}', '{{ lvl.name|escapejs }}')"
-                                                title="Activar">
-                                            <i class="fas fa-toggle-on"></i>
-                                        </button>
-                                    {% endif %}
+                                    <button class="{% if lvl.is_active %}btn-sixth{% else %}btn-eleventh{% endif %}"
+                                            onclick="toggleLevelStatus('{% url 'institution:level_toggle' lvl.id %}', '{{ lvl.name|escapejs }}')"
+                                            title="Cambiar Estado">
+                                        <i class="fas fa-power-off"></i>
+                                    </button>
+
+                                    {#                                    {% if lvl.is_active %}#}
+                                    {#                                        <button class="btn-sixth"#}
+                                    {#                                                onclick="toggleLevelStatus(this, '{% url 'institution:level_toggle' lvl.id %}', '{{ lvl.name|escapejs }}')"#}
+                                    {#                                                title="Desactivar">#}
+                                    {#                                            <i class="fas fa-power-off"></i>#}
+                                    {#                                        </button>#}
+                                    {#                                    {% else %}#}
+                                    {#                                        <button class="btn-eleventh"#}
+                                    {#                                                onclick="toggleLevelStatus(this, '{% url 'institution:level_toggle' lvl.id %}', '{{ lvl.name|escapejs }}')"#}
+                                    {#                                                title="Activar">#}
+                                    {#                                            <i class="fas fa-toggle-on"></i>#}
+                                    {#                                        </button>#}
+                                    {#                                    {% endif %}#}
                                 </div>
                             </td>
                         {% endif %}
