@@ -5,15 +5,13 @@
     <link rel="stylesheet" href="{% static 'css/institution.css' %}">
 {% endblock %}
 {% block content %}
-
-    {# ── HEADER ── #}
     <div class="header-card">
         <div>
             <h1>Estructura Organizacional</h1>
             <p>Gestión de direcciones, departamentos y unidades administrativas.</p>
         </div>
         {% if perms.institution.add_administrativeunit %}
-            <button id="btn-add-unit" type="button" class="btn btn-create">
+            <button id="btn-add-unit" type="button" class="btn-secondary">
                 <i class="fas fa-sitemap"></i> Nueva Unidad
             </button>
         {% endif %}
@@ -21,11 +19,11 @@
     <div id="table-app">
         <div class="content-table">
             <div class="table-controls">
-                <input class="toggle-status-red-input" type="checkbox" id="toggleInactiveUnits"
+                <input class="switch-input switch-red" type="checkbox" id="toggleInactiveUnits"
                        onchange="toggleInactiveUnits(this.checked)">
-                <label class="toggle-status-red-wrapper" for="toggleInactiveUnits">
-                    <div class="toggle-status-red-circle"></div>
-                    <span class="toggle-status-red-text">Mostrar Unidades Inactivas</span>
+                <label class="switch-wrapper" for="toggleInactiveUnits">
+                    <div class="switch-circle"></div>
+                    <span class="switch-text">Mostrar Unidades Inactivas</span>
                 </label>
                 <div class="search-box">
                     <input type="text" class="table-search-input" placeholder="Buscar por nombre">

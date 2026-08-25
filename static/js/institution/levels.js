@@ -10,9 +10,6 @@ window.toggleLevelStatus = function (url, name) {
         showCancelButton: true,
         confirmButtonText: 'Sí, cambiar',
         cancelButtonText: 'Cancelar',
-        // --- SOLUCIÓN AL SALTO DE PANTALLA ---
-        scrollbarPadding: false,
-        heightAuto: false,
         // -------------------------------------
     }).then((result) => {
         if (result.isConfirmed) {

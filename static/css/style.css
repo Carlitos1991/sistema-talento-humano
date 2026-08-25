@@ -58,6 +58,9 @@
     --table-btn-radius: 50%;
     --table-btn-shadow: 0 6px 14px rgba(2, 6, 23, 0.06);
     --table-btn-transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.28s ease;
+
+    --swal2-confirm-button-color: #28a745;
+    --swal2-cancel-button-color: #dc3545;
 }
 
 * {
@@ -2467,13 +2470,13 @@ table {
     border: 1px solid #e8edf4;
 }
 
-.table-hscroll {
+.table-scroll-top {
     overflow-x: auto;
     overflow-y: visible;
     transform: scaleY(-1);
 }
 
-.table-hscroll table {
+.table-scroll-top table {
     transform: scaleY(-1);
 }
 

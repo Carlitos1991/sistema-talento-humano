@@ -276,12 +276,6 @@ a:hover {
 }
 
 /* === TABLAS === */
-.table-container {
-    overflow-x: auto;
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-md);
-}
-
 table {
     width: 100%;
     border-collapse: collapse;

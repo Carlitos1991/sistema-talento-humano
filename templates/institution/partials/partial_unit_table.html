@@ -1,152 +1,146 @@
 {% load static %}
 <div class="table-container">
-    <table class="managed-table exportable-table"
-           data-title="Reporte Estructura Organizacional"
-           data-filename="reporte_estructura_organizacional"
-           data-page-size="10"
-           data-external-search="true">
-        <thead>
-        <tr>
-            <th><i class="fa-solid fa-list-ol"></i> Código</th>
-            <th><i class="fa-solid fa-building"></i> Unidad Administrativa</th>
-            <th><i class="fa-solid fa-layer-group"></i> Nivel</th>
-            <th><i class="fa-solid fa-building"></i> Depende de</th>
-            <th><i class="fa-solid fa-user-tie"></i> Jefe Inmediato</th>
-            <th><i class="fa-solid fa-toggle-on"></i> Estado</th>
-            {% if perms.institution.change_administrativeunit %}
-                <th class="text-center no-sort"><i class="fas fa-cogs"></i> Acciones</th>
-            {% endif %}
-        </tr>
-        </thead>
-        <tbody id="table-body">
-        {% for unit in units %}
-            <tr class="unit-row" id="row-{{ unit.id }}"
-                data-status="{{ unit.is_active|yesno:'true,false' }}"
-                data-level="{{ unit.level.id }}"
-                data-parent="{{ unit.parent.id|default:'' }}">
-                <td><span class="badge-code">{{ unit.code|default:"--" }}</span></td>
-                <td>
-                    {% if unit.children.all|length > 0 %}
-                        <a href="javascript:void(0);"
-                           onclick="filterByParent('{{ unit.id }}', '{{ unit.level.level_order|add:"1" }}')"
-                           class="link"
-                           title="Ver dependencias de {{ unit.name }}">
-                            {{ unit.name }}
-                        </a>
-                    {% else %}
-                        <span class="text-muted" title="Sin dependencias">{{ unit.name }}</span>
-                    {% endif %}
-                </td>
-                <td>
-                    <span class="status-badge general">{{ unit.level.name }}</span>
-                </td>
-                <td>
-                    {% if unit.parent %}
-                        <a href="javascript:void(0);"
-                           onclick="filterByParent('{{ unit.parent.parent_id|default:'' }}')"
-                           class="link"
-                           title="Ir al nivel de {{ unit.parent.name }}">
-                            <i class="fas fa-level-up-alt me-1 small"></i>
-                            {{ unit.parent.name }}
-                        </a>
-                    {% else %}
-                        <span class="text-muted" title="Nivel Raíz">-Raíz-</span>
-                    {% endif %}
-                </td>
-                <td>
-                    {% if unit.boss %}
-                        <div class="boss-mini-profile">
-                            {% if unit.boss.person.photo %}
-                                <img src="{{ unit.boss.person.photo.url }}" class="boss-avatar-img" alt="Foto">
-                            {% else %}
-                                <div class="avatar-placeholder-sm"
-                                     style="width: 40px; height: 40px; font-size: 0.9rem;">
-                                    {{ unit.boss.person.first_name|first }}{{ unit.boss.person.last_name|first }}
+    <div class="table-scroll-top">
+        <table class="managed-table exportable-table" data-title="Reporte Estructura Organizacional"
+               data-filename="Reporte_Estructura" data-page-size="10">
+            <thead>
+            <tr>
+                <th style="width: 8%"> Código</th>
+                <th style="width: 20%"> Unidad Administrativa</th>
+                <th style="width: 10%"> Nivel</th>
+                <th style="width: 23%"> Depende de</th>
+                <th style="width: 15%"> Jefe Inmediato</th>
+                <th class="no-sort" style="width: 12%"> Estado</th>
+                {% if perms.institution.change_administrativeunit %}
+                    <th style="width: 15%" class="no-sort"><i class="fas fa-cogs"></i> Acciones</th>
+                {% endif %}
+            </tr>
+            </thead>
+            <tbody id="table-body">
+            {% for unit in units %}
+                <tr class="unit-row" id="row-{{ unit.id }}"
+                    data-status="{{ unit.is_active|yesno:'true,false' }}"
+                    data-level="{{ unit.level.id }}"
+                    data-parent="{{ unit.parent.id|default:'' }}">
+                    <td><span class="badge-code">{{ unit.code|default:"--" }}</span></td>
+                    <td>
+                        {% if unit.children.all|length > 0 %}
+                            <a href="javascript:void(0);"
+                               onclick="filterByParent('{{ unit.id }}', '{{ unit.level.level_order|add:"1" }}')"
+                               class="link"
+                               title="Ver dependencias de {{ unit.name }}">
+                                {{ unit.name }}
+                            </a>
+                        {% else %}
+                            <span class="text-muted" title="Sin dependencias">{{ unit.name }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="status-badge general">{{ unit.level.name }}</span>
+                    </td>
+                    <td>
+                        {% if unit.parent %}
+                            <a href="javascript:void(0);"
+                               onclick="filterByParent('{{ unit.parent.parent_id|default:'' }}')"
+                               class="link"
+                               title="Ir al nivel de {{ unit.parent.name }}">
+                                <i class="fas fa-level-up-alt me-1 small"></i>
+                                {{ unit.parent.name }}
+                            </a>
+                        {% else %}
+                            <span class="text-muted" title="Nivel Raíz">-Raíz-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if unit.boss %}
+                            <div class="boss-mini-profile">
+                                {% if unit.boss.person.photo %}
+                                    <img src="{{ unit.boss.person.photo.url }}" class="boss-avatar-img" alt="Foto">
+                                {% else %}
+                                    <div class="avatar-placeholder-sm"
+                                         style="width: 40px; height: 40px; font-size: 0.9rem;">
+                                        {{ unit.boss.person.first_name|first }}{{ unit.boss.person.last_name|first }}
+                                    </div>
+                                {% endif %}
+                                <div class="boss-info">
+                                    <span class="boss-name-highlight">{{ unit.boss.person.first_name }}</span>
+                                    <span class="boss-lastname-highlight">{{ unit.boss.person.last_name }}</span>
                                 </div>
-                            {% endif %}
-                            <div class="boss-info">
-                                <span class="boss-name-highlight">{{ unit.boss.person.first_name }}</span>
-                                <span class="boss-lastname-highlight">{{ unit.boss.person.last_name }}</span>
                             </div>
-                        </div>
-                    {% else %}
-                        <span class="status-badge badge-neutral">SIN ASIGNAR</span>
-                    {% endif %}
-                </td>
-
-                <td>
+                        {% else %}
+                            <span class="status-badge badge-neutral">SIN ASIGNAR</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
                     <span id="badge-{{ unit.id }}"
                           class="status-badge {% if unit.is_active %}active{% else %}inactive{% endif %}">
                         {% if unit.is_active %}Activo{% else %}Inactivo{% endif %}
                     </span>
-                </td>
-
-                {% if perms.institution.change_administrativeunit %}
-                    <td class="actions text-center">
-                        <div class="actions-wrapper">
-                            {% if perms.institution.change_administrativeunit %}
-                                {# Solo mostrar si NO es el último nivel #}
-                                {% with max_level=level_stats|last %}
-                                    {% if unit.level.level_order < max_level.order %}
-                                        <button type="button"
-                                                class="btn-icon btn-success-action"
-                                                onclick="openCreateDependency('{{ unit.id }}', '{{ unit.level.level_order|add:1 }}')"
-                                                title="Crear Dependencia">
-                                            <i class="fas fa-plus"></i>
-                                        </button>
-                                    {% endif %}
-                                {% endwith %}
-                                <button type="button"
-                                        class="btn-icon btn-list-action"
-                                        onclick="openAssignBoss('{{ unit.id }}')"
-                                        title="Asignar Jefe Inmediato">
-                                    <i class="fas fa-user-tie"></i>
+                    </td>
+                    {% if perms.institution.change_administrativeunit %}
+                        <td class="actions text-center">
+                            <div class="actions-wrapper">
+                                {% if perms.institution.change_administrativeunit %}
+                                    {# Solo mostrar si NO es el último nivel #}
+                                    {% with max_level=level_stats|last %}
+                                        {% if unit.level.level_order < max_level.order %}
+                                            <button type="button"
+                                                    class="btn-icon btn-success-action"
+                                                    onclick="openCreateDependency('{{ unit.id }}', '{{ unit.level.level_order|add:1 }}')"
+                                                    title="Crear Dependencia">
+                                                <i class="fas fa-plus"></i>
+                                            </button>
+                                        {% endif %}
+                                    {% endwith %}
+                                    <button type="button"
+                                            class="btn-thirteenth"
+                                            onclick="openAssignBoss('{{ unit.id }}')"
+                                            title="Asignar Jefe Inmediato">
+                                        <i class="fas fa-user-tie"></i>
+                                    </button>
+                                {% endif %}
+                                <button class="btn-seventh"
+                                        onclick="openEditUnit({{ unit.id }})"
+                                        title="Editar Unidad">
+                                    <i class="fas fa-pencil"></i>
                                 </button>
-
-                            {% endif %}
-                            <button class="btn-icon btn-views-action"
-                                    onclick="openEditUnit({{ unit.id }})"
-                                    title="Editar Unidad">
-                                <i class="fas fa-pencil"></i>
+                                <a href="{% url 'institution:unit_detail_view' unit.id %}"
+                                   class="btn-second"
+                                   title="Ver Detalle">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if unit.is_active %}
+                                    <button class="btn-sixth"
+                                            onclick="toggleUnitStatus(this, '{% url 'institution:unit_toggle' unit.id %}', '{{ unit.name|escapejs }}', '{{ unit.id }}')"
+                                            title="Desactivar">
+                                        <i class="fa-solid fa-toggle-off"></i>
+                                    </button>
+                                {% else %}
+                                    <button class="btn-eleventh"
+                                            onclick="toggleUnitStatus(this, '{% url 'institution:unit_toggle' unit.id %}', '{{ unit.name|escapejs }}', '{{ unit.id }}')"
+                                            title="Activar">
+                                        <i class="fas fa-toggle-on"></i>
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    {% endif %}
+                </tr>
+            {% empty %}
+                <tr class="empty-state-row">
+                    <td colspan="{% if perms.institution.change_administrativeunit %}7{% else %}6{% endif %}"
+                        class="empty-state-cell">
+                        <div class="empty-state-content">
+                            <i class="fas fa-network-wired empty-state-icon"></i>
+                            <h5 class="empty-state-text">No existen dependencias</h5>
+                            <button onclick="window.handleEmptyBack()" class="btn-empty-reset">
+                                <i class="fas fa-arrow-left me-1"></i> Volver atrás
                             </button>
-                            <a href="{% url 'institution:unit_detail_view' unit.id %}"
-                               class="btn-icon btn-info-action"
-                               title="Ver Detalle">
-                                <i class="fas fa-eye"></i>
-                            </a>
-
-                            {% if unit.is_active %}
-                                <button class="btn-icon btn-delete-action"
-                                        onclick="toggleUnitStatus(this, '{% url 'institution:unit_toggle' unit.id %}', '{{ unit.name|escapejs }}', '{{ unit.id }}')"
-                                        title="Desactivar">
-                                    <i class="fas fa-power-off"></i>
-                                </button>
-                            {% else %}
-                                <button class="btn-icon btn-success-action"
-                                        onclick="toggleUnitStatus(this, '{% url 'institution:unit_toggle' unit.id %}', '{{ unit.name|escapejs }}', '{{ unit.id }}')"
-                                        title="Activar">
-                                    <i class="fas fa-toggle-on"></i>
-                                </button>
-                            {% endif %}
-
                         </div>
                     </td>
-                {% endif %}
-            </tr>
-        {% empty %}
-            <tr class="empty-state-row">
-                <td colspan="{% if perms.institution.change_administrativeunit %}7{% else %}6{% endif %}"
-                    class="empty-state-cell">
-                    <div class="empty-state-content">
-                        <i class="fas fa-network-wired empty-state-icon"></i>
-                        <h5 class="empty-state-text">No existen dependencias</h5>
-                        <button onclick="window.handleEmptyBack()" class="btn-empty-reset">
-                            <i class="fas fa-arrow-left me-1"></i> Volver atrás
-                        </button>
-                    </div>
-                </td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>

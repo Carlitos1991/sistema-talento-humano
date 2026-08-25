@@ -184,3 +184,16 @@ document.addEventListener('DOMContentLoaded', () => {
         window.initGlobalTableFilters(container);
     });
 });
+
+window.Swal = Swal.mixin({
+    scrollbarPadding: false,
+    heightAuto: false,
+
+    // --- COLORES GLOBALES DE BOTONES ---
+    confirmButtonColor: '#28a745',
+    cancelButtonColor: '#dc3545',
+    customClass: {
+        confirmButton: 'text-white',
+        cancelButton: 'text-white'
+    }
+});
