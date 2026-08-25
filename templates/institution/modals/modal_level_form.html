@@ -2,9 +2,8 @@
     <div class="modal-container-small">
         <form action="{{ request.path }}" method="POST" id="levelForm" onsubmit="submitAjaxForm(event)">
             {% csrf_token %}
-
-            <div class="modal-header-medium modal-header-gradient">
-                <h3 class="header-title-main">
+            <div class="modal-header-medium">
+                <h3 class="header-title">
                     <i class="fa-solid fa-layer-group me-2"></i>
                     <span>{% if form.instance.pk %}Editar Nivel{% else %}Nuevo Nivel{% endif %}</span>
                 </h3>
@@ -13,7 +12,7 @@
                 </button>
             </div>
 
-            <div class="modal-body-custom">
+            <div class="modal-body">
                 {% if form.non_field_errors %}
                     <div class="alert alert-danger mb-3">
                         {% for error in form.non_field_errors %}
@@ -38,7 +37,7 @@
                 </div>
             </div>
 
-            <div class="modal-footer-medium modal-footer-spaced">
+            <div class="modal-footer-medium">
                 <button type="button" class="btn-default-outline" onclick="closeModal()">Cancelar</button>
                 <button type="submit" class="btn-default">
                     <i class="fas fa-save me-1"></i> {% if form.instance.pk %}Actualizar{% else %}Guardar{% endif %}

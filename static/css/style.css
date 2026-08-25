@@ -3452,33 +3452,23 @@ th.sorted-desc .sort-arrow {
 }
 
 /* Header de modal */
-.modal-header,
-.modal-header-medium {
+
+.modal-header, .modal-header-medium {
+    /* Estructura y Espaciados */
     padding: 1rem 2rem;
-    background: linear-gradient(to right, #1e293b, #334155);
     display: flex;
     align-items: center;
     justify-content: space-between;
     flex-shrink: 0;
+
+    /* Bordes Redondeados Superiores */
     border-top-left-radius: var(--border-radius);
     border-top-right-radius: var(--border-radius);
-}
+    border-bottom: none; /* Quitamos el borde para que el degradado luzca limpio */
 
-.modal-header-gradient {
+    /* Colores y Estética Visual Permanente */
     background: linear-gradient(to right, #1e293b, #334155);
-    border-bottom: none;
     color: white;
-}
-
-.modal-header {
-    padding: 1rem 2rem;
-    background: linear-gradient(to right, #1e293b, #334155);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-shrink: 0;
-    border-top-left-radius: var(--border-radius);
-    border-top-right-radius: var(--border-radius);
 }
 
 .modal-title-clean {
@@ -3510,7 +3500,7 @@ th.sorted-desc .sort-arrow {
     color: white;
 }
 
-.header-title-main {
+.header-title {
     color: white;
     font-size: 1.25rem;
     font-weight: 700;
