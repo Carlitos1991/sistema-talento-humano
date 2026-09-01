@@ -1,7 +1,7 @@
 from django.contrib.auth.decorators import permission_required, login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.core.cache import cache
-from django.db.models import Q, F
+from django.db.models import Q, F, Count
 from django.db.models.functions import Length
 from django.http import HttpResponse
 from django.http import JsonResponse
@@ -102,16 +102,12 @@ class UnitListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     permission_required = 'institution.view_administrativeunit'
 
     def get_queryset(self):
-        qs = AdministrativeUnit.objects.all().select_related(
-            'level', 'parent', 'boss__person'
-        ).annotate(
-            code_len=Length('code')
-        ).order_by('level__level_order', 'code_len', 'code', 'name')
-
+        qs = AdministrativeUnit.objects.all().select_related('level', 'parent', 'boss__person').annotate(
+            code_len=Length('code'), children_count=Count('children')).order_by('level__level_order', 'code_len',
+                                                                                'code', 'name')
         q = self.request.GET.get('q')
         show_inactive = self.request.GET.get('show_inactive')
-
-        # Filtrar por nivel raíz (nivel 1) y por activo/inactivo según parámetro
+        
         qs = qs.filter(level__level_order=1)
         if show_inactive == 'true':
             qs = qs.filter(is_active=False)
@@ -442,8 +438,10 @@ def unit_partial_table(request):
 
     # Base queryset with selects/annotations
     qs = AdministrativeUnit.objects.all().select_related('level', 'parent', 'boss__person') \
-        .annotate(code_len=Length('code')) \
-        .order_by('level__level_order', 'code_len', 'code', 'name')
+        .annotate(
+        code_len=Length('code'),
+        children_count=Count('children')
+    ).order_by('level__level_order', 'code_len', 'code', 'name')
 
     # Active/inactive filter
     if show_inactive == 'true':
@@ -527,7 +525,7 @@ class LevelListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 
         if q:
             qs = qs.filter(name__icontains=q)
-            
+
         if show_inactive == 'true':
             qs = qs.filter(is_active=False)
         else:

@@ -10,11 +10,11 @@
             <h1>Estructura Organizacional</h1>
             <p>Gestión de direcciones, departamentos y unidades administrativas.</p>
         </div>
-        {% if perms.institution.add_administrativeunit %}
-            <button id="btn-add-unit" type="button" class="btn-secondary">
-                <i class="fas fa-sitemap"></i> Nueva Unidad
-            </button>
-        {% endif %}
+{#        {% if perms.institution.add_administrativeunit %}#}
+{#            <button id="btn-add-unit" type="button" class="btn-secondary">#}
+{#                    <i class="fas fa-sitemap"></i> Nuevo Proceso#}
+{#            </button>#}
+{#        {% endif %}#}
     </div>
     <div id="table-app">
         <div class="content-table">
@@ -23,7 +23,7 @@
                        onchange="toggleInactiveUnits(this.checked)">
                 <label class="switch-wrapper" for="toggleInactiveUnits">
                     <div class="switch-circle"></div>
-                    <span class="switch-text">Mostrar Unidades Inactivas</span>
+                    <span class="switch-text">Mostrar Inactivos</span>
                 </label>
                 <div class="search-box">
                     <input type="text" class="table-search-input" placeholder="Buscar por nombre">
