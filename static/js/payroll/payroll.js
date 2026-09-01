@@ -984,8 +984,6 @@ window.filterTableLocal = function () {
 
     const initialTable = document.querySelector('.managed-table');
     if (initialTable && typeof TableManager !== 'undefined') {
-        // La tabla ya viene inicializada por el auto-init de table-manager.js
-        // en DOMContentLoaded; solo neutralizamos su búsqueda local.
         neutralizeTableManagerSearch(initialTable);
     }
 

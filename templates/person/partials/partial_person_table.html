@@ -1,219 +1,195 @@
 {% load static %}
 <div class="table-container">
-    <input type="hidden" id="server-level-indicator" value="{{ current_display_level }}">
-    <table class="managed-table exportable-table"
-           data-title="Reporte Empleados"
-           data-filename="Reporte_empleados"
-           data-external-pagination="true"
-           data-external-search="true">
-        <thead>
-        <tr>
-            <th><i class="fa-solid fa-list-ol"></i></th>
-            <th data-field="full_name_str" onclick="sortPersonTable(this)" class="sortable-header"
-                style="cursor: pointer;">
-                Empleado
-                <span class="sort-arrow">⇅</span>
-            </th>
-            <th data-field="document_number" onclick="sortPersonTable(this)" class="sortable-header"
-                style="cursor: pointer;">
-                Cédula
-                <span class="sort-arrow">⇅</span>
-            </th>
-            <th>Contacto</th>
-            <th class="text-center sortable-header" data-field="employee_profile__area__name"
-                onclick="sortPersonTable(this)" style="cursor: pointer;">Dependencia
-                <span class="sort-arrow">⇅</span>
-            </th>
-            <th class="text-center sortable-header" data-field="employee_profile__employment_status__name"
-                onclick="sortPersonTable(this)" style="cursor: pointer;"> Estado
-                <span class="sort-arrow">⇅</span>
-            </th>
-            {% if perms.person.change_person or perms.person.delete_person or perms.person.view_person %}
-                <th class="text-center"><i class="fas fa-cogs header-icon"></i> Acciones</th>
-            {% endif %}
-        </tr>
-        </thead>
-        <tbody id="table-body">
-        {% for person in people %}
-            <tr class="location-row" id="row-{{ person.id }}"
-                data-search-text="{{ person.last_name|default:''|lower }} {{ person.first_name|default:''|lower }} {{ person.document_number|default:''|lower }} {{ person.email|default:''|lower }} {{ person.phone_number|default:''|lower }} {{ person.employee_profile.area.name|default:''|lower }} {{ person.employee_profile.employment_status.name|default:''|lower }}">
-                <td>{{ page_obj.start_index|add:forloop.counter0 }}</td>
-                <td>
-                    <div class="person-info">
-                        {% if perms.person.change_person %}
-                            <a href="{% url 'employee:employee_detail' person.id %}"
-                               class="person-avatar-link"
-                               title="Ver perfil completo de {{ person.full_name }}">
-                                {% if person.photo %}
-                                    <img src="{{ person.photo.url }}" alt="{{ person.first_name }}"
-                                         class="person-avatar">
+    <div class="table-scroll-top">
+        <table class="managed-table exportable-table"
+               data-title="Reporte Empleados"
+               data-filename="Reporte_Empleados"
+               data-list-url="{% url 'person:person_list' %}"
+               data-external-pagination="true"
+               data-external-search="true">
+            <thead>
+            <tr>
+                <th class="width-3 no-sort">N.</th>
+                <th class="width-25" data-field="full_name_str">Empleado</th>
+                <th class="width-10" data-field="document_number">Cédula</th>
+                <th class="width-15 no-sort">Contacto</th>
+                <th class="width-15" data-field="employee_profile__area__name">Dependencia</th>
+                <th class="width-13" data-field="employee_profile__employment_status__name">Estado</th>
+                {% if perms.person.change_person or perms.person.delete_person or perms.person.view_person %}
+                    <th class="width-15 no-sort text-center">Acciones</th>
+                {% endif %}
+            </tr>
+            </thead>
+            <tbody id="table-body">
+            {% if people %}
+                {% for person in people %}
+                    <tr class="location-row" id="row-{{ person.id }}">
+                        <!-- Cálculo correcto del índice para paginación externa -->
+                        <td>{{ page_obj.start_index|add:forloop.counter0 }}</td>
+                        <td>
+                            <div class="person-info">
+                                {% if perms.person.change_person %}
+                                    <a href="{% url 'employee:employee_detail' person.id %}"
+                                       class="person-avatar-link"
+                                       title="Ver perfil completo de {{ person.full_name }}">
+                                        {% if person.photo %}
+                                            <img src="{{ person.photo.url }}" alt="{{ person.first_name }}"
+                                                 class="person-avatar">
+                                        {% else %}
+                                            <div class="person-avatar-placeholder">
+                                                {{ person.first_name|first }}{{ person.last_name|first }}
+                                            </div>
+                                        {% endif %}
+                                    </a>
                                 {% else %}
-                                    <div class="person-avatar-placeholder">
-                                        {{ person.first_name|first }}{{ person.last_name|first }}
+                                    <div class="person-avatar-link" style="cursor: default;">
+                                        {% if person.photo %}
+                                            <img src="{{ person.photo.url }}" alt="{{ person.first_name }}"
+                                                 class="person-avatar">
+                                        {% else %}
+                                            <div class="person-avatar-placeholder">
+                                                {{ person.first_name|first }}{{ person.last_name|first }}
+                                            </div>
+                                        {% endif %}
                                     </div>
                                 {% endif %}
-                            </a>
-                        {% else %}
-                            <div class="person-avatar-link" style="cursor: default;">
-                                {% if person.photo %}
-                                    <img src="{{ person.photo.url }}" alt="{{ person.first_name }}"
-                                         class="person-avatar">
-                                {% else %}
-                                    <div class="person-avatar-placeholder">
-                                        {{ person.first_name|first }}{{ person.last_name|first }}
-                                    </div>
-                                {% endif %}
+                                <div class="person-details">
+                                    <h4>{{ person.last_name }} {{ person.first_name }}</h4>
+                                </div>
                             </div>
-                        {% endif %}
-                        <div class="person-details">
-                            <h4>{{ person.last_name }} {{ person.first_name }}</h4>
-                        </div>
-                    </div>
-                </td>
-                <td>{{ person.document_number|default:"--" }}</td>
-                <td>
-                    <div class="person-doc"><b>{{ person.email|default:"sin correo" }}</b></div>
-                    <div class="person-doc"><b>{{ person.phone_number|default:"sin teléfono" }}</b></div>
-                </td>
-                <td class="text-center">
-                    {% if person.employee_profile.area %}
-                        <div class="font-weight-700 small text-primary">
-                            {{ person.employee_profile.area.name }}
-                        </div>
-                        {% if person.employee_profile.is_boss %}
-                            <span class="status-badge" style="background: #fef3c7; color: #92400e; font-size: 0.6rem;">JEFE/A</span>
-                        {% endif %}
-                    {% else %}
-                        <span class="text-muted small italic">Sin unidad asignada</span>
-                    {% endif %}
-                </td>
-                <td class="text-center">
-                    {% with emp=person.employee_profile %}
-                        {% if emp.employment_status %}
-                            <span class="status-badge
-                                {% if emp.employment_status.code == 'PERSONA' %}neutral
-                                {% elif emp.employment_status.code == 'EMPLEADO' or emp.employment_status.code == 'TRABAJADOR' %}active
-                                {% elif 'EX_' in emp.employment_status.code %}inactive
-                                {% else %}general{% endif %}">
+                        </td>
+                        <td>{{ person.document_number|default:"--" }}</td>
+                        <td>
+                            <div class="person-doc"><b>{{ person.email|default:"sin correo" }}</b></div>
+                            <div class="person-doc"><b>{{ person.phone_number|default:"sin teléfono" }}</b></div>
+                        </td>
+                        <td class="text-center">
+                            {% if person.employee_profile.area %}
+                                <div class="font-weight-700 small text-primary">
+                                    {{ person.employee_profile.area.name }}
+                                </div>
+                                {% if person.employee_profile.is_boss %}
+                                    <span class="status-badge"
+                                          style="background: #fef3c7; color: #92400e; font-size: 0.6rem;">JEFE/A</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted small italic">Sin unidad asignada</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% with emp=person.employee_profile %}
+                                {% if emp.employment_status %}
+                                    <span class="badge
+                                {% if emp.employment_status.code == 'PERSONA' %} badge-amber
+                                {% elif emp.employment_status.code == 'EMPLEADO' or emp.employment_status.code == 'TRABAJADOR' %} badge-green
+                                {% elif 'EX_' in emp.employment_status.code %} badge-red
+                                {% else %} badge-blue{% endif %}">
                                 {{ emp.employment_status.name }}
                             </span>
-                        {% else %}
-                            <span class="status-badge neutral">PERSONA</span>
+                                {% else %}
+                                    <span class="status-badge neutral">PERSONA</span>
+                                {% endif %}
+                            {% endwith %}
+                        </td>
+
+                        {% if perms.person.change_person or perms.person.delete_person or perms.person.view_person %}
+                            <td class="actions text-center">
+                                <div class="actions-wrapper">
+                                    {% if perms.person.change_person %}
+                                        <button type="button"
+                                                class="btn-second"
+                                                title="Reubicar Empleado"
+                                                onclick="window.openRelocateEmployeeModal('{{ person.id }}', '{{ person.first_name }} {{ person.last_name }}', '{{ person.employee_profile.area.name|default:'' }}')">
+                                            <i class="fa-solid fa-sitemap"></i>
+                                        </button>
+                                    {% endif %}
+
+                                    {% if perms.person.view_person %}
+                                        <button type="button"
+                                                class="btn-tenth"
+                                                data-action="quick-view"
+                                                data-id="{{ person.id }}"
+                                                title="Vista Rápida">
+                                            <i class="fa-duotone fa-solid fa-eye"></i>
+                                        </button>
+                                    {% endif %}
+
+                                    {% if perms.person.change_person or perms.person.delete_person %}
+                                        <a href="{% url 'employee:employee_detail' person.id %}"
+                                           class="btn-first"
+                                           title="Ver Detalle Completo">
+                                            <i class="fa-solid fa-user-gear"></i>
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </td>
                         {% endif %}
-                    {% endwith %}
-                </td>
-
-                {% if perms.person.change_person or perms.person.delete_person or perms.person.view_person %}
-                    <td>
-                        <div class="actions-wrapper">
-                            {% if perms.person.change_person %}
-                                <button type="button"
-                                        class="btn-second"
-                                        title="Reubicar Empleado"
-                                        onclick="window.openRelocateEmployeeModal('{{ person.id }}', '{{ person.first_name }} {{ person.last_name }}', '{{ unit.name }}')">
-                                    <i class="fa-solid fa-sitemap"></i>
-                                </button>
-                            {% endif %}
-
-                            {% if perms.person.view_person %}
-                                <button type="button"
-                                        class="btn-tenth"
-                                        data-action="quick-view"
-                                        data-id="{{ person.id }}"
-                                        title="Vista Rápida">
-                                    <i class="fa-duotone fa-solid fa-eye"></i>
-                                </button>
-                            {% endif %}
-
-                            {% if perms.person.change_person or perms.person.delete_person %}
-                                <a href="{% url 'employee:employee_detail' person.id %}"
-                                   class="btn-first"
-                                   title="Ver Detalle Completo">
-                                    <i class="fa-solid fa-user-gear"></i>
-                                </a>
-                            {% endif %}
+                    </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="100%">
+                        <div class="empty-state-container">
+                            <i class="fas fa-calendar-times empty-state-icon"></i>
+                            <p class="empty-state-text">No se encontraron registros.</p>
                         </div>
                     </td>
-                {% endif %}
-            </tr>
-        {% empty %}
-            <tr>
-                {% if perms.person.change_person or perms.person.delete_person or perms.person.view_person %}
-                    <td colspan="8">
-                        {% else %}
-                    <td colspan="7">
-                {% endif %}
-                <div class="empty-state-container">
-                    <i class="fas fa-calendar-times empty-state-icon"></i>
-                    <p class="empty-state-text">No se encontraron registros registrados.</p>
-                </div>
-                </td>
-            </tr>
-        {% endfor %}
-        <tr id="client-no-results" style="display: none;">
-            {% if perms.person.change_person or perms.person.delete_person or perms.person.view_person %}
-                <td colspan="8">
-                    {% else %}
-                <td colspan="7">
+                </tr>
             {% endif %}
-            <div class="empty-state-container">
-                <i class="fas fa-search empty-state-icon"></i>
-                <p class="empty-state-text">No hay coincidencias con tu búsqueda en pantalla.</p>
-            </div>
-            </td>
-        </tr>
-        </tbody>
-    </table>
-</div>
-<!-- PAGINACIÓN — server-side, navegación via Vue fetchPeople() -->
-<div class="pagination-container">
-    <span class="pagination-info">
-        Mostrando {{ page_obj.start_index|default:"0" }}-{{ page_obj.end_index|default:"0" }} de {{ paginator.count|default:"0" }}
-    </span>
-    <div class="pagination-controls" style="{% if paginator.num_pages <= 1 %}visibility:hidden;{% endif %}">
-        <button class="page-btn" title="Primera"
-                {% if not page_obj.has_previous %}disabled{% endif %}
-                onclick="changePage(1)">
-            <i class="fas fa-angle-double-left"></i>
-        </button>
-        <button class="page-btn" title="Anterior"
-                {% if not page_obj.has_previous %}disabled{% endif %}
-                onclick="changePage(
-                        {% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% else %}1{% endif %})">
-            <i class="fas fa-angle-left"></i>
-        </button>
-        <div class="page-input-wrapper">
-            <input type="number" class="page-input"
-                   value="{{ page_obj.number }}"
-                   min="1" max="{{ paginator.num_pages }}"
-                   onchange="changePage(parseInt(this.value)||1)"
-                   onkeypress="if(event.key==='Enter') changePage(parseInt(this.value)||1)">
-            <span class="total-pages-badge">de {{ paginator.num_pages }}</span>
-        </div>
-        <button class="page-btn" title="Siguiente"
-                {% if not page_obj.has_next %}disabled{% endif %}
-                onclick="changePage(
-                        {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages }}{% endif %})">
-            <i class="fas fa-angle-right"></i>
-        </button>
-        <button class="page-btn" title="Última"
-                {% if not page_obj.has_next %}disabled{% endif %}
-                onclick="changePage({{ paginator.num_pages }})">
-            <i class="fas fa-angle-double-right"></i>
-        </button>
+            </tbody>
+        </table>
     </div>
 </div>
 
-<!-- Script temporario para evitar error si person.js aun no cargó -->
-<script>
-    if (!window.sortPersonTable) {
-        window.sortPersonTable = (thElement) => {
-            console.warn('sortPersonTable no está lista aún, esperando a person.js...');
-            setTimeout(() => {
-                if (window.sortPersonTable && vueApp) {
-                    vueApp.fetchPeople(1);
-                }
-            }, 100);
-        };
-    }
-</script>
+<!-- PAGINACIÓN ESTANDARIZADA (Controlada por evento global clic en .page-btn) -->
+{% if paginator.num_pages > 0 %}
+    <div class="pagination-container">
+    <span class="pagination-info">
+        Mostrando {{ page_obj.start_index|default:"0" }}-{{ page_obj.end_index|default:"0" }} de {{ paginator.count|default:"0" }}
+    </span>
+        <div class="pagination-controls" style="{% if paginator.num_pages <= 1 %}visibility:hidden;{% endif %}">
+
+            <!-- Primera -->
+            <button class="page-btn {% if not page_obj.has_previous %}disabled{% endif %}"
+                    title="Primera"
+                    data-page="1"
+                    {% if not page_obj.has_previous %}disabled{% endif %}>
+                <i class="fas fa-angle-double-left"></i>
+            </button>
+
+            <!-- Anterior -->
+            <button class="page-btn {% if not page_obj.has_previous %}disabled{% endif %}"
+                    title="Anterior"
+                    data-page="{% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% else %}1{% endif %}"
+                    {% if not page_obj.has_previous %}disabled{% endif %}>
+                <i class="fas fa-angle-left"></i>
+            </button>
+
+            <!-- Info central -->
+            <div class="page-input-wrapper">
+                <!-- Es readonly porque el listener global no procesa 'enter' en este input para backend, requiere clics en botones -->
+                <input type="number" class="page-input" value="{{ page_obj.number }}" readonly style="cursor: default;">
+                <span class="total-pages-badge">de {{ paginator.num_pages }}</span>
+            </div>
+
+            <!-- Siguiente -->
+            <button class="page-btn {% if not page_obj.has_next %}disabled{% endif %}"
+                    title="Siguiente"
+                    data-page="
+
+                            
+                            {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages }}{% endif %}"
+                    {% if not page_obj.has_next %}disabled{% endif %}>
+                <i class="fas fa-angle-right"></i>
+            </button>
+
+            <!-- Última -->
+            <button class="page-btn {% if not page_obj.has_next %}disabled{% endif %}"
+                    title="Última"
+                    data-page="{{ paginator.num_pages }}"
+                    {% if not page_obj.has_next %}disabled{% endif %}>
+                <i class="fas fa-angle-double-right"></i>
+            </button>
+        </div>
+    </div>
+{% endif %}
