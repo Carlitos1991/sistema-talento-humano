@@ -28,15 +28,13 @@
                             <div><b>Teléfono:</b> <span>{{ unit.phone|default:'Sin asignar' }}</span></div>
                             {% if perms.institution.change_administrativeunit %}
                                 <div class="unit-actions {% if unit.level.level_order <= 1 %}unit-actions-single{% endif %}">
-                                    <button type="button"
-                                            class="btn-primary"
-                                            onclick="openEditUnit({{ unit.id }})"
-                                            title="Editar Unidad">
-                                        <i class="fas fa-pencil"></i> Editar
+                                    <button type="button" class="btn-warning " title="Editar Unidad"
+                                            onclick="openAjaxModal('{% url 'institution:level_update' unit.id %}')">
+                                        <i class="fas fa-pencil"></i>Editar
                                     </button>
                                     {% if unit.level.level_order > 1 %}
                                         <button type="button"
-                                                class="btn-primary btn-relocate-unit"
+                                                class="btn-primary"
                                                 onclick="openRelocateUnit({{ unit.id }})"
                                                 title="Cambiar Unidad Padre">
                                             <i class="fas fa-arrows-alt-v"></i> Reubicar

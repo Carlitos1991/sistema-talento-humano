@@ -167,16 +167,6 @@ a:hover {
     cursor: not-allowed;
 }
 
-.btn-primary {
-    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-    color: white;
-}
-
-.btn-primary:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
-}
-
 .btn-secondary {
     background: var(--text-secondary);
     color: white;

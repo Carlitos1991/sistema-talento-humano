@@ -37,8 +37,12 @@
         }
 
         @keyframes shake {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(10px); }
+            0% {
+                transform: translateX(0);
+            }
+            100% {
+                transform: translateX(10px);
+            }
         }
 
         .error-icon {
@@ -48,8 +52,12 @@
         }
 
         @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.1);
+            }
         }
 
         .error-title {
@@ -87,16 +95,6 @@
             gap: 10px;
             transition: all 0.3s ease;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-        }
-
-        .btn-primary {
-            background: white;
-            color: #f5576c;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
         }
 
         .btn-secondary {
@@ -143,40 +141,40 @@
     </style>
 </head>
 <body>
-    <div class="error-container">
-        <div class="error-icon">
-            <i class="fas fa-lock"></i>
-        </div>
-        <div class="error-code">403</div>
-        <h1 class="error-title">¡Acceso Denegado!</h1>
-        <p class="error-description">
-            No tienes los permisos necesarios para acceder a esta página o recurso.
-        </p>
-
-        <div class="warning-box">
-            <strong><i class="fas fa-exclamation-circle"></i> Posibles causas:</strong>
-            <ul>
-                <li>No tienes los permisos de usuario requeridos</li>
-                <li>Tu sesión ha expirado</li>
-                <li>Intentaste acceder a un área restringida</li>
-            </ul>
-        </div>
-        
-        <div class="error-buttons">
-            <a href="/" class="btn btn-primary">
-                <i class="fas fa-home"></i>
-                Ir al Inicio
-            </a>
-            <a href="/login/" class="btn btn-secondary">
-                <i class="fas fa-sign-in-alt"></i>
-                Iniciar Sesión
-            </a>
-        </div>
-
-        <div class="error-details">
-            <p><i class="fas fa-shield-alt"></i> Sistema de Gestión de Talento Humano - SIGETH</p>
-            <p>Si necesitas acceso a este recurso, contacta al administrador del sistema.</p>
-        </div>
+<div class="error-container">
+    <div class="error-icon">
+        <i class="fas fa-lock"></i>
     </div>
+    <div class="error-code">403</div>
+    <h1 class="error-title">¡Acceso Denegado!</h1>
+    <p class="error-description">
+        No tienes los permisos necesarios para acceder a esta página o recurso.
+    </p>
+
+    <div class="warning-box">
+        <strong><i class="fas fa-exclamation-circle"></i> Posibles causas:</strong>
+        <ul>
+            <li>No tienes los permisos de usuario requeridos</li>
+            <li>Tu sesión ha expirado</li>
+            <li>Intentaste acceder a un área restringida</li>
+        </ul>
+    </div>
+
+    <div class="error-buttons">
+        <a href="/" class="btn btn-primary">
+            <i class="fas fa-home"></i>
+            Ir al Inicio
+        </a>
+        <a href="/login/" class="btn btn-secondary">
+            <i class="fas fa-sign-in-alt"></i>
+            Iniciar Sesión
+        </a>
+    </div>
+
+    <div class="error-details">
+        <p><i class="fas fa-shield-alt"></i> Sistema de Gestión de Talento Humano - SIGETH</p>
+        <p>Si necesitas acceso a este recurso, contacta al administrador del sistema.</p>
+    </div>
+</div>
 </body>
 </html>

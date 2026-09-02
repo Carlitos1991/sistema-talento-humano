@@ -228,36 +228,12 @@
     color: #fff !important;
 }
 
-.institution-header-card .btn-relocate-unit {
-    background: linear-gradient(135deg, #0d6ea4 0%, #0f4d7a 100%);
-    border-color: #2b80b1;
-}
-
 .institution-header-card .unit-actions {
     grid-column: 1 / -1;
     display: flex;
     justify-content: center;
     align-items: center;
     gap: 10px;
-}
-
-.institution-header-card .unit-actions .btn-primary {
-    margin-top: 0;
-    width: auto;
-    min-width: 160px;
-    padding: 0.6rem 1rem;
-    border-radius: 8px;
-    background: linear-gradient(135deg, #1b4f86 0%, #0f2e56 100%);
-    border: 1px solid #2c69a8;
-}
-
-.institution-header-card .unit-actions.unit-actions-single .btn-primary {
-    width: 100%;
-    max-width: 240px;
-}
-
-.institution-header-card .unit-actions .btn-primary:hover {
-    background: linear-gradient(135deg, #2363a5 0%, #124273 100%);
 }
 
 .institution-header-card .icon-circle-large {

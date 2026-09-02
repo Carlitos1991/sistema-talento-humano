@@ -1,14 +1,18 @@
 <div class="modal-overlay hidden">
-    <div class="modal-container-medium">
-        <form @submit.prevent="submitForm" id="unitForm">
+    <div class="modal-container-small">
+        <form id="unitForm" method="post" action="
+                
+                {% if form.instance.pk %}{% url 'institution:unit_update' form.instance.pk %}{% else %}{% url 'institution:unit_create' %}{% endif %}"
+              onsubmit="submitAjaxForm(event);">
             {% csrf_token %}
-            {#            <div>#}
-            {#                {{ form.level }}#}
-            {#                {{ form.parent }}#}
-            {#                {{ form.boss }}#}
-            {#            </div>#}
+            <div>
+                {{ form.level }}
+                {{ form.parent }}
+                {{ form.boss }}
+                {{ form.is_active }}
+            </div>
 
-            <div class="modal-header-medium">
+            <div class="modal-header">
                 <h3 class="header-title">
                     <i class="fa-solid fa-layer-group me-2"></i>
                     <span>Estructura Organizacional</span>
@@ -49,20 +53,6 @@
                             {{ form.phone }}
                         </div>
                     </div>
-
-                    <!-- ESTADO — solo visible al editar -->
-                    <div class="form-group mt-3" v-if="isEditing">
-                        <label class="form-label mb-2">Estado del Registro</label>
-                        <div class="d-flex align-items-center gap-3">
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="id_is_active" name="is_active" v-model="isActive">
-                                <span class="toggle-slider"></span>
-                            </label>
-                        </div>
-                        <div class="text-error" v-if="errors.is_active">
-                        </div>
-                    </div>
-
                 </div>
             </div>
 

@@ -37,12 +37,24 @@
         }
 
         @keyframes glitch {
-            0% { transform: translate(0); }
-            20% { transform: translate(-2px, 2px); }
-            40% { transform: translate(-2px, -2px); }
-            60% { transform: translate(2px, 2px); }
-            80% { transform: translate(2px, -2px); }
-            100% { transform: translate(0); }
+            0% {
+                transform: translate(0);
+            }
+            20% {
+                transform: translate(-2px, 2px);
+            }
+            40% {
+                transform: translate(-2px, -2px);
+            }
+            60% {
+                transform: translate(2px, 2px);
+            }
+            80% {
+                transform: translate(2px, -2px);
+            }
+            100% {
+                transform: translate(0);
+            }
         }
 
         .error-icon {
@@ -52,8 +64,12 @@
         }
 
         @keyframes blink {
-            0%, 49% { opacity: 1; }
-            50%, 100% { opacity: 0.3; }
+            0%, 49% {
+                opacity: 1;
+            }
+            50%, 100% {
+                opacity: 0.3;
+            }
         }
 
         .error-title {
@@ -91,16 +107,6 @@
             gap: 10px;
             transition: all 0.3s ease;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-        }
-
-        .btn-primary {
-            background: white;
-            color: #ff6b6b;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
         }
 
         .btn-secondary {
@@ -144,41 +150,41 @@
     </style>
 </head>
 <body>
-    <div class="error-container">
-        <div class="error-icon">
-            <i class="fas fa-exclamation-triangle"></i>
-        </div>
-        <div class="error-code">500</div>
-        <h1 class="error-title">¡Error Interno del Servidor!</h1>
-        <p class="error-description">
-            Algo salió mal en nuestro servidor. Nuestro equipo técnico ha sido notificado 
-            y estamos trabajando para solucionar el problema.
-        </p>
-
-        <div class="info-box">
-            <strong><i class="fas fa-tools"></i> ¿Qué puedes hacer?</strong>
-            <p>• Intenta recargar la página en unos momentos</p>
-            <p>• Verifica tu conexión a internet</p>
-            <p>• Regresa al inicio y prueba nuevamente</p>
-            <p>• Si el problema persiste, contacta al soporte técnico</p>
-        </div>
-        
-        <div class="error-buttons">
-            <a href="/" class="btn btn-primary">
-                <i class="fas fa-home"></i>
-                Ir al Inicio
-            </a>
-            <a href="javascript:location.reload()" class="btn btn-secondary">
-                <i class="fas fa-redo"></i>
-                Recargar Página
-            </a>
-        </div>
-
-        <div class="error-details">
-            <p><i class="fas fa-server"></i> Sistema de Gestión de Talento Humano - SIGETH</p>
-            <p>Código de Error: 500 | Internal Server Error</p>
-            <p>Estamos trabajando para resolver este problema lo antes posible.</p>
-        </div>
+<div class="error-container">
+    <div class="error-icon">
+        <i class="fas fa-exclamation-triangle"></i>
     </div>
+    <div class="error-code">500</div>
+    <h1 class="error-title">¡Error Interno del Servidor!</h1>
+    <p class="error-description">
+        Algo salió mal en nuestro servidor. Nuestro equipo técnico ha sido notificado
+        y estamos trabajando para solucionar el problema.
+    </p>
+
+    <div class="info-box">
+        <strong><i class="fas fa-tools"></i> ¿Qué puedes hacer?</strong>
+        <p>• Intenta recargar la página en unos momentos</p>
+        <p>• Verifica tu conexión a internet</p>
+        <p>• Regresa al inicio y prueba nuevamente</p>
+        <p>• Si el problema persiste, contacta al soporte técnico</p>
+    </div>
+
+    <div class="error-buttons">
+        <a href="/" class="btn btn-primary">
+            <i class="fas fa-home"></i>
+            Ir al Inicio
+        </a>
+        <a href="javascript:location.reload()" class="btn btn-secondary">
+            <i class="fas fa-redo"></i>
+            Recargar Página
+        </a>
+    </div>
+
+    <div class="error-details">
+        <p><i class="fas fa-server"></i> Sistema de Gestión de Talento Humano - SIGETH</p>
+        <p>Código de Error: 500 | Internal Server Error</p>
+        <p>Estamos trabajando para resolver este problema lo antes posible.</p>
+    </div>
+</div>
 </body>
 </html>

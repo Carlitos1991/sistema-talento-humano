@@ -37,11 +37,8 @@
                         <!-- 1. HEADER -->
                         <div class="card-header-section">
                             {% if perms.institution.change_administrativeunit %}
-{#                                <button type="button" class="btn-pill solid"#}
-{#                                        onclick="openEditUnit('{{ unit.id }}')">#}
-{#                                    <i class="fas fa-pen"></i> Actualizar#}
-{#                                </button>#}
-                                <h2 class="card-unit-title" onclick="openEditUnit('{{ unit.id }}')">{{ unit.name }}</h2>
+                                <h2 class="card-unit-title"
+                                    onclick="openAjaxModal('{% url 'institution:unit_update' unit.id %}')">{{ unit.name }}</h2>
                             {% else %}
                                 <h2 class="card-unit-title">{{ unit.name }}</h2>
                             {% endif %}
@@ -68,13 +65,6 @@
                                    class="btn-pill outline">
                                     <i class="fas fa-eye"></i> Detalle
                                 </a>
-
-                                {% if perms.institution.change_administrativeunit %}
-                                    <button type="button" class="btn-pill solid"
-                                            onclick="openEditUnit('{{ unit.id }}')">
-                                        <i class="fas fa-pen"></i> Actualizar
-                                    </button>
-                                {% endif %}
                             </div>
                         </div>
 
