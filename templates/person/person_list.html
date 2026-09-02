@@ -15,7 +15,7 @@
                 <p>Gestión de fichas personales y empleados </p>
             </div>
             {% if perms.person.add_person %}
-                <button type="button" class="btn-primary" @click="openCreateModal">
+                <button type="button" class="btn-primary" onclick="openModal('modalPersonOverlay')">
                     <i class="fas fa-plus"></i> Nueva Persona
                 </button>
             {% endif %}
@@ -88,7 +88,6 @@
         </div>
         {% include 'person/modals/modal_person_form.html' %}
         {% include 'person/modals/modal_credentials.html' %}
-        {% include 'person/modals/modal_person_quick_view.html' %}
         {% include 'person/modals/modal_relocate_employee.html' %}
     </div>
 

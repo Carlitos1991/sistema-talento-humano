@@ -105,10 +105,8 @@
                                     {% endif %}
 
                                     {% if perms.person.view_person %}
-                                        <button type="button"
-                                                class="btn-tenth"
-                                                data-action="quick-view"
-                                                data-id="{{ person.id }}"
+                                        <button type="button" class="btn-tenth"
+                                                onclick="openAjaxModal('{% url 'person:person_quick_view_partial' person.id %}')"
                                                 title="Vista Rápida">
                                             <i class="fa-duotone fa-solid fa-eye"></i>
                                         </button>
@@ -140,53 +138,45 @@
         </table>
     </div>
 </div>
-
-<!-- PAGINACIÓN ESTANDARIZADA (Controlada por evento global clic en .page-btn) -->
+<!-- PAGINACIÓN ESTANDARIZADA -->
 {% if paginator.num_pages > 0 %}
-    <div class="pagination-container">
+    <div id="js-pagination" class="pagination-container">
     <span class="pagination-info">
         Mostrando {{ page_obj.start_index|default:"0" }}-{{ page_obj.end_index|default:"0" }} de {{ paginator.count|default:"0" }}
     </span>
-        <div class="pagination-controls" style="{% if paginator.num_pages <= 1 %}visibility:hidden;{% endif %}">
-
+        <div class="pagination-controls">
             <!-- Primera -->
-            <button class="page-btn {% if not page_obj.has_previous %}disabled{% endif %}"
-                    title="Primera"
-                    data-page="1"
+            <button type="button" class="page-btn {% if not page_obj.has_previous %}disabled{% endif %}"
+                    title="Primera" data-page="1"
                     {% if not page_obj.has_previous %}disabled{% endif %}>
                 <i class="fas fa-angle-double-left"></i>
             </button>
 
             <!-- Anterior -->
-            <button class="page-btn {% if not page_obj.has_previous %}disabled{% endif %}"
+            <button type="button" class="page-btn {% if not page_obj.has_previous %}disabled{% endif %}"
                     title="Anterior"
                     data-page="{% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% else %}1{% endif %}"
                     {% if not page_obj.has_previous %}disabled{% endif %}>
                 <i class="fas fa-angle-left"></i>
             </button>
 
-            <!-- Info central -->
+            <!-- Indicador de página -->
             <div class="page-input-wrapper">
-                <!-- Es readonly porque el listener global no procesa 'enter' en este input para backend, requiere clics en botones -->
                 <input type="number" class="page-input" value="{{ page_obj.number }}" readonly style="cursor: default;">
                 <span class="total-pages-badge">de {{ paginator.num_pages }}</span>
             </div>
 
             <!-- Siguiente -->
-            <button class="page-btn {% if not page_obj.has_next %}disabled{% endif %}"
-                    title="Siguiente"
-                    data-page="
-
-                            
-                            {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages }}{% endif %}"
+            <button type="button" class="page-btn {% if not page_obj.has_next %}disabled{% endif %}"
+                    title="Siguiente" data-page="
+                    {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages }}{% endif %}"
                     {% if not page_obj.has_next %}disabled{% endif %}>
                 <i class="fas fa-angle-right"></i>
             </button>
 
             <!-- Última -->
-            <button class="page-btn {% if not page_obj.has_next %}disabled{% endif %}"
-                    title="Última"
-                    data-page="{{ paginator.num_pages }}"
+            <button type="button" class="page-btn {% if not page_obj.has_next %}disabled{% endif %}"
+                    title="Última" data-page="{{ paginator.num_pages }}"
                     {% if not page_obj.has_next %}disabled{% endif %}>
                 <i class="fas fa-angle-double-right"></i>
             </button>

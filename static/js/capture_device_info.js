@@ -6,6 +6,14 @@
 (function() {
     'use strict';
 
+    let deviceInfoRequestStarted = false;
+
+    function shouldSkipCapture() {
+        return window.location.pathname === '/login/' ||
+               window.location.pathname === '/oidc/' ||
+               document.body.classList.contains('login-page');
+    }
+
     /**
      * Obtiene la MAC del dispositivo intentando diferentes métodos
      */
@@ -107,6 +115,11 @@
      */
     async function sendDeviceInfo() {
         try {
+            if (deviceInfoRequestStarted || shouldSkipCapture()) {
+                return;
+            }
+
+            deviceInfoRequestStarted = true;
             const macAddress = await getMACAddress();
             const deviceInfo = getDeviceInfo();
 
@@ -123,11 +136,20 @@
                 })
             });
 
-            if (response.ok) {
-                const data = await response.json();
-            } else {
+            const contentType = response.headers.get('content-type') || '';
+
+            if (!response.ok) {
                 console.error('Error al enviar info del dispositivo:', response.status);
+                return;
             }
+
+            if (contentType.includes('application/json')) {
+                await response.json();
+                return;
+            }
+
+            const responseText = await response.text();
+            console.debug('Respuesta no JSON al guardar información del dispositivo:', responseText.slice(0, 200));
         } catch (e) {
             console.error('Error en sendDeviceInfo:', e);
         }
@@ -136,23 +158,29 @@
     // Ejecutar cuando el documento esté listo
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => {
-            // Esperar 2 segundos para que se complete el login
-            setTimeout(sendDeviceInfo, 2000);
+            if (!shouldSkipCapture()) {
+                // Esperar 2 segundos para que se complete el login
+                setTimeout(sendDeviceInfo, 2000);
+            }
         });
     } else {
         // El documento ya está cargado
-        setTimeout(sendDeviceInfo, 2000);
+        if (!shouldSkipCapture()) {
+            setTimeout(sendDeviceInfo, 2000);
+        }
     }
 
     // También ejecutar después de cada cambio significativo (por si el usuario navega)
     window.addEventListener('load', () => {
         // Esperar un poco después de que todo esté completamente cargado
-        setTimeout(() => {
-            // Enviar si no se ejecutó aún (fallback)
-            if (document.querySelector('body') && !document._deviceInfoSent) {
-                sendDeviceInfo();
-                document._deviceInfoSent = true;
-            }
-        }, 3000);
+        if (!shouldSkipCapture()) {
+            setTimeout(() => {
+                // Enviar si no se ejecutó aún (fallback)
+                if (document.querySelector('body') && !document._deviceInfoSent) {
+                    document._deviceInfoSent = true;
+                    sendDeviceInfo();
+                }
+            }, 3000);
+        }
     });
 })();

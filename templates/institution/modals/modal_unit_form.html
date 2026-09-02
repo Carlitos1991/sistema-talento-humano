@@ -1,6 +1,6 @@
 <div class="modal-overlay hidden">
     <div class="modal-overlay" :class="{ 'hidden': !isVisible }" role="dialog">
-        <div class="modal-container-medium animate-scale-in" style="max-width: 600px;">
+        <div class="modal-container-medium animate-scale-in">
             <form @submit.prevent="submitForm" id="unitForm">
                 {% csrf_token %}
                 <!-- Selects Django ocultos pero presentes para sincronización de datos -->

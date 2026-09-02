@@ -11,54 +11,19 @@
 
 {% block content %}
     <div class="root-list-container">
-
-        <!-- HEADER COMÚN -->
-        <div class="root-header-card">
-            <div class="municipality-brand">
-                <i class="fas fa-building brand-icon"></i>
-                <h1 class="brand-text">
-                    {% if mode == 'detail' %}
-                        {{ current_unit.name }}
-                    {% else %}
-                        MUNICIPIO DE LOJA
-                    {% endif %}
-                </h1>
+        <!-- 1. Header -->
+        <div class="header-card">
+            <div>
+                <h1>MUNICIPIO DE LOJA</h1>
+                <p>Gestión de organigrama posicional </p>
             </div>
-
-            <!-- NAVEGACIÓN MODIFICADA -->
-            {% if mode == 'detail' %}
-                <div class="d-flex gap-3 align-items-center">
-
-                    <!-- 1. Botón Regresar (Inteligente) -->
-                    {% if current_unit.parent %}
-                        <a href="{% url 'institution:organigram_nav_detail' current_unit.parent.id %}"
-                           class="btn-back-simple">
-                            <i class="fas fa-arrow-left"></i> Regresar
-                        </a>
-                    {% else %}
-                        <a href="{% url 'institution:organigram_nav' %}" class="btn-back-simple">
-                            <i class="fas fa-arrow-left"></i> Regresar
-                        </a>
-                    {% endif %}
-
-                    <!-- 2. Separador visual -->
-                    <span style="color: #cbd5e1;">|</span>
-
-                    <!-- 3. Botón Inicio (Siempre visible) -->
-                    <a href="{% url 'institution:organigram_nav' %}" class="btn-back-simple">
-                        <i class="fas fa-home"></i> Inicio
-                    </a>
-                </div>
-            {% else %}
-                <a href="{% url 'institution:organigram_view' %}" class="btn-back-simple">
-                    <i class="fas fa-arrow-left"></i> Volver al Organigrama
-                </a>
-            {% endif %}
+            <a href="{% url 'institution:organigram_view' %}" class="btn-secondary">
+                <i class="fas fa-arrow-left"></i> Volver al Organigrama
+            </a>
         </div>
 
         <!-- =============== ESTADO 1: LISTADO RAÍZ =============== -->
         {% if mode == 'root' %}
-
             <div class="section-divider">
                 <i class="fas fa-sitemap me-2"></i>
                 <h3>Dependencias Activas ({{ total_active }})</h3>
@@ -71,13 +36,21 @@
 
                         <!-- 1. HEADER -->
                         <div class="card-header-section">
-                            <span class="badge-dark">{{ unit.level.name }}</span>
-                            <span class="badge-dark">Activo</span>
+                            {% if perms.institution.change_administrativeunit %}
+{#                                <button type="button" class="btn-pill solid"#}
+{#                                        onclick="openEditUnit('{{ unit.id }}')">#}
+{#                                    <i class="fas fa-pen"></i> Actualizar#}
+{#                                </button>#}
+                                <h2 class="card-unit-title" onclick="openEditUnit('{{ unit.id }}')">{{ unit.name }}</h2>
+                            {% else %}
+                                <h2 class="card-unit-title">{{ unit.name }}</h2>
+                            {% endif %}
+
                         </div>
+
 
                         <!-- 2. BODY -->
                         <div class="card-body-section">
-                            <h2 class="card-unit-title">{{ unit.name }}</h2>
                             <div class="card-info-row">
                                 <i class="fas fa-map-marker-alt"></i>
                                 <span>{{ unit.address|default:"Sin dirección" }}</span>

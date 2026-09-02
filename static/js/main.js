@@ -795,9 +795,6 @@ document.addEventListener('click', (e) => {
         .then(html => {
             if (!html) return;
 
-            // Actualizar URL en el navegador
-            window.history.pushState(null, '', `?${params.toString()}`);
-
             const temp = document.createElement('div');
             temp.innerHTML = html;
 

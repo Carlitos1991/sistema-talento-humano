@@ -88,7 +88,8 @@ class EmployeeReportExportView(LoginRequiredMixin, PermissionRequiredMixin, View
             if key == 'blood_type':
                 return getattr(emp.person.blood_type, 'name', '') if emp.person and emp.person.blood_type else ''
             if key == 'marital_status':
-                return getattr(emp.person.marital_status, 'name', '') if emp.person and emp.person.marital_status else ''
+                return getattr(emp.person.marital_status, 'name',
+                               '') if emp.person and emp.person.marital_status else ''
             if key == 'gender':
                 return getattr(emp.person.gender, 'name', '') if emp.person and emp.person.gender else ''
             if key == 'birth_date':
@@ -135,7 +136,8 @@ class EmployeeReportExportView(LoginRequiredMixin, PermissionRequiredMixin, View
 
         # Columnas: siempre N°, Apellidos, Nombres, Documento
         institutional_keys = ['area', 'cargo', 'remuneration']
-        personal_keys = ['blood_type', 'marital_status', 'gender', 'birth_date', 'email', 'address_reference', 'phone_number', 'emergency_contact_name', 'emergency_contact_phone']
+        personal_keys = ['blood_type', 'marital_status', 'gender', 'birth_date', 'email', 'address_reference',
+                         'phone_number', 'emergency_contact_name', 'emergency_contact_phone']
 
         selected_institutional = [k for k in institutional_keys if k in selected_fields]
         selected_personal = [k for k in personal_keys if k in selected_fields]
@@ -183,7 +185,7 @@ class EmployeeReportExportView(LoginRequiredMixin, PermissionRequiredMixin, View
             col_count = len(headers)
             cell = ws.cell(row=row_idx, column=1, value=u.name)
             cell.font = Font(bold=True)
-            fill = depth_fills[min(depth, len(depth_fills)-1)]
+            fill = depth_fills[min(depth, len(depth_fills) - 1)]
             for c in range(1, col_count + 1):
                 ws.cell(row=row_idx, column=c).fill = fill
             row_idx += 1
@@ -212,13 +214,15 @@ class EmployeeReportExportView(LoginRequiredMixin, PermissionRequiredMixin, View
                     # merge and label institutional
                     col = group_col_start
                     if inst_len:
-                        ws.merge_cells(start_row=row_idx, start_column=col, end_row=row_idx, end_column=col+inst_len-1)
+                        ws.merge_cells(start_row=row_idx, start_column=col, end_row=row_idx,
+                                       end_column=col + inst_len - 1)
                         cell = ws.cell(row=row_idx, column=col, value='Datos Institucionales')
                         cell.alignment = Alignment(horizontal='center')
                         cell.font = Font(bold=True)
                     col += inst_len
                     if pers_len:
-                        ws.merge_cells(start_row=row_idx, start_column=col, end_row=row_idx, end_column=col+pers_len-1)
+                        ws.merge_cells(start_row=row_idx, start_column=col, end_row=row_idx,
+                                       end_column=col + pers_len - 1)
                         cell = ws.cell(row=row_idx, column=col, value='Datos Personales')
                         cell.alignment = Alignment(horizontal='center')
                         cell.font = Font(bold=True)
@@ -301,8 +305,6 @@ class PersonListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
             'employee_profile__area',
             'employee_profile__employment_status',
             'marital_status'
-        ).annotate(
-            full_name_str=Concat('first_name', Value(' '), 'last_name', output_field=CharField())
         ).order_by('-pk')
 
         q = self.request.GET.get('q')
@@ -327,21 +329,19 @@ class PersonListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
                     Q(first_name__icontains=term) |
                     Q(last_name__icontains=term) |
                     Q(document_number__icontains=term) |
-                    Q(email__icontains=term) |
-                    Q(full_name_str__icontains=term)
+                    Q(email__icontains=term)
                 )
-
-        if cedula:
-            qs = qs.filter(document_number__icontains=cedula)
 
         if nombres:
             terms = [t.strip() for t in nombres.split() if t.strip()]
             for term in terms:
                 qs = qs.filter(
                     Q(first_name__icontains=term) |
-                    Q(last_name__icontains=term) |
-                    Q(full_name_str__icontains=term)
+                    Q(last_name__icontains=term)
                 )
+
+        if cedula:
+            qs = qs.filter(document_number__icontains=cedula)
 
         if area_id:
             unit_ids = self.get_unit_tree_ids(area_id)
@@ -437,41 +437,49 @@ class PersonListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
             'status': self.request.GET.get('status', ''),
         }
 
-        # --- 3. ESTADÍSTICAS DINÁMICAS (con el filtro actual) ---
-        from employee.models import Employee
-
-        # Códigos de estados activos
         active_status_codes = ['EMPLEADO', 'TRABAJADOR', 'CONTRATADO', 'PROFESIONAL']
 
-        filtered_people = getattr(self, 'object_list', None) or self.get_filtered_people_queryset()
+        # Evaluamos si hay filtros activos
+        has_filters = any([
+            self.request.GET.get('q'),
+            self.request.GET.get('area'),
+            self.request.GET.get('is_active'),
+            self.request.GET.get('status')
+        ])
 
-        # Estadísticas sobre el resultado filtrado actual
-        active_employees = Employee.objects.filter(
-            person__in=filtered_people,
-            employment_status__code__in=active_status_codes,
-            is_active=True
-        )
+        if has_filters:
+            filtered_people = getattr(self, 'object_list', None) or self.get_filtered_people_queryset()
+            # Subconsulta limpia solo con IDs y sin ordenamiento
+            person_ids = filtered_people.values_list('id', flat=True).order_by()
+            active_employees = Employee.objects.filter(
+                person_id__in=person_ids,
+                employment_status__code__in=active_status_codes,
+                is_active=True
+            )
+        else:
+            # Si se limpia o carga inicial: consulta directa sin joins innecesarios
+            active_employees = Employee.objects.filter(
+                employment_status__code__in=active_status_codes,
+                is_active=True
+            )
 
-        stats_qs = active_employees.values(
+        stats_qs = list(active_employees.values(
             'employment_status__name',
             'employment_status__code',
             'employment_status__id'
-        ).annotate(total=Count('id')).order_by('-total')
+        ).annotate(total=Count('id')).order_by('-total'))
 
-        # Convertimos a lista para fácil manejo en template
         stats = []
-        total_active_employees = active_employees.count()
+        total_active_employees = sum(item['total'] for item in stats_qs)
 
-        # Tarjeta "Total Activos"
         stats.append({
             'label': 'Total Activos',
             'count': total_active_employees,
             'icon': 'fa-users',
             'class': 'color-one',
-            'filter_val': ''  # Vacío limpia el filtro
+            'filter_val': ''
         })
 
-        # Tarjetas dinámicas por cada estado activo
         icons_map = {
             'EMPLEADO': 'fa-user-tie',
             'TRABAJADOR': 'fa-hard-hat',
@@ -489,7 +497,6 @@ class PersonListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
                 'class': colors[idx] if idx < len(colors) else 'color-one',
                 'filter_val': item['employment_status__id']
             })
-
 
         context['stats_cards'] = stats
         return context
@@ -831,7 +838,7 @@ def person_quick_view_partial(request, pk):
             institutional_data = InstitutionalData.objects.filter(employee=employee).first()
 
         # Si faltan datos institucionales o partida, podemos mostrar el modal con mensaje informativo
-        return render(request, 'person/partials/partial_person_quick_view.html', {
+        return render(request, 'person/modals/modal_person_quick_view.html', {
             'person': person,
             'budget': budget,
             'institutional_data': institutional_data

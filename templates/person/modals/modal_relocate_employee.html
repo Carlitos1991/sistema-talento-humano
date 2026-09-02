@@ -1,11 +1,13 @@
 <div id="modal-relocate-employee" class="modal-overlay hidden">
     <div class="modal-container-medium">
-        <div class="modal-header-gradient">
+        <div class="modal-header-medium">
             <div class="header-content-group">
                 <div class="header-icon-circle"><i class="fa-solid fa-sitemap"></i></div>
-                <h3 class="header-title-main">Reubicar Empleado</h3>
+                <h3 class="header-title">Reubicar Empleado</h3>
             </div>
-            <button type="button" class="btn-close-circle" @click="closeModal"><i class="fa-solid fa-xmark"></i>
+            <!-- CORRECCIÓN AQUÍ: Se añade el ID -->
+            <button type="button" class="btn-close-circle" onclick="closeModal('modal-relocate-employee')">
+                <i class="fas fa-times"></i>
             </button>
         </div>
         <form id="form-relocate-employee">
@@ -17,7 +19,9 @@
                 </div>
             </div>
             <div class="modal-footer-fixed">
-                <button type="button" onclick="window.closeRelocateModal()" class="btn-default-outline">Cancelar</button>
+                <button type="button" onclick="closeModal('modal-relocate-employee')" class="btn-default-outline">
+                    Cancelar
+                </button>
                 <button type="submit" class="btn-default">
                     <i class="fa-solid fa-check"></i> Guardar Reubicación
                 </button>
