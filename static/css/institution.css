@@ -801,10 +801,6 @@ body.modal-open {
     color: #1e293b;
 }
 
-.modal-body {
-    padding: 1.2rem;
-}
-
 .modal-footer {
     padding: 1rem 1.5rem;
     background-color: #f8fafc;

@@ -1,34 +1,37 @@
-<div class="custom-modal-dialog">
-    <div class="modal-header-refined">
-        <div class="header-content-group">
-            <div class="header-icon-circle"><i class="fas fa-user-tie"></i></div>
-            <h3 class="header-title-main">Asignar Jefe Inmediato</h3>
-        </div>
-        <button type="button" class="btn-close-modal-refined" onclick="closeDynamicModal()">
-            <i class="fas fa-times"></i>
-        </button>
-    </div>
-
-    <form id="assignBossForm" data-unit-id="{{ unit.id }}" method="post" onsubmit="submitAssignBoss(); return false;">
-        {% csrf_token %}
-        <div class="modal-body-custom">
-            <div class="form-section-card">
-                <div class="row g-3">
-                    <div class="col-12 form-group">
-                        <div class="alert alert-info py-2">
-                            <small><i class="fas fa-info-circle"></i> Unidad: <strong>{{ unit.name }}</strong></small>
+<div class="modal-overlay hidden">
+    <div class="modal-container-small">
+        <form action="{{ request.path }}" method="POST" id="assignBossForm" onsubmit="submitAjaxForm(event)">
+            {% csrf_token %}
+            <div class="modal-header-medium">
+                <h3 class="header-title">
+                    <i class="fa-solid fa-layer-group me-2"></i>
+                    <span>Asignar Jefe Inmediato</span>
+                </h3>
+                <button type="button" class="btn-close-circle" onclick="closeModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-section-card">
+                    <div class="form-group">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> Unidad: <b>{{ unit.name }}</b>
                         </div>
-                        <label class="form-label fw-bold">Funcionario</label>
+                        <label class="form-label bold">Funcionario</label>
                         {{ form.boss }}
-                        <div class="form-text text-muted">Puede buscar por nombre o número de cédula. No se muestran ex-empleados.</div>
+                        <div class="form-text text-muted">Puede buscar por nombre o número de cédula. No se
+                            muestran ex-empleados.
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <div class="modal-footer-fixed">
-            <button type="button" class="btn-cancel" onclick="closeDynamicModal()">Cancelar</button>
-            <button type="button" class="btn-save" onclick="submitAssignBoss()"><i class="fas fa-save"></i> Guardar Asignación</button>
-        </div>
-    </form>
+            <div class="modal-footer-fixed">
+                <button type="button" class="btn-default-outline" onclick="closeModal()">Cancelar</button>
+                <button type="submit" class="btn-default">
+                    <i class="fas fa-save me-1"></i> Guardar Asignación
+                </button>
+            </div>
+        </form>
+    </div>
 </div>

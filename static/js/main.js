@@ -14,24 +14,38 @@ const getCSRF = () => {
     }
     return '';
 };
+// CONFIGURACIÓN GLOBAL DE SWEETALERT2
+if (typeof Swal !== 'undefined') {
+    window.Swal = Swal.mixin({
+        // 1. SOLUCIÓN AL MOVIMIENTO DE LA TABLA:
+        scrollbarPadding: false,
+        heightAuto: false,
+
+        // 2. SOLUCIÓN AL DISEÑO DE BOTONES:
+        buttonsStyling: false, // Desactiva los colores en línea por defecto de Swal
+        customClass: {
+            // Aplica las hermosas clases que ya tienes en style.css
+            confirmButton: 'swal2-confirm btn-swal-success',
+            cancelButton: 'swal2-cancel btn-swal-cancel'
+        }
+    });
+}
 
 // 2. MODALES ESTÁTICOS (Para los que ya están en el HTML como el de "Nuevo")
 window.openModal = function (id) {
     const modal = document.getElementById(id);
     if (modal) {
-        modal.classList.remove('hidden');
-        document.body.classList.add('no-scroll');
-        // Inicializar Select2 si hay dentro
         $(modal).find('select').select2({
-            width: '100%',
-            dropdownParent: $(modal)
+            width: '100%'
         });
+        document.body.classList.add('no-scroll');
+        modal.classList.remove('hidden');
     } else {
         console.error("No se encontró el modal con ID: " + id);
     }
 };
 
-// 3. MODALES DINÁMICOS (Para los que cargan datos del servidor como "Editar")
+// 3. MODALES DINÁMICOS
 window.openAjaxModal = function (url, callback = null) {
     fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
         .then(response => {
@@ -44,14 +58,19 @@ window.openAjaxModal = function (url, callback = null) {
 
             const modal = root.querySelector('.modal-overlay');
             if (modal) {
-                modal.classList.remove('hidden');
                 document.body.classList.add('no-scroll');
 
-                // Auto-inicializar Select2 en el contenido inyectado
-                $(modal).find('select').select2({
-                    width: '100%',
-                    dropdownParent: $(modal)
-                });
+                // 1. PRIMERO quitamos el hidden para que el navegador asigne el alto real
+                modal.classList.remove('hidden');
+
+                // 2. LUEGO inicializamos Select2 dándole tiempo al DOM de pintar (10ms es suficiente)
+                setTimeout(() => {
+                    $(modal).find('select').select2({
+                        width: '100%',
+                        // Al estar ya visible, no forzará un recálculo violento en Flexbox
+                        dropdownParent: $(modal).find('.modal-body-custom').length ? $(modal).find('.modal-body-custom') : $(modal)
+                    });
+                }, 10);
             }
             if (callback) callback(root);
         })
@@ -135,7 +154,13 @@ window.deleteRecordAjax = function (url, itemName) {
         text: "Esta acción no se puede deshacer.",
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#d33',
+
+        // Reemplazamos confirmButtonColor por tus clases CSS
+        customClass: {
+            confirmButton: 'swal2-confirm btn-swal-danger',
+            cancelButton: 'swal2-cancel btn-swal-cancel'
+        },
+
         confirmButtonText: 'Sí, eliminar',
         cancelButtonText: 'Cancelar'
     }).then((result) => {

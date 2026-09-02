@@ -241,39 +241,6 @@ a:hover {
 .badge-info { background: var(--info-color); color: white; }
 .badge-secondary { background: var(--text-secondary); color: white; }
 
-/* === ALERTS === */
-.alert {
-    padding: var(--spacing-md);
-    border-radius: var(--radius-md);
-    margin-bottom: var(--spacing-md);
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-sm);
-}
-
-.alert-success {
-    background: #d1fae5;
-    color: #065f46;
-    border-left: 4px solid var(--success-color);
-}
-
-.alert-warning {
-    background: #fef3c7;
-    color: #92400e;
-    border-left: 4px solid var(--warning-color);
-}
-
-.alert-danger {
-    background: #fee2e2;
-    color: #991b1b;
-    border-left: 4px solid var(--danger-color);
-}
-
-.alert-info {
-    background: #dbeafe;
-    color: #1e40af;
-    border-left: 4px solid var(--info-color);
-}
 
 /* === TABLAS === */
 table {
@@ -324,9 +291,6 @@ tbody tr:hover {
 }
 
 /* === FORMULARIOS === */
-.form-group {
-    margin-bottom: var(--spacing-md);
-}
 
 label {
     display: block;

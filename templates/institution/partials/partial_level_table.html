@@ -5,27 +5,26 @@
                data-page-size="10">
             <thead>
             <tr>
-                <th class="no-sort" style="width: 10%"> Orden</th>
-                <th style="width: 55%"> Nombre del Nivel</th>
-                <th style="width: 15%"> Estado</th>
+                <th class="no-sort width-10"> Orden</th>
+                <th class="width-55"> Nombre del Nivel</th>
+                <th class="width-15"> Estado</th>
                 {% if perms.institution.change_organizationallevel %}
-                    <th style="width: 25%" class="=no-sort"><i class="fas fa-cogs"></i> Acciones</th>
+                    <th class="=no-sort width-25"><i class="fas fa-cogs"></i> Acciones</th>
                 {% endif %}
             </tr>
             </thead>
             <tbody id="table-body">
             {% if levels %}
                 {% for lvl in levels %}
-                    <tr class="level-row" id="row-{{ lvl.id }}" data-status="{{ lvl.is_active|yesno:'true,false' }}">
-                        <td class="fw-bold text-center" style="width: 80px;">{{ lvl.level_order }}</td>
+                    <tr id="row-{{ lvl.id }}" data-status="{{ lvl.is_active|yesno:'true,false' }}">
+                        <td class="bold text-center">{{ lvl.level_order }}</td>
                         <td>{{ lvl.name }}</td>
                         <td>
                         <span id="badge-{{ lvl.id }}"
-                              class="status-badge {% if lvl.is_active %}active{% else %}inactive{% endif %}">
+                              class="badge {% if lvl.is_active %}badge-green{% else %}badge-red{% endif %}">
                             {% if lvl.is_active %}Activo{% else %}Inactivo{% endif %}
                         </span>
                         </td>
-
                         {% if perms.institution.change_organizationallevel %}
                             <td class="actions text-center">
                                 <div class="actions-wrapper">

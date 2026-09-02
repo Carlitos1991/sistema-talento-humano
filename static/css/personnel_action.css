@@ -158,13 +158,6 @@
     padding: 1.5rem !important;
 }
 
-/* Asegurar que las tarjetas de información tengan sombra suave */
-.form-section-card {
-    border: 1px solid #e5e7eb !important;
-    margin-bottom: 1rem !important;
-    border-radius: 8px !important;
-}
-
 /* Asegurar que el contenido inyectado se distribuya correctamente */
 #modal-detail-content {
     display: flex !important;

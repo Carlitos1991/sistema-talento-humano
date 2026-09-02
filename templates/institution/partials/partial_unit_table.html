@@ -19,7 +19,7 @@
             <tbody id="table-body">
             {% if units %}
                 {% for unit in units %}
-                    <tr class="unit-row" id="row-{{ unit.id }}" data-status="{{ unit.is_active|yesno:'true,false' }}"
+                    <tr id="row-{{ unit.id }}" data-status="{{ unit.is_active|yesno:'true,false' }}"
                         data-level="{{ unit.level.id }}" data-parent="{{ unit.parent.id|default:'' }}">
                         <td><span class="badge badge-blue">{{ unit.code|default:"--" }}</span></td>
                         <td>
@@ -76,23 +76,13 @@
                             <td class="actions text-center">
                                 <div class="actions-wrapper">
                                     {% if perms.institution.change_administrativeunit %}
-                                        {% with max_level=level_stats|last %}
-                                            {% if unit.level.level_order < max_level.order %}
-                                                <button type="button"
-                                                        class="btn-icon btn-success-action"
-                                                        onclick="openCreateDependency('{{ unit.id }}', '{{ unit.level.level_order|add:1 }}')"
-                                                        title="Crear Dependencia">
-                                                    <i class="fas fa-plus"></i>
-                                                </button>
-                                            {% endif %}
-                                        {% endwith %}
                                         <button type="button" class="btn-thirteenth"
-                                                onclick="openAssignBoss('{{ unit.id }}')"
-                                                title="Asignar Jefe Inmediato">
-                                            <i class="fas fa-user-tie"></i>
+                                                onclick="openAjaxModal('{% url 'institution:unit_assign_boss' unit.id %}')"
+                                                title="Asignar Jefe Inmediato"><i class="fas fa-user-tie"></i>
                                         </button>
                                     {% endif %}
-                                    <button class="btn-seventh" onclick="openEditUnit({{ unit.id }})"
+                                    <button class="btn-seventh"
+                                            onclick="openAjaxModal('{% url 'institution:unit_update' unit.id %}')"
                                             title="Editar Unidad"><i class="fas fa-pencil"></i>
                                     </button>
                                     <a href="{% url 'institution:unit_detail_view' unit.id %}" class="btn-second"

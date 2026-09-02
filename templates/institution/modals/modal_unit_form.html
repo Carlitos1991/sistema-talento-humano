@@ -1,94 +1,77 @@
 <div class="modal-overlay hidden">
-    <div class="modal-overlay" :class="{ 'hidden': !isVisible }" role="dialog">
-        <div class="modal-container-medium animate-scale-in">
-            <form @submit.prevent="submitForm" id="unitForm">
-                {% csrf_token %}
-                <!-- Selects Django ocultos pero presentes para sincronización de datos -->
-                <div style="display:none !important; position:absolute; visibility:hidden;">
-                    {{ form.level }}
-                    {{ form.parent }}
-                    {{ form.boss }}
-                </div>
+    <div class="modal-container-medium">
+        <form @submit.prevent="submitForm" id="unitForm">
+            {% csrf_token %}
+            {#            <div>#}
+            {#                {{ form.level }}#}
+            {#                {{ form.parent }}#}
+            {#                {{ form.boss }}#}
+            {#            </div>#}
 
-                <div class="modal-header-medium modal-header-gradient">
-                    <h3 class="modal-title text-white">
-                        <i class="fa-solid fa-sitemap me-2"></i> Estructura Organizacional
-                        <span v-text="modalTitle"> </span>
-                    </h3>
-                    <button type="button" class="btn-close-modal text-white-opacity"
-                            @click="closeModal">&times;
-                    </button>
-                </div>
+            <div class="modal-header-medium">
+                <h3 class="header-title">
+                    <i class="fa-solid fa-layer-group me-2"></i>
+                    <span>Estructura Organizacional</span>
+                </h3>
+                <button type="button" class="btn-close-circle" onclick="closeModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
 
-                <div class="modal-body-content modal-body-custom">
-
-                    <!-- Errores generales -->
-                    <div v-if="errors.__all__" class="alert alert-danger mb-3">
-                        <span v-for="err in errors.__all__">[[ err ]]</span>
+            <div class="modal-body-content modal-body-custom">
+                <div class="form-section-card">
+                    <!-- CÓDIGO -->
+                    <div class="form-group mb-3">
+                        <label class="form-label">
+                            Código <span class="text-danger">*</span>
+                            <small class="text-muted ms-1">(generado automáticamente)</small>
+                        </label>
+                        {{ form.code }}
                     </div>
 
-                    <div class="form-section-card">
-
-                        <!-- CÓDIGO -->
-                        <div class="form-group mb-3">
-                            <label class="form-label">
-                                Código <span class="text-danger">*</span>
-                                <small class="text-muted ms-1">(generado automáticamente)</small>
-                            </label>
-                            {{ form.code }}
-                            <div class="text-error" v-if="errors.code">[[ errors.code[0] ]]</div>
-                        </div>
-
-                        <!-- NOMBRE -->
-                        <div class="form-group mb-3">
-                            <label class="form-label">
-                                Nombre de la Unidad <span class="text-danger">*</span>
-                            </label>
-                            {{ form.name }}
-                            <div class="text-error" v-if="errors.name">[[ errors.name[0] ]]</div>
-                        </div>
-
-                        <div class="row g-3">
-                            <!-- UBICACIÓN -->
-                            <div class="col-md-6 form-group">
-                                <label class="form-label">Ubicación</label>
-                                {{ form.address }}
-                                <div class="text-error" v-if="errors.address">[[ errors.address[0] ]]</div>
-                            </div>
-                            <!-- TELÉFONO -->
-                            <div class="col-md-6 form-group">
-                                <label class="form-label">Teléfono</label>
-                                {{ form.phone }}
-                                <div class="text-error" v-if="errors.phone">[[ errors.phone[0] ]]</div>
-                            </div>
-                        </div>
-
-                        <!-- ESTADO — solo visible al editar -->
-                        <div class="form-group mt-3" v-if="isEditing">
-                            <label class="form-label mb-2">Estado del Registro</label>
-                            <div class="d-flex align-items-center gap-3">
-                                <label class="toggle-switch">
-                                    <input type="checkbox" id="id_is_active" name="is_active" v-model="isActive">
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
-                            <div class="text-error" v-if="errors.is_active">
-                                [[ errors.is_active[0] ]]
-                            </div>
-                        </div>
-
+                    <!-- NOMBRE -->
+                    <div class="form-group mb-3">
+                        <label class="form-label">
+                            Nombre de la Unidad <span class="text-danger">*</span>
+                        </label>
+                        {{ form.name }}
                     </div>
-                </div>
 
-                <div class="modal-footer-medium modal-footer-spaced">
-                    <button type="button" class="btn-cancel" @click="closeModal">
-                        Cancelar
-                    </button>
-                    <button type="submit" class="btn-save shadow-md">
-                        <i class="fa-solid fa-save me-2"></i> Guardar
-                    </button>
+                    <div class="row g-3">
+                        <!-- UBICACIÓN -->
+                        <div class="col-md-6 form-group">
+                            <label class="form-label">Ubicación</label>
+                            {{ form.address }}
+                        </div>
+                        <!-- TELÉFONO -->
+                        <div class="col-md-6 form-group">
+                            <label class="form-label">Teléfono</label>
+                            {{ form.phone }}
+                        </div>
+                    </div>
+
+                    <!-- ESTADO — solo visible al editar -->
+                    <div class="form-group mt-3" v-if="isEditing">
+                        <label class="form-label mb-2">Estado del Registro</label>
+                        <div class="d-flex align-items-center gap-3">
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="id_is_active" name="is_active" v-model="isActive">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="text-error" v-if="errors.is_active">
+                        </div>
+                    </div>
+
                 </div>
-            </form>
-        </div>
+            </div>
+
+            <div class="modal-footer-medium modal-footer-spaced">
+                <button type="button" class="btn-default-outline" onclick="closeModal()">Cancelar</button>
+                <button type="submit" class="btn-default">
+                    <i class="fas fa-save me-1"></i> Guardar
+                </button>
+            </div>
+        </form>
     </div>
 </div>
