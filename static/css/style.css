@@ -1140,6 +1140,7 @@ h1, h2, h3, h4, h5, h6 {
     font-size: 0.875rem;
     line-height: 1.4;
 }
+
 .alert i {
     font-size: 1.15rem;
 }
@@ -1166,6 +1167,139 @@ h1, h2, h3, h4, h5, h6 {
     background-color: #f0f7ff;
     color: #1d4ed8;
     border: 1px solid #bfdbfe;
+}
+
+.alert-gray {
+    background: #ffffff;
+    color: #555555;
+    border-left: 4px solid var(--success-color);
+}
+
+/*Tarjetas*/
+/*Tarjetas*/
+.general-card {
+    /* Variables por defecto (Azul base) */
+    --card-accent: #2563eb;
+    --card-bg: #f8faff;
+    --card-bg-hover: #eff6ff; /* Tinte suave al hover */
+    --card-border: #dbeafe;
+    --card-header-border: #e2e8f0;
+
+    background-color: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-left: 4px solid var(--card-accent);
+    border-radius: 6px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    cursor: pointer;
+    text-decoration: none !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.general-card:hover {
+    background-color: var(--card-bg-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px -2px rgba(0, 0, 0, 0.1);
+    text-decoration: none !important;
+}
+
+/* Anular estilos por defecto de enlace */
+.general-card * {
+    text-decoration: none !important;
+}
+
+.general-card .card-header {
+    min-height: 4.2rem;
+    display: flex;
+    align-items: center;
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid var(--card-header-border);
+    background: transparent;
+}
+
+.general-card .card-title {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #1e293b;
+    text-transform: uppercase;
+    line-height: 1.3;
+}
+
+.general-card .card-body {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    gap: 0.5rem;
+    color: #4b5563;
+    font-size: 0.88rem;
+}
+
+.general-card .card-body i {
+    color: var(--card-accent);
+    margin-right: 0.35rem;
+}
+
+/* ==========================================
+   VARIANTES CON COLOR BASE Y HOVER SUAVE
+   ========================================== */
+
+/* Azul / Primario */
+.general-card.card-primary {
+    --card-accent: #10234a;
+    --card-bg: #f8faff;
+    --card-bg-hover: #e0edff;
+    --card-border: #bfdbfe;
+    --card-header-border: #dbeafe;
+}
+
+/* Verde / Éxito */
+.general-card.card-success {
+    --card-accent: #059669;
+    --card-bg: #f0fdf4;
+    --card-bg-hover: #dcfce7;
+    --card-border: #bbf7d0;
+    --card-header-border: #dcfce7;
+}
+
+/* Naranja / Advertencia */
+.general-card.card-warning {
+    --card-accent: #d97706;
+    --card-bg: #fffbeb;
+    --card-bg-hover: #fef3c7;
+    --card-border: #fde68a;
+    --card-header-border: #fef3c7;
+}
+
+/* Rojo / Peligro */
+.general-card.card-danger {
+    --card-accent: #dc2626;
+    --card-bg: #fef2f2;
+    --card-bg-hover: #fee2e2;
+    --card-border: #fecaca;
+    --card-header-border: #fee2e2;
+}
+
+/* Púrpura */
+.general-card.card-purple {
+    --card-accent: #7c3aed;
+    --card-bg: #faf5ff;
+    --card-bg-hover: #f3e8ff;
+    --card-border: #e9d5ff;
+    --card-header-border: #f3e8ff;
+}
+
+/* Gris / Neutro */
+.general-card.card-secondary {
+    --card-accent: #4b5563;
+    --card-bg: #f9fafb;
+    --card-bg-hover: #f1f5f9;
+    --card-border: #e5e7eb;
+    --card-header-border: #e5e7eb;
 }
 
 /* Avatares */

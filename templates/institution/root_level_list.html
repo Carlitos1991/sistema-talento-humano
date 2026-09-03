@@ -10,7 +10,7 @@
 {% endblock %}
 
 {% block content %}
-    <div class="root-list-container">
+    <div>
         <!-- 1. Header -->
         <div class="header-card">
             <div>
@@ -32,43 +32,21 @@
 
             <div class="grid-dynamic">
                 {% for unit in units %}
-                    <div class="dependency-card animate-scale-in">
-
-                        <!-- 1. HEADER -->
-                        <div class="card-header-section">
-                            {% if perms.institution.change_administrativeunit %}
-                                <h2 class="card-unit-title"
-                                    onclick="openAjaxModal('{% url 'institution:unit_update' unit.id %}')">{{ unit.name }}</h2>
-                            {% else %}
-                                <h2 class="card-unit-title">{{ unit.name }}</h2>
-                            {% endif %}
-
+                    <a href="{% url 'institution:unit_detail_view' unit.id %}" class="general-card card-primary">
+                        <div class="card-header">
+                            <h3 class="card-title">{{ unit.name }}</h3>
                         </div>
-
-
-                        <!-- 2. BODY -->
-                        <div class="card-body-section">
-                            <div class="card-info-row">
+                        <div class="card-body">
+                            <div class="card-info-item">
                                 <i class="fas fa-map-marker-alt"></i>
                                 <span>{{ unit.address|default:"Sin dirección" }}</span>
                             </div>
-                            <div class="card-info-row">
-                                <i class="fas fa-phone-alt"></i>
+                            <div class="card-info-item">
+                                <i class="fas fa-phone"></i>
                                 <span>{{ unit.phone|default:"Sin teléfono" }}</span>
                             </div>
                         </div>
-
-                        <!-- 3. FOOTER -->
-                        <div class="card-footer-section">
-                            <div class="btn-pill-group">
-                                <a href="{% url 'institution:unit_detail_view' unit.id %}"
-                                   class="btn-pill outline">
-                                    <i class="fas fa-eye"></i> Detalle
-                                </a>
-                            </div>
-                        </div>
-
-                    </div>
+                    </a>
                 {% endfor %}
             </div>
 
@@ -81,7 +59,6 @@
                     <i class="fas fa-users me-2"></i>
                     <h3>Nómina de Personal</h3>
                     <div class="divider-line"></div>
-                    <!-- Botón imprimir eliminado -->
                 </div>
 
                 <div class="employees-grid">

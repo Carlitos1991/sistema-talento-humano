@@ -14,7 +14,7 @@
             <div class="header-card institution-header-card">
                 <div class="header-left">
                     <span class="icon icon-circle-large"><i class="fa-solid fa-building"></i></span>
-                    <button class="btn btn-header-back" onclick="window.history.back()">
+                    <button class="btn-secondary" onclick="window.history.back()">
                         <i class="fa-solid fa-arrow-left"></i> Regresar
                     </button>
                 </div>
@@ -29,7 +29,7 @@
                             {% if perms.institution.change_administrativeunit %}
                                 <div class="unit-actions {% if unit.level.level_order <= 1 %}unit-actions-single{% endif %}">
                                     <button type="button" class="btn-warning " title="Editar Unidad"
-                                            onclick="openAjaxModal('{% url 'institution:level_update' unit.id %}')">
+                                            onclick="openAjaxModal('{% url 'institution:unit_update' unit.id %}')">
                                         <i class="fas fa-pencil"></i>Editar
                                     </button>
                                     {% if unit.level.level_order > 1 %}
@@ -73,7 +73,7 @@
                                     </a>
                                     <button type="button"
                                             class="btn btn-profile-custom btn-profile-green mt-2 btn-boss-profile"
-                                            onclick="openAssignBoss({{ unit.id }})"
+                                            onclick="openAjaxModal('{% url 'institution:unit_assign_boss' unit.id %}')"
                                             title="Asignar Jefe Inmediato">
                                         <i class="fa-solid fa-retweet"></i> Cambiar
                                     </button>
@@ -86,8 +86,8 @@
                                 <h2 class="boss-name boss-empty-title"><i
                                         class="fa-solid fa-user-tie"></i> ASIGNAR JEFE INMEDIATO</h2>
                                 <button type="button"
-                                        class="btn-icon btn-list-action"
-                                        onclick="openAssignBoss({{ unit.id }})"
+                                        class="btn-sixth"
+                                        onclick="openAjaxModal('{% url 'institution:unit_assign_boss' unit.id %}')"
                                         title="Asignar Jefe Inmediato">
                                     <i class="fas fa-user-tie"></i>
                                 </button>
@@ -259,7 +259,6 @@
                     {% if employees and employees|length > 0 %}
                         {% for emp in employees %}
                             {% if unit.boss and emp.id == unit.boss.id %}
-                                {# Omitir jefe inmediato #}
                             {% else %}
                                 <div class="nomina-card {% if emp.institutional_data.original_dependency and emp.institutional_data.original_dependency.id != unit.id %}nomina-card-relocated{% endif %}">
                                     {% if emp.person.photo %}
