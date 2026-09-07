@@ -101,18 +101,15 @@
                     </span>
                 </div>
             </div>
-            <div class="header-actions-wrapper">
-                <a href="{% url 'person:person_list' %}" class="btn-header-premium btn-header-back">
+            <div class="header-title header-actions-group">
+                <a href="{% url 'person:person_list' %}" class="btn-warning-outline">
                     <i class="fa-solid fa-arrow-left"></i> Volver
                 </a>
-
-                <button @click="openAuditModal({{ person.id }})" class="btn btn-outline-primary">
-                    <i class="fa-solid fa-shield-halved"></i> Auditoría
-                </button>
-
                 {% if can_edit_person %}
-                    <button @click="openEditPersonModal({{ person.id }})" class="btn btn-save"
-                            style="background: linear-gradient(to right, #fbbf24, #f59e0b);">
+                    <button type="button" @click="openAuditModal({{ person.id }})" class="btn-secondary">
+                        <i class="fa-solid fa-shield-halved"></i> Auditoría
+                    </button>
+                    <button type="button" @click="openEditPersonModal({{ person.id }})" class="btn-primary">
                         <i class="fa-solid fa-user-pen"></i> Editar Perfil
                     </button>
                 {% endif %}

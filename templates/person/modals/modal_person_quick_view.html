@@ -1,12 +1,12 @@
 {% load static %}
 <div class="modal-overlay">
-    <div class="modal-container-medium" style="max-width: 850px;">
+    <div class="modal-container-medium">
 
         <!-- HEADER -->
-        <div class="modal-header modal-header-gradient">
+        <div class="modal-header-medium">
             <div class="header-content-group">
                 <div class="header-icon-circle"><i class="fa-solid fa-id-badge"></i></div>
-                <h3 class="header-title-main">Ficha Rápida: {{ person.full_name }}</h3>
+                <h3 class="header-title">Ficha Rápida: {{ person.full_name }}</h3>
             </div>
             <button type="button" class="btn-close-circle" onclick="closeModal()">
                 <i class="fas fa-times"></i>
@@ -52,8 +52,9 @@
                     </div>
 
                     <div class="info-data-row border-bottom pb-1">
-                        <label class="text-muted mb-0">Edad</label>
-                        <span class="fw-bold text-primary">{{ person.age|default:"--" }} años</span>
+                        <label class="text-muted mb-0">Fecha de nacimiento</label>
+                        <span class="fw-bold text-primary">{{ person.birth_date|date:"Y-m-d" }}
+                            <span>({{ person.age|default:"--" }} años)</span>
                     </div>
                     <div class="info-data-row border-bottom pb-1">
                         <label class="text-muted mb-0">Estado Civil</label>

@@ -612,17 +612,23 @@ const app = createApp({
 
         let visibilities = {};
         try {
+            const containerData = appElement?.dataset?.tabVisibilities;
             const dataScript = document.getElementById('tab-visibilities-data');
-            if (dataScript) {
-                visibilities = JSON.parse(dataScript.textContent);
+            const rawData = containerData || (dataScript ? dataScript.textContent : '{}');
+            if (rawData) {
+                visibilities = JSON.parse(rawData);
             }
         } catch (e) {
             console.error("Error parsing tab visibilities", e);
+            visibilities = {};
         }
 
         const getSavedVisibility = (tabId) => {
-            if (visibilities.hasOwnProperty(tabId)) {
-                return Boolean(visibilities[tabId]);
+            if (Object.prototype.hasOwnProperty.call(visibilities, tabId)) {
+                const value = visibilities[tabId];
+                if (typeof value === 'boolean') return value;
+                if (typeof value === 'string') return value.toLowerCase() === 'true';
+                return Boolean(value);
             }
             // Fallback for default tabs if not in the dataset
             const defaultTabs = ['personal', 'curriculum', 'institutional', 'economic'];

@@ -40,6 +40,8 @@
              data-courses="{{ curriculum_courses_count|default:0 }}"
              data-hidden-tabs="{{ restricted_tab_ids|default:'' }}">
 
+            <script id="tab-visibilities-data" type="application/json">{{ tab_visibilities|safe }}</script>
+
             <!-- Banner informativo (mantener diseño previo bajo la cabecera) -->
             <div class="banner-employee-detail">
                 <div class="banner-info-employee-detail">

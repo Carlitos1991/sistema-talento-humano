@@ -10,7 +10,7 @@
             <p>Gestión de documentos, como memorandos, oficios, informes técnicos</p>
         </div>
         {% if perms.documents.add_document %}
-            <button id="btn-add-document" type="button" class="btn btn-create" onclick="openDocumentModal()">
+            <button id="btn-add-document" type="button" class="btn-secondary" onclick="openDocumentModal()">
                 <i class="fas fa-plus-circle"></i> Nuevo Documento
             </button>
         {% endif %}
@@ -71,9 +71,6 @@
                     <div class="search-box" style="display:flex; align-items:center; width:120%; max-width:720px;">
                         <input type="text" id="table-search-document" class="input-field"
                                placeholder="Buscar por número, responsable">
-                        <button type="submit" class="search-btn">
-                            <i class="fas fa-search"></i>
-                        </button>
                     </div>
                 </div>
             </div>

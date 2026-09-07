@@ -14,13 +14,13 @@
         {% if curriculum_obj and curriculum_obj.pdf_file %}
             <!-- BOTÓN VER: Abre en pestaña nueva -->
             <a href="{{ curriculum_obj.pdf_file.url }}" target="_blank"
-               class="btn-header-premium" style="background: #3b82f6; color: white;">
+               class="btn-seventh">
                 <i class="fa-solid fa-file-pdf"></i>
             </a>
 
             <!-- BOTÓN REEMPLAZAR -->
             {% if can_edit_person %}
-                <button class="btn-header-premium" style="background: #10b981; color: white;"
+                <button class="btn-eleventh"
                         onclick="document.getElementById('pdfInput').click()">
                     <i class="fa-solid fa-file-arrow-up"></i>
                 </button>
@@ -28,7 +28,7 @@
         {% else %}
             <!-- BOTÓN SUBIR (Cuando no existe archivo) -->
             {% if can_edit_person %}
-                <button class="btn-header-premium" style="background: #10b981; color: white;"
+                <button class="btn-primary"
                         onclick="document.getElementById('pdfInput').click()">
                     <i class="fa-solid fa-cloud-arrow-up"></i> SUBIR HOJA DE VIDA
                 </button>

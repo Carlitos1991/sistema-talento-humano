@@ -3782,6 +3782,22 @@ th.sorted-desc .sort-arrow {
     line-height: 1;
 }
 
+.header-actions-group {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem; /* Espaciado entre los 3 botones */
+    flex-wrap: wrap;
+}
+
+.header-actions-group .btn-warning-outline,
+.header-actions-group .btn-secondary,
+.header-actions-group .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    white-space: nowrap;
+}
+
 /* Cuerpos de modal */
 .modal-body {
     padding: 2rem;
