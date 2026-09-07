@@ -56,11 +56,3 @@
     transform: translateY(-1px);
     box-shadow: 0 2px 4px rgba(220, 38, 38, 0.1);
 }
-
-.content-table .table-controls {
-    display: flex;
-    justify-content: space-between; /* Esto empuja un elemento a la izq y otro a la der */
-    align-items: center;
-    width: 100%;
-    margin-bottom: 15px;
-}

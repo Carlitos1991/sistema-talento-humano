@@ -24,7 +24,6 @@
             {% if people %}
                 {% for person in people %}
                     <tr class="location-row" id="row-{{ person.id }}">
-                        <!-- Cálculo correcto del índice para paginación externa -->
                         <td>{{ page_obj.start_index|add:forloop.counter0 }}</td>
                         <td>
                             <div class="person-info">

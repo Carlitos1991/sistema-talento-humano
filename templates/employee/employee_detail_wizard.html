@@ -109,8 +109,11 @@
                     <button type="button" @click="openAuditModal({{ person.id }})" class="btn-secondary">
                         <i class="fa-solid fa-shield-halved"></i> Auditoría
                     </button>
-                    <button type="button" @click="openEditPersonModal({{ person.id }})" class="btn-primary">
-                        <i class="fa-solid fa-user-pen"></i> Editar Perfil
+                    <button type="button"
+                            class="btn-icon btn-edit-action"
+                            title="Editar Ficha Personal"
+                            onclick="openAjaxModal('{% url 'person:person_update' person.id %}')">
+                        <i class="fa-solid fa-pen-to-square"></i>
                     </button>
                 {% endif %}
             </div>
@@ -206,7 +209,7 @@
             </div>
 
         </div>
-        {% include 'employee/modals/modal_person_edit_wizard.html' %}
+        <div id="modal-root"></div>
         {% include 'person/modals/modal_person_audit.html' %}
         {% include 'employee/modals/modal_academic_title.html' %}
         {% include 'employee/modals/modal_work_experience.html' %}

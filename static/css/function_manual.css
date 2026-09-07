@@ -1323,12 +1323,6 @@ input:checked + .slider:before {
 }
 
 /* SEARCH GRID */
-.search-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-}
-
 .search-full-width {
     grid-column: span 2;
 }

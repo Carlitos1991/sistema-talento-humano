@@ -1,27 +1,25 @@
 # apps/person/views.py
-from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib.auth.decorators import login_required, permission_required
-from django.db.models import Q, Count
-from django.http import JsonResponse, HttpResponse
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.core.paginator import Paginator
+from django.db.models import Count
+from django.db.models import Q
+from django.http import JsonResponse, HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.template.loader import render_to_string
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.http import require_POST
 from django.views.generic import ListView, CreateView, UpdateView, TemplateView
-from django.db.models import Q, Value, CharField
-from django.db.models.functions import Concat
-
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment
 
 from budget.models import BudgetLine
-from core.models import CatalogItem
+from core.models import CatalogItem, Location
 from employee.models import Employee, InstitutionalData
 from institution.models import AdministrativeUnit
-from .models import Person, PersonAuditLog
 from .forms import PersonForm
+from .models import Person, PersonAuditLog
 from .utils import log_person_audit, PERSON_AUDIT_SECTIONS
 
 
@@ -575,65 +573,51 @@ class PersonCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
             return JsonResponse({'success': False, 'message': f'Error interno: {str(e)}'}, status=500)
 
 
+# apps/person/views.py
+
 class PersonUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     model = Person
     form_class = PersonForm
-    template_name = 'person/modals/modal_person_form.html'
+    template_name = 'employee/modals/modal_person_edit_wizard.html'
     permission_required = 'person.change_person'
 
-    def has_permission(self):
-        # Los superadministradores siempre tienen permiso
-        if self.request.user.is_superuser:
-            return True
-        # Para otros usuarios, verificar permiso explícito
-        return super().has_permission()
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        form = self.get_form()
 
-    def post(self, request, *args, **kwargs):
-        try:
-            self.object = self.get_object()
+        # Contexto adicional requerido por el modal
+        context = self.get_context_data(
+            form=form,
+            gender_list=CatalogItem.objects.filter(catalog__code='GENDERS', is_active=True),
+            marital_status_list=CatalogItem.objects.filter(catalog__code='MARITAL_STATUSES', is_active=True),
+            blood_type_list=CatalogItem.objects.filter(catalog__code='BLOOD_TYPES', is_active=True),
+            country_list=Location.objects.filter(level=1, is_active=True),
+            relationships=CatalogItem.objects.filter(catalog__code='RELATIONSHIPS', is_active=True),
+            disability_types=CatalogItem.objects.filter(catalog__code='DISABILITY_TYPES', is_active=True),
+        )
 
-            # Verificar si la foto actual existe físicamente
-            if self.object.photo:
-                try:
-                    # Intentar acceder al archivo
-                    if not self.object.photo.storage.exists(self.object.photo.name):
-                        # La foto no existe físicamente, limpiar el campo
-                        print(f"Foto no encontrada: {self.object.photo.name}, limpiando campo...")
-                        self.object.photo = None
-                        self.object.save(update_fields=['photo'])
-                except Exception as e:
-                    # Error al acceder a la foto (ruta inválida, etc), limpiar el campo
-                    print(f"Error al verificar foto: {e}, limpiando campo...")
-                    self.object.photo = None
-                    self.object.save(update_fields=['photo'])
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return render(request, self.template_name, context)
+        return super().get(request, *args, **kwargs)
 
-            # Procesar el formulario
-            if 'photo' in request.FILES:
-                # Hay una nueva foto
-                form = PersonForm(request.POST, request.FILES, instance=self.object)
-            else:
-                # No hay nueva foto
-                form = PersonForm(request.POST, instance=self.object)
+    def form_invalid(self, form):
+        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            context = self.get_context_data(form=form)
+            return render(self.request, self.template_name, context, status=400)
+        return super().form_invalid(form)
 
-            if form.is_valid():
-                form.save()
-                log_person_audit(
-                    request,
-                    self.object,
-                    PersonAuditLog.Action.UPDATE,
-                    PERSON_AUDIT_SECTIONS['personal']
-                )
-                return JsonResponse({'success': True, 'message': 'Datos actualizados correctamente.'})
-            else:
-                # Log de errores para debugging
-                print("Errores de formulario:", form.errors)
-                return JsonResponse({'success': False, 'errors': form.errors}, status=400)
-        except Exception as e:
-            # Log del error real
-            import traceback
-            print("Error en PersonUpdateView:", str(e))
-            traceback.print_exc()
-            return JsonResponse({'success': False, 'message': f'Error interno: {str(e)}'}, status=500)
+    def form_valid(self, form):
+        self.object = form.save()
+        log_person_audit(
+            self.request,
+            self.object,
+            PersonAuditLog.Action.UPDATE,
+            PERSON_AUDIT_SECTIONS['personal']
+        )
+        return JsonResponse({
+            'success': True,
+            'message': 'Datos actualizados correctamente.'
+        })
 
 
 @method_decorator(require_POST, name='dispatch')

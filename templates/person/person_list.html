@@ -3,7 +3,6 @@
 {% block title %}Directorio de Personas | SIGETH{% endblock %}
 
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/person_modal.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -28,10 +27,10 @@
         <!-- 3. Contenedor principal Tabla -->
         <div id="table-app">
             <div class="content-table">
-                <form id="personFiltersForm" class="person-filter-form" onsubmit="return false;">
-                    <div class="person-filter-panel">
-                        <div class="person-filter-grid">
-                            <div class="person-filter-field search-field">
+                <form id="personFiltersForm" onsubmit="return false;">
+                    <div class="search-panel">
+                        <div class="search-grid ">
+                            <div class="person-filter-field">
                                 <div class="search-box person-search-box">
                                     <input type="text" id="searchInput" name="q" class="input-field"
                                            placeholder="Buscar por nombre o cédula" autocomplete="off"
@@ -69,9 +68,9 @@
                         </div>
                     </div>
                 </form>
-                <div class="person-toolbar">
+                <div class="search-toolbar">
                     <div class="table-controls person-filter-controls"></div>
-                    <div class="person-filter-actions">
+                    <div class="search-filter-actions">
                         <button type="submit" form="personFiltersForm" class="btn-primary">
                             <i class="fas fa-search"></i> Buscar
                         </button>

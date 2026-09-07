@@ -6,13 +6,11 @@
    FILTROS INLINE - LISTADO DE PERSONAS
    ======================================== */
 
-.person-filter-controls {
-    padding: 0;
-}
 
-.person-filter-form {
-    width: 100%;
-}
+
+/*.person-filter-form {*/
+/*    width: 100%;*/
+/*}*/
 
 .person-toolbar {
     position: relative;
@@ -24,20 +22,6 @@
     min-height: 52px;
     margin: 10px 0 8px;
 }
-
-.person-toolbar .table-controls.person-filter-controls {
-    position: absolute;
-    left: 0;
-    top: 50%;
-    transform: translateY(-50%);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex: 0 0 auto;
-    margin: 0;
-    padding: 0;
-}
-
 .person-filter-panel {
     display: flex;
     flex-direction: column;
@@ -50,14 +34,7 @@
     box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
 }
 
-.person-filter-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 10px;
-    align-items: end;
-    width: min(100%, 860px);
-    justify-content: center;
-}
+
 
 .person-filter-field {
     display: flex;
@@ -204,12 +181,6 @@
         display: flex;
         justify-content: center;
         min-height: auto;
-    }
-
-    .person-toolbar .table-controls.person-filter-controls {
-        position: static;
-        transform: none;
-        justify-content: flex-start;
     }
 
     .person-filter-actions {

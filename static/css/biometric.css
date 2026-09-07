@@ -784,17 +784,6 @@ input:checked + .toggle-slider:before {
     cursor: pointer;
 }
 
-.search-panel {
-    background-color: #ffffff;
-    border-radius: 8px;
-    padding: 20px;
-    margin: 20px auto;
-    max-width: 750px;
-    width: 95%;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    border: 1px solid #e0e0e0;
-}
-
 .search-form-row {
     display: grid;
     /* Dos columnas iguales para inputs, una automática para botones */
@@ -802,14 +791,6 @@ input:checked + .toggle-slider:before {
     gap: 15px;
     /* IMPORTANTE: Alinea todo a la base inferior */
     align-items: end;
-}
-
-/* Forzamos que los grupos de formulario dentro del panel NO tengan margen inferior */
-.search-panel .form-group {
-    margin-bottom: 0 !important;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
 }
 
 .input-label {

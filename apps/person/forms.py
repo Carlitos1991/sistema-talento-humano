@@ -43,26 +43,20 @@ class PersonForm(BaseFormMixin, forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.fields['has_disability'].widget.attrs.update({'v-model': 'form.has_disability'})
-        self.fields['has_catastrophic_illness'].widget.attrs.update({'v-model': 'form.has_catastrophic_illness'})
-        self.fields['is_substitute'].widget.attrs.update({'v-model': 'form.is_substitute'})
         self.fields['birth_date'].input_formats = ['%Y-%m-%d']
 
         # 1. LOGICA: Preseleccionar "CEDULA" solo al Crear (sin PK)
         if not self.instance.pk:
             try:
-                # Buscamos coincidencias en el catálogo DOCUMENT_TYPES (nombre exacto del modelo)
                 cedula_type = CatalogItem.objects.filter(
                     catalog__code='DOCUMENT_TYPES',
                     name__icontains='CEDULA'
                 ).first()
-
                 if cedula_type:
                     self.fields['document_type'].initial = cedula_type
             except Exception:
-                pass  # Fallo silencioso si no existe el catálogo aún
+                pass
 
-        # 2. LOGICA: Clases CSS y Atributos (Manejo especial para Email)
         placeholders_map = {
             'document_number': '1100025869',
             'first_name': 'JUAN CARLOS',
@@ -76,34 +70,24 @@ class PersonForm(BaseFormMixin, forms.ModelForm):
             'catastrophic_illness_description': 'Descripción de la enfermedad',
             'substitute_family_member_name': 'PEDRO GARCÍA'
         }
-        
+
         for name, field in self.fields.items():
             attrs = {}
-
-            # --- CASO ESPECIAL: EMAIL (Sin mayúsculas) ---
             if name == 'email':
-                attrs['class'] = 'input-field'  # Clase limpia (sin uppercase-input)
-                attrs['placeholder'] = placeholders_map.get(name, '')
-
-            # --- CASO SELECTS (Para Select2) ---
+                attrs['class'] = 'input-field'
             elif isinstance(field.widget, (forms.Select, forms.SelectMultiple)):
                 attrs['class'] = 'input-field select2-field'
-
-            # --- CASO CHECKBOX ---
             elif isinstance(field.widget, forms.CheckboxInput):
-                attrs['class'] = 'form-checkbox'
-
-            # --- RESTO DE CAMPOS (Mayúsculas visuales) ---
+                attrs['class'] = 'switch-input'
             else:
                 attrs['class'] = 'input-field uppercase-input'
-                # Agregar placeholder si existe en el mapa
-                if name in placeholders_map:
-                    attrs['placeholder'] = placeholders_map[name]
 
-            # Aplicamos los atributos al widget
+            if name in placeholders_map:
+                attrs['placeholder'] = placeholders_map[name]
+
             field.widget.attrs.update(attrs)
 
-        # 3. LOGICA: Campos Obligatorios Manuales
+        # 2. LOGICA: Campos Obligatorios Manuales
         mandatory = [
             'document_type', 'document_number', 'first_name', 'last_name',
             'birth_date'
@@ -112,7 +96,7 @@ class PersonForm(BaseFormMixin, forms.ModelForm):
             if field in self.fields:
                 self.fields[field].required = True
 
-        # 4. LOGICA: Cascada de Ubicaciones
+        # 3. LOGICA: Cascada de Ubicaciones
         # Inicializar todos los querysets vacíos (incluyendo country)
         self.fields['country'].queryset = Location.objects.filter(level=1, is_active=True).order_by('name')
         self.fields['country'].empty_label = "-- Seleccione --"  # Texto del placeholder

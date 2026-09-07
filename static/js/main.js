@@ -858,3 +858,79 @@ document.addEventListener('click', (e) => {
             }
         });
 }, true);
+
+// Previsualización reactiva de imagen en modales
+window.handleModalPhotoPreview = function (input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            const img = document.getElementById('photo-preview-img');
+            const placeholder = document.getElementById('photo-placeholder');
+            if (img) {
+                img.src = e.target.result;
+                img.style.display = 'block';
+            }
+            if (placeholder) {
+                placeholder.style.display = 'none';
+            }
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+};
+
+// Control de Acordeones / Toggles de Salud e Inclusión
+window.syncToggleView = function (checkbox, targetContentId) {
+    const target = document.getElementById(targetContentId);
+    const header = checkbox.closest('.toggle-header');
+    const labelText = checkbox.parentElement.querySelector('.switch-text');
+
+    if (checkbox.checked) {
+        if (target) target.classList.remove('hidden');
+        if (header) header.classList.add('active-header');
+        if (labelText) labelText.textContent = 'Sí';
+    } else {
+        if (target) target.classList.add('hidden');
+        if (header) header.classList.remove('active-header');
+        if (labelText) labelText.textContent = 'No';
+    }
+};
+
+window.toggleAccordionSection = function (targetContentId) {
+    const target = document.getElementById(targetContentId);
+    if (!target) return;
+    const header = target.previousElementSibling;
+    const checkbox = header ? header.querySelector('.switch-input') : null;
+
+    if (checkbox) {
+        checkbox.checked = !checkbox.checked;
+        syncToggleView(checkbox, targetContentId);
+    }
+};
+
+// Cascadas dinámicas de ubicación (País -> Provincia -> Cantón -> Parroquia)
+window.handleLocationCascade = function (selectElement, targetSelectId, targetLevel) {
+    const parentId = selectElement.value;
+    const targetSelect = $(`#${targetSelectId}`);
+
+    targetSelect.empty().append('<option value="">Cargando...</option>').trigger('change');
+
+    if (!parentId) {
+        targetSelect.empty().append('<option value="">-- Seleccione --</option>').trigger('change');
+        return;
+    }
+
+    fetch(`/core/locations/children/?parent_id=${parentId}`, {
+        headers: {'X-Requested-With': 'XMLHttpRequest'}
+    })
+        .then(res => res.json())
+        .then(data => {
+            targetSelect.empty().append('<option value="">-- Seleccione --</option>');
+            data.forEach(item => {
+                targetSelect.append(new Option(item.name, item.id));
+            });
+            targetSelect.trigger('change');
+        })
+        .catch(() => {
+            targetSelect.empty().append('<option value="">-- Error al cargar --</option>').trigger('change');
+        });
+};
