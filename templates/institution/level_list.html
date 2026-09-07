@@ -18,15 +18,19 @@
     {#Tabla#}
     <div id="table-app">
         <div class="content-table">
-            <div class="table-controls">
-                <input class="switch-input switch-red" type="checkbox" id="toggleInactiveLevels"
-                       onchange="toggleInactiveLevels(this.checked)">
-                <label class="switch-wrapper" for="toggleInactiveLevels">
-                    <div class="switch-circle"></div>
-                    <span class="switch-text">Mostrar Niveles Inactivos</span>
-                </label>
-                <div class="search-box">
-                    <input type="text" class="table-search-input" placeholder="Buscar por nombre">
+            <div class="table-controls toolbar-row">
+                <div class="toolbar-center">
+                    <input class="switch-input switch-red" type="checkbox" id="toggleInactiveLevels"
+                           onchange="toggleInactiveLevels(this.checked)">
+                    <label class="switch-wrapper" for="toggleInactiveLevels">
+                        <div class="switch-circle"></div>
+                        <span class="switch-text">Mostrar Niveles Inactivos</span>
+                    </label>
+                </div>
+                <div class="toolbar-right">
+                    <div class="search-box">
+                        <input type="text" class="table-search-input" placeholder="Buscar por nombre">
+                    </div>
                 </div>
             </div>
             <div id="table-content-wrapper">

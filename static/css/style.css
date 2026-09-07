@@ -3045,7 +3045,7 @@ th.no-sort, .no-sort {
     width: 55%;
 }
 
-.rubric-toolbar-row {
+.toolbar-row {
     display: grid;
     grid-template-columns: 1fr auto 1fr;
     align-items: center;
@@ -3054,14 +3054,14 @@ th.no-sort, .no-sort {
     margin: 0 0 0.35rem;
 }
 
-.rubric-toolbar-left {
+.toolbar-left {
     justify-self: start;
     display: flex;
     align-items: center;
     min-width: 0;
 }
 
-.rubric-toolbar-center {
+.toolbar-center {
     justify-self: center;
     display: flex;
     align-items: center;
@@ -3071,7 +3071,7 @@ th.no-sort, .no-sort {
     min-width: 0;
 }
 
-.rubric-toolbar-right {
+.toolbar-right {
     justify-self: end;
     min-width: 0;
 }
@@ -3113,17 +3113,12 @@ th.no-sort, .no-sort {
         width: 100%;
     }
 
-    .rubric-toolbar-row {
-        grid-template-columns: 1fr;
-        justify-items: center;
-    }
-
-    .rubric-toolbar-left,
-    .rubric-toolbar-right {
+    .toolbar-left,
+    .toolbar-right {
         justify-self: center;
     }
 
-    .rubric-toolbar-center {
+    .toolbar-center {
         width: 100%;
         justify-content: center;
     }
