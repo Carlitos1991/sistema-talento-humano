@@ -11,10 +11,15 @@ urlpatterns = [
     path('api/upload-cv/<int:person_id>/', views.upload_cv_pdf, name='api_upload_cv'),
 
     # ENDPOINTS DE CURRICULUM (CRUD)
-    path('api/cv/add-title/<int:person_id>/', views.add_academic_title_api, name='api_add_title'),
+
+    path('person/<int:person_id>/academic-titles/', views.AcademicTitleModalListView.as_view(),
+         name='academic_title_list'),
+    path('person/<int:person_id>/academic-titles/create/', views.AcademicTitleCreateView.as_view(),
+         name='academic_title_create'),
+    path('academic-titles/<int:pk>/update/', views.AcademicTitleUpdateView.as_view(), name='academic_title_update'),
+    path('academic-titles/<int:pk>/delete/', views.AcademicTitleDeleteView.as_view(), name='academic_title_delete'),
     path('api/cv/add-experience/<int:person_id>/', views.add_work_experience_api, name='api_add_experience'),
     path('api/cv/add-training/<int:person_id>/', views.add_training_api, name='api_add_training'),
-    path('api/cv/edit-title/<int:title_id>/', views.edit_academic_title_api, name='api_edit_title'),
     path('api/cv/edit-experience/<int:experience_id>/', views.edit_work_experience_api, name='api_edit_experience'),
     path('api/cv/edit-training/<int:training_id>/', views.edit_training_api, name='api_edit_training'),
     path('api/cv/list-titles/<int:person_id>/', views.list_academic_titles_api, name='api_list_titles'),

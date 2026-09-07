@@ -1,5 +1,4 @@
-<!-- 1. BANNER DE GESTIÓN PDF (Se mantiene igual) -->
-<!-- 1. BANNER DE GESTIÓN PDF -->
+<!-- 1. BANNER DE GESTIÓN PDF-->
 <div class="cv-action-banner shadow-sm">
     <div class="cv-action-title">
         <i class="fa-solid fa-file-pdf fa-xl"></i>
@@ -12,13 +11,10 @@
                @change="handlePdfUpload($event, {{ person.id }})">
 
         {% if curriculum_obj and curriculum_obj.pdf_file %}
-            <!-- BOTÓN VER: Abre en pestaña nueva -->
             <a href="{{ curriculum_obj.pdf_file.url }}" target="_blank"
                class="btn-seventh">
                 <i class="fa-solid fa-file-pdf"></i>
             </a>
-
-            <!-- BOTÓN REEMPLAZAR -->
             {% if can_edit_person %}
                 <button class="btn-eleventh"
                         onclick="document.getElementById('pdfInput').click()">
@@ -26,11 +22,10 @@
                 </button>
             {% endif %}
         {% else %}
-            <!-- BOTÓN SUBIR (Cuando no existe archivo) -->
             {% if can_edit_person %}
-                <button class="btn-primary"
+                <button class="btn-eleventh"
                         onclick="document.getElementById('pdfInput').click()">
-                    <i class="fa-solid fa-cloud-arrow-up"></i> SUBIR HOJA DE VIDA
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
                 </button>
             {% endif %}
         {% endif %}
@@ -43,16 +38,20 @@
     <div class="info-box-styled personal-border shadow-sm">
         <h6 class="section-title"><i class="fa-solid fa-graduation-cap"></i> Títulos Académicos</h6>
         <div class="cv-stat-inner-container">
-            <div class="cv-stat-number text-primary">[[ personStats.titles ]]</div>
+            <div class="cv-stat-number text-primary">{{ curriculum_titles_count|default:0 }}</div>
             <div class="cv-stat-label">Registrados</div>
         </div>
         <div class="cv-buttons-centered">
             {% if can_edit_person %}
-                <button class="btn-cv-pill new" @click="handleCvAction('academic', 'new')">
+                <button type="button"
+                        class="btn-cv-pill new"
+                        onclick="openAjaxModal('{% url 'employee:academic_title_create' person.id %}')">
                     <i class="fa-solid fa-plus"></i> Nuevo
                 </button>
             {% endif %}
-            <button class="btn-cv-pill list" @click="handleCvAction('academic', 'list')">
+            <button type="button"
+                    class="btn-cv-pill list"
+                    onclick="openAjaxModal('{% url 'employee:academic_title_list' person.id %}')">
                 <i class="fa-solid fa-list"></i> Listado
             </button>
         </div>

@@ -1,48 +1,81 @@
-<div id="modalTitleOverlay" class="modal-overlay hidden" v-cloak>
-    <div class="modal-container">
-        <div class="modal-header-medium">
-            <h3 class="header-title header-title-main"><i class="fa-solid fa-graduation-cap me-2"></i>[[ titleForm.id ?
-                'Editar Título Académico' : 'Nuevo Título Académico' ]]</h3>
-            <button @click="closeModal('academic')" class="btn-close-circle">&times;</button>
+<div class="modal-overlay" id="modalAcademicTitleFormOverlay">
+    <div class="modal-container-medium">
+        <div class="modal-header">
+            <div class="header-content-group">
+                <div class="header-icon-circle">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                </div>
+                <div>
+                    <h3 class="header-title">{% if form.instance.pk %}Editar{% else %}Nuevo{% endif %} Título
+                        Académico</h3>
+                    <p class="small mb-0" style="color: #cbd5e1;">{{ person.full_name }}</p>
+                </div>
+            </div>
+            <button type="button" onclick="closeModal()" class="btn-close-circle" aria-label="Cerrar">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
         </div>
-        <form @submit.prevent="submitAcademicTitle">
-            <div class="modal-body-custom p-4">
-                <div class="form-group mb-3">
-                    <label class="form-label">Institución Educativa</label>
-                    <input type="text" v-model="titleForm.educational_institution" class="input-field uppercase-input"
-                           placeholder="Ej: Universidad Central" required>
-                </div>
-                <div class="form-group mb-3">
-                    <label class="form-label">Título Obtenido</label>
-                    <input type="text" v-model="titleForm.title_obtained" class="input-field uppercase-input"
-                           placeholder="Ej: Ingeniero en Sistemas" required>
-                </div>
-                <div class="form-group mb-3">
-                    <label class="form-label">N° SENESCYT</label>
-                    <input type="text" v-model="titleForm.senescyt_number" class="input-field"
-                           placeholder="Opcional: 1234567890">
-                </div>
-                <div class="grid-2-cols gap-3">
-                    <div class="form-group">
-                        <label class="form-label">Nivel</label>
-                        <select v-model="titleForm.education_level" class="input-field" required>
-                            <option value="">-- Seleccione --</option>
-                            {% for item in education_levels %}
-                                <option value="{{ item.id }}">{{ item.name }}</option>{% endfor %}
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Año Graduación</label>
-                        <input type="number" v-model="titleForm.graduation_year" class="input-field"
-                               placeholder="Ej: 2015">
+
+        <form action="
+                {% if form.instance.pk %}{% url 'employee:academic_title_update' form.instance.pk %}{% else %}{% url 'employee:academic_title_create' person.id %}{% endif %}"
+              method="POST"
+              onsubmit="submitAjaxForm(event, () => openAjaxModal('{% url 'employee:academic_title_list' person.id %}'))">
+            {% csrf_token %}
+
+            <div class="modal-body-custom">
+                <div class="form-section-card mb-0">
+                    <div class="grid-2-cols grid-compact">
+                        <div class="form-group col-md-12" style="grid-column: 1 / -1;">
+                            <label class="form-label">Título Obtenido</label>
+                            {{ form.title_obtained }}
+                            {% if form.title_obtained.errors %}
+                                <span class="text-red small">{{ form.title_obtained.errors.0 }}</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group col-md-12" style="grid-column: 1 / -1;">
+                            <label class="form-label">Institución Educativa</label>
+                            {{ form.educational_institution }}
+                            {% if form.educational_institution.errors %}
+                                <span class="text-red small">{{ form.educational_institution.errors.0 }}</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Nivel de Instrucción</label>
+                            {{ form.education_level }}
+                            {% if form.education_level.errors %}
+                                <span class="text-red small">{{ form.education_level.errors.0 }}</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Año de Graduación</label>
+                            {{ form.graduation_year }}
+                            {% if form.graduation_year.errors %}
+                                <span class="text-red small">{{ form.graduation_year.errors.0 }}</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group col-md-12" style="grid-column: 1 / -1;">
+                            <label class="form-label">N° de Registro SENESCYT</label>
+                            {{ form.senescyt_number }}
+                            {% if form.senescyt_number.errors %}
+                                <span class="text-red small">{{ form.senescyt_number.errors.0 }}</span>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
             </div>
+
             <div class="modal-footer-fixed">
-                <button type="button" @click="closeModal('academic')" class="btn-default-outline">Cancelar
+                <button type="button"
+                        onclick="openAjaxModal('{% url 'employee:academic_title_list' person.id %}')"
+                        class="btn-secondary">
+                    <i class="fa-solid fa-arrow-left"></i> Volver a la Lista
                 </button>
-                <button type="submit" class="btn-default" :disabled="isSaving">
-                    [[ isSaving ? 'Guardando...' : 'Guardar Título' ]]
+                <button type="submit" class="btn-success">
+                    <i class="fa-solid fa-floppy-disk"></i> Guardar Título
                 </button>
             </div>
         </form>

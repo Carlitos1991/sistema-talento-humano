@@ -13,14 +13,16 @@
     </div>
     <div id="table-app">
         <div class="content-table">
-            <div class="table-controls">
-                <input class="switch-input switch-red" type="checkbox" id="toggleInactiveUnits"
-                       onchange="toggleInactiveUnits(this.checked)">
-                <label class="switch-wrapper" for="toggleInactiveUnits">
-                    <div class="switch-circle"></div>
-                    <span class="switch-text">Mostrar Inactivos</span>
-                </label>
-                <div class="search-box">
+            <div class="table-controls toolbar-row">
+                <div class="toolbar-center">
+                    <input class="switch-input switch-red" type="checkbox" id="toggleInactiveUnits"
+                           onchange="toggleInactiveUnits(this.checked)">
+                    <label class="switch-wrapper" for="toggleInactiveUnits">
+                        <div class="switch-circle"></div>
+                        <span class="switch-text">Mostrar Inactivos</span>
+                    </label>
+                </div>
+                <div class="toolbar-right">
                     <input type="text" class="table-search-input" placeholder="Buscar por nombre">
                 </div>
             </div>

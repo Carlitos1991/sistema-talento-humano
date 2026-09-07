@@ -1,22 +1,54 @@
 from django import forms
 
 from core.forms import BaseFormMixin
+from core.models import CatalogItem
 from institution.models import AdministrativeUnit
 from .models import AcademicTitle, BankAccount, Training, WorkExperience, PayrollInfo
+
+from django import forms
+from core.models import CatalogItem
+from .models import AcademicTitle
 
 
 class AcademicTitleForm(forms.ModelForm):
     class Meta:
         model = AcademicTitle
-        fields = ['education_level', 'title_obtained', 'educational_institution', 'graduation_year', 'senescyt_number',
-                  'is_current']
+        fields = [
+            'education_level',
+            'title_obtained',
+            'educational_institution',
+            'senescyt_number',
+            'graduation_year'
+        ]
         widgets = {
-            'education_level': forms.Select(attrs={'class': 'input-field select2-field'}),
-            'title_obtained': forms.TextInput(attrs={'class': 'input-field uppercase-input'}),
-            'educational_institution': forms.TextInput(attrs={'class': 'input-field uppercase-input'}),
-            'graduation_year': forms.NumberInput(attrs={'class': 'input-field', 'placeholder': 'Ej: 2023'}),
-            'senescyt_number': forms.TextInput(attrs={'class': 'input-field', 'placeholder': 'Opcional'}),
+            'title_obtained': forms.TextInput(attrs={
+                'class': 'input-field uppercase-input',
+                'placeholder': 'Ej: INGENIERO EN SISTEMAS'
+            }),
+            'educational_institution': forms.TextInput(attrs={
+                'class': 'input-field uppercase-input',
+                'placeholder': 'Ej: UNIVERSIDAD NACIONAL DE LOJA'
+            }),
+            'senescyt_number': forms.TextInput(attrs={
+                'class': 'input-field',
+                'placeholder': 'Ej: 1005-12-345678'
+            }),
+            'graduation_year': forms.NumberInput(attrs={
+                'class': 'input-field',
+                'placeholder': 'Ej: 2020',
+                'min': '1950',
+                'max': '2100'
+            }),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['education_level'].queryset = CatalogItem.objects.filter(
+            catalog__code='EDUCATION_LEVELS',
+            is_active=True
+        ).order_by('name')
+        self.fields['education_level'].widget.attrs.update({'class': 'input-field select2-field'})
+        self.fields['education_level'].empty_label = "-- Seleccione Nivel --"
 
 
 class WorkExperienceForm(forms.ModelForm):

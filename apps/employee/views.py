@@ -3,6 +3,8 @@ import logging
 from datetime import datetime, time
 from decimal import Decimal
 from django.contrib.auth import get_user_model
+from .models import EconomicData
+from .forms import BankAccountForm, PayrollInfoForm
 
 User = get_user_model()
 from django.contrib.auth.decorators import login_required
@@ -679,26 +681,6 @@ def upload_cv_pdf(request, person_id):
 
 
 @transaction.atomic
-def add_academic_title(request, person_id):
-    if request.method == 'POST':
-        person = get_object_or_404(Person, pk=person_id)
-        curriculum, created = Curriculum.objects.get_or_create(person=person)
-
-        form = AcademicTitleForm(request.POST)
-        if form.is_valid():
-            title = form.save(commit=False)
-            title.curriculum = curriculum
-            title.save()
-            return JsonResponse({'success': True, 'message': 'Título académico registrado.'})
-        return JsonResponse({'success': False, 'errors': form.errors}, status=400)
-    return None
-
-
-from .models import EconomicData
-from .forms import BankAccountForm, PayrollInfoForm
-
-
-@transaction.atomic
 def add_bank_account(request, person_id):
     if request.method == 'POST':
         person = get_object_or_404(Person, pk=person_id)
@@ -822,30 +804,90 @@ def upload_cv_pdf(request, person_id):
     return JsonResponse({'success': False, 'message': 'Error al subir archivo.'}, status=400)
 
 
-@transaction.atomic
-def add_academic_title_api(request, person_id):
-    if request.method == 'POST':
-        person = get_object_or_404(Person, pk=person_id)
-        curriculum, _ = Curriculum.objects.get_or_create(person=person)
-
-        form = AcademicTitleForm(request.POST)
-        if form.is_valid():
-            title = form.save(commit=False)
-            title.curriculum = curriculum
-            title.save()
-            return JsonResponse({'success': True, 'message': 'Título registrado correctamente'})
-        return JsonResponse({'success': False, 'errors': form.errors}, status=400)
-    return None
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.shortcuts import get_object_or_404, render
+from django.http import JsonResponse
+from django.views import View
+from django.views.generic import ListView, CreateView, UpdateView
+from person.models import Person
+from .models import AcademicTitle, Curriculum
+from .forms import AcademicTitleForm
 
 
-@require_POST
-def edit_academic_title_api(request, title_id):
-    title = get_object_or_404(AcademicTitle, pk=title_id)
-    form = AcademicTitleForm(request.POST, instance=title)
-    if form.is_valid():
+# 1. LISTADO (MODAL DINÁMICO)
+class AcademicTitleModalListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
+    model = AcademicTitle
+    template_name = 'employee/modals/modal_academic_title_list.html'
+    context_object_name = 'titles'
+    permission_required = 'employee.view_academictitle'
+
+    def get_queryset(self):
+        self.person = get_object_or_404(Person, pk=self.kwargs['person_id'])
+        return AcademicTitle.objects.filter(
+            curriculum__person=self.person
+        ).select_related('education_level').order_by('-graduation_year', '-pk')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['person'] = self.person
+        return context
+
+
+# 2. CREACIÓN (VÍA AJAX)
+class AcademicTitleCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    model = AcademicTitle
+    form_class = AcademicTitleForm
+    template_name = 'employee/modals/modal_academic_title_form.html'
+    permission_required = 'employee.add_academictitle'
+
+    def dispatch(self, request, *args, **kwargs):
+        self.person = get_object_or_404(Person, pk=self.kwargs['person_id'])
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['person'] = self.person
+        return context
+
+    def form_valid(self, form):
+        title = form.save(commit=False)
+        curriculum, _ = Curriculum.objects.get_or_create(person=self.person)
+        title.curriculum = curriculum
+        title.save()
+        return JsonResponse({'success': True, 'message': 'Título académico registrado exitosamente.'})
+
+    def form_invalid(self, form):
+        return render(self.request, self.template_name, self.get_context_data(form=form), status=400)
+
+
+# 3. EDICIÓN (VÍA AJAX)
+class AcademicTitleUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    model = AcademicTitle
+    form_class = AcademicTitleForm
+    template_name = 'employee/modals/modal_academic_title_form.html'
+    permission_required = 'employee.change_academictitle'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['person'] = self.object.curriculum.person
+        return context
+
+    def form_valid(self, form):
         form.save()
-        return JsonResponse({'success': True, 'message': 'Título actualizado correctamente'})
-    return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+        return JsonResponse({'success': True, 'message': 'Título académico actualizado correctamente.'})
+
+    def form_invalid(self, form):
+        return render(self.request, self.template_name, self.get_context_data(form=form), status=400)
+
+
+# 4. ELIMINACIÓN (VÍA AJAX CON SWEETALERT)
+class AcademicTitleDeleteView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'employee.delete_academictitle'
+
+    def post(self, request, pk):
+        title = get_object_or_404(AcademicTitle, pk=pk)
+        title.delete()
+        return JsonResponse({'success': True, 'message': 'Título eliminado correctamente.'})
 
 
 @transaction.atomic

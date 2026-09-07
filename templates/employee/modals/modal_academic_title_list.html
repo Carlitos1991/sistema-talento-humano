@@ -1,0 +1,99 @@
+<div class="modal-overlay" id="modalAcademicTitlesOverlay">
+    <div class="modal-container-large modal-cv-list-large">
+        <div class="modal-header">
+            <div class="header-content-group">
+                <div class="header-icon-circle">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                </div>
+                <div>
+                    <h3 class="header-title">Títulos Académicos</h3>
+                    <p class="small mb-0" style="color: #cbd5e1;">{{ person.full_name }}</p>
+                </div>
+            </div>
+            <div class="header-actions-group">
+                {% if perms.employee.add_academictitle %}
+                <button type="button"
+                        class="btn-success"
+                        onclick="openAjaxModal('{% url 'employee:academic_title_create' person.id %}')">
+                    <i class="fa-solid fa-plus"></i> Nuevo Título
+                </button>
+                {% endif %}
+                <button type="button" onclick="closeModal()" class="btn-close-circle" aria-label="Cerrar">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="content-table modal-body-custom">
+            <div class="search-toolbar mb-3">
+                <div class="search-box">
+                    <input type="text" class="table-search-input" placeholder="Buscar título, institución o registro...">
+                    <button type="button" class="search-btn"><i class="fa-solid fa-search"></i></button>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table class="managed-table table-clean-cv" data-page-size="5">
+                    <thead>
+                        <tr>
+                            <th class="width-35"><i class="fa-solid fa-certificate"></i> Título / Nivel</th>
+                            <th class="width-30"><i class="fa-solid fa-building-columns"></i> Institución Educativa</th>
+                            <th class="width-15"><i class="fa-solid fa-hashtag"></i> Reg. SENESCYT</th>
+                            <th class="width-10 text-center"><i class="fa-solid fa-calendar"></i> Graduación</th>
+                            <th class="width-10 actions no-sort text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in titles %}
+                        <tr>
+                            <td>
+                                <strong>{{ item.title_obtained }}</strong><br>
+                                <span class="badge badge-sm badge-blue">{{ item.education_level.name|default:"Sin nivel" }}</span>
+                            </td>
+                            <td>{{ item.educational_institution|default:"No especificada" }}</td>
+                            <td>{{ item.senescyt_number|default:"—" }}</td>
+                            <td class="text-center">{{ item.graduation_year|default:"—" }}</td>
+                            <td class="actions">
+                                <div class="actions-wrapper">
+                                    {% if perms.employee.change_academictitle %}
+                                    <button type="button"
+                                            class="btn-icon btn-edit-action"
+                                            title="Editar"
+                                            onclick="openAjaxModal('{% url 'employee:academic_title_update' item.pk %}')">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </button>
+                                    {% endif %}
+                                    {% if perms.employee.delete_academictitle %}
+                                    <button type="button"
+                                            class="btn-icon btn-delete-action"
+                                            title="Eliminar"
+                                            onclick="deleteRecordAjax('{% url 'employee:academic_title_delete' item.pk %}', 'este título académico')">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr class="empty-results-row">
+                            <td colspan="5" class="text-center py-4 text-muted">
+                                <i class="fa-solid fa-folder-open fa-2x mb-2 d-block"></i>
+                                No hay títulos académicos registrados.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    setTimeout(() => {
+        const table = document.querySelector('#modalAcademicTitlesOverlay .managed-table');
+        if (table && window.TableManager) {
+            new TableManager(table);
+        }
+    }, 30);
+</script>

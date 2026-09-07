@@ -343,7 +343,6 @@ const app = createApp({
                         const name = $(this).attr('name');
                         const val = $(this).val();
                         const lower = selector.toLowerCase();
-                        if (lower.includes('title')) titleForm.value[name] = val;
                         if (lower.includes('experience')) expForm.value[name] = val;
                         if (lower.includes('training')) trainForm.value[name] = val;
                         if (lower.includes('person')) editForm.value[name] = val;
@@ -364,7 +363,6 @@ const app = createApp({
                     }).on('change', function () {
                         const name = $(this).attr('name');
                         const val = $(this).val();
-                        if (selector.includes('Title')) titleForm.value[name] = val;
                         if (selector.includes('Experience')) expForm.value[name] = val;
                         if (selector.includes('Training')) trainForm.value[name] = val;
                         if (selector.includes('Person')) editForm.value[name] = val;
@@ -389,7 +387,6 @@ const app = createApp({
             const selector = map[type];
             if (action === 'new') {
                 // RESET FORMS
-                if (type === 'academic') titleForm.value = {id: null, education_level: '', senescyt_number: ''};
                 if (type === 'experience') expForm.value = {id: null, is_current: false};
                 if (type === 'training') trainForm.value = {id: null};
                 if (type === 'bank') { // No action 'new' usually but for consistency
@@ -451,8 +448,6 @@ const app = createApp({
             roles_count: 0
         });
         const payrollErrors = ref({});
-        const titleForm = ref({education_level: '', senescyt_number: ''});
-        const titleErrors = ref({});
         const expForm = ref({is_current: false});
         const expErrors = ref({});
         const trainForm = ref({training_name: ''});
@@ -841,11 +836,6 @@ const app = createApp({
                 const res = await (await fetch(`/employee/api/cv/detail/${type}/${id}/`)).json();
                 if (res.success) {
                     isListModalVisible.value = false;
-
-                    if (type === 'academic') {
-                        titleForm.value = res.data;
-                        openModal('academic', 'edit');
-                    }
                     if (type === 'experience') {
                         expForm.value = res.data;
                         openModal('experience', 'edit');
@@ -1274,31 +1264,6 @@ const app = createApp({
                 console.error(e);
             }
         };
-
-        const submitAcademicTitle = async () => {
-            if (isSaving.value) return;
-            isSaving.value = true;
-            const formData = new FormData();
-            Object.keys(titleForm.value).forEach(k => formData.append(k, titleForm.value[k]));
-            try {
-                const url = titleForm.value.id ? `/employee/api/cv/edit-title/${titleForm.value.id}/` : `/employee/api/cv/add-title/${personId}/`;
-                const res = await (await fetch(url, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {'X-CSRFToken': window.getCookie('csrftoken')}
-                })).json();
-                if (res.success) {
-                    window.Toast.fire({icon: 'success', title: res.message});
-                    closeModal('academic');
-                    refreshCvTab(personId);
-                } else {
-                    titleErrors.value = res.errors;
-                }
-            } finally {
-                isSaving.value = false;
-            }
-        };
-
         const submitExperience = async () => {
             if (isSaving.value) return;
             isSaving.value = true;
@@ -1350,13 +1315,11 @@ const app = createApp({
             isListModalVisible.value = true;
 
             // Configure headers
-            if (type === 'academic') listModalTitle.value = 'Mis Títulos Académicos';
             if (type === 'experience') listModalTitle.value = 'Mi Experiencia Laboral';
             if (type === 'training') listModalTitle.value = 'Mis Capacitaciones';
 
             try {
                 let url = '';
-                if (type === 'academic') url = `/employee/api/cv/list-titles/${personId}/`;
                 if (type === 'experience') url = `/employee/api/cv/list-experience/${personId}/`;
                 if (type === 'training') url = `/employee/api/cv/list-training/${personId}/`;
 
@@ -1772,8 +1735,6 @@ const app = createApp({
             savePayrollInfo,
             editForm,
             editErrors,
-            titleForm,
-            titleErrors,
             expForm,
             expErrors,
             trainForm,
@@ -1812,7 +1773,6 @@ const app = createApp({
             closeListModal,
             handleEditCvItem,
             handleDeleteCvItem,
-            submitAcademicTitle,
             submitExperience,
             submitTraining,
             editItem,
