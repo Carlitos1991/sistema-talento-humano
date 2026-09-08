@@ -814,7 +814,7 @@ from .models import AcademicTitle, Curriculum
 from .forms import AcademicTitleForm
 
 
-# 1. LISTADO (MODAL DINÁMICO)
+# 1. LISTADO
 class AcademicTitleModalListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     model = AcademicTitle
     template_name = 'employee/modals/modal_academic_title_list.html'
@@ -890,21 +890,51 @@ class AcademicTitleDeleteView(LoginRequiredMixin, PermissionRequiredMixin, View)
         return JsonResponse({'success': True, 'message': 'Título eliminado correctamente.'})
 
 
+# Experiencia Laboral
+class WorkExperienceListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
+    model = WorkExperience
+    template_name = 'employee/modals/modal_work_experience_list.html'
+    context_object_name = 'titles'
+    permission_required = 'employee.view_workexperience'
+
+    def get_queryset(self):
+        self.person = get_object_or_404(Person, pk=self.kwargs['person_id'])
+        return WorkExperience.objects.filter(
+            curriculum__person=self.person
+        ).select_related('position').order_by('-start_date', '-pk')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['person'] = self.person
+        return context
+
+
+@require_POST
 @transaction.atomic
-def add_work_experience_api(request, person_id):
-    if request.method == 'POST':
-        person = get_object_or_404(Person, pk=person_id)
-        curriculum, _ = Curriculum.objects.get_or_create(person=person)
+class WorkExperienceCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    model = WorkExperience
+    form_class = WorkExperienceForm
+    template_name = 'employee/modals/modal_work_experience.html'
+    permission_required = 'employee.add_workexperience'
 
-        form = WorkExperienceForm(request.POST)
-        if form.is_valid():
-            experience = form.save(commit=False)
-            experience.curriculum = curriculum
-            experience.save()
-            return JsonResponse({'success': True, 'message': 'Experiencia laboral registrada correctamente.'})
+    def dispatch(self, request, *args, **kwargs):
+        self.person = get_object_or_404(Person, pk=self.kwargs['person_id'])
+        return super().dispatch(request, *args, **kwargs)
 
-        return JsonResponse({'success': False, 'errors': form.errors}, status=400)
-    return None
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['person'] = self.person
+        return context
+
+    def form_valid(self, form):
+        title = form.save(commit=False)
+        curriculum, _ = Curriculum.objects.get_or_create(person=self.person)
+        title.curriculum = curriculum
+        title.save()
+        return JsonResponse({'success': True, 'message': 'Experiencia Laboral registrada exitosamente.'})
+
+    def form_invalid(self, form):
+        return render(self.request, self.template_name, self.get_context_data(form=form), status=400)
 
 
 @require_POST
@@ -1010,6 +1040,24 @@ def list_work_experience_api(request, person_id):
         'total_years': total_years,
         'total_months': total_months
     })
+
+
+class TrainingListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
+    model = Training
+    template_name = 'employee/modals/modal_training_list.html'
+    context_object_name = 'titles'
+    permission_required = 'employee.view_workexperience'
+
+    def get_queryset(self):
+        self.person = get_object_or_404(Person, pk=self.kwargs['person_id'])
+        return WorkExperience.objects.filter(
+            curriculum__person=self.person
+        ).select_related('position').order_by('-start_date', '-pk')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['person'] = self.person
+        return context
 
 
 def list_training_api(request, person_id):

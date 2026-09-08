@@ -41,3 +41,83 @@
         </form>
     </div>
 </div>
+
+
+<div class="modal-overlay" id="modalWorkExperienceFormOverlay">
+    <div class="modal-container-medium">
+        <div class="modal-header">
+            <div class="header-content-group">
+                <div class="header-icon-circle">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                </div>
+                <div>
+                    <h3 class="header-title">{% if form.instance.pk %}Editar{% else %}Nueva{% endif %} Experiencia</h3>
+                </div>
+            </div>
+        </div>
+
+        <form action="
+                {% if form.instance.pk %}{% url 'employee:_update' form.instance.pk %}{% else %}{% url 'employee:academic_title_create' person.id %}{% endif %}"
+              method="POST"
+              onsubmit="submitAjaxForm(event, () => openAjaxModal('{% url 'employee:academic_title_list' person.id %}'))">
+            {% csrf_token %}
+
+            <div class="modal-body-custom">
+                <div class="form-section-card mb-0">
+                    <div class="grid-2-cols grid-compact">
+                        <div class="form-group col-md-12" style="grid-column: 1 / -1;">
+                            <label class="form-label">Título Obtenido</label>
+                            {{ form.title_obtained }}
+                            {% if form.title_obtained.errors %}
+                                <span class="text-red small">{{ form.title_obtained.errors.0 }}</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group col-md-12" style="grid-column: 1 / -1;">
+                            <label class="form-label">Institución Educativa</label>
+                            {{ form.educational_institution }}
+                            {% if form.educational_institution.errors %}
+                                <span class="text-red small">{{ form.educational_institution.errors.0 }}</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Nivel de Instrucción</label>
+                            {{ form.education_level }}
+                            {% if form.education_level.errors %}
+                                <span class="text-red small">{{ form.education_level.errors.0 }}</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Año de Graduación</label>
+                            {{ form.graduation_year }}
+                            {% if form.graduation_year.errors %}
+                                <span class="text-red small">{{ form.graduation_year.errors.0 }}</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group col-md-12" style="grid-column: 1 / -1;">
+                            <label class="form-label">N° de Registro SENESCYT</label>
+                            {{ form.senescyt_number }}
+                            {% if form.senescyt_number.errors %}
+                                <span class="text-red small">{{ form.senescyt_number.errors.0 }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer-fixed">
+                <button type="button"
+                        onclick="openAjaxModal('{% url 'employee:academic_title_list' person.id %}')"
+                        class="btn-secondary">
+                    <i class="fa-solid fa-arrow-left"></i> Volver a la Lista
+                </button>
+                <button type="submit" class="btn-success">
+                    <i class="fa-solid fa-floppy-disk"></i> Guardar Título
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

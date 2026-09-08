@@ -13,40 +13,22 @@ from .models import AcademicTitle
 class AcademicTitleForm(forms.ModelForm):
     class Meta:
         model = AcademicTitle
-        fields = [
-            'education_level',
-            'title_obtained',
-            'educational_institution',
-            'graduation_year',
-            'senescyt_number',
-        ]
+        fields = ['education_level', 'title_obtained', 'educational_institution', 'graduation_year',
+                  'senescyt_number', ]
         widgets = {
-            'title_obtained': forms.TextInput(attrs={
-                'class': 'input-field uppercase-input',
-                'placeholder': 'EJ: INGENIERO EN SISTEMAS'
-            }),
-            'educational_institution': forms.TextInput(attrs={
-                'class': 'input-field uppercase-input',
-                'placeholder': 'EJ: UNIVERSIDAD NACIONAL DE LOJA'
-            }),
-            'graduation_year': forms.NumberInput(attrs={
-                'class': 'input-field',
-                'placeholder': 'EJ: 2020',
-                'min': '1950',
-                'max': '2100'
-            }),
-            'senescyt_number': forms.TextInput(attrs={
-                'class': 'input-field',
-                'placeholder': 'EJ: 1005-12-345678'
-            }),
+            'title_obtained': forms.TextInput(
+                attrs={'class': 'input-field uppercase-input', 'placeholder': 'EJ: INGENIERO EN SISTEMAS'}),
+            'educational_institution': forms.TextInput(
+                attrs={'class': 'input-field uppercase-input', 'placeholder': 'EJ: UNIVERSIDAD NACIONAL DE LOJA'}),
+            'graduation_year': forms.NumberInput(
+                attrs={'class': 'input-field', 'placeholder': 'EJ: 2020', 'min': '1950', 'max': '2100'}),
+            'senescyt_number': forms.TextInput(attrs={'class': 'input-field', 'placeholder': 'EJ: 1005-12-345678'}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['education_level'].queryset = CatalogItem.objects.filter(
-            catalog__code='EDUCATION_LEVELS',
-            is_active=True
-        ).order_by('name')
+        self.fields['education_level'].queryset = CatalogItem.objects.filter(catalog__code='EDUCATION_LEVELS',
+                                                                             is_active=True).order_by('name')
         self.fields['education_level'].widget.attrs.update({'class': 'input-field select2-field'})
         self.fields['education_level'].empty_label = "-- Seleccione Nivel --"
 
