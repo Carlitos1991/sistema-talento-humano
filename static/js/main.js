@@ -934,3 +934,40 @@ window.handleLocationCascade = function (selectElement, targetSelectId, targetLe
             targetSelect.empty().append('<option value="">-- Error al cargar --</option>').trigger('change');
         });
 };
+// 1. ACTUALIZADOR GLOBAL DE ESTADÍSTICAS DE CV
+window.refreshCvStats = function (personId) {
+    if (!personId) return;
+    fetch(`/employee/api/cv/stats/${personId}/`, {
+        headers: {'X-Requested-With': 'XMLHttpRequest'}
+    })
+        .then(res => res.json())
+        .then(data => {
+            if (!data.success) return;
+            // Soporta ambos esquemas de IDs por seguridad
+            const elTitles = document.getElementById('cv-stat-titles') || document.getElementById('stat-titles');
+            const elExp = document.getElementById('cv-stat-experience') || document.getElementById('stat-experience');
+            const elCourses = document.getElementById('cv-stat-courses') || document.getElementById('stat-courses');
+
+            if (elTitles) elTitles.textContent = data.titles_count;
+            if (elExp) elExp.textContent = data.experience_text;
+            if (elCourses) elCourses.textContent = data.courses_count;
+        })
+        .catch(err => console.error("Error actualizando estadísticas de CV:", err));
+};
+
+// 2. DELEGACIÓN GLOBAL: OCULTAR FECHA FIN AL MARCAR 'TRABAJO ACTUALMENTE AQUÍ'
+// Escucha el cambio sin importar cuántas veces se abra o cierre el modal AJAX
+document.addEventListener('change', function (e) {
+    if (e.target && (e.target.id === 'id_is_current' || e.target.name === 'is_current')) {
+        const endWrap = document.getElementById('endDateWrapper');
+        if (!endWrap) return;
+
+        if (e.target.checked) {
+            endWrap.classList.add('hidden');
+            const input = endWrap.querySelector('input');
+            if (input) input.value = '';
+        } else {
+            endWrap.classList.remove('hidden');
+        }
+    }
+});

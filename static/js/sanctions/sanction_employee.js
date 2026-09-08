@@ -222,7 +222,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (historyBtn) {
                 e.preventDefault();
                 const employeeId = historyBtn.dataset.employeeId;
-                window.location.href = `/sanctions/admin/employee/${employeeId}/`;
+                window.location.href = `../employee/${employeeId}/`;
                 return;
             }
         });

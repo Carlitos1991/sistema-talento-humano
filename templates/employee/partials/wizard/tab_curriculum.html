@@ -35,14 +35,14 @@
 <!-- 2. GRID: TÍTULOS, EXPERIENCIA, CURSOS -->
 <div class="grid-info-personal">
     <!-- TARJETA: TÍTULOS ACADÉMICOS -->
-    <div class="info-box-styled personal-border shadow-sm">
+    <div class="card-large orange-border">
         <h6 class="section-title"><i class="fa-solid fa-graduation-cap"></i> Títulos Académicos</h6>
-        <div class="cv-stat-inner-container">
-            <div class="cv-stat-number text-primary">{{ curriculum_titles_count|default:0 }}</div>
-            <div class="cv-stat-label">Registrados</div>
+        <div class="stat-inner-container">
+            <div id="stat-titles" class="stat-number text-primary">{{ curriculum_titles_count|default:0 }}</div>
+            <div class="stat-label">Registrados</div>
         </div>
-        <div class="cv-buttons-centered">
-            <button type="button" class="btn-cv-pill list"
+        <div class="buttons-centered">
+            <button type="button" class="btn-light"
                     onclick="openAjaxModal('{% url 'employee:academic_title_list' person.id %}')">
                 <i class="fa-solid fa-list"></i> Listado
             </button>
@@ -50,17 +50,16 @@
     </div>
 
     <!-- TARJETA: EXPERIENCIA LABORAL -->
-    <div class="info-box-styled medical-border shadow-sm">
+    <div class="card-large orange-border">
         <h6 class="section-title"><i class="fa-solid fa-briefcase"></i> Experiencia Laboral</h6>
-        <div class="cv-stat-inner-container">
-            <div class="cv-stat-number text-success">
+        <div class="stat-inner-container">
+            <div id="stat-experience" class="stat-number">
                 {{ experience_years|default:0 }} años {{ experience_months|default:0 }} meses
             </div>
-            <div class="cv-stat-label">Experiencia Total</div>
+            <div class="stat-label">Experiencia Total</div>
         </div>
-        <div class="cv-buttons-centered">
-            <button type="button"
-                    class="btn-cv-pill list"
+        <div class="buttons-centered">
+            <button type="button" class="btn-light"
                     onclick="openAjaxModal('{% url 'employee:work_experience_list' person.id %}')">
                 <i class="fa-solid fa-list"></i> Listado
             </button>
@@ -68,17 +67,17 @@
     </div>
 
     <!-- TARJETA: CURSOS -->
-    <div class="info-box-styled location-border shadow-sm">
+    <div class="card-large orange-border">
         <h6 class="section-title"><i class="fa-solid fa-book-atlas"></i> Cursos y Capacitaciones</h6>
-        <div class="cv-stat-inner-container">
-            <div class="cv-stat-number text-warning">{{ courses|default:0 }}</div>
-            <div class="cv-stat-label">Capacitaciones</div>
+        <div class="stat-inner-container">
+            <div id="stat-courses" class="stat-number">{{ courses|default:0 }}</div>
+            <div class="stat-label">Capacitaciones</div>
         </div>
-        {#        <div class="cv-buttons-centered">#}
-        {#            <button type="button" class="btn-cv-pill list"#}
-        {#                    onclick="openAjaxModal('{% url 'employee:work_experience_list' person.id %}')">#}
-        {#                <i class="fa-solid fa-list"></i> Listado#}
-        {#            </button>#}
-        {#        </div>#}
+        <div class="buttons-centered">
+            <button type="button" class="btn-light"
+                    onclick="openAjaxModal('{% url 'employee:courses_list' person.id %}')">
+                <i class="fa-solid fa-list"></i> Listado
+            </button>
+        </div>
     </div>
 </div>

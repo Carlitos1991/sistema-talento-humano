@@ -2295,7 +2295,7 @@ input.is-valid:focus, select.is-valid:focus, textarea.is-valid:focus, .input-fie
    ===================================================================== */
 
 /* --- Base compartida para TODOS los botones (Sólidos y Outline) --- */
-.btn-primary, .btn-default, .btn-secondary, .btn-success, .btn-info, .btn-warning, .btn-danger,
+.btn-primary, .btn-default, .btn-light, .btn-secondary, .btn-success, .btn-info, .btn-warning, .btn-danger,
 .btn-primary-outline, .btn-default-outline, .btn-secondary-outline, .btn-success-outline,
 .btn-info-outline, .btn-warning-outline, .btn-danger-outline {
     font-family: 'Inter', 'Roboto', sans-serif;
@@ -2317,7 +2317,7 @@ input.is-valid:focus, select.is-valid:focus, textarea.is-valid:focus, .input-fie
 }
 
 /* Forzar que los iconos NUNCA tengan subrayado y preparar su transición */
-.btn-primary i, .btn-default i, .btn-secondary i, .btn-success i, .btn-info i, .btn-warning i, .btn-danger i,
+.btn-primary i, .btn-default i, .btn-light i, .btn-secondary i, .btn-success i, .btn-info i, .btn-warning i, .btn-danger i,
 .btn-primary-outline i, .btn-default-outline i, .btn-secondary-outline i, .btn-success-outline i,
 .btn-info-outline i, .btn-warning-outline i, .btn-danger-outline i, .btn-close-circle i {
     text-decoration: none;
@@ -2326,7 +2326,7 @@ input.is-valid:focus, select.is-valid:focus, textarea.is-valid:focus, .input-fie
 }
 
 /* Hover general (todos suben -2px excepto los de cerrar) */
-.btn-primary:hover, .btn-default:hover, .btn-secondary:hover, .btn-success:hover,
+.btn-primary:hover, .btn-light:hover, .btn-default:hover, .btn-secondary:hover, .btn-success:hover,
 .btn-info:hover, .btn-warning:hover, .btn-danger:hover,
 .btn-primary-outline:hover, .btn-default-outline:hover, .btn-secondary-outline:hover,
 .btn-success-outline:hover, .btn-info-outline:hover, .btn-warning-outline:hover, .btn-danger-outline:hover {
@@ -2335,7 +2335,7 @@ input.is-valid:focus, select.is-valid:focus, textarea.is-valid:focus, .input-fie
 }
 
 /* Efecto al hacer clic (hundimiento) para todos */
-.btn-primary:active, .btn-default:active, .btn-secondary:active, .btn-success:active,
+.btn-primary:active, .btn-default:active, .btn-light:active, .btn-secondary:active, .btn-success:active,
 .btn-info:active, .btn-warning:active, .btn-danger:active,
 .btn-primary-outline:active, .btn-default-outline:active, .btn-secondary-outline:active,
 .btn-success-outline:active, .btn-info-outline:active, .btn-warning-outline:active, .btn-danger-outline:active {
@@ -2368,6 +2368,12 @@ input.is-valid:focus, select.is-valid:focus, textarea.is-valid:focus, .input-fie
 .btn-success {
     background: linear-gradient(135deg, #00d26a 0%, #047857 100%);
     color: #ffffff;
+}
+
+.btn-light {
+    background-color: #f8fafc;
+    color: #475569;
+    border-color: #e2e8f0;
 }
 
 .btn-info {
@@ -5202,13 +5208,15 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
 }
 
 /* Wrapper card genérico para contenido + tabla */
-.card {
-    background: var(--white);
-    border-radius: 14px;
-    border: 1px solid #e8edf4;
-    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.03);
-    padding: 1.25rem 1.5rem;
-    margin-bottom: 1.25rem;
+.card-large {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    border-left: 5px solid #cbd5e1;
 }
 
 .occupant-content {
@@ -5272,7 +5280,7 @@ body.employee-dashboard-page .grid-info-personal > :last-child:nth-child(odd) {
     border-left-color: #06630f;
 }
 
-.location-border {
+.orange-border {
     border-left-color: #fd7e14;
 }
 
@@ -5609,7 +5617,7 @@ body.employee-dashboard-page .grid-info-personal > :last-child:nth-child(odd) {
     transform: translateY(-2px);
 }
 
-.cv-stat-inner-container {
+.stat-inner-container {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -5620,14 +5628,14 @@ body.employee-dashboard-page .grid-info-personal > :last-child:nth-child(odd) {
     border-radius: 12px;
 }
 
-.cv-stat-number {
+.stat-number {
     font-size: 2.2rem;
     font-weight: 800;
     color: var(--primary-color);
     line-height: 1;
 }
 
-.cv-stat-label {
+.stat-label {
     font-size: 0.7rem;
     font-weight: 700;
     color: #64748b;
@@ -5636,7 +5644,7 @@ body.employee-dashboard-page .grid-info-personal > :last-child:nth-child(odd) {
     margin-top: 5px;
 }
 
-.cv-buttons-centered {
+.buttons-centered {
     display: flex;
     justify-content: center;
     gap: 15px;
@@ -6508,4 +6516,22 @@ body.employee-dashboard-page .grid-info-personal > :last-child:nth-child(odd) {
 
 .col-span-full {
     grid-column: 1 / -1;
+}
+
+/* =====================================================================
+   24. CHECKBOX GRANDE Y ALINEACIÓN DE FORMULARIO
+   ===================================================================== */
+.checkbox-lg {
+    width: 38px;
+    height: 38px;
+    accent-color: var(--accent-color);
+    cursor: pointer;
+    margin: 0;
+    flex-shrink: 0;
+}
+
+.checkbox-text {
+    font-size: 0.98rem;
+    color: #334155;
+    font-weight: 600;
 }

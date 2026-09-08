@@ -1,5 +1,12 @@
+{% if form.instance.pk %}
+    {% url 'employee:work_experience_update' form.instance.pk as form_action %}
+{% else %}
+    {% url 'employee:work_experience_create' person.id as form_action %}
+{% endif %}
+{% url 'employee:work_experience_list' person.id as list_url %}
+
 <div class="modal-overlay" id="modalWorkExperienceFormOverlay">
-    <div class="modal-container-large">
+    <div class="modal-container-medium">
         <!-- HEADER -->
         <div class="modal-header">
             <div class="header-content-group">
@@ -15,31 +22,30 @@
                 <i class="fa-solid fa-xmark"></i>
             </button>
         </div>
-        {% if form.instance.pk %}
-            {% url 'employee:work_experience_update' form.instance.pk as form_action %}
-        {% else %}
-            {% url 'employee:work_experience_create' person.id as form_action %}
-        {% endif %}
-        {% url 'employee:work_experience_list' person.id as list_url %}
 
         <!-- FORMULARIO -->
-        <form action="{{ form_action }}" method="POST"
-              onsubmit="submitAjaxForm(event, () => openAjaxModal('{{ list_url }}'))">
+        <form action="{{ form_action }}"
+              method="POST"
+              onsubmit="submitAjaxForm(event, () => {refreshCvStats('{{ person.id }}');
+                      openAjaxModal('{{ list_url }}');})">
             {% csrf_token %}
 
             <div class="modal-body-custom">
                 <div class="form-section-card">
-                    <div class="grid-2-cols grid-compact">
-                        <div class="form-group col-span-full">
-                            <label class="form-label">Nombre de la Empresa / Institución</label>
-                            {{ form.company_name }}
-                            {% if form.company_name.errors %}
-                                <span class="text-red small">{{ form.company_name.errors.0 }}</span>
-                            {% endif %}
-                        </div>
 
+                    <!-- FILA 1: EMPRESA (Ancho completo) -->
+                    <div class="form-group mb-3">
+                        <label class="form-label">Nombre de la Empresa / Institución</label>
+                        {{ form.company_name }}
+                        {% if form.company_name.errors %}
+                            <span class="text-red small">{{ form.company_name.errors.0 }}</span>
+                        {% endif %}
+                    </div>
+
+                    <!-- FILA 2: CARGO Y CHECKBOX (Exactamente 2 columnas) -->
+                    <div class="grid-2-cols grid-compact mb-3">
                         <div class="form-group">
-                            <label class="form-label">Cargo / Puesto Desempeñado</label>
+                            <label class="form-label">Puesto Desempeñado</label>
                             {{ form.position }}
                             {% if form.position.errors %}
                                 <span class="text-red small">{{ form.position.errors.0 }}</span>
@@ -47,13 +53,18 @@
                         </div>
 
                         <div class="form-group">
-                            <label class="form-label center">¿Trabaja actualmente aquí?</label>
-                            {{ form.is_current }}
+                            <label class="form-label">Trabajo actualmente aquí</label>
+                            <label for="id_is_current" class="checkbox-label-wrapper">
+                                {{ form.is_current }}
+                            </label>
                             {% if form.is_current.errors %}
                                 <span class="text-red small">{{ form.is_current.errors.0 }}</span>
                             {% endif %}
                         </div>
+                    </div>
 
+                    <!-- FILA 3: FECHAS -->
+                    <div class="grid-2-cols grid-compact mb-3">
                         <div class="form-group">
                             <label class="form-label">Fecha de Inicio</label>
                             {{ form.start_date }}
@@ -62,7 +73,8 @@
                             {% endif %}
                         </div>
 
-                        <div class="form-group" id="endDateWrapper">
+                        <!-- Si form.is_current.value es True, Django aplica la clase 'hidden' directamente -->
+                        <div class="form-group {% if form.is_current.value %}hidden{% endif %}" id="endDateWrapper">
                             <label class="form-label">Fecha de Finalización</label>
                             {{ form.end_date }}
                             {% if form.end_date.errors %}
@@ -70,13 +82,25 @@
                             {% endif %}
                         </div>
                     </div>
+
+                    {% if form.responsibilities %}
+                        <!-- FILA 4: RESPONSABILIDADES (Opcional) -->
+                        <div class="form-group">
+                            <label class="form-label">Responsabilidades Principales</label>
+                            {{ form.responsibilities }}
+                            {% if form.responsibilities.errors %}
+                                <span class="text-red small">{{ form.responsibilities.errors.0 }}</span>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+
                 </div>
             </div>
 
             <!-- FOOTER FIJO -->
             <div class="modal-footer-fixed">
                 <button type="button"
-                        onclick="openAjaxModal('{% url 'employee:work_experience_list' person.id %}')"
+                        onclick="openAjaxModal('{{ list_url }}')"
                         class="btn-secondary">
                     <i class="fa-solid fa-arrow-left"></i> Volver al Listado
                 </button>
@@ -89,24 +113,5 @@
 </div>
 
 <script>
-    // Control dinámico: ocultar fecha fin si trabaja actualmente
-    (function () {
-        const isCurrentSelect = document.querySelector('#modalWorkExperienceFormOverlay [name="is_current"]');
-        const endDateWrapper = document.getElementById('endDateWrapper');
 
-        function toggleEndDate() {
-            if (!isCurrentSelect || !endDateWrapper) return;
-            const isCurrent = isCurrentSelect.value === 'true' || isCurrentSelect.value === 'True' || isCurrentSelect.checked;
-            endDateWrapper.style.display = isCurrent ? 'none' : 'block';
-            if (isCurrent) {
-                const endInput = endDateWrapper.querySelector('input');
-                if (endInput) endInput.value = '';
-            }
-        }
-
-        if (isCurrentSelect) {
-            isCurrentSelect.addEventListener('change', toggleEndDate);
-            toggleEndDate();
-        }
-    })();
 </script>

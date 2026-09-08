@@ -5,6 +5,7 @@ from decimal import Decimal
 from django.contrib.auth import get_user_model
 from .models import EconomicData
 from .forms import BankAccountForm, PayrollInfoForm
+
 User = get_user_model()
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
@@ -998,6 +999,83 @@ class WorkExperienceDeleteView(LoginRequiredMixin, PermissionRequiredMixin, View
         return JsonResponse({'success': True, 'message': 'Experiencia laboral eliminada correctamente.'})
 
 
+# Cursos
+# 1. LISTADO
+class CoursesModalListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
+    model = Training
+    template_name = 'employee/modals/modal_training_list.html'
+    context_object_name = 'titles'
+    permission_required = 'person.change_person'
+
+    def get_queryset(self):
+        self.person = get_object_or_404(Person, pk=self.kwargs['person_id'])
+        return Training.objects.filter(
+            curriculum__person=self.person
+        ).select_related('training_name').order_by('-completion_date', '-pk')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['person'] = self.person
+        return context
+
+
+# 2. CREACIÓN (VÍA AJAX)
+class CoursesCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
+    model = Training
+    form_class = TrainingForm
+    template_name = 'employee/modals/modal_training.html'
+    permission_required = 'person.change_person'
+
+    def dispatch(self, request, *args, **kwargs):
+        self.person = get_object_or_404(Person, pk=self.kwargs['person_id'])
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['person'] = self.person
+        return context
+
+    def form_valid(self, form):
+        title = form.save(commit=False)
+        curriculum, _ = Curriculum.objects.get_or_create(person=self.person)
+        title.curriculum = curriculum
+        title.save()
+        return JsonResponse({'success': True, 'message': 'Curso registrado exitosamente.'})
+
+    def form_invalid(self, form):
+        return render(self.request, self.template_name, self.get_context_data(form=form), status=400)
+
+
+# 3. EDICIÓN (VÍA AJAX)
+class CoursesUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
+    model = Training
+    form_class = TrainingForm
+    template_name = 'employee/modals/modal_training.html'
+    permission_required = 'person.change_person'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['person'] = self.object.curriculum.person
+        return context
+
+    def form_valid(self, form):
+        form.save()
+        return JsonResponse({'success': True, 'message': 'Curso actualizado correctamente.'})
+
+    def form_invalid(self, form):
+        return render(self.request, self.template_name, self.get_context_data(form=form), status=400)
+
+
+# 4. ELIMINACIÓN (VÍA AJAX CON SWEETALERT)
+class CoursesDeleteView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'person.change_person'
+
+    def post(self, request, pk):
+        title = get_object_or_404(AcademicTitle, pk=pk)
+        title.delete()
+        return JsonResponse({'success': True, 'message': 'Curso eliminado correctamente.'})
+
+
 @require_POST
 def delete_cv_item_api(request, item_type, item_id):
     models = {'academic': AcademicTitle, 'experience': WorkExperience, 'training': Training}
@@ -1405,3 +1483,38 @@ def generate_telework_report_pdf(request, person_id):
         return response
 
     return HttpResponse("Error al generar el PDF", status=500)
+
+
+@login_required
+def get_cv_stats_api(request, person_id):
+    person = get_object_or_404(Person, pk=person_id)
+    curriculum = getattr(person, 'curriculum', None)
+
+    titles_count = 0
+    experiences_count = 0
+    courses_count = 0
+    experience_years = 0
+    experience_months = 0
+
+    if curriculum:
+        titles_count = curriculum.academic_titles.count()
+        experiences_count = curriculum.work_experiences.count()
+        courses_count = curriculum.trainings.count()
+
+        total_days = 0
+        for exp in curriculum.work_experiences.all():
+            start = exp.start_date
+            end = date.today() if exp.is_current else (exp.end_date or date.today())
+            if start:
+                total_days += (end - start).days
+
+        experience_years = total_days // 365
+        experience_months = (total_days % 365) // 30
+
+    return JsonResponse({
+        'success': True,
+        'titles_count': titles_count,
+        'experiences_count': experiences_count,
+        'courses_count': courses_count,
+        'experience_text': f"{experience_years} años {experience_months} meses"
+    })

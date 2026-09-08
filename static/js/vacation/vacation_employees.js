@@ -226,5 +226,5 @@ function attachFirstVacationFormSubmit() {
 
 function openVacationModal(employeeId) {
     // Redirigir a la página de detalle de vacaciones
-    window.location.href = `/vacation/requests/employee/${employeeId}/`;
+    window.location.href = `../employee/${employeeId}/`;
 }

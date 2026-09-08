@@ -42,21 +42,27 @@ class WorkExperienceForm(forms.ModelForm):
                 attrs={'class': 'input-field uppercase-input', 'placeholder': 'EJ: MUNICIPIO DE LOJA'}),
             'position': forms.TextInput(
                 attrs={'class': 'input-field uppercase-input', 'placeholder': 'EJ: ANALISTA ADMINISTRATIVO'}),
-            'start_date': forms.DateInput(attrs={'class': 'input-field', 'type': 'date'}),
-            'end_date': forms.DateInput(attrs={'class': 'input-field', 'type': 'date'}),
+            'start_date': forms.DateInput(format='%Y-%m-%d', attrs={'class': 'input-field', 'type': 'date'}),
+            'end_date': forms.DateInput(format='%Y-%m-%d', attrs={'class': 'input-field', 'type': 'date'}),
             'responsibilities': forms.Textarea(
                 attrs={'class': 'input-field', 'rows': 2, 'placeholder': 'EJ: TAREAS ADMINISTRATIVAS'}),
+            'is_current': forms.CheckboxInput(attrs={'class': 'checkbox-lg'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['start_date'].input_formats = ['%Y-%m-%d']
+        self.fields['end_date'].input_formats = ['%Y-%m-%d']
 
 
 class TrainingForm(forms.ModelForm):
     class Meta:
         model = Training
-        # Quitamos 'certificate_number' de la lista
         fields = ['training_name', 'institution', 'hours', 'completion_date']
         widgets = {
-            'training_name': forms.TextInput(attrs={'class': 'input-field uppercase-input'}),
-            'institution': forms.TextInput(attrs={'class': 'input-field uppercase-input'}),
+            'training_name': forms.TextInput(
+                attrs={'class': 'input-field uppercase-input', 'placeholder': 'EJ: CURSO DE TALENTO HUMANO'}),
+            'institution': forms.TextInput(attrs={'class': 'input-field uppercase-input', 'placeholder': 'EJ: SECAP'}),
             'hours': forms.NumberInput(attrs={'class': 'input-field'}),
             'completion_date': forms.DateInput(attrs={'class': 'input-field', 'type': 'date'}),
         }

@@ -26,7 +26,11 @@ urlpatterns = [
     path('work-experience/<int:pk>/delete/', views.WorkExperienceDeleteView.as_view(), name='work_experience_delete'),
     path('api/cv/delete/<str:item_type>/<int:item_id>/', views.delete_cv_item_api, name='api_delete_cv_item'),
     path('api/cv/detail/<str:item_type>/<int:item_id>/', views.get_cv_item_detail_api, name='api_get_cv_item_detail'),
-
+    path('api/cv/stats/<int:person_id>/', views.get_cv_stats_api, name='api_cv_stats'),
+    path('person/<int:person_id>/courses/', views.CoursesModalListView.as_view(), name='courses_list'),
+    path('person/<int:person_id>/courses/create/', views.CoursesCreateView.as_view(), name='courses_create'),
+    path('courses/<int:pk>/update/', views.CoursesUpdateView.as_view(), name='courses_update'),
+    path('courses/<int:pk>/delete/', views.CoursesDeleteView.as_view(), name='courses_delete'),
     # ENDPOINTS DE DATOS ECONÓMICOS E INSTITUCIONALES
     path('person/<int:person_id>/update-payroll-info/', views.update_payroll_info, name='update_payroll_info'),
     path('person/<int:person_id>/add-bank-account/', views.add_bank_account, name='add_bank_account'),
