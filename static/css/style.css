@@ -6416,3 +6416,96 @@ body.employee-dashboard-page .grid-info-personal > :last-child:nth-child(odd) {
         --sidebar-width: 200px; /* Estrechamos un poco el sidebar */
     }
 }
+
+/* =====================================================================
+   22. TABLAS EN MODALES (MODAL TABLES & TOOLBARS)
+   ===================================================================== */
+.modal-table-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.modal-table-container {
+    width: 100%;
+    min-height: 380px;
+    max-height: 480px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background-color: var(--white);
+    border-radius: 12px;
+    border: 1px solid #e8edf4;
+}
+
+.modal-table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+}
+
+.modal-table tbody tr {
+    height: auto !important;
+}
+
+.modal-table td {
+    padding: 0.65rem 0.75rem !important;
+    vertical-align: middle;
+}
+
+/* Anchos y alineación de columnas de modal */
+.col-modal-title {
+    width: 30%;
+}
+
+.col-modal-institution {
+    width: 35%;
+    white-space: normal !important;
+    word-break: break-word;
+    line-height: 1.35;
+    color: #334155;
+}
+
+.col-modal-code {
+    width: 15%;
+    text-align: center;
+    font-family: monospace;
+    font-size: 0.85rem;
+}
+
+.col-modal-year {
+    width: 10%;
+    text-align: center;
+    font-weight: 600;
+}
+
+.col-modal-actions {
+    width: 10%;
+    text-align: center;
+}
+
+/* Tipografía de celdas en modal */
+.modal-table-title-main {
+    display: block;
+    line-height: 1.25;
+    color: var(--primary-color);
+    font-weight: 700;
+}
+
+/* Botón de eliminación para tablas de modal */
+.btn-action-delete {
+    background: linear-gradient(135deg, #ef4444 0%, #be123c 100%);
+    box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2);
+    color: #ffffff !important;
+}
+
+.btn-action-delete:hover {
+    background: linear-gradient(135deg, #dc2626 0%, #9f1239 100%);
+    transform: translateY(-2px);
+}
+
+.col-span-full {
+    grid-column: 1 / -1;
+}

@@ -17,27 +17,27 @@ class AcademicTitleForm(forms.ModelForm):
             'education_level',
             'title_obtained',
             'educational_institution',
+            'graduation_year',
             'senescyt_number',
-            'graduation_year'
         ]
         widgets = {
             'title_obtained': forms.TextInput(attrs={
                 'class': 'input-field uppercase-input',
-                'placeholder': 'Ej: INGENIERO EN SISTEMAS'
+                'placeholder': 'EJ: INGENIERO EN SISTEMAS'
             }),
             'educational_institution': forms.TextInput(attrs={
                 'class': 'input-field uppercase-input',
-                'placeholder': 'Ej: UNIVERSIDAD NACIONAL DE LOJA'
-            }),
-            'senescyt_number': forms.TextInput(attrs={
-                'class': 'input-field',
-                'placeholder': 'Ej: 1005-12-345678'
+                'placeholder': 'EJ: UNIVERSIDAD NACIONAL DE LOJA'
             }),
             'graduation_year': forms.NumberInput(attrs={
                 'class': 'input-field',
-                'placeholder': 'Ej: 2020',
+                'placeholder': 'EJ: 2020',
                 'min': '1950',
                 'max': '2100'
+            }),
+            'senescyt_number': forms.TextInput(attrs={
+                'class': 'input-field',
+                'placeholder': 'EJ: 1005-12-345678'
             }),
         }
 

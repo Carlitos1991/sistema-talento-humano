@@ -837,7 +837,7 @@ class AcademicTitleModalListView(LoginRequiredMixin, PermissionRequiredMixin, Li
 class AcademicTitleCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     model = AcademicTitle
     form_class = AcademicTitleForm
-    template_name = 'employee/modals/modal_academic_title_form.html'
+    template_name = 'employee/modals/modal_academic_title.html'
     permission_required = 'employee.add_academictitle'
 
     def dispatch(self, request, *args, **kwargs):
@@ -864,7 +864,7 @@ class AcademicTitleCreateView(LoginRequiredMixin, PermissionRequiredMixin, Creat
 class AcademicTitleUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     model = AcademicTitle
     form_class = AcademicTitleForm
-    template_name = 'employee/modals/modal_academic_title_form.html'
+    template_name = 'employee/modals/modal_academic_title.html'
     permission_required = 'employee.change_academictitle'
 
     def get_context_data(self, **kwargs):
