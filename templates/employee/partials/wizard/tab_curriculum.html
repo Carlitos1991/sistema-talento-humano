@@ -53,13 +53,14 @@
     <div class="info-box-styled medical-border shadow-sm">
         <h6 class="section-title"><i class="fa-solid fa-briefcase"></i> Experiencia Laboral</h6>
         <div class="cv-stat-inner-container">
-            <div class="cv-stat-number text-success">{{ experienceYears|default:0 }}
-                años {{ experienceMonths|default:0 }} meses
+            <div class="cv-stat-number text-success">
+                {{ experience_years|default:0 }} años {{ experience_months|default:0 }} meses
             </div>
             <div class="cv-stat-label">Experiencia Total</div>
         </div>
         <div class="cv-buttons-centered">
-            <button type="button" class="btn-cv-pill list"
+            <button type="button"
+                    class="btn-cv-pill list"
                     onclick="openAjaxModal('{% url 'employee:work_experience_list' person.id %}')">
                 <i class="fa-solid fa-list"></i> Listado
             </button>
@@ -73,11 +74,11 @@
             <div class="cv-stat-number text-warning">{{ courses|default:0 }}</div>
             <div class="cv-stat-label">Capacitaciones</div>
         </div>
-        <div class="cv-buttons-centered">
-            <button type="button" class="btn-cv-pill list"
-                    onclick="openAjaxModal('{% url 'employee:courses_list' person.id %}')">
-                <i class="fa-solid fa-list"></i> Listado
-            </button>
-        </div>
+        {#        <div class="cv-buttons-centered">#}
+        {#            <button type="button" class="btn-cv-pill list"#}
+        {#                    onclick="openAjaxModal('{% url 'employee:work_experience_list' person.id %}')">#}
+        {#                <i class="fa-solid fa-list"></i> Listado#}
+        {#            </button>#}
+        {#        </div>#}
     </div>
 </div>

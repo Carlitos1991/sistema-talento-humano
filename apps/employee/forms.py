@@ -38,11 +38,14 @@ class WorkExperienceForm(forms.ModelForm):
         model = WorkExperience
         fields = ['company_name', 'position', 'start_date', 'end_date', 'is_current', 'responsibilities']
         widgets = {
-            'company_name': forms.TextInput(attrs={'class': 'input-field uppercase-input'}),
-            'position': forms.TextInput(attrs={'class': 'input-field uppercase-input'}),
+            'company_name': forms.TextInput(
+                attrs={'class': 'input-field uppercase-input', 'placeholder': 'EJ: MUNICIPIO DE LOJA'}),
+            'position': forms.TextInput(
+                attrs={'class': 'input-field uppercase-input', 'placeholder': 'EJ: ANALISTA ADMINISTRATIVO'}),
             'start_date': forms.DateInput(attrs={'class': 'input-field', 'type': 'date'}),
             'end_date': forms.DateInput(attrs={'class': 'input-field', 'type': 'date'}),
-            'responsibilities': forms.Textarea(attrs={'class': 'input-field', 'rows': 2}),
+            'responsibilities': forms.Textarea(
+                attrs={'class': 'input-field', 'rows': 2, 'placeholder': 'EJ: TAREAS ADMINISTRATIVAS'}),
         }
 
 

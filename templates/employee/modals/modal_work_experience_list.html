@@ -4,17 +4,17 @@
         <div class="modal-header">
             <div class="header-content-group">
                 <div class="header-icon-circle">
-                    <i class="fa-solid fa-business-time"></i>
+                    <i class="fa-solid fa-briefcase"></i>
                 </div>
                 <div>
                     <h3 class="header-title">Experiencia Laboral</h3>
                 </div>
             </div>
             <div class="header-actions-group">
-                {% if perms.person.change_person or perms.employee.work_experience_list %}
+                {% if perms.person.change_person or perms.employee.add_workexperience %}
                     <button type="button"
                             class="btn-success"
-                            onclick="openAjaxModal('{% url 'employee:academic_title_create' person.id %}')">
+                            onclick="openAjaxModal('{% url 'employee:work_experience_create' person.id %}')">
                         <i class="fa-solid fa-plus"></i> Nueva Experiencia
                     </button>
                 {% endif %}
@@ -23,63 +23,68 @@
 
         <!-- CONTENIDO Y TABLA -->
         <div class="content-table modal-body-custom">
-
-            <!-- TOOLBAR -->
             <div class="modal-table-toolbar">
                 <div>
                     <span class="badge badge-gray badge-lg">
-                        <i class="fa-solid fa-graduation-cap text-green me-1"></i>
-                        Total registrados: <strong>{{ titles|length }}</strong>
+                        <i class="fa-solid fa-briefcase text-green me-1"></i>
+                        Registros: <strong>{{ experiences|length }}</strong>
                     </span>
                 </div>
                 <div class="search-box">
-                    <input type="text" class="table-search-input" placeholder="Buscar título o institución...">
+                    <input type="text" class="table-search-input" placeholder="Buscar cargo o empresa...">
                     <button type="button" class="search-btn"><i class="fa-solid fa-search"></i></button>
                 </div>
             </div>
 
-            <!-- CONTENEDOR DE TABLA -->
             <div class="table-container modal-table-container">
                 <table class="managed-table modal-table" data-page-size="5">
                     <thead>
                     <tr>
-                        <th class="col-modal-title"><i class="fa-solid fa-certificate"></i> Título / Nivel</th>
-                        <th class="col-modal-institution"><i class="fa-solid fa-building-columns"></i> Institución
-                            Educativa
+                        <th class="col-modal-title"><i class="fa-solid fa-user-tie"></i> Cargo Desempeñado</th>
+                        <th class="col-modal-institution"><i class="fa-solid fa-building"></i> Empresa / Institución
                         </th>
-                        <th class="col-modal-code"><i class="fa-solid fa-hashtag"></i> Reg. SENESCYT</th>
-                        <th class="col-modal-year"><i class="fa-solid fa-calendar"></i> Año</th>
+                        <th style="width: 15%; text-align: center;"><i class="fa-solid fa-calendar-day"></i> Período
+                        </th>
+                        <th style="width: 10%; text-align: center;"><i class="fa-solid fa-clock"></i> Estado</th>
                         <th class="col-modal-actions no-sort actions">Acciones</th>
                     </tr>
                     </thead>
                     <tbody>
-                    {% for item in titles %}
+                    {% for item in experiences %}
                         <tr>
                             <td>
-                                <strong class="modal-table-title-main">{{ item.title_obtained }}</strong>
-                                <span class="badge badge-sm badge-blue mt-1">{{ item.education_level.name|default:"Sin nivel" }}</span>
+                                <strong class="modal-table-title-main">{{ item.position }}</strong>
                             </td>
                             <td class="col-modal-institution">
-                                {{ item.educational_institution|default:"No especificada" }}
+                                {{ item.company_name }}
                             </td>
-                            <td class="col-modal-code">
-                                {{ item.senescyt_number|default:"—" }}
+                            <td style="text-align: center; font-size: 0.85rem;">
+                                {{ item.start_date|date:"d/m/Y" }} —
+                                {% if item.is_current %}
+                                    <span class="text-green font-weight-700">Actualidad</span>
+                                {% else %}
+                                    {{ item.end_date|date:"d/m/Y"|default:"—" }}
+                                {% endif %}
                             </td>
-                            <td class="col-modal-year">
-                                {{ item.graduation_year|default:"—" }}
+                            <td style="text-align: center;">
+                                {% if item.is_current %}
+                                    <span class="badge badge-sm badge-green">Activo</span>
+                                {% else %}
+                                    <span class="badge badge-sm badge-gray">Finalizado</span>
+                                {% endif %}
                             </td>
                             <td class="actions">
                                 <div class="actions-wrapper">
                                     <button type="button"
                                             class="btn-icon btn-action-yellow"
-                                            title="Editar Título"
-                                            onclick="openAjaxModal('{% url 'employee:academic_title_update' item.pk %}')">
+                                            title="Editar"
+                                            onclick="openAjaxModal('{% url 'employee:work_experience_update' item.pk %}')">
                                         <i class="fa-solid fa-pen-to-square"></i>
                                     </button>
                                     <button type="button"
                                             class="btn-icon btn-action-delete"
-                                            title="Eliminar Título"
-                                            onclick="deleteRecordAjax('{% url 'employee:academic_title_delete' item.pk %}', 'este título académico')">
+                                            title="Eliminar"
+                                            onclick="deleteRecordAjax('{% url 'employee:work_experience_delete' item.pk %}', 'esta experiencia laboral')">
                                         <i class="fa-solid fa-trash"></i>
                                     </button>
                                 </div>
@@ -88,8 +93,8 @@
                     {% empty %}
                         <tr class="empty-results-row">
                             <td colspan="5" class="text-center empty-state-container">
-                                <i class="fa-solid fa-folder-open empty-state-icon"></i>
-                                <span class="empty-state-text">No hay títulos académicos registrados.</span>
+                                <i class="fa-solid fa-briefcase empty-state-icon"></i>
+                                <span class="empty-state-text">No hay registros de experiencia laboral.</span>
                             </td>
                         </tr>
                     {% endfor %}
@@ -109,7 +114,7 @@
 
 <script>
     setTimeout(() => {
-        const table = document.querySelector('#modalAcademicTitlesOverlay .managed-table');
+        const table = document.querySelector('#modalWorkExperienceOverlay .managed-table');
         if (table && window.TableManager) {
             new TableManager(table);
         }

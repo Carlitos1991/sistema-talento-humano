@@ -298,10 +298,6 @@ const app = createApp({
         });
 
         onMounted(() => {
-            if (personId) {
-                refreshCvTab(personId);
-            }
-
             if (activeTab.value === 'actions') {
                 Vue.nextTick(() => {
                     initActionsLocalPagination();
@@ -1070,42 +1066,6 @@ const app = createApp({
         };
 
         // --- 7. MÉTODOS: CURRICULUM VITAE (PDF Y CRUD) ---
-
-        const refreshCvTab = async (pId) => {
-            // En lugar de reemplazar todo el HTML, actualizar solo los contadores
-
-            try {
-                // Obtener la persona actualizada para los contadores
-                const [titlesRes, expRes, trainRes] = await Promise.all([
-                    fetch(`/employee/api/cv/list-titles/${pId}/`),
-                    fetch(`/employee/api/cv/list-experience/${pId}/`),
-                    fetch(`/employee/api/cv/list-training/${pId}/`)
-                ]);
-
-                const titlesData = await titlesRes.json();
-                const expData = await expRes.json();
-                const trainData = await trainRes.json();
-
-                if (titlesData.success) {
-                    personStats.value.titles = titlesData.items.length;
-                }
-
-                if (expData.success) {
-                    personStats.value.experiences = expData.items.length;
-                    personStats.value.experienceYears = expData.total_years || 0;
-                    personStats.value.experienceMonths = expData.total_months || 0;
-                }
-
-                if (trainData.success) {
-                    personStats.value.courses = trainData.items.length;
-                }
-
-
-            } catch (e) {
-                console.error('Error actualizando estadísticas:', e);
-            }
-        };
-
         const refreshInstitutionalTab = async (pId) => {
             try {
                 const pid = pId || appElement.dataset.personId;
@@ -1257,8 +1217,6 @@ const app = createApp({
                     } catch (e) {
                         console.warn('Error updating CV banner buttons', e);
                     }
-                    // Refresh counters and small UI on the CV tab
-                    refreshCvTab(pId);
                 }
             } catch (e) {
                 console.error(e);
@@ -1277,7 +1235,6 @@ const app = createApp({
                 if (res.success) {
                     window.Toast.fire({icon: 'success', title: res.message});
                     closeModal('experience');
-                    refreshCvTab(personId);
                 } else {
                     expErrors.value = res.errors;
                 }
@@ -1299,7 +1256,6 @@ const app = createApp({
                 if (res.success) {
                     window.Toast.fire({icon: 'success', title: res.message});
                     closeModal('training');
-                    refreshCvTab(personId);
                 } else {
                     trainErrors.value = res.errors;
                 }
@@ -1397,7 +1353,6 @@ const app = createApp({
                 if (res.success) {
                     window.Toast.fire({icon: 'success', title: res.message});
                     fetchListData(type); // Recargar modal lista
-                    refreshCvTab(personId); // Recargar parcial verde
                 }
             }
         };
@@ -1785,7 +1740,6 @@ const app = createApp({
             openBankModal,
             saveBankAccount,
             refreshEconomicTab,
-            refreshCvTab,
 
             // Métodos Nómina
             openPayrollModal,

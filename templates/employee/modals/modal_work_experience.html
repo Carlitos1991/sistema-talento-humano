@@ -1,123 +1,112 @@
-<div id="modalExperienceOverlay" class="modal-overlay hidden" v-cloak>
-    <div class="modal-container" style="max-width: 650px;">
-        <div class="modal-header modal-header-gradient">
-            <h3 class="header-title-main"><i class="fa-solid fa-briefcase me-2"></i>Nueva Experiencia Laboral</h3>
-            <button @click="closeModal('experience')" class="btn-close-modal-refined">&times;</button>
-        </div>
-        <form @submit.prevent="submitExperience">
-            <div class="modal-body-scrolled bg-light p-4">
-                <div class="form-group mb-3">
-                    <label class="form-label">Nombre de la Empresa</label>
-                    <input type="text" v-model="expForm.company_name" class="input-field uppercase-input" placeholder="Ej: Empresa S.A." required>
-                </div>
-                <div class="grid-2-cols gap-3 mb-3">
-                    <div class="form-group">
-                        <label class="form-label">Cargo / Puesto</label>
-                        <input type="text" v-model="expForm.position" class="input-field uppercase-input" placeholder="Ej: Analista" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">¿Trabaja actualmente aquí?</label>
-                        <select v-model="expForm.is_current" class="input-field">
-                            <option :value="false">No</option>
-                            <option :value="true">Sí</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="grid-2-cols gap-3 mb-3">
-                    <div class="form-group">
-                        <label class="form-label">Fecha Inicio</label>
-                        <input type="date" v-model="expForm.start_date" class="input-field" required>
-                    </div>
-                    <div class="form-group" v-if="!expForm.is_current">
-                        <label class="form-label">Fecha Fin</label>
-                        <input type="date" v-model="expForm.end_date" class="input-field">
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer-fixed">
-                <button type="button" @click="closeModal('experience')" class="btn-cancel">Cerrar</button>
-                <button type="submit" class="btn-save">Guardar Experiencia</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-
 <div class="modal-overlay" id="modalWorkExperienceFormOverlay">
-    <div class="modal-container-medium">
+    <div class="modal-container-large">
+        <!-- HEADER -->
         <div class="modal-header">
             <div class="header-content-group">
                 <div class="header-icon-circle">
-                    <i class="fa-solid fa-graduation-cap"></i>
+                    <i class="fa-solid fa-briefcase"></i>
                 </div>
                 <div>
-                    <h3 class="header-title">{% if form.instance.pk %}Editar{% else %}Nueva{% endif %} Experiencia</h3>
+                    <h3 class="header-title">{% if form.instance.pk %}Editar{% else %}Nueva{% endif %} Experiencia
+                        Laboral</h3>
                 </div>
             </div>
+            <button type="button" onclick="closeModal()" class="btn-close-circle" aria-label="Cerrar">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
         </div>
+        {% if form.instance.pk %}
+            {% url 'employee:work_experience_update' form.instance.pk as form_action %}
+        {% else %}
+            {% url 'employee:work_experience_create' person.id as form_action %}
+        {% endif %}
+        {% url 'employee:work_experience_list' person.id as list_url %}
 
-        <form action="
-                {% if form.instance.pk %}{% url 'employee:_update' form.instance.pk %}{% else %}{% url 'employee:academic_title_create' person.id %}{% endif %}"
-              method="POST"
-              onsubmit="submitAjaxForm(event, () => openAjaxModal('{% url 'employee:academic_title_list' person.id %}'))">
+        <!-- FORMULARIO -->
+        <form action="{{ form_action }}" method="POST"
+              onsubmit="submitAjaxForm(event, () => openAjaxModal('{{ list_url }}'))">
             {% csrf_token %}
 
             <div class="modal-body-custom">
-                <div class="form-section-card mb-0">
+                <div class="form-section-card">
                     <div class="grid-2-cols grid-compact">
-                        <div class="form-group col-md-12" style="grid-column: 1 / -1;">
-                            <label class="form-label">Título Obtenido</label>
-                            {{ form.title_obtained }}
-                            {% if form.title_obtained.errors %}
-                                <span class="text-red small">{{ form.title_obtained.errors.0 }}</span>
-                            {% endif %}
-                        </div>
-
-                        <div class="form-group col-md-12" style="grid-column: 1 / -1;">
-                            <label class="form-label">Institución Educativa</label>
-                            {{ form.educational_institution }}
-                            {% if form.educational_institution.errors %}
-                                <span class="text-red small">{{ form.educational_institution.errors.0 }}</span>
+                        <div class="form-group col-span-full">
+                            <label class="form-label">Nombre de la Empresa / Institución</label>
+                            {{ form.company_name }}
+                            {% if form.company_name.errors %}
+                                <span class="text-red small">{{ form.company_name.errors.0 }}</span>
                             {% endif %}
                         </div>
 
                         <div class="form-group">
-                            <label class="form-label">Nivel de Instrucción</label>
-                            {{ form.education_level }}
-                            {% if form.education_level.errors %}
-                                <span class="text-red small">{{ form.education_level.errors.0 }}</span>
+                            <label class="form-label">Cargo / Puesto Desempeñado</label>
+                            {{ form.position }}
+                            {% if form.position.errors %}
+                                <span class="text-red small">{{ form.position.errors.0 }}</span>
                             {% endif %}
                         </div>
 
                         <div class="form-group">
-                            <label class="form-label">Año de Graduación</label>
-                            {{ form.graduation_year }}
-                            {% if form.graduation_year.errors %}
-                                <span class="text-red small">{{ form.graduation_year.errors.0 }}</span>
+                            <label class="form-label center">¿Trabaja actualmente aquí?</label>
+                            {{ form.is_current }}
+                            {% if form.is_current.errors %}
+                                <span class="text-red small">{{ form.is_current.errors.0 }}</span>
                             {% endif %}
                         </div>
 
-                        <div class="form-group col-md-12" style="grid-column: 1 / -1;">
-                            <label class="form-label">N° de Registro SENESCYT</label>
-                            {{ form.senescyt_number }}
-                            {% if form.senescyt_number.errors %}
-                                <span class="text-red small">{{ form.senescyt_number.errors.0 }}</span>
+                        <div class="form-group">
+                            <label class="form-label">Fecha de Inicio</label>
+                            {{ form.start_date }}
+                            {% if form.start_date.errors %}
+                                <span class="text-red small">{{ form.start_date.errors.0 }}</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group" id="endDateWrapper">
+                            <label class="form-label">Fecha de Finalización</label>
+                            {{ form.end_date }}
+                            {% if form.end_date.errors %}
+                                <span class="text-red small">{{ form.end_date.errors.0 }}</span>
                             {% endif %}
                         </div>
                     </div>
                 </div>
             </div>
 
+            <!-- FOOTER FIJO -->
             <div class="modal-footer-fixed">
                 <button type="button"
-                        onclick="openAjaxModal('{% url 'employee:academic_title_list' person.id %}')"
+                        onclick="openAjaxModal('{% url 'employee:work_experience_list' person.id %}')"
                         class="btn-secondary">
-                    <i class="fa-solid fa-arrow-left"></i> Volver a la Lista
+                    <i class="fa-solid fa-arrow-left"></i> Volver al Listado
                 </button>
                 <button type="submit" class="btn-success">
-                    <i class="fa-solid fa-floppy-disk"></i> Guardar Título
+                    <i class="fa-solid fa-floppy-disk"></i> Guardar Experiencia
                 </button>
             </div>
         </form>
     </div>
 </div>
+
+<script>
+    // Control dinámico: ocultar fecha fin si trabaja actualmente
+    (function () {
+        const isCurrentSelect = document.querySelector('#modalWorkExperienceFormOverlay [name="is_current"]');
+        const endDateWrapper = document.getElementById('endDateWrapper');
+
+        function toggleEndDate() {
+            if (!isCurrentSelect || !endDateWrapper) return;
+            const isCurrent = isCurrentSelect.value === 'true' || isCurrentSelect.value === 'True' || isCurrentSelect.checked;
+            endDateWrapper.style.display = isCurrent ? 'none' : 'block';
+            if (isCurrent) {
+                const endInput = endDateWrapper.querySelector('input');
+                if (endInput) endInput.value = '';
+            }
+        }
+
+        if (isCurrentSelect) {
+            isCurrentSelect.addEventListener('change', toggleEndDate);
+            toggleEndDate();
+        }
+    })();
+</script>
