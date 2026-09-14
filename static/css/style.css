@@ -6463,37 +6463,6 @@ body.employee-dashboard-page .grid-info-personal > :last-child:nth-child(odd) {
     vertical-align: middle;
 }
 
-/* Anchos y alineación de columnas de modal */
-.col-modal-title {
-    width: 30%;
-}
-
-.col-modal-institution {
-    width: 35%;
-    white-space: normal !important;
-    word-break: break-word;
-    line-height: 1.35;
-    color: #334155;
-}
-
-.col-modal-code {
-    width: 15%;
-    text-align: center;
-    font-family: monospace;
-    font-size: 0.85rem;
-}
-
-.col-modal-year {
-    width: 10%;
-    text-align: center;
-    font-weight: 600;
-}
-
-.col-modal-actions {
-    width: 10%;
-    text-align: center;
-}
-
 /* Tipografía de celdas en modal */
 .modal-table-title-main {
     display: block;

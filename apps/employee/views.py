@@ -999,19 +999,23 @@ class WorkExperienceDeleteView(LoginRequiredMixin, PermissionRequiredMixin, View
         return JsonResponse({'success': True, 'message': 'Experiencia laboral eliminada correctamente.'})
 
 
-# Cursos
+# =====================================================================
+# CURSOS Y CAPACITACIONES
+# =====================================================================
+
 # 1. LISTADO
 class CoursesModalListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     model = Training
     template_name = 'employee/modals/modal_training_list.html'
-    context_object_name = 'titles'
+    context_object_name = 'courses'
     permission_required = 'person.change_person'
 
     def get_queryset(self):
         self.person = get_object_or_404(Person, pk=self.kwargs['person_id'])
+        # Se elimina select_related('training_name') porque es un CharField
         return Training.objects.filter(
             curriculum__person=self.person
-        ).select_related('training_name').order_by('-completion_date', '-pk')
+        ).order_by('-completion_date', '-pk')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -1019,7 +1023,7 @@ class CoursesModalListView(LoginRequiredMixin, PermissionRequiredMixin, ListView
         return context
 
 
-# 2. CREACIÓN (VÍA AJAX)
+# 2. CREACIÓN
 class CoursesCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     model = Training
     form_class = TrainingForm
@@ -1036,17 +1040,18 @@ class CoursesCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView)
         return context
 
     def form_valid(self, form):
-        title = form.save(commit=False)
-        curriculum, _ = Curriculum.objects.get_or_create(person=self.person)
-        title.curriculum = curriculum
-        title.save()
-        return JsonResponse({'success': True, 'message': 'Curso registrado exitosamente.'})
+        with transaction.atomic():
+            training = form.save(commit=False)
+            curriculum, _ = Curriculum.objects.get_or_create(person=self.person)
+            training.curriculum = curriculum
+            training.save()
+        return JsonResponse({'success': True, 'message': 'Capacitación registrada exitosamente.'})
 
     def form_invalid(self, form):
         return render(self.request, self.template_name, self.get_context_data(form=form), status=400)
 
 
-# 3. EDICIÓN (VÍA AJAX)
+# 3. EDICIÓN
 class CoursesUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     model = Training
     form_class = TrainingForm
@@ -1055,25 +1060,27 @@ class CoursesUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['person'] = self.object.curriculum.person
+        curriculum = getattr(self.object, 'curriculum', None)
+        context['person'] = getattr(curriculum, 'person', None)
         return context
 
     def form_valid(self, form):
         form.save()
-        return JsonResponse({'success': True, 'message': 'Curso actualizado correctamente.'})
+        return JsonResponse({'success': True, 'message': 'Capacitación actualizada correctamente.'})
 
     def form_invalid(self, form):
         return render(self.request, self.template_name, self.get_context_data(form=form), status=400)
 
 
-# 4. ELIMINACIÓN (VÍA AJAX CON SWEETALERT)
+# 4. ELIMINACIÓN
 class CoursesDeleteView(LoginRequiredMixin, PermissionRequiredMixin, View):
     permission_required = 'person.change_person'
 
     def post(self, request, pk):
-        title = get_object_or_404(AcademicTitle, pk=pk)
-        title.delete()
-        return JsonResponse({'success': True, 'message': 'Curso eliminado correctamente.'})
+        # Corregido: se consulta el modelo Training
+        training = get_object_or_404(Training, pk=pk)
+        training.delete()
+        return JsonResponse({'success': True, 'message': 'Capacitación eliminada correctamente.'})
 
 
 @require_POST
