@@ -31,7 +31,7 @@
     </style>
 
     <div class="modal-body-scrolled">
-        <div style="margin-bottom: 16px; padding: 12px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;">
+        <div>
             <strong>Horario actual:</strong>
             {% if current_row and current_row.schedule %}
                 {{ current_row.schedule.name }}
@@ -72,11 +72,11 @@
                 <textarea id="reason" name="reason" class="form-control" rows="3" placeholder="Opcional: indique si es temporal o el motivo del cambio"></textarea>
             </div>
 
-            <div class="modal-footer-fixed" style="padding-left:0; padding-right:0;">
-                <button type="button" class="btn-cancel js-close-modal">
+            <div class="modal-footer-fixed" >
+                <button type="button" class="btn-default-outline js-close-modal">
                     <i class="fa-solid fa-xmark"></i> CANCELAR
                 </button>
-                <button type="submit" class="btn-save">
+                <button type="submit" class="btn-default">
                     <i class="fa-solid fa-floppy-disk"></i> GUARDAR
                 </button>
             </div>

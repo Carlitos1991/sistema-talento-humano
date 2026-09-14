@@ -1,8 +1,10 @@
 <div class="tab-pane-telework" data-person-id="{{ person.id }}">
 
-    <!-- AVISO PERFIL AJENO -->
-    <div id="teleworkReadOnlyAlert" class="alert-banner-info hidden mb-3">
-        <i class="fa-solid fa-circle-info me-2 text-primary"></i>
+    <!-- BANNER DE AVISO (PERFIL DE OTRO FUNCIONARIO) -->
+    <div id="teleworkReadOnlyAlert"
+         class="alert-telework-readonly {% if request.user == person.user %}hidden{% endif %}"
+         style="{% if request.user == person.user %}display: none;{% endif %}">
+        <i class="fa-solid fa-circle-info"></i>
         <span>Usted está visualizando el módulo de teletrabajo de otro empleado. Las opciones de marcación están deshabilitadas.</span>
     </div>
 
@@ -15,8 +17,10 @@
             </h5>
             <hr class="telework-divider">
 
-            <!-- Botones centrados de marcación -->
-            <div id="teleworkAttendanceGroup" class="telework-center-actions">
+            <!-- Botones de Marcación (Ocultos por defecto si no es perfil propio) -->
+            <div id="teleworkAttendanceGroup"
+                 class="telework-center-actions"
+                 style="{% if request.user != person.user %}display: none;{% endif %}">
                 <button type="button"
                         id="btnPunchIncome"
                         class="btn-telework-square green"
@@ -33,7 +37,7 @@
                 </button>
             </div>
 
-            <!-- Listado de Marcaciones del Día -->
+            <!-- Listado de Marcaciones -->
             <div class="telework-scroll-area" id="teleworkPunchesContainer">
                 <div class="text-center py-4 text-muted small">
                     <i class="fa-solid fa-spinner fa-spin me-1"></i> Cargando marcaciones...
@@ -48,9 +52,14 @@
             </h5>
             <hr class="telework-divider">
 
-            <!-- Botón central "Nueva Actividad" y botón "Reporte PDF" -->
+            <!-- Acción Central / Vista Solo Lectura -->
             <div id="teleworkActivityActionContainer" class="telework-center-actions">
-                <!-- Se inyecta dinámicamente según el estado del empleado -->
+                {% if request.user != person.user %}
+                    <div class="telework-readonly-indicator">
+                        <i class="fa-solid fa-eye"></i>
+                        <span>Vista de solo lectura</span>
+                    </div>
+                {% endif %}
             </div>
 
             <!-- Listado de Actividades -->

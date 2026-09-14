@@ -1,5 +1,4 @@
 <div class="profile-header-container">
-
     <form id="detailPhotoForm" action="{% url 'person:person_photo_update' person.id %}" method="post" enctype="multipart/form-data" class="profile-photo-form">
         {% csrf_token %}
         <label id="detailPhotoPreviewWrapper"

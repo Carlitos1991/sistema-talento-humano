@@ -1,41 +1,155 @@
-<div id="personAuditOverlay" class="modal-overlay hidden" v-cloak>
-    <div class="modal-container-xl" style="max-width: 980px;">
-        <div class="modal-header modal-header-gradient">
+<div class="modal-overlay" id="personAuditOverlay">
+    <div class="modal-container-xl">
+        <!-- HEADER -->
+        <div class="modal-header">
             <div class="header-content-group">
-                <div class="header-icon-circle"><i class="fa-solid fa-shield-halved"></i></div>
+                <div class="header-icon-circle">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
                 <div>
-                    <h3 class="header-title-main">Auditoría del Expediente</h3>
-                    <p class="text-white-50 small mb-0">{{ person.full_name }}</p>
+                    <h3 class="header-title">Auditoría del Expediente</h3>
+                    <p class="small text-muted mb-0">{{ person.full_name }}</p>
                 </div>
             </div>
-            <button type="button" class="btn-close-modal-refined" @click="closeAuditModal">&times;</button>
+            <button type="button" onclick="closeModal()" class="btn-close-circle" aria-label="Cerrar">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
         </div>
 
-        <div class="modal-body-scrolled bg-light">
-            <div class="d-flex flex-wrap gap-2 align-items-center justify-content-between mb-3">
-                <div class="d-flex flex-wrap gap-2 align-items-center">
-                    <input type="text" id="personAuditSearchInput" class="form-control" style="min-width: 260px;" placeholder="Buscar usuario, sección o detalle">
-                    <button type="button" class="btn btn-outline-primary" id="personAuditSearchBtn">
-                        <i class="fa-solid fa-magnifying-glass"></i> Buscar
-                    </button>
-                    <button type="button" class="btn btn-outline-secondary" id="personAuditResetBtn">
-                        Limpiar
-                    </button>
+        <!-- BODY -->
+        <div class="modal-body-custom">
+            <!-- BARRA DE FILTROS -->
+            <div class="form-section-card mb-3">
+                <div class="d-flex flex-wrap gap-3 align-items-center justify-content-between">
+                    <!-- Rango de Fechas -->
+                    <div class="d-flex flex-wrap gap-2 align-items-center">
+                        <div>
+                            <span class="small text-muted fw-bold d-block mb-1">Desde:</span>
+                            <input type="date" id="auditStartDate" class="input-field" value="{{ start_date }}">
+                        </div>
+                        <div>
+                            <span class="small text-muted fw-bold d-block mb-1">Hasta:</span>
+                            <input type="date" id="auditEndDate" class="input-field" value="{{ end_date }}">
+                        </div>
+                        <div class="align-self-end d-flex gap-1">
+                            <button type="button" class="btn-success" onclick="filterAuditByDate(false)">
+                                <i class="fa-solid fa-filter me-1"></i> Filtrar
+                            </button>
+                            <button type="button" class="btn-secondary" onclick="filterAuditByDate(true)">
+                                Ver Todos
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Contador y Exportación -->
+                    <div class="align-self-end d-flex align-items-center gap-2">
+                        <span class="badge-count-pill" id="auditRowCountBadge">{{ audit_logs|length }} registros</span>
+                        <a href="{% url 'employee:audit_export_excel' person.id %}?{% if is_all %}show_all=1{% else %}start_date={{ start_date }}&end_date={{ end_date }}{% endif %}"
+                           class="btn-light border text-nowrap"
+                           target="_blank">
+                            <i class="fa-solid fa-file-excel text-success me-1"></i> Exportar Excel
+                        </a>
+                    </div>
                 </div>
-                <button type="button" class="btn btn-success" id="personAuditExportBtn">
-                    <i class="fa-solid fa-file-excel"></i> Exportar Excel
-                </button>
+
+                <!-- Buscador en tiempo real -->
+                <div class="mt-3 pt-2 border-top">
+                    <input type="text"
+                           id="personAuditSearchInput"
+                           class="input-field"
+                           placeholder="Buscar por usuario, acción o IP..."
+                           onkeyup="filterAuditTableClient()">
+                </div>
             </div>
-            <div id="personAuditResults" class="person-audit-results">
-                <div class="py-4 text-center text-muted" id="personAuditLoadingState">
-                <i class="fa-solid fa-spinner fa-spin me-2"></i>
-                Cargando movimientos...
-                </div>
+
+            <!-- TABLA ESTILIZADA -->
+            <div class="audit-table-wrapper">
+                <table class="table-audit-refined" id="personAuditTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 185px;">Fecha y Hora</th>
+                            <th style="min-width: 200px;">Usuario</th>
+                            <th>Movimiento / Detalle</th>
+                            <th style="width: 140px; text-align: center;">Dirección IP</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in audit_logs %}
+                            <tr>
+                                <!-- Formato con hora, minuto y segundo -->
+                                <td>
+                                    <span class="audit-timestamp">{{ log.created_at|date:"d/m/Y H:i:s" }}</span>
+                                </td>
+                                <td>
+                                    <strong class="text-dark">{{ log.user.get_full_name|default:log.user.username }}</strong>
+                                </td>
+                                <td>
+                                    {% if log.action_detail %}
+                                        {{ log.action_detail }}
+                                    {% else %}
+                                        {{ log.get_action_display }} {{ log.get_section_display|default:log.section|default:"" }}
+                                    {% endif %}
+                                </td>
+                                <!-- IP en cápsula visible sin desborde -->
+                                <td style="text-align: center;">
+                                    <span class="badge-ip-pill">{{ log.ip_address|default:"—" }}</span>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr id="emptyAuditRow">
+                                <td colspan="4" class="text-center py-5 text-muted">
+                                    <i class="fa-solid fa-shield-halved fa-2x mb-2 opacity-40"></i>
+                                    <p class="mb-0 small">No se registraron movimientos en este período.</p>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
 
-        <div class="modal-footer-fixed d-flex justify-content-end">
-            <button type="button" class="btn-cancel" @click="closeAuditModal">Cerrar</button>
+        <!-- FOOTER FIJO -->
+        <div class="modal-footer-fixed">
+            <button type="button" onclick="closeModal()" class="btn-secondary">
+                <i class="fa-solid fa-xmark"></i> Cerrar
+            </button>
         </div>
     </div>
 </div>
+
+<script>
+    function filterAuditByDate(showAll) {
+        const personId = '{{ person.id }}';
+        let url = `/employee/person/${personId}/audit/modal/?`;
+        if (showAll) {
+            url += 'show_all=1';
+        } else {
+            const start = document.getElementById('auditStartDate').value;
+            const end = document.getElementById('auditEndDate').value;
+            if (!start || !end) {
+                alert('Seleccione ambas fechas para filtrar.');
+                return;
+            }
+            url += `start_date=${encodeURIComponent(start)}&end_date=${encodeURIComponent(end)}`;
+        }
+        openAjaxModal(url);
+    }
+
+    function filterAuditTableClient() {
+        const query = document.getElementById('personAuditSearchInput').value.toLowerCase();
+        const rows = document.querySelectorAll('#personAuditTable tbody tr:not(#emptyAuditRow)');
+        let visibleCount = 0;
+
+        rows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            const match = text.includes(query);
+            row.style.display = match ? '' : 'none';
+            if (match) visibleCount++;
+        });
+
+        const badge = document.getElementById('auditRowCountBadge');
+        if (badge) {
+            badge.textContent = visibleCount + ' registros';
+        }
+    }
+</script>

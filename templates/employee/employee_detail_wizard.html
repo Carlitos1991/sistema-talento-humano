@@ -106,7 +106,9 @@
                     <i class="fa-solid fa-arrow-left"></i> Volver
                 </a>
                 {% if can_edit_person %}
-                    <button type="button" @click="openAuditModal({{ person.id }})" class="btn-secondary">
+                    <button type="button"
+                            class="btn-secondary"
+                            onclick="openAjaxModal('{% url 'employee:person_audit_modal' person.id %}')">
                         <i class="fa-solid fa-shield-halved"></i> Auditoría
                     </button>
                     <button type="button"
@@ -240,4 +242,38 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="{% static 'js/employee_vacation_chart.js' %}"></script>
     <script src="{% static 'js/vacation/vacation_detail.js' %}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const wizardRoot = document.getElementById('employeeWizardApp');
+            if (!wizardRoot) return;
+
+            const personId = wizardRoot.getAttribute('data-person-id');
+            window.__lastAuditedTab = 'Datos Personales'; // Pestaña activa inicial por defecto
+
+            document.querySelector('.module-grid-premium')?.addEventListener('click', function (e) {
+                // Ignorar si se hizo clic en el mini check de visibilidad
+                if (e.target.closest('.mini-check')) return;
+
+                const btn = e.target.closest('.employee-detail-button');
+                if (!btn) return;
+
+                const label = btn.querySelector('.employee-detail-button-label')?.textContent?.trim();
+                if (!label || label === window.__lastAuditedTab) return;
+                window.__lastAuditedTab = label;
+
+                const csrf = (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] ||
+                    document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+
+                fetch(`/employee/person/${personId}/audit/tab/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': csrf
+                    },
+                    body: JSON.stringify({tab_name: label})
+                }).catch(err => console.error("Error al registrar auditoría:", err));
+            });
+        });
+    </script>
 {% endblock %}

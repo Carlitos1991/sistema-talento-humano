@@ -1015,72 +1015,51 @@ window.loadTeleworkData = function (personId) {
             const punchGroup = document.getElementById('teleworkAttendanceGroup');
             const actionContainer = document.getElementById('teleworkActivityActionContainer');
 
-            // A. Estado de perfil y botones de acción
-            if (readOnlyAlert && punchGroup && actionContainer) {
-                if (!data.is_own_profile) {
-                    readOnlyAlert.classList.remove('hidden');
-                    punchGroup.classList.add('hidden');
+            // A. Manejo de perfil ajeno vs perfil propio
+            if (!data.is_own_profile) {
+                if (readOnlyAlert) readOnlyAlert.style.display = 'flex';
+                if (punchGroup) punchGroup.style.display = 'none';
+                if (actionContainer) {
                     actionContainer.innerHTML = `
-                    <button type="button" class="btn-telework-square green"
-            onclick="openAjaxModal('/employee/person/${personId}/telework/activity/modal/')">
-        <i class="fa-solid fa-plus"></i>
-        <span>Nueva<br>Actividad</span>
-    </button>
-    <button type="button" class="btn-telework-square neutral"
-            onclick="openAjaxModal('/employee/person/${personId}/telework/report/modal/')">
-        <i class="fa-solid fa-file-pdf text-red"></i>
-        <span>Reporte<br>PDF</span>
-    </button>`;
-                } else {
-                    readOnlyAlert.classList.add('hidden');
-                    punchGroup.classList.remove('hidden');
+                    <div class="telework-readonly-indicator">
+                        <i class="fa-solid fa-eye"></i>
+                        <span>Vista de solo lectura</span>
+                    </div>`;
+                }
+            } else {
+                if (readOnlyAlert) readOnlyAlert.style.display = 'none';
+                if (punchGroup) punchGroup.style.display = 'flex';
 
-                    const btnIncome = document.getElementById('btnPunchIncome');
-                    const btnExit = document.getElementById('btnPunchExit');
+                const btnIncome = document.getElementById('btnPunchIncome');
+                const btnExit = document.getElementById('btnPunchExit');
+                if (btnIncome) btnIncome.disabled = (data.last_punch_type === 'INCOME');
+                if (btnExit) btnExit.disabled = (data.last_punch_type !== 'INCOME');
 
-                    if (btnIncome) btnIncome.disabled = (data.last_punch_type === 'INCOME');
-                    if (btnExit) btnExit.disabled = (data.last_punch_type !== 'INCOME');
-
-                    // Botones centrados de actividad
+                if (actionContainer) {
                     if (data.last_punch_type === 'EXIT') {
                         actionContainer.innerHTML = `
                         <div class="text-center p-2 bg-light border rounded">
                             <i class="fa-solid fa-lock text-red me-1"></i>
-                            <span class="small fw-bold text-muted">Salida registrada para el día de hoy</span>
-                        </div>
-                        <button type="button" class="btn-telework-square green"
-            onclick="openAjaxModal('/employee/person/${personId}/telework/activity/modal/')">
-        <i class="fa-solid fa-plus"></i>
-        <span>Nueva<br>Actividad</span>
-    </button>
-    <button type="button" class="btn-telework-square neutral"
-            onclick="openAjaxModal('/employee/person/${personId}/telework/report/modal/')">
-        <i class="fa-solid fa-file-pdf text-red"></i>
-        <span>Reporte<br>PDF</span>
-    </button>`;
+                            <span class="small fw-bold text-muted">Salida registrada</span>
+                        </div>`;
                     } else if (!data.has_income) {
                         actionContainer.innerHTML = `
                         <div class="text-center p-2 bg-light border rounded">
                             <i class="fa-solid fa-circle-exclamation text-warning me-1"></i>
-                            <span class="small fw-bold text-muted">Debe marcar entrada para reportar actividades</span>
+                            <span class="small fw-bold text-muted">Debe marcar entrada</span>
                         </div>`;
                     } else {
                         actionContainer.innerHTML = `
                         <button type="button" class="btn-telework-square green"
-            onclick="openAjaxModal('/employee/person/${personId}/telework/activity/modal/')">
-        <i class="fa-solid fa-plus"></i>
-        <span>Nueva<br>Actividad</span>
-    </button>
-    <button type="button" class="btn-telework-square neutral"
-            onclick="openAjaxModal('/employee/person/${personId}/telework/report/modal/')">
-        <i class="fa-solid fa-file-pdf text-red"></i>
-        <span>Reporte<br>PDF</span>
-    </button>`;
+                                onclick="openAjaxModal('/employee/person/${personId}/telework/activity/modal/')">
+                            <i class="fa-solid fa-plus"></i>
+                            <span>Nueva<br>Actividad</span>
+                        </button>`;
                     }
                 }
             }
 
-            // B. Listado de marcaciones
+            // B. Renderizado de Marcaciones
             const punchesContainer = document.getElementById('teleworkPunchesContainer');
             if (punchesContainer) {
                 if (!data.punches || data.punches.length === 0) {
@@ -1115,7 +1094,7 @@ window.loadTeleworkData = function (personId) {
                 }
             }
 
-            // C. Listado de actividades (idéntico a la imagen)
+            // C. Renderizado de Actividades
             const activitiesContainer = document.getElementById('teleworkActivitiesContainer');
             if (activitiesContainer) {
                 if (!data.activities || data.activities.length === 0) {
@@ -1142,9 +1121,32 @@ window.loadTeleworkData = function (personId) {
                 }
             }
         })
-        .catch(err => console.error("Error al cargar datos de teletrabajo:", err));
+        .catch(err => console.error("Error cargando datos de teletrabajo:", err));
 };
 
+// AUTO-DISPARADOR AL HACER CLIC EN LA PESTAÑA TELETRABAJO
+document.addEventListener('click', function (e) {
+    const btn = e.target.closest('.employee-detail-button');
+    if (btn) {
+        const label = btn.querySelector('.employee-detail-button-label')?.textContent?.trim().toLowerCase();
+        if (label && label.includes('teletrabajo')) {
+            const wizardRoot = document.getElementById('employeeWizardApp');
+            const personId = wizardRoot ? wizardRoot.getAttribute('data-person-id') : null;
+            // Delay breve para permitir que Vue monte el contenido en el DOM
+            setTimeout(() => {
+                window.loadTeleworkData(personId);
+            }, 120);
+        }
+    }
+});
+
+// Carga si la página inicia directamente en teletrabajo
+document.addEventListener('DOMContentLoaded', function () {
+    const pane = document.querySelector('.tab-pane-telework');
+    if (pane) {
+        window.loadTeleworkData(pane.getAttribute('data-person-id'));
+    }
+});
 // 2. REGISTRO DE ASISTENCIA CON GEOLOCALIZACIÓN
 window.markTeleworkAttendance = function (punchType, personId) {
     const doSubmit = (lat = 0, lng = 0) => {

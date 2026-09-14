@@ -6836,3 +6836,197 @@ body.no-scroll {
     align-items: center;
     gap: 8px;
 }
+
+/* =====================================================================
+   31. MODAL DE AUDITORÍA Y MODALES EXTRA GRANDES (XL)
+   ===================================================================== */
+.modal-overlay {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background-color: rgba(15, 23, 42, 0.6) !important;
+    backdrop-filter: blur(3px);
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    z-index: 9999 !important;
+    overscroll-behavior: contain;
+}
+
+.modal-overlay.hidden {
+    display: none !important;
+}
+
+.modal-container-xl {
+    background: #ffffff;
+    border-radius: 14px;
+    width: 95%;
+    max-width: 1050px;
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    overflow: hidden;
+    position: relative;
+    z-index: 10000;
+}
+
+.modal-container-xl .modal-body-custom {
+    overflow-y: auto;
+    flex: 1 1 auto;
+    padding: 1.25rem;
+    background-color: #f8fafc;
+}
+
+/* Tabla interna de auditoría */
+.table-audit {
+    width: 100%;
+    border-collapse: collapse;
+    background: #ffffff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.table-audit th {
+    background-color: #0f172a;
+    color: #ffffff;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 10px 12px;
+    letter-spacing: 0.04em;
+}
+
+.table-audit td {
+    padding: 9px 12px;
+    font-size: 0.82rem;
+    color: #334155;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.table-audit tr:hover td {
+    background-color: #f8fafc;
+}
+
+/* =====================================================================
+   32. BANNER Y MODO SOLO LECTURA EN TELETRABAJO
+   ===================================================================== */
+.alert-telework-readonly {
+    background-color: #eff6ff;
+    border-left: 5px solid #3b82f6;
+    border-radius: 8px;
+    padding: 12px 18px;
+    color: #1e40af;
+    font-size: 0.88rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 1.25rem;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.alert-telework-readonly i {
+    font-size: 1.25rem;
+    color: #3b82f6;
+    flex-shrink: 0;
+}
+
+.telework-readonly-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 6px 0;
+    color: #64748b;
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
+.telework-readonly-indicator i {
+    font-size: 1.1rem;
+    color: #334155;
+}
+
+/* =====================================================================
+   33. ESTILOS PARA AUDITORÍA
+   ===================================================================== */
+.audit-table-wrapper {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    overflow-x: auto;
+    max-height: 420px;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.table-audit-refined {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: auto;
+}
+
+.table-audit-refined thead th {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background-color: #0f172a;
+    color: #f8fafc;
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 11px 14px;
+    border: none;
+    white-space: nowrap;
+}
+
+.table-audit-refined tbody tr {
+    transition: background-color 0.12s ease;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.table-audit-refined tbody tr:hover {
+    background-color: #f8fafc;
+}
+
+.table-audit-refined td {
+    padding: 9px 14px;
+    font-size: 0.81rem;
+    color: #334155;
+    vertical-align: middle;
+}
+
+.audit-timestamp {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #0f172a;
+    white-space: nowrap;
+}
+
+.badge-ip-pill {
+    display: inline-block;
+    padding: 3px 8px;
+    background-color: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.73rem;
+    font-weight: 700;
+    color: #475569;
+    white-space: nowrap;
+}
+
+.badge-count-pill {
+    background-color: #e2e8f0;
+    color: #334155;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 9999px;
+}
