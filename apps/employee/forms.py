@@ -60,12 +60,28 @@ class TrainingForm(forms.ModelForm):
         model = Training
         fields = ['training_name', 'institution', 'hours', 'completion_date']
         widgets = {
-            'training_name': forms.TextInput(
-                attrs={'class': 'input-field uppercase-input', 'placeholder': 'EJ: CURSO DE TALENTO HUMANO'}),
-            'institution': forms.TextInput(attrs={'class': 'input-field uppercase-input', 'placeholder': 'EJ: SECAP'}),
-            'hours': forms.NumberInput(attrs={'class': 'input-field'}),
-            'completion_date': forms.DateInput(attrs={'class': 'input-field', 'type': 'date'}),
+            'training_name': forms.TextInput(attrs={
+                'class': 'input-field uppercase-input',
+                'placeholder': 'EJ: TALLER DE GESTIÓN PÚBLICA'
+            }),
+            'institution': forms.TextInput(attrs={
+                'class': 'input-field uppercase-input',
+                'placeholder': 'EJ: INSTITUTO DE CAPACITACIÓN'
+            }),
+            'hours': forms.NumberInput(attrs={
+                'class': 'input-field',
+                'placeholder': 'EJ: 40',
+                'min': '1'
+            }),
+            'completion_date': forms.DateInput(
+                format='%Y-%m-%d',
+                attrs={'class': 'input-field', 'type': 'date'}
+            ),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['completion_date'].input_formats = ['%Y-%m-%d']
 
 
 class BankAccountForm(forms.ModelForm):

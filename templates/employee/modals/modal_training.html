@@ -1,40 +1,89 @@
-<div id="modalTrainingOverlay" class="modal-overlay hidden" v-cloak>
-    <div class="modal-container" style="max-width: 600px;">
-        <div class="modal-header modal-header-gradient">
-            <h3 class="header-title-main">Nueva Capacitación</h3>
-            <button @click="closeModal('training')" class="btn-close-modal-refined">&times;</button>
-        </div>
-        <form action="{{ form_action }}"
-              method="POST" onsubmit="submitAjaxForm(event, () => {refreshCvStats('{{ person.id }}');
-                openAjaxModal('{{ list_url }}');})">
-            {% csrf_token %}
-            <div class="modal-body-custom">
-                <div class="form-group mb-3">
-                    <label class="form-label">Nombre del Evento</label>
-                    <input type="text" v-model="trainForm.training_name" class="input-field uppercase-input"
-                           placeholder="Ej: Curso de Python" required>
+{% if form.instance.pk %}
+    {% url 'employee:courses_update' form.instance.pk as form_action %}
+{% else %}
+    {% url 'employee:courses_create' person.id as form_action %}
+{% endif %}
+{% url 'employee:courses_list' person.id as list_url %}
+
+<div id="modalTrainingOverlay" class="modal-overlay">
+    <div class="modal-container-medium">
+        <!-- HEADER -->
+        <div class="modal-header">
+            <div class="header-content-group">
+                <div class="header-icon-circle">
+                    <i class="fa-solid fa-book-atlas"></i>
                 </div>
-                <div class="form-group mb-3">
-                    <label class="form-label">Institución</label>
-                    <input type="text" v-model="trainForm.institution" class="input-field uppercase-input"
-                           placeholder="Ej: Instituto Técnico">
-                </div>
-                <div class="grid-2-cols gap-3">
-                    <div class="form-group">
-                        <label class="form-label">Horas</label>
-                        <input type="number" v-model="trainForm.hours" class="input-field" placeholder="Ej: 40"
-                               required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Fecha Fin</label>
-                        <input type="date" v-model="trainForm.completion_date" class="input-field">
-                    </div>
+                <div>
+                    <h3 class="header-title">{% if form.instance.pk %}Editar{% else %}Nueva{% endif %} Capacitación</h3>
+                    <p class="small text-muted mb-0">{{ person.full_name }}</p>
                 </div>
             </div>
+            <button type="button" onclick="closeModal()" class="btn-close-circle" aria-label="Cerrar">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <!-- FORMULARIO -->
+        <form action="{{ form_action }}"
+              method="POST"
+              onsubmit="submitAjaxForm(event, () => {
+                      refreshCvStats('{{ person.id }}');
+                      openAjaxModal('{{ list_url }}');
+                      })">
+            {% csrf_token %}
+
+            <div class="modal-body-custom">
+                <div class="form-section-card">
+
+                    <!-- 1. NOMBRE DEL CURSO -->
+                    <div class="form-group mb-3">
+                        <label class="form-label">Nombre del Evento / Curso</label>
+                        {{ form.training_name }}
+                        {% if form.training_name.errors %}
+                            <span class="text-red small">{{ form.training_name.errors.0 }}</span>
+                        {% endif %}
+                    </div>
+
+                    <!-- 2. INSTITUCIÓN -->
+                    <div class="form-group mb-3">
+                        <label class="form-label">Institución / Entidad Capacitadora</label>
+                        {{ form.institution }}
+                        {% if form.institution.errors %}
+                            <span class="text-red small">{{ form.institution.errors.0 }}</span>
+                        {% endif %}
+                    </div>
+
+                    <!-- 3. HORAS Y FECHA FIN -->
+                    <div class="grid-2-cols grid-compact">
+                        <div class="form-group">
+                            <label class="form-label">Número de Horas</label>
+                            {{ form.hours }}
+                            {% if form.hours.errors %}
+                                <span class="text-red small">{{ form.hours.errors.0 }}</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Fecha de Finalización</label>
+                            {{ form.completion_date }}
+                            {% if form.completion_date.errors %}
+                                <span class="text-red small">{{ form.completion_date.errors.0 }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- FOOTER FIJO -->
             <div class="modal-footer-fixed">
-                <button type="button" @click="closeModal('training')" class="btn-cancel">Cancelar</button>
-                <button type="submit" class="btn-save" :disabled="isSaving">[[ isSaving ? 'Guardando...' : 'Guardar'
-                    ]]
+                <button type="button"
+                        onclick="openAjaxModal('{{ list_url }}')"
+                        class="btn-secondary">
+                    <i class="fa-solid fa-arrow-left"></i> Volver al Listado
+                </button>
+                <button type="submit" class="btn-success">
+                    <i class="fa-solid fa-floppy-disk"></i> Guardar Capacitación
                 </button>
             </div>
         </form>

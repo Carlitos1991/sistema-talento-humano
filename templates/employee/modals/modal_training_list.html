@@ -1,5 +1,5 @@
 <div class="modal-overlay" id="modalTrainingOverlay">
-    <div class="modal-container-large modal-cv-list-large">
+    <div class="modal-container-large">
         <!-- HEADER -->
         <div class="modal-header">
             <div class="header-content-group">
@@ -7,15 +7,15 @@
                     <i class="fa-solid fa-graduation-cap"></i>
                 </div>
                 <div>
-                    <h3 class="header-title">Títulos Académicos</h3>
+                    <h3 class="header-title">{% if form.instance.pk %}Editar{% else %}Nueva{% endif %} Capacitación</h3>
                 </div>
             </div>
             <div class="header-actions-group">
-                {% if perms.person.change_person or perms.employee.add_academictitle %}
+                {% if perms.person.change_person or perms.employee.add_courses %}
                     <button type="button"
                             class="btn-success"
-                            onclick="openAjaxModal('{% url 'employee:academic_title_create' person.id %}')">
-                        <i class="fa-solid fa-plus"></i> Nuevo Título
+                            onclick="openAjaxModal('{% url 'employee:courses_create' person.id %}')">
+                        <i class="fa-solid fa-plus"></i> Nueva Capacitación
                     </button>
                 {% endif %}
             </div>
@@ -28,12 +28,12 @@
             <div class="modal-table-toolbar">
                 <div>
                     <span class="badge badge-gray badge-lg">
-                        <i class="fa-solid fa-graduation-cap text-green me-1"></i>
+                        <i class="fa-solid fa-laptop-file"></i>
                         Total registrados: <strong>{{ titles|length }}</strong>
                     </span>
                 </div>
                 <div class="search-box">
-                    <input type="text" class="table-search-input" placeholder="Buscar título o institución...">
+                    <input type="text" class="table-search-input" placeholder="Buscar Tema o institución...">
                     <button type="button" class="search-btn"><i class="fa-solid fa-search"></i></button>
                 </div>
             </div>
@@ -43,43 +43,32 @@
                 <table class="managed-table modal-table" data-page-size="5">
                     <thead>
                     <tr>
-                        <th class="col-modal-title"><i class="fa-solid fa-certificate"></i> Título / Nivel</th>
-                        <th class="col-modal-institution"><i class="fa-solid fa-building-columns"></i> Institución
-                            Educativa
-                        </th>
-                        <th class="col-modal-code"><i class="fa-solid fa-hashtag"></i> Reg. SENESCYT</th>
-                        <th class="col-modal-year"><i class="fa-solid fa-calendar"></i> Año</th>
-                        <th class="col-modal-actions no-sort actions">Acciones</th>
+                        <th class=width-25"><i class="fa-solid fa-certificate"></i> Nombre</th>
+                        <th class="width-25"><i class="fa-solid fa-building-columns"></i> Institución</th>
+                        <th class="width-15"><i class="fa-regular fa-clock"></i> Nro de Horas</th>
+                        <th class="width-10"><i class="fa-regular fa-calendar-days"></i> Fecha</th>
+                        <th class="width-25 no-sort actions">Acciones</th>
                     </tr>
                     </thead>
                     <tbody>
-                    {% for item in titles %}
+                    {% for item in courses %}
                         <tr>
-                            <td>
-                                <strong class="modal-table-title-main">{{ item.title_obtained }}</strong>
-                                <span class="badge badge-sm badge-blue mt-1">{{ item.education_level.name|default:"Sin nivel" }}</span>
-                            </td>
-                            <td class="col-modal-institution">
-                                {{ item.educational_institution|default:"No especificada" }}
-                            </td>
-                            <td class="col-modal-code">
-                                {{ item.senescyt_number|default:"—" }}
-                            </td>
-                            <td class="col-modal-year">
-                                {{ item.graduation_year|default:"—" }}
-                            </td>
+                            <td><strong class="modal-table-title-main">{{ item.training_name }}</strong></td>
+                            <td>{{ item.institution|default:"No especificada" }}</td>
+                            <td>{{ item.hours|default:"—" }}</td>
+                            <td>{{ item.completion_date|default:"—" }}</td>
                             <td class="actions">
                                 <div class="actions-wrapper">
                                     <button type="button"
                                             class="btn-icon btn-action-yellow"
                                             title="Editar Título"
-                                            onclick="openAjaxModal('{% url 'employee:academic_title_update' item.pk %}')">
+                                            onclick="openAjaxModal('{% url 'employee:courses_update' item.pk %}')">
                                         <i class="fa-solid fa-pen-to-square"></i>
                                     </button>
                                     <button type="button"
                                             class="btn-icon btn-action-delete"
                                             title="Eliminar Título"
-                                            onclick="deleteRecordAjax('{% url 'employee:academic_title_delete' item.pk %}', 'este título académico')">
+                                            onclick="deleteRecordAjax('{% url 'employee:courses_delete' item.pk %}', 'este curso')">
                                         <i class="fa-solid fa-trash"></i>
                                     </button>
                                 </div>
@@ -89,7 +78,7 @@
                         <tr class="empty-results-row">
                             <td colspan="5" class="text-center empty-state-container">
                                 <i class="fa-solid fa-folder-open empty-state-icon"></i>
-                                <span class="empty-state-text">No hay títulos académicos registrados.</span>
+                                <span class="empty-state-text">No hay cursos registrados.</span>
                             </td>
                         </tr>
                     {% endfor %}
