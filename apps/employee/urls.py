@@ -40,7 +40,8 @@ urlpatterns = [
          name='get_institutional_data'),
     path('person/<int:person_id>/save-institutional-data/', views.save_institutional_data_api,
          name='save_institutional_data'),
-
+    path('person/<int:person_id>/institutional-data/update/', views.InstitutionalDataUpdateView.as_view(),
+         name='institutional_data_update'),
     # Catálogos y otros
     path('api/areas-list/', views.get_areas_list_api, name='api_areas_list'),
     path('api/employment-statuses/', views.get_employment_statuses_api, name='api_employment_statuses'),

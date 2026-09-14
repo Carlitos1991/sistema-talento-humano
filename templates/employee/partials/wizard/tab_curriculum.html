@@ -1,47 +1,12 @@
-<!-- 1. BANNER DE GESTIÓN PDF-->
-<div class="cv-action-banner shadow-sm">
-    <div class="cv-action-title">
-        <i class="fa-solid fa-file-pdf fa-xl"></i>
-        <span>HOJA DE VIDA DIGITAL (PDF)</span>
-    </div>
-
-    <div class="header-actions-wrapper">
-        <!-- Input de archivo oculto -->
-        <input type="file" id="pdfInput" class="hidden" accept=".pdf"
-               @change="handlePdfUpload($event, {{ person.id }})">
-
-        {% if curriculum_obj and curriculum_obj.pdf_file %}
-            <a href="{{ curriculum_obj.pdf_file.url }}" target="_blank"
-               class="btn-seventh">
-                <i class="fa-solid fa-file-pdf"></i>
-            </a>
-            {% if can_edit_person %}
-                <button class="btn-eleventh"
-                        onclick="document.getElementById('pdfInput').click()">
-                    <i class="fa-solid fa-file-arrow-up"></i>
-                </button>
-            {% endif %}
-        {% else %}
-            {% if can_edit_person %}
-                <button class="btn-eleventh"
-                        onclick="document.getElementById('pdfInput').click()">
-                    <i class="fa-solid fa-cloud-arrow-up"></i>
-                </button>
-            {% endif %}
-        {% endif %}
-    </div>
-</div>
-
-<!-- 2. GRID: TÍTULOS, EXPERIENCIA, CURSOS -->
-<div class="grid-info-personal">
+<div class="grid-general">
     <!-- TARJETA: TÍTULOS ACADÉMICOS -->
-    <div class="card-large orange-border">
+    <div class="card-large yellow-border">
         <h6 class="section-title"><i class="fa-solid fa-graduation-cap"></i> Títulos Académicos</h6>
         <div class="stat-inner-container">
             <div id="stat-titles" class="stat-number text-primary">{{ curriculum_titles_count|default:0 }}</div>
             <div class="stat-label">Registrados</div>
         </div>
-        <div class="buttons-centered">
+        <div class="right">
             <button type="button" class="btn-light"
                     onclick="openAjaxModal('{% url 'employee:academic_title_list' person.id %}')">
                 <i class="fa-solid fa-list"></i> Listado
@@ -50,7 +15,7 @@
     </div>
 
     <!-- TARJETA: EXPERIENCIA LABORAL -->
-    <div class="card-large orange-border">
+    <div class="card-large yellow-border">
         <h6 class="section-title"><i class="fa-solid fa-briefcase"></i> Experiencia Laboral</h6>
         <div class="stat-inner-container">
             <div id="stat-experience" class="stat-number">
@@ -67,7 +32,7 @@
     </div>
 
     <!-- TARJETA: CURSOS -->
-    <div class="card-large orange-border">
+    <div class="card-large yellow-border">
         <h6 class="section-title"><i class="fa-solid fa-book-atlas"></i> Cursos y Capacitaciones</h6>
         <div class="stat-inner-container">
             <div id="stat-courses" class="stat-number">{{ curriculum_courses_count|default:0 }}</div>
@@ -78,6 +43,27 @@
                     onclick="openAjaxModal('{% url 'employee:courses_list' person.id %}')">
                 <i class="fa-solid fa-list"></i> Listado
             </button>
+        </div>
+    </div>
+    <!-- TARJETA: hoja de vida -->
+    <div class="card-large yellow-border">
+        <h6 class="section-title"><i class="fa-regular fa-id-card"></i> Hoja de Vida</h6>
+        <div class="stat-inner-container">
+            <div id="stat-courses" class="stat-number"><a
+                    href="{{ curriculum_obj.pdf_file.url }}" target="_blank"
+                    class="btn-seventh">
+                <i class="fa-solid fa-file-pdf"></i>
+            </a></div>
+            <div class="stat-label">Hoja de Vida</div>
+        </div>
+        <div class="buttons-centered">
+            {% if can_edit_person %}
+                <button class="btn-light"
+                        onclick="document.getElementById('pdfInput').click()">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    SUBIR
+                </button>
+            {% endif %}
         </div>
     </div>
 </div>

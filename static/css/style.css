@@ -1220,6 +1220,14 @@ h1, h2, h3, h4, h5, h6 {
     background: transparent;
 }
 
+.card-header-flex {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    width: 100%;
+}
+
 .general-card .card-title {
     margin: 0;
     font-size: 0.95rem;
@@ -2445,8 +2453,8 @@ input.is-valid:focus, select.is-valid:focus, textarea.is-valid:focus, .input-fie
 
 .btn-secondary-outline {
     background-color: #ffffff;
-    border-color: #a872d8;
-    color: #a872d8;
+    border-color: #334155;
+    color: #334155;
 }
 
 .btn-success-outline {
@@ -5207,12 +5215,11 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
     overflow: hidden;
 }
 
-/* Wrapper card genérico para contenido + tabla */
 .card-large {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    background: white;
+    background: var(--white, #ffffff);
     border-radius: 12px;
     padding: 20px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
@@ -5228,23 +5235,23 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
 }
 
 /* Grid info personal */
-.grid-info-personal {
+.grid-general {
     display: grid;
     grid-template-columns: 1fr;
     gap: 20px;
     margin-top: 30px;
 }
 
-body.employee-dashboard-page .grid-info-personal {
+body.employee-dashboard-page .grid-general {
     grid-template-columns: repeat(2, 1fr);
 }
 
-body.employee-dashboard-page .grid-info-personal > :last-child:nth-child(odd) {
+body.employee-dashboard-page .grid-general > :last-child:nth-child(odd) {
     grid-column: 1 / -1;
 }
 
 @media (min-width: 768px) {
-    body:not(.employee-dashboard-page) .grid-info-personal {
+    body:not(.employee-dashboard-page) .grid-general {
         grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     }
 }
@@ -5284,12 +5291,17 @@ body.employee-dashboard-page .grid-info-personal > :last-child:nth-child(odd) {
     border-left-color: #fd7e14;
 }
 
+
+.yellow-border {
+    border-left-color: rgba(207, 171, 0, 0.88);
+}
+
 .medical-border {
     border-left-color: #069800;
 }
 
 .emergency-border {
-    border-left-color: #ffb673;
+    border-left-color: #f6d218;
 }
 
 .border-left-primary {
@@ -6253,7 +6265,7 @@ body.employee-dashboard-page .grid-info-personal > :last-child:nth-child(odd) {
 }
 
 @media (min-width: 768px) {
-    body.employee-dashboard-page .grid-info-personal {
+    body.employee-dashboard-page .grid-general {
         grid-template-columns: repeat(2, 1fr);
     }
 }

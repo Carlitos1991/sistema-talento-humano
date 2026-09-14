@@ -1,0 +1,118 @@
+<div class="modal-overlay" id="modalInstitutionalDataOverlay">
+    <div class="modal-container-large">
+        <!-- HEADER -->
+        <div class="modal-header">
+            <div class="header-content-group">
+                <div class="header-icon-circle">
+                    <i class="fa-solid fa-building-user"></i>
+                </div>
+                <div>
+                    <h3 class="header-title">Datos Institucionales</h3>
+                </div>
+            </div>
+            <button type="button" onclick="closeModal()" class="btn-close-circle" aria-label="Cerrar">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <!-- FORMULARIO -->
+        <form action="{% url 'employee:institutional_data_update' person.id %}"
+              method="POST"
+              onsubmit="submitAjaxForm(event, () => window.location.reload())">
+            {% csrf_token %}
+
+            <div class="modal-body-custom">
+                <div class="form-section-card">
+                    <!-- FILA 1: EXPEDIENTE Y BIOMÉTRICO -->
+                    <div class="grid-2-cols grid-compact mb-3">
+                        <div class="form-group">
+                            <label class="form-label">Número de Expediente</label>
+                            {{ form.file_number }}
+                            {% if form.file_number.errors %}
+                                <span class="text-red small">{{ form.file_number.errors.0 }}</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Identificador Biométrico</label>
+                            {{ form.biometric_id }}
+                            {% if form.biometric_id.errors %}
+                                <span class="text-red small">{{ form.biometric_id.errors.0 }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- FILA 2: EMAIL Y FECHA DE INGRESO -->
+                    <div class="grid-2-cols grid-compact mb-3">
+                        <div class="form-group">
+                            <label class="form-label">Correo Institucional</label>
+                            {{ form.institutional_email }}
+                            {% if form.institutional_email.errors %}
+                                <span class="text-red small">{{ form.institutional_email.errors.0 }}</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Fecha de Ingreso Institucional</label>
+                            {{ form.entry_date }}
+                            {% if form.entry_date.errors %}
+                                <span class="text-red small">{{ form.entry_date.errors.0 }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- FILA 3: CONTRATO COLECTIVO Y DEPENDENCIA ORIGINAL -->
+                    <div class="grid-2-cols grid-compact mb-3">
+                        <div class="form-group">
+                            <label class="form-label center">Pertenece a Contrato Colectivo</label>
+                            <div class="checkbox-field-container center">
+                                <label for="id_collective_contract" class="checkbox-label-wrapper">
+                                    {{ form.collective_contract }}
+                                </label>
+                            </div>
+                            {% if form.collective_contract.errors %}
+                                <span class="text-red small">{{ form.collective_contract.errors.0 }}</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Dependencia Original</label>
+                            {{ form.original_dependency }}
+                            {% if form.original_dependency.errors %}
+                                <span class="text-red small">{{ form.original_dependency.errors.0 }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- FILA 4: MOTIVO DE DEPENDENCIA ORIGINAL -->
+                    <div class="form-group mb-3">
+                        <label class="form-label">Motivo de la Dependencia Original</label>
+                        {{ form.original_dependency_reason }}
+                        {% if form.original_dependency_reason.errors %}
+                            <span class="text-red small">{{ form.original_dependency_reason.errors.0 }}</span>
+                        {% endif %}
+                    </div>
+
+                    <!-- FILA 5: OBSERVACIONES -->
+                    <div class="form-group">
+                        <label class="form-label">Observaciones Adicionales</label>
+                        {{ form.observations }}
+                        {% if form.observations.errors %}
+                            <span class="text-red small">{{ form.observations.errors.0 }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- FOOTER FIJO -->
+            <div class="modal-footer-fixed">
+                <button type="button" onclick="closeModal()" class="btn-secondary">
+                    <i class="fa-solid fa-xmark"></i> Cancelar
+                </button>
+                <button type="submit" class="btn-success">
+                    <i class="fa-solid fa-floppy-disk"></i> Guardar Datos
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

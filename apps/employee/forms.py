@@ -1,10 +1,6 @@
 from django import forms
-
-from core.forms import BaseFormMixin
-from core.models import CatalogItem
+from .models import InstitutionalData, BankAccount, Training, WorkExperience, PayrollInfo
 from institution.models import AdministrativeUnit
-from .models import AcademicTitle, BankAccount, Training, WorkExperience, PayrollInfo
-
 from django import forms
 from core.models import CatalogItem
 from .models import AcademicTitle
@@ -94,6 +90,36 @@ class BankAccountForm(forms.ModelForm):
             'account_number': forms.TextInput(attrs={'class': 'input-field', 'placeholder': 'Ej: 1234567890'}),
             'holder_name': forms.TextInput(attrs={'class': 'input-field uppercase-input'}),
         }
+
+
+class InstitutionalDataForm(forms.ModelForm):
+    class Meta:
+        model = InstitutionalData
+        fields = [
+            'file_number', 'biometric_id', 'entry_date',
+            'institutional_email', 'collective_contract',
+            'original_dependency', 'original_dependency_reason',
+            'observations'
+        ]
+        widgets = {
+            'file_number': forms.TextInput(attrs={'class': 'input-field uppercase-input', 'placeholder': 'EJ: TC-360'}),
+            'biometric_id': forms.TextInput(attrs={'class': 'input-field', 'placeholder': 'EJ: BIO-123456'}),
+            'entry_date': forms.DateInput(format='%Y-%m-%d', attrs={'class': 'input-field', 'type': 'date'}),
+            'institutional_email': forms.EmailInput(
+                attrs={'class': 'input-field', 'placeholder': 'usuario@loja.gob.ec'}),
+            'collective_contract': forms.CheckboxInput(attrs={'class': 'checkbox-lg'}),
+            'original_dependency': forms.Select(attrs={'class': 'input-field'}),
+            'original_dependency_reason': forms.Textarea(attrs={'class': 'input-field', 'rows': 2,
+                                                                'placeholder': 'Describa el motivo del traslado o asignación original...'}),
+            'observations': forms.Textarea(
+                attrs={'class': 'input-field', 'rows': 3, 'placeholder': 'Observaciones adicionales...'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['entry_date'].input_formats = ['%Y-%m-%d']
+        self.fields['original_dependency'].queryset = AdministrativeUnit.objects.filter(is_active=True).order_by('name')
+        self.fields['original_dependency'].empty_label = "— Seleccione dependencia original —"
 
 
 class PayrollInfoForm(forms.ModelForm):

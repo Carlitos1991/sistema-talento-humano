@@ -5,7 +5,7 @@ from decimal import Decimal
 from django.contrib.auth import get_user_model
 from .models import EconomicData
 from .forms import BankAccountForm, PayrollInfoForm
-
+from .forms import InstitutionalDataForm
 User = get_user_model()
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
@@ -1113,6 +1113,52 @@ def get_cv_item_detail_api(request, item_type, item_id):
                 'completion_date': item.completion_date.isoformat() if item.completion_date else ''}
 
     return JsonResponse({'success': True, 'data': data})
+
+
+class InstitutionalDataUpdateView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'person.change_person'
+    template_name = 'employee/modals/modal_institutional_data_form.html'
+
+    def get(self, request, person_id):
+        person = get_object_or_404(Person, pk=person_id)
+        employee = getattr(person, 'employee_profile', None)
+        if not employee:
+            return JsonResponse({'success': False, 'message': 'El empleado no tiene perfil registrado.'}, status=404)
+
+        inst_data, _ = InstitutionalData.objects.get_or_create(employee=employee)
+        form = InstitutionalDataForm(instance=inst_data)
+        return render(request, self.template_name, {
+            'form': form,
+            'person': person,
+            'institutional_data': inst_data
+        })
+
+    def post(self, request, person_id):
+        person = get_object_or_404(Person, pk=person_id)
+        employee = getattr(person, 'employee_profile', None)
+        if not employee:
+            return JsonResponse({'success': False, 'message': 'El empleado no tiene perfil registrado.'}, status=404)
+
+        inst_data, _ = InstitutionalData.objects.get_or_create(employee=employee)
+        form = InstitutionalDataForm(request.POST, instance=inst_data)
+        if form.is_valid():
+            inst = form.save(commit=False)
+            if not inst.institutional_email:
+                inst.institutional_email = None
+            inst.save()
+            log_person_audit(
+                request,
+                person,
+                PersonAuditLog.Action.UPDATE,
+                PERSON_AUDIT_SECTIONS['institutional'],
+                'Actualizó datos institucionales'
+            )
+            return JsonResponse({'success': True, 'message': 'Datos institucionales actualizados correctamente.'})
+        return render(request, self.template_name, {
+            'form': form,
+            'person': person,
+            'institutional_data': inst_data
+        }, status=400)
 
 
 @login_required
