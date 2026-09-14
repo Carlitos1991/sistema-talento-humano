@@ -28,8 +28,8 @@
             <div class="modal-table-toolbar">
                 <div>
                     <span class="badge badge-gray badge-lg">
-                        <i class="fa-solid fa-laptop-file"></i>
-                        Total registrados: <strong>{{ titles|length }}</strong>
+                        <i class="fa-solid fa-book-atlas text-green me-1"></i>
+                        Total registrados: <strong>{{ courses|length }}</strong>
                     </span>
                 </div>
                 <div class="search-box">
@@ -45,9 +45,9 @@
                     <tr>
                         <th class=width-25"><i class="fa-solid fa-certificate"></i> Nombre</th>
                         <th class="width-25"><i class="fa-solid fa-building-columns"></i> Institución</th>
-                        <th class="width-15"><i class="fa-regular fa-clock"></i> Nro de Horas</th>
-                        <th class="width-10"><i class="fa-regular fa-calendar-days"></i> Fecha</th>
-                        <th class="width-25 no-sort actions">Acciones</th>
+                        <th class="width-10 text-center"><i class="fa-regular fa-clock"></i>Horas</th>
+                        <th class="width-15"><i class="fa-regular fa-calendar-days"></i> Fecha</th>
+                        <th class="width-25 no-sort">Acciones</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -55,19 +55,20 @@
                         <tr>
                             <td><strong class="modal-table-title-main">{{ item.training_name }}</strong></td>
                             <td>{{ item.institution|default:"No especificada" }}</td>
-                            <td>{{ item.hours|default:"—" }}</td>
+                            <td class="text-center"><span
+                                    class="badge badge-sm badge-blue">{{ item.hours|default:"—" }}</span></td>
                             <td>{{ item.completion_date|default:"—" }}</td>
                             <td class="actions">
                                 <div class="actions-wrapper">
                                     <button type="button"
                                             class="btn-icon btn-action-yellow"
-                                            title="Editar Título"
+                                            title="Editar Curso"
                                             onclick="openAjaxModal('{% url 'employee:courses_update' item.pk %}')">
                                         <i class="fa-solid fa-pen-to-square"></i>
                                     </button>
                                     <button type="button"
                                             class="btn-icon btn-action-delete"
-                                            title="Eliminar Título"
+                                            title="Eliminar Curso"
                                             onclick="deleteRecordAjax('{% url 'employee:courses_delete' item.pk %}', 'este curso')">
                                         <i class="fa-solid fa-trash"></i>
                                     </button>

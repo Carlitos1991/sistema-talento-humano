@@ -1012,7 +1012,6 @@ class CoursesModalListView(LoginRequiredMixin, PermissionRequiredMixin, ListView
 
     def get_queryset(self):
         self.person = get_object_or_404(Person, pk=self.kwargs['person_id'])
-        # Se elimina select_related('training_name') porque es un CharField
         return Training.objects.filter(
             curriculum__person=self.person
         ).order_by('-completion_date', '-pk')
