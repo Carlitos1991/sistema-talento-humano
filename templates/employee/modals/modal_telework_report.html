@@ -1,48 +1,73 @@
-<div v-if="isReportModalVisible" class="modal-overlay" style="display:flex; z-index: 1050;" role="dialog" aria-modal="true">
-    <div class="modal-container animate-scale-in" style="max-width:500px; width:calc(100% - 40px);">
-
+<div class="modal-overlay" id="modalTeleworkReportOverlay">
+    <div class="modal-container-medium">
         <!-- HEADER -->
-        <div class="modal-header modal-header-gradient" style="background: linear-gradient(135deg, #6b21a8 0%, #9d174d 100%);">
-            <h3 class="modal-title text-white">
-                <i class="fa-solid fa-file-pdf me-2"></i> Generar Reporte PDF
-            </h3>
-            <button type="button" class="btn-close-modal text-white-opacity" @click="isReportModalVisible = false">
-                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        <div class="modal-header">
+            <div class="header-content-group">
+                <div class="header-icon-circle">
+                    <i class="fa-solid fa-file-pdf"></i>
+                </div>
+                <div>
+                    <h3 class="header-title">Generar Reporte de Teletrabajo</h3>
+                    <p class="small text-muted mb-0">{{ person.full_name }}</p>
+                </div>
+            </div>
+            <button type="button" onclick="closeModal()" class="btn-close-circle" aria-label="Cerrar">
+                <i class="fa-solid fa-xmark"></i>
             </button>
         </div>
 
-        <!-- FORM WRAPPER -->
-        <form @submit.prevent="generateTeleworkReport" style="display: flex; flex-direction: column; height: 100%;">
+        <!-- FORMULARIO: abre en nueva pestaña con target="_blank" -->
+        <form action="{% url 'employee:generate_telework_report_pdf' person.id %}"
+              method="GET"
+              target="_blank"
+              onsubmit="setTimeout(() => closeModal(), 300)">
 
-            <!-- BODY -->
-            <div class="modal-body modal-body-custom p-4">
-                <p class="text-gray-600 text-sm mb-4">Seleccione el rango de fechas para el informe de actividades de teletrabajo.</p>
-                <div class="grid-cantidad-asunto" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; align-items: flex-start;">
-                    <div class="form-group mb-0">
-                        <label class="form-label">
-                            <i class="fa-solid fa-calendar-days"></i> Desde
+            <div class="modal-body-custom">
+                <div class="form-section-card">
+
+                    <div class="mb-3">
+                        <label class="form-label text-dark fw-bold">
+                            <i class="fa-regular fa-calendar-days me-1 text-muted"></i> Seleccione el Período
                         </label>
-                        <input type="date" v-model="reportDates.start" class="form-control input-field" required>
+                        <p class="small text-muted mb-0">
+                            Indique el rango de fechas para recopilar las actividades registradas.
+                        </p>
                     </div>
-                    <div class="form-group mb-0">
-                        <label class="form-label">
-                            <i class="fa-solid fa-calendar-days"></i> Hasta
-                        </label>
-                        <input type="date" v-model="reportDates.end" class="form-control input-field" required>
+
+                    <div class="grid-2-cols grid-compact">
+                        <div class="form-group">
+                            <label class="form-label">Fecha Desde</label>
+                            <input type="date"
+                                   name="start"
+                                   id="report_start_date"
+                                   class="input-field"
+                                   value="{{ first_day }}"
+                                   required>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Fecha Hasta</label>
+                            <input type="date"
+                                   name="end"
+                                   id="report_end_date"
+                                   class="input-field"
+                                   value="{{ today }}"
+                                   required>
+                        </div>
                     </div>
+
                 </div>
             </div>
 
-            <!-- FOOTER -->
-            <div class="modal-footer modal-footer-spaced mt-3 border-t">
-                <button type="button" class="btn-cancel" @click="isReportModalVisible = false">
-                    Cancelar
+            <!-- FOOTER FIJO -->
+            <div class="modal-footer-fixed">
+                <button type="button" onclick="closeModal()" class="btn-secondary">
+                    <i class="fa-solid fa-xmark"></i> Cancelar
                 </button>
-                <button type="submit" class="btn-save" style="background: linear-gradient(to right, #9d174d, #6b21a8); border: none;">
-                    <i class="fa-solid fa-file-arrow-down me-1"></i> Generar PDF
+                <button type="submit" class="btn-success">
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i> Generar en Nueva Pestaña
                 </button>
             </div>
         </form>
-
     </div>
 </div>

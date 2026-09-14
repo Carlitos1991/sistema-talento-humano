@@ -26,9 +26,9 @@
         <table class="table" id="actions-personal-table">
             <thead>
             <tr>
-                <th>Nº</th>
+                <th class="width-5">Nº</th>
                 <th>Número</th>
-                <th>Tipo de Acción</th>
+                <th class="width-25">Tipo de Acción</th>
                 <th>Fecha Emisión</th>
                 <th>Vigencia</th>
                 <th class="actions no-sort">Acciones</th>
@@ -39,9 +39,9 @@
                 {% for a in actions_list %}
                     <tr data-action-row>
                         <td>{{ forloop.counter }}</td>
-                        <td style="font-weight: 600;">{{ a.number }}</td>
+                        <td>{{ a.number }}</td>
                         <td>
-                            <span class="badge-code" style="background:#dbeafe;color:#1e40af;">
+                            <span class="badge badge-blue">
                                 {{ a.action_name }}
                             </span>
                         </td>
@@ -51,13 +51,13 @@
                             <div class="actions-wrapper">
                                 <!-- USAMOS data-url QUE YA TRAE LA URL CORRECTA DE DJANGO -->
                                 <button type="button"
-                                        class="btn-icon btn-info-action js-view-action-detail"
+                                        class="btn-second js-view-action-detail"
                                         data-url="{% url 'personnel_actions:action_detail' a.id %}"
                                         title="Ver Detalle">
                                     <i class="fa-solid fa-eye"></i>
                                 </button>
                                 {% if a.document_url %}
-                                    <a href="{{ a.document_url }}" target="_blank" class="btn-list-action" title="PDF">
+                                    <a href="{{ a.document_url }}" target="_blank" class="btn-third" title="PDF">
                                         <i class="fa-solid fa-file-pdf"></i>
                                     </a>
                                 {% endif %}

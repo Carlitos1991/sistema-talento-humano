@@ -1,126 +1,65 @@
-<div v-if="activeTab === 'telework'" class="animate__animated animate__fadeIn">
+<div class="tab-pane-telework" data-person-id="{{ person.id }}">
 
-    <div v-if="!teleworkData.is_own_profile" class="alert alert-info mb-4"
-         style="border-left: 5px solid #3b82f6; background: #eff6ff;">
-        <i class="fa-solid fa-circle-info me-2"></i>
-        Usted está visualizando el módulo de teletrabajo de otro empleado. Las opciones de marcación están
-        deshabilitadas.
+    <!-- AVISO PERFIL AJENO -->
+    <div id="teleworkReadOnlyAlert" class="alert-banner-info hidden mb-3">
+        <i class="fa-solid fa-circle-info me-2 text-primary"></i>
+        <span>Usted está visualizando el módulo de teletrabajo de otro empleado. Las opciones de marcación están deshabilitadas.</span>
     </div>
+
     <div class="telework-dashboard-grid">
 
+        <!-- PANEL 1: CONTROL DE ASISTENCIA -->
         <div class="telework-panel">
+            <h5 class="telework-panel-title-center blue">
+                <i class="fa-solid fa-fingerprint"></i> Control de Asistencia
+            </h5>
+            <hr class="telework-divider">
 
-            <div class="telework-panel-header-centered">
-                <h5 class="telework-panel-title-centered">
-                    <i class="fa-solid fa-fingerprint" style="color: #3b82f6;"></i> CONTROL DE ASISTENCIA
-                </h5>
-                <div class="attendance-btn-group-centered" v-if="teleworkData.is_own_profile">
-                    <button @click="markTelework('INCOME')"
-                            class="btn-attendance income"
-                            :disabled="teleworkData.last_punch_type === 'INCOME'">
-                        <i class="fa-solid fa-sign-in"></i>
-                        <span>Entrada</span>
-                    </button>
-                    <button @click="markTelework('EXIT')"
-                            class="btn-attendance exit"
-                            :disabled="teleworkData.last_punch_type !== 'INCOME'">
-                        <i class="fa-solid fa-sign-out"></i>
-                        <span>Salida</span>
-                    </button>
-                </div>
-            </div>
-
-            <div class="telework-scroll-area">
-                <div v-for="punch in teleworkData.punches" :key="punch.time" class="day-card-compact">
-                    <div style="flex: 1;">
-                        <span class="day-label">EVENTO</span>
-                        <div :class="punch.type_code === 'INCOME' ? 'text-green-600' : 'text-red-600'"
-                             style="font-weight: 800; font-size: 0.8rem; line-height: 1.2;">
-                            [[ punch.type.toUpperCase() ]]
-                        </div>
-                    </div>
-                    <div style="flex: 1; text-align: center;">
-                        <span class="day-label">HORA</span>
-                        <div style="font-weight: 700; font-size: 1.05rem; color: #1e293b; line-height: 1.2;">[[
-                            punch.time ]]
-                        </div>
-                    </div>
-                    <div style="flex: 1; text-align: right;">
-                        <span class="day-label">UBICACIÓN</span>
-                        <div style="color: #64748b; font-size: 0.72rem; font-weight: 700; line-height: 1.2;">
-                            <i class="fa-solid fa-location-dot text-danger"></i> GPS VÁLIDO
-                        </div>
-                    </div>
-                </div>
-
-                <div v-if="teleworkData.punches.length === 0"
-                     class="text-center py-12 bg-white border-2 border-dashed border-gray-200"
-                     style="border-radius: 10px;">
-                    <i class="fa-solid fa-clock-rotate-left fa-2x text-gray-200 mb-2"></i>
-                    <p class="text-gray-400 small font-bold m-0">No hay registros hoy</p>
-                </div>
-            </div>
-
-        </div>
-
-        <div class="telework-panel">
-
-            <div class="telework-panel-header-centered">
-                <h5 class="telework-panel-title-centered" style="color: #065f46 !important;">
-                    <i class="fa-solid fa-list-check"></i> REPORTE DE ACTIVIDADES
-                </h5>
-            </div>
-
-            <div v-if="teleworkData.is_own_profile" class="attendance-btn-group-centered" style="padding: 10px;">
-                <div v-if="teleworkData.last_punch_type === 'EXIT'" class="text-center py-3 bg-red-50 border border-red-200 w-100"
-                     style="border-radius: 10px;">
-                    <i class="fa-solid fa-lock text-red-600 mb-1"></i>
-                    <p class="text-red-800 font-bold m-0" style="font-size: 0.75rem;">Usted ya ha marcado su SALIDA. No puede registrar más actividades hoy.</p>
-                </div>
-                <div v-else-if="!teleworkData.has_income" class="text-center py-3 bg-yellow-50 border border-yellow-200 w-100"
-                     style="border-radius: 10px;">
-                    <i class="fa-solid fa-lock text-yellow-600 mb-1"></i>
-                    <p class="text-yellow-800 font-bold m-0" style="font-size: 0.75rem;">Debe registrar su ENTRADA para habilitar el reporte.</p>
-                </div>
-                <button v-else @click="isActivityModalVisible = true" class="btn-attendance income">
-                    <i class="fa-solid fa-plus me-1"></i> Nueva Actividad
+            <!-- Botones centrados de marcación -->
+            <div id="teleworkAttendanceGroup" class="telework-center-actions">
+                <button type="button"
+                        id="btnPunchIncome"
+                        class="btn-telework-square green"
+                        onclick="markTeleworkAttendance('INCOME', '{{ person.id }}')">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>Entrada</span>
                 </button>
-{#                <button @click="isReportModalVisible = true" class="btn-attendance exit">#}
-{#                    <i class="fa-solid fa-file-pdf me-1"></i> Reporte#}
-{#                </button>#}
+                <button type="button"
+                        id="btnPunchExit"
+                        class="btn-telework-square red"
+                        onclick="markTeleworkAttendance('EXIT', '{{ person.id }}')">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    <span>Salida</span>
+                </button>
             </div>
 
-            <div v-else class="text-center py-6 text-gray-400" style="flex-shrink: 0;">
-                <i class="fa-solid fa-eye mb-1"></i>
-                <p class="small m-0">Vista de solo lectura</p>
-            </div>
-
-            <div class="telework-scroll-area">
-                <div v-for="act in teleworkData.activities" :key="act.id" class="budget-history-item"
-                     style="border-left: 4px solid #10b981; background: #ffffff; margin-bottom: 0; padding: 8px 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
-                    <div class="budget-history-left" style="padding-right: 8px;">
-                        <div class="budget-history-title" style="font-size: 0.82rem; font-weight: 700; color: #1e293b;">
-                            [[ act.title ]]
-                        </div>
-                        <div class="budget-history-sub"
-                             style="font-size: 0.7rem; background: #f0fdf4; color: #166534; padding: 2px 6px; border-radius: 4px; margin-top: 3px; display: inline-block;">
-                            [[ act.detail ]]
-                        </div>
-                    </div>
-                    <div class="budget-history-right" style="min-width: 80px; text-align: right; flex-shrink: 0;">
-                        <span class="text-green-700" style="font-size: 0.75rem; font-weight: 700;">[[ act.time ]]</span>
-                        <div class="w-full bg-gray-200 rounded-full h-1 mt-1"
-                             style="background-color: #e2e8f0; border-radius: 4px; height: 4px; width: 100%;">
-                            <div class="bg-green-500 h-1 rounded-full"
-                                 style="background-color: #10b981; height: 4px; border-radius: 4px;"
-                                 :style="{width: act.percentage + '%'}"></div>
-                        </div>
-                    </div>
+            <!-- Listado de Marcaciones del Día -->
+            <div class="telework-scroll-area" id="teleworkPunchesContainer">
+                <div class="text-center py-4 text-muted small">
+                    <i class="fa-solid fa-spinner fa-spin me-1"></i> Cargando marcaciones...
                 </div>
             </div>
         </div>
-    </div>
 
-    {% include 'employee/modals/modal_activity_telework_form.html' %}
-    {% include 'employee/modals/modal_telework_report.html' %}
+        <!-- PANEL 2: REPORTE DE ACTIVIDADES -->
+        <div class="telework-panel">
+            <h5 class="telework-panel-title-center green">
+                <i class="fa-solid fa-list-check"></i> Reporte de Actividades
+            </h5>
+            <hr class="telework-divider">
+
+            <!-- Botón central "Nueva Actividad" y botón "Reporte PDF" -->
+            <div id="teleworkActivityActionContainer" class="telework-center-actions">
+                <!-- Se inyecta dinámicamente según el estado del empleado -->
+            </div>
+
+            <!-- Listado de Actividades -->
+            <div class="telework-scroll-area" id="teleworkActivitiesContainer">
+                <div class="text-center py-4 text-muted small">
+                    <i class="fa-solid fa-spinner fa-spin me-1"></i> Cargando actividades...
+                </div>
+            </div>
+        </div>
+
+    </div>
 </div>

@@ -1,269 +1,123 @@
-<!-- Header Datos Económicos -->
 <div class="grid-general">
-    <!-- Cuenta Bancaria -->
-    <div class="info-box-styled personal-border shadow-sm">
-        <div class="border-bottom pb-2 mb-3">
-            <h6 class="section-title mb-0 pt-1"><i class="fa-solid fa-building-columns"></i> Cuenta Bancaria</h6>
+    <!-- TARJETA 1: CUENTA BANCARIA -->
+    <div class="card-large blue-light-border">
+        <div class="card-header-flex">
+            <h6 class="section-title mb-0">
+                <i class="fa-solid fa-building-columns"></i> Cuenta Bancaria
+            </h6>
+            {% if can_edit_person and bank_account %}
+                <button type="button"
+                        class="btn-second"
+                        title="Actualizar Cuenta Bancaria"
+                        onclick="openAjaxModal('{% url 'employee:bank_account_update' person.id %}')">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                </button>
+            {% endif %}
         </div>
 
         {% if bank_account %}
             <div class="info-data-row">
                 <label>Institución:</label>
-                <span id="econ_bank_institution" class="fw-bold text-dark">{{ bank_account.bank.name }}</span>
+                <span class="fw-bold text-dark">{{ bank_account.bank.name }}</span>
             </div>
             <div class="info-data-row">
                 <label>Tipo de Cuenta:</label>
-                <span id="econ_bank_type">{{ bank_account.account_type.name }}</span>
+                <span>{{ bank_account.account_type.name }}</span>
             </div>
             <div class="info-data-row">
-                <label>Número:</label>
-                <span id="econ_bank_number" class="text-primary fw-bold"
-                      style="letter-spacing: 0.5px;">{{ bank_account.account_number }}</span>
+                <label>Número de Cuenta:</label>
+                <span class="text-primary fw-bold">{{ bank_account.account_number }}</span>
             </div>
             <div class="info-data-row">
                 <label>Titular:</label>
-                <span id="econ_bank_holder" class="small text-muted">{{ bank_account.holder_name }}</span>
+                <span class="small text-muted">{{ bank_account.holder_name }}</span>
             </div>
             <div class="info-data-row">
                 <label>Estado:</label>
-                <span id="econ_bank_status" class="status-badge active" style="font-size: 0.7rem;">Activa</span>
+                <span class="status-badge active">Activa</span>
             </div>
-
-            <!-- Footer con botón centrado -->
-            {% if can_edit_person %}
-                <div class="info-box-footer">
-                    <button class="btn-footer-action" @click="openBankModal({{ person.id }})">
-                        <i class="fa-solid fa-pen-to-square"></i> Actualizar
-                    </button>
-                </div>
-            {% endif %}
         {% else %}
             <div class="text-center py-4">
                 <div class="mb-3 text-secondary opacity-50">
                     <i class="fa-solid fa-building-columns fa-2x"></i>
                 </div>
-                <p class="text-muted small mb-3">No hay cuenta bancaria registrada</p>
+                <p class="text-muted small mb-3">No hay cuenta bancaria registrada.</p>
                 {% if can_edit_person %}
-                    <button class="btn-cv-pill new mx-auto" @click="openBankModal({{ person.id }})">
-                        <i class="fa-solid fa-plus tiny-icon"></i> Agregar
+                    <button type="button"
+                            class="btn-light mx-auto"
+                            onclick="openAjaxModal('{% url 'employee:bank_account_update' person.id %}')">
+                        <i class="fa-solid fa-plus me-1"></i> Registrar Cuenta
                     </button>
                 {% endif %}
             </div>
         {% endif %}
     </div>
 
-    <!-- Mensualización -->
-    <div class="info-box-styled additional-border shadow-sm">
-        <div class="border-bottom pb-2 mb-3">
-            <h6 class="section-title mb-0 pt-1"><i class="fa-solid fa-calculator"></i> Nómina y Mensualización</h6>
+    <!-- TARJETA 2: NÓMINA Y MENSUALIZACIÓN -->
+    <div class="card-large blue-light-border">
+        <div class="card-header-flex">
+            <h6 class="section-title mb-0">
+                <i class="fa-solid fa-calculator"></i> Nómina y Mensualización
+            </h6>
+            {% if can_edit_person and payroll_info %}
+                <button type="button"
+                        class="btn-second"
+                        title="Configurar Nómina"
+                        onclick="openAjaxModal('{% url 'employee:payroll_info_update' person.id %}')">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                </button>
+            {% endif %}
         </div>
 
         {% if payroll_info %}
             <div class="info-data-row">
                 <label>Mensualiza Décimos:</label>
-                <span id="econ_payroll_monthly"
-                      class="status-badge {% if payroll_info.monthly_payment %}active{% else %}neutral{% endif %}"
-                      style="font-size: 0.7rem;">
-                    {% if payroll_info.monthly_payment %}SÍ{% else %}NO{% endif %}
+                <span class="status-badge {% if payroll_info.monthly_payment %}active{% else %}neutral{% endif %}">
+                    {{ payroll_info.monthly_payment|yesno:"SÍ,NO" }}
                 </span>
             </div>
             <div class="info-data-row">
                 <label>Fondos de Reserva:</label>
-                <span id="econ_payroll_reserve"
-                      class="status-badge {% if payroll_info.reserve_funds %}active{% else %}neutral{% endif %}"
-                      style="font-size: 0.7rem;">
+                <span class="status-badge {% if payroll_info.reserve_funds %}active{% else %}neutral{% endif %}">
                     {% if payroll_info.reserve_funds %}ACUMULA{% else %}NO ACUMULA{% endif %}
                 </span>
             </div>
             <div class="info-data-row">
-                <label>F. Reserva Inmediato:</label>
-                <span id="econ_payroll_immediate_reserve"
-                      class="status-badge {% if payroll_info.immediate_reserve_funds %}active{% else %}neutral{% endif %}"
-                      style="font-size: 0.7rem;">
-                    {% if payroll_info.immediate_reserve_funds %}SÍ (Continuidad){% else %}NO{% endif %}
+                <label>Derecho Inmediato:</label>
+                <span class="status-badge {% if payroll_info.immediate_reserve_funds %}active{% else %}neutral{% endif %}">
+                    {{ payroll_info.immediate_reserve_funds|yesno:"SÍ (Continuidad),NO" }}
                 </span>
             </div>
-            <div class="info-data-row mt-3 pt-2 border-top">
+            <div class="info-data-row border-top pt-2 mt-2">
                 <label>Hijos dependientes:</label>
-                <span id="econ_payroll_family" class="fw-bold">{{ payroll_info.family_dependents }}</span>
+                <span class="fw-bold">{{ payroll_info.family_dependents|default:0 }}</span>
             </div>
             <div class="info-data-row">
                 <label>Hijos con discapacidad:</label>
-                <span id="econ_payroll_education" class="fw-bold">{{ payroll_info.education_dependents }}</span>
+                <span class="fw-bold">{{ payroll_info.education_dependents|default:0 }}</span>
             </div>
-            <div class="info-data-row mt-2">
+            <div class="info-data-row">
                 <label>Ingreso a Roles:</label>
-                <span id="econ_payroll_roles_entry"
-                      class="small">{{ payroll_info.roles_entry_date|date:"d/m/Y"|default:"-" }}</span>
+                <span class="small">{{ payroll_info.roles_entry_date|date:"d/m/Y"|default:"—" }}</span>
             </div>
-
-            <!-- Footer con botón centrado -->
-            {% if can_edit_person %}
-                <div class="info-box-footer">
-                    <button class="btn-footer-action" @click="openPayrollModal({{ person.id }})">
-                        <i class="fa-solid fa-pen-to-square"></i> Actualizar
-                    </button>
-                </div>
-            {% endif %}
+            <div class="info-data-row">
+                <label>N° Roles Acumulados:</label>
+                <span class="fw-bold">{{ payroll_info.roles_count|default:0 }}</span>
+            </div>
         {% else %}
             <div class="text-center py-4">
                 <div class="mb-3 text-secondary opacity-50">
-                    <i class="fa-regular fa-calendar-check fa-2x"></i>
+                    <i class="fa-solid fa-calculator fa-2x"></i>
                 </div>
-                <p class="text-muted small mb-3">Sin configuración de nómina</p>
+                <p class="text-muted small mb-3">Sin configuración de nómina.</p>
                 {% if can_edit_person %}
-                    <button class="btn-cv-pill new mx-auto" @click="openPayrollModal({{ person.id }})">
-                        <i class="fa-solid fa-plus tiny-icon"></i> Configurar
+                    <button type="button"
+                            class="btn-light mx-auto"
+                            onclick="openAjaxModal('{% url 'employee:payroll_info_update' person.id %}')">
+                        <i class="fa-solid fa-plus me-1"></i> Configurar Nómina
                     </button>
                 {% endif %}
             </div>
         {% endif %}
-    </div>
-</div>
-
-<!-- Modal Cuenta Bancaria -->
-<div id="modalBankOverlay" class="modal-overlay hidden">
-    <div class="modal-container" style="max-width: 550px;">
-        <div class="modal-header modal-header-gradient">
-            <h3 class="header-title-main">Cuenta Bancaria</h3>
-            <button class="btn-close-modal-refined" onclick="this.closest('.modal-overlay').classList.add('hidden')">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-        </div>
-        <div class="modal-body-custom">
-
-            <div class="form-group mb-3">
-                <label class="form-label required">Institución Bancaria</label>
-                <select v-model="bankForm.bank" name="bank" class="input-field select2-wizard select2-wizard-bank">
-                    <option value="">---------</option>
-                    {% for b in banks_list %}
-                        <option value="{{ b.id }}">{{ b.name }}</option>
-                    {% endfor %}
-                </select>
-                <div class="form-text text-muted">Seleccione el banco donde mantiene la cuenta</div>
-                <span v-if="bankErrors.bank" class="text-error">[[ bankErrors.bank[0] ]]</span>
-            </div>
-
-            <div class="form-group mb-3">
-                <label class="form-label required">Tipo de Cuenta</label>
-                <select v-model="bankForm.account_type" name="account_type"
-                        class="input-field select2-wizard select2-wizard-bank">
-                    <option value="">---------</option>
-                    {% for t in account_types_list %}
-                        <option value="{{ t.id }}">{{ t.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div class="form-group mb-3">
-                <label class="form-label required">Número de Cuenta</label>
-                <input type="text" name="account_number" v-model="bankForm.account_number" class="input-field"
-                       placeholder="Ingrese el número de cuenta">
-            </div>
-
-            <div class="form-group mb-3">
-                <label class="form-label required">Titular de la Cuenta</label>
-                <input type="text" name="holder_name" v-model="bankForm.holder_name" class="input-field uppercase-input"
-                       placeholder="NOMBRE DEL TITULAR">
-            </div>
-        </div>
-        <div class="modal-footer-fixed">
-            <button class="btn-save" @click="saveBankAccount({{ person.id }})"><i
-                    class="fa-solid fa-floppy-disk me-2"></i>Guardar
-            </button>
-            <button class="btn-cancel" onclick="this.closest('.modal-overlay').classList.add('hidden')"><i
-                    class="fa-solid fa-xmark me-2"></i>Cancelar
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Mensualización -->
-<div id="modalPayrollOverlay" class="modal-overlay hidden">
-    <div class="modal-container" style="max-width: 600px;">
-        <div class="modal-header modal-header-gradient">
-            <h3 class="header-title-main">Configuración de Nómina</h3>
-            <button class="btn-close-modal-refined" onclick="this.closest('.modal-overlay').classList.add('hidden')">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-        </div>
-        <div class="modal-body-custom">
-            <h6 class="text-primary mb-3"><i class="fa-solid fa-toggle-on"></i> Estados</h6>
-            <div class="grid-2-cols gap-3 mb-4">
-                <div class="border p-3 rounded bg-light d-flex align-items-center justify-content-between">
-                    <div>
-                        <div class="fw-bold">Mensualiza</div>
-                        <small class="text-muted">Marque si el empleado mensualiza décimos</small>
-                    </div>
-                    <label class="toggle-switch">
-                        <input type="checkbox" v-model="payrollForm.monthly_payment" id="checkMonthly"
-                               name="monthly_payment">
-                        <span class="toggle-slider"></span>
-                    </label>
-                </div>
-                <div class="border p-3 rounded bg-light d-flex align-items-center justify-content-between">
-                    <div>
-                        <div class="fw-bold">Fondos de Reserva</div>
-                        <small class="text-muted">Marque si acumula fondos de reserva</small>
-                    </div>
-                    <label class="toggle-switch">
-                        <input type="checkbox" v-model="payrollForm.reserve_funds" id="checkReserve"
-                               name="reserve_funds">
-                        <span class="toggle-slider"></span>
-                    </label>
-                </div>
-                <div class="border p-3 rounded bg-light d-flex align-items-center justify-content-between mb-4">
-                    <div>
-                        <div class="fw-bold">Derecho Inmediato a Fondos (Continuidad)</div>
-                        <small class="text-muted">Marque si certifica continuidad en el sector público (no espera 1
-                            año)</small>
-                    </div>
-                    <label class="toggle-switch">
-                        <input type="checkbox" v-model="payrollForm.immediate_reserve_funds" id="checkImmediateReserve"
-                               name="immediate_reserve_funds">
-                        <span class="toggle-slider"></span>
-                    </label>
-                </div>
-            </div>
-
-            <hr>
-
-            <h6 class="text-primary mb-3 mt-3"><i class="fa-solid fa-users"></i> Hijos dependientes</h6>
-            <div class="grid-2-cols gap-3 mb-4">
-                <div class="form-group">
-                    <label class="form-label required">Hijos dependientes</label>
-                    <input type="number" v-model="payrollForm.family_dependents" class="input-field" min="0" max="20">
-                </div>
-                <div class="form-group">
-                    <label class="form-label required">Hijos con discapacidad</label>
-                    <input type="number" v-model="payrollForm.education_dependents" class="input-field" min="0"
-                           max="20">
-                </div>
-            </div>
-
-            <hr>
-
-            <h6 class="text-primary mb-3 mt-3"><i class="fa-solid fa-file-invoice"></i> Información de Roles</h6>
-            <div class="grid-2-cols gap-3 mb-4">
-                <div class="form-group">
-                    <label class="form-label">Fecha Ingreso a Roles</label>
-                    <input type="date" v-model="payrollForm.roles_entry_date" class="input-field">
-                </div>
-                <div class="form-group">
-                    <label class="form-label required">Número de Roles</label>
-                    <input type="number" v-model="payrollForm.roles_count" class="input-field" min="0">
-                </div>
-            </div>
-
-
-        </div>
-        <div class="modal-footer-fixed">
-            <button class="btn-save" @click="savePayrollInfo({{ person.id }})"><i
-                    class="fa-solid fa-floppy-disk me-2"></i>Guardar
-            </button>
-            <button class="btn-cancel" onclick="this.closest('.modal-overlay').classList.add('hidden')"><i
-                    class="fa-solid fa-xmark me-2"></i>Cancelar
-            </button>
-        </div>
     </div>
 </div>

@@ -4,11 +4,6 @@
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
             <h6 class="section-title section-title-accent-green" style="margin:0"><i class="fa-solid fa-file-invoice-dollar"></i>
                 Roles de pago</h6>
-            <div class="payment-filters">
-                <button type="button" class="payment-filter-btn btn btn-sm btn-outline" data-filter="ALL">Todos</button>
-                <button type="button" class="payment-filter-btn btn btn-sm btn-outline" data-filter="NET_POSITIVE">Neto positivo</button>
-                <button type="button" class="payment-filter-btn btn btn-sm btn-outline" data-filter="NEGATIVE">Con descuentos</button>
-            </div>
         </div>
         <div class="p-3 bg-light rounded" style="max-height: 320px; overflow-y: auto;">
             {% if payment_roles_history and payment_roles_history|length > 0 %}
@@ -28,7 +23,7 @@
                             </div>
                             <div class="budget-history-right">
                                 <div class="permission-action-group">
-                                    <a href="{{ role.print_url }}" target="_blank" class="btn btn-sm btn-outline btn-action-print" title="Imprimir rol de pago">
+                                    <a href="{{ role.print_url }}" target="_blank" class="btn-sixth" title="Imprimir rol de pago">
                                         <i class="fa-solid fa-print"></i>
                                     </a>
                                 </div>

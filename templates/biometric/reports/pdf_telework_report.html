@@ -1,162 +1,246 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Reporte de Actividades de Teletrabajo</title>
+    <title>Reporte de Teletrabajo</title>
     <style>
         @page {
-            size: A4 portrait;
-            margin: 0;
-            @bottom-center {
-                content: "Página " counter(page) " de " counter(pages);
-                font-size: 10px;
-                color: #555;
-            }
+            size: a4 portrait;
+        {% if letterhead_data %}
+            background-image: url('{{ letterhead_data }}');
+        {% endif %}
+            margin-top: 3.4cm;
+            margin-bottom: 2.2cm;
+            margin-left: 2.2cm;
+            margin-right: 2cm;
+
+            @frame footer_frame {
+            -pdf-frame-content: footer_content;
+            bottom: 0.8cm;
+            margin-left: 2.2cm;
+            margin-right: 2cm;
+            height: 0.8cm;
+        }
         }
 
         body {
             font-family: Helvetica, Arial, sans-serif;
-            font-size: 10px;
-            color: #333;
-            padding: 2.5cm 1.5cm 1.5cm 1.5cm;
-            box-sizing: border-box;
+            font-size: 8.5pt;
+            color: #1e293b;
+            line-height: 1.3;
         }
 
-        {% if letterhead_data %}
-        body {
-            background-image: url('{{ letterhead_data }}');
-            background-repeat: no-repeat;
-            background-position: top center;
-            background-size: 100% auto;
-        }
-        {% endif %}
-
-        .header {
+        /* TÍTULO CENTRADO */
+        .header-title-container {
+            width: 100%;
             text-align: center;
-            margin-bottom: 15px;
+            margin-bottom: 14px;
         }
 
-        .header h2 {
+        .header-title-container h2 {
             margin: 0;
-            font-size: 14px;
+            font-size: 13pt;
             font-weight: bold;
-            color: #111;
+            color: #0f172a;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
         }
 
-        .header h3 {
-            margin: 2px 0;
-            font-size: 12px;
-            font-weight: normal;
-            color: #444;
+        .header-title-container p {
+            margin: 3px 0 0 0;
+            font-size: 8.5pt;
+            color: #475569;
+        }
+
+        .info-card {
+            width: 100%;
+            background-color: #f8fafc;
+            border: 1px solid #cbd5e1;
+            margin-bottom: 12px;
         }
 
         .info-table {
             width: 100%;
-            margin-bottom: 15px;
-            border-collapse: collapse;
-            font-size: 10px;
         }
 
         .info-table td {
-            padding: 4px 0;
+            padding: 4px 6px;
+            font-size: 8pt;
         }
 
-        .info-table strong {
-            color: #000;
+        .label {
+            font-weight: bold;
+            color: #475569;
+            width: 22%;
         }
 
-        .activities-table {
+        .val {
+            color: #0f172a;
+        }
+
+        .date-section {
+            background-color: #f1f5f9;
+            border-left: 4px solid #059669;
+            padding: 4px 8px;
+            font-size: 8.5pt;
+            font-weight: bold;
+            color: #0f172a;
+            margin-top: 12px;
+            margin-bottom: 6px;
+        }
+
+        .table-data {
             width: 100%;
             border-collapse: collapse;
-            table-layout: fixed;
-            font-size: 9px;
+            margin-bottom: 8px;
         }
 
-        .activities-table th,
-        .activities-table td {
-            border: 1px solid #ccc;
-            padding: 6px 8px;
+        .table-data th {
+            background-color: #e2e8f0;
+            color: #1e293b;
+            font-size: 8pt;
+            font-weight: bold;
             text-align: left;
-            word-wrap: break-word;
+            padding: 5px;
+            border: 1px solid #cbd5e1;
         }
 
-        .activities-table thead th {
-            background-color: #f2f2f2;
-            font-weight: bold;
-            color: #222;
+        .table-data td {
+            padding: 5px;
+            border: 1px solid #e2e8f0;
+            font-size: 8pt;
+            vertical-align: top;
         }
 
-        .activity-date-row {
-            background-color: #eef2f7;
-            font-weight: bold;
-            color: #1e3a8a;
+        .text-center {
+            text-align: center;
         }
 
-        .activity-date-row td {
-            padding: 8px;
-        }
-
-        .footer-info {
+        /* TABLA DE FIRMAS */
+        .signatures-table {
             width: 100%;
             margin-top: 20px;
-            text-align: right;
-            font-size: 9px;
-            color: #777;
         }
 
+        .signatures-table td {
+            width: 50%;
+            text-align: center;
+            vertical-align: top;
+            font-size: 8pt;
+        }
+
+        .signature-blank-space {
+            height: 65px;
+        }
+
+        .signature-line {
+            width: 65%;
+            border-top: 1px solid #334155;
+            margin: 0 auto 5px auto;
+        }
+
+        .footer-table {
+            width: 100%;
+            font-size: 7.5pt;
+            color: #64748b;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 4px;
+        }
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <h2>REPORTE DE ACTIVIDADES DE TELETRABAJO</h2>
-        <h3>Periodo del {{ start_date|date:"d/m/Y" }} al {{ end_date|date:"d/m/Y" }}</h3>
-    </div>
-
-    <table class="info-table">
+<!-- PIE DE PÁGINA NATIVO -->
+<div id="footer_content">
+    <table class="footer-table">
         <tr>
-            <td style="width: 60%;"><strong>EMPLEADO:</strong> {{ employee.person.full_name }}</td>
-            <td style="width: 40%; text-align: right;"><strong>CÉDULA:</strong> {{ employee.person.document_number }}</td>
+            <td style="text-align: left;">Sistema de Gestión de Talento Humano</td>
+            <td style="text-align: right;">Página
+                <pdf:pagenumber> de
+                    <pdf:pagecount>
+            </td>
         </tr>
     </table>
+</div>
 
-    <table class="activities-table">
-        <thead>
+<!-- ENCABEZADO CENTRADO -->
+<div class="header-title-container">
+    <h2>INFORME DE TELETRABAJO</h2>
+    <p>Dirección de Talento Humano | Bitácora de Actividades</p>
+    <p>Período: {{ start_date|date:"d/m/Y" }} al {{ end_date|date:"d/m/Y" }}</p>
+</div>
+
+<!-- DATOS DEL FUNCIONARIO -->
+<div class="info-card">
+    <table class="info-table">
+        <tr>
+            <td class="label">Funcionario:</td>
+            <td class="val">{{ employee.person.full_name }}</td>
+            <td class="label">Identificación:</td>
+            <td class="val">{{ employee.person.document_number }}</td>
+        </tr>
+        <tr>
+            <td class="label">Unidad / Área:</td>
+            <td class="val">{{ employee.area.name|default:"Coordinación de Diseño y Desarrollo del Sistema" }}</td>
+            <td class="label">Fecha de Emisión:</td>
+            <td class="val">{{ today|date:"d/m/Y" }}</td>
+        </tr>
+    </table>
+</div>
+
+<!-- ACTIVIDADES POR JORNADA -->
+{% if activities_by_date %}
+    {% for d, activities in activities_by_date.items %}
+        <div class="date-section">
+            Jornada: {{ d|date:"l, d \d\e F \d\e Y"|upper }}
+        </div>
+        <table class="table-data">
+            <thead>
             <tr>
-                <th style="width: 15%;">Hora</th>
-                <th style="width: 30%;">Actividad</th>
-                <th style="width: 45%;">Detalle</th>
-                <th style="width: 10%; text-align: center;">Avance</th>
+                <th style="width: 12%;" class="text-center">Hora</th>
+                <th style="width: 38%;">Actividad</th>
+                <th style="width: 38%;">Detalle / Tarea</th>
+                <th style="width: 12%;" class="text-center">Avance</th>
             </tr>
-        </thead>
-        <tbody>
-            {% for date, activities in activities_by_date.items %}
-                <tr class="activity-date-row">
-                    <td colspan="4">{{ date|date:"l, d" }} de {{ date|date:"F" }} de {{ date|date:"Y" }}</td>
-                </tr>
-                {% for activity in activities %}
-                    <tr style="page-break-inside: avoid;">
-                        <td>{{ activity.created_at|time:"H:i" }}</td>
-                        <td>{{ activity.title }}</td>
-                        <td>{{ activity.detail|default:"-" }}</td>
-                        <td style="text-align: center;">{{ activity.percentage }}%</td>
-                    </tr>
-                {% empty %}
-                    <tr>
-                        <td colspan="4" style="text-align: center; padding: 10px; color: #888;">No hay actividades registradas en esta fecha.</td>
-                    </tr>
-                {% endfor %}
-            {% empty %}
+            </thead>
+            <tbody>
+            {% for act in activities %}
                 <tr>
-                    <td colspan="4" style="text-align: center; padding: 20px; color: #888;">No se encontraron actividades en el rango de fechas seleccionado.</td>
+                    <td class="text-center">{{ act.created_at|date:"H:i" }}</td>
+                    <td><strong>{{ act.title }}</strong></td>
+                    <td>{{ act.detail|default:"—"|linebreaksbr }}</td>
+                    <td class="text-center"><strong>{{ act.percentage }}%</strong></td>
                 </tr>
             {% endfor %}
-        </tbody>
-    </table>
-
-    <div class="footer-info">
-        <strong>FECHA IMPRESIÓN:</strong> {{ today|date:"d/m/Y" }}
+            </tbody>
+        </table>
+    {% endfor %}
+{% else %}
+    <div style="text-align: center; padding: 25px; border: 1px solid #cbd5e1; margin-top: 15px;">
+        <p style="color: #64748b; margin: 0;">No se registraron actividades de teletrabajo en el período
+            seleccionado.</p>
     </div>
+{% endif %}
+
+<!-- BLOQUE DE FIRMAS CON ESPACIO PREVIO -->
+<table class="signatures-table">
+    <tr>
+        <td class="signature-blank-space">&nbsp;</td>
+        <td class="signature-blank-space">&nbsp;</td>
+    </tr>
+    <tr>
+        <td>
+            <div class="signature-line"></div>
+            <strong>{{ employee.person.full_name }}</strong><br>
+            <span>Servidor / Funcionario</span>
+        </td>
+        <td>
+            <div class="signature-line"></div>
+            <strong>Jefatura Inmediata</strong><br>
+            <span>{{ employee.area.name|default:"Coordinación de Diseño y Desarrollo del Sistema" }}</span>
+        </td>
+    </tr>
+</table>
 
 </body>
 </html>

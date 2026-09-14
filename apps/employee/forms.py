@@ -85,12 +85,24 @@ class BankAccountForm(forms.ModelForm):
         model = BankAccount
         fields = ['bank', 'account_type', 'account_number', 'holder_name']
         widgets = {
-            'bank': forms.Select(attrs={'class': 'input-field select2-field'}),
-            'account_type': forms.Select(attrs={'class': 'input-field select2-field'}),
-            'account_number': forms.TextInput(attrs={'class': 'input-field', 'placeholder': 'Ej: 1234567890'}),
-            'holder_name': forms.TextInput(attrs={'class': 'input-field uppercase-input'}),
+            'bank': forms.Select(attrs={'class': 'input-field'}),
+            'account_type': forms.Select(attrs={'class': 'input-field'}),
+            'account_number': forms.TextInput(attrs={
+                'class': 'input-field',
+                'placeholder': 'Ej: 1045892301'
+            }),
+            'holder_name': forms.TextInput(attrs={
+                'class': 'input-field uppercase-input',
+                'placeholder': 'NOMBRE COMPLETO DEL TITULAR'
+            }),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['bank'].queryset = CatalogItem.objects.filter(catalog__code='BANCO', is_active=True).order_by('name')
+        self.fields['bank'].empty_label = "— Seleccione banco —"
+        self.fields['account_type'].queryset = CatalogItem.objects.filter(catalog__code='ACCOUNT_TYPES', is_active=True).order_by('name')
+        self.fields['account_type'].empty_label = "— Seleccione tipo —"
 
 class InstitutionalDataForm(forms.ModelForm):
     class Meta:
@@ -124,23 +136,22 @@ class InstitutionalDataForm(forms.ModelForm):
 
 class PayrollInfoForm(forms.ModelForm):
     class Meta:
-        model = PayrollInfo  # Make sure PayrollInfo is imported at top
-        fields = ['monthly_payment', 'reserve_funds', 'family_dependents', 'education_dependents', 'roles_entry_date',
-                  'roles_count', 'immediate_reserve_funds']
-        labels = {
-            'monthly_payment': 'Mensualiza Décimos',
-            'reserve_funds': 'Fondos de Reserva',
-            'family_dependents': 'Hijos dependientes',
-            'education_dependents': 'Hijos con discapacidad',
-            'roles_entry_date': 'Fecha Ingreso a Roles',
-            'roles_count': 'Número de Roles', 'immediate_reserve_funds': 'Derecho a Fondos de Reserva Inmediato'
-        }
+        model = PayrollInfo
+        fields = [
+            'monthly_payment', 'reserve_funds', 'immediate_reserve_funds',
+            'family_dependents', 'education_dependents',
+            'roles_entry_date', 'roles_count'
+        ]
         widgets = {
-            'monthly_payment': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'reserve_funds': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'family_dependents': forms.NumberInput(attrs={'class': 'input-field', 'min': 0, 'max': 20}),
-            'education_dependents': forms.NumberInput(attrs={'class': 'input-field', 'min': 0, 'max': 20}),
-            'roles_entry_date': forms.DateInput(attrs={'class': 'input-field', 'type': 'date'}),
-            'roles_count': forms.NumberInput(attrs={'class': 'input-field', 'min': 0}),
-            'immediate_reserve_funds': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'monthly_payment': forms.CheckboxInput(attrs={'class': 'checkbox-lg'}),
+            'reserve_funds': forms.CheckboxInput(attrs={'class': 'checkbox-lg'}),
+            'immediate_reserve_funds': forms.CheckboxInput(attrs={'class': 'checkbox-lg'}),
+            'family_dependents': forms.NumberInput(attrs={'class': 'input-field', 'min': '0', 'max': '20'}),
+            'education_dependents': forms.NumberInput(attrs={'class': 'input-field', 'min': '0', 'max': '20'}),
+            'roles_entry_date': forms.DateInput(format='%Y-%m-%d', attrs={'class': 'input-field', 'type': 'date'}),
+            'roles_count': forms.NumberInput(attrs={'class': 'input-field', 'min': '0'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['roles_entry_date'].input_formats = ['%Y-%m-%d']

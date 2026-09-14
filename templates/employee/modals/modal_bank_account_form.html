@@ -1,0 +1,77 @@
+<div class="modal-overlay" id="modalBankAccountOverlay">
+    <div class="modal-container-medium">
+        <!-- HEADER -->
+        <div class="modal-header">
+            <div class="header-content-group">
+                <div class="header-icon-circle">
+                    <i class="fa-solid fa-building-columns"></i>
+                </div>
+                <div>
+                    <h3 class="header-title">Cuenta Bancaria</h3>
+                </div>
+            </div>
+            <button type="button" onclick="closeModal()" class="btn-close-circle" aria-label="Cerrar">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <!-- FORMULARIO -->
+        <form action="{% url 'employee:bank_account_update' person.id %}"
+              method="POST"
+              onsubmit="submitAjaxForm(event, () => window.location.reload())">
+            {% csrf_token %}
+
+            <div class="modal-body-custom">
+                <div class="form-section-card">
+                    <!-- BANCO Y TIPO -->
+                    <div class="grid-2-cols grid-compact mb-3">
+                        <div class="form-group">
+                            <label class="form-label">Institución Bancaria</label>
+                            {{ form.bank }}
+                            {% if form.bank.errors %}
+                                <span class="text-red small">{{ form.bank.errors.0 }}</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Tipo de Cuenta</label>
+                            {{ form.account_type }}
+                            {% if form.account_type.errors %}
+                                <span class="text-red small">{{ form.account_type.errors.0 }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- NÚMERO Y TITULAR -->
+                    <div class="grid-2-cols grid-compact">
+                        <div class="form-group">
+                            <label class="form-label">Número de Cuenta</label>
+                            {{ form.account_number }}
+                            {% if form.account_number.errors %}
+                                <span class="text-red small">{{ form.account_number.errors.0 }}</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Titular de la Cuenta</label>
+                            {{ form.holder_name }}
+                            {% if form.holder_name.errors %}
+                                <span class="text-red small">{{ form.holder_name.errors.0 }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FOOTER FIJO -->
+            <div class="modal-footer-fixed">
+                <button type="button" onclick="closeModal()" class="btn-secondary">
+                    <i class="fa-solid fa-xmark"></i> Cancelar
+                </button>
+                <button type="submit" class="btn-success">
+                    <i class="fa-solid fa-floppy-disk"></i> Guardar Cuenta
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

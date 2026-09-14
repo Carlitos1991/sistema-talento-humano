@@ -1,0 +1,137 @@
+<div class="modal-overlay" id="modalPayrollInfoOverlay">
+    <div class="modal-container-medium">
+        <!-- HEADER -->
+        <div class="modal-header">
+            <div class="header-content-group">
+                <div class="header-icon-circle">
+                    <i class="fa-solid fa-calculator"></i>
+                </div>
+                <div>
+                    <h3 class="header-title">Configuración de Nómina</h3>
+                </div>
+            </div>
+            <button type="button" onclick="closeModal()" class="btn-close-circle" aria-label="Cerrar">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <!-- FORMULARIO -->
+        <form action="{% url 'employee:payroll_info_update' person.id %}"
+              method="POST"
+              onsubmit="submitAjaxForm(event, () => window.location.reload())">
+            {% csrf_token %}
+
+            <div class="modal-body-custom">
+                <div class="form-section-card">
+
+                    <!-- SECCIÓN 1: ESTADOS -->
+                    <div class="modal-section-heading">
+                        <i class="fa-solid fa-toggle-on text-dark"></i>
+                        <span>Estados</span>
+                    </div>
+
+                    <div class="grid-2-cols grid-compact mb-2">
+                        <!-- Mensualiza -->
+                        <div class="switch-info-card">
+                            <div class="switch-info-texts">
+                                <span class="switch-info-title">Mensualiza</span>
+                                <span class="switch-info-desc">Marque si el empleado mensualiza décimos</span>
+                            </div>
+                            <label class="pill-switch">
+                                {{ form.monthly_payment }}
+                                <span class="pill-slider"></span>
+                            </label>
+                        </div>
+
+                        <!-- Fondos de Reserva -->
+                        <div class="switch-info-card">
+                            <div class="switch-info-texts">
+                                <span class="switch-info-title">Fondos de Reserva</span>
+                                <span class="switch-info-desc">Marque si acumula fondos de reserva</span>
+                            </div>
+                            <label class="pill-switch">
+                                {{ form.reserve_funds }}
+                                <span class="pill-slider"></span>
+                            </label>
+                        </div>
+
+                        <!-- Derecho Inmediato a Fondos (Continuidad) -->
+                        <div class="switch-info-card">
+                            <div class="switch-info-texts">
+                                <span class="switch-info-title">Derecho Inmediato a Fondos (Continuidad)</span>
+                                <span class="switch-info-desc">Marque si certifica continuidad en el sector público (no espera 1 año)</span>
+                            </div>
+                            <label class="pill-switch">
+                                {{ form.immediate_reserve_funds }}
+                                <span class="pill-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <hr class="modal-section-divider">
+
+                    <!-- SECCIÓN 2: HIJOS DEPENDIENTES -->
+                    <div class="modal-section-heading">
+                        <i class="fa-solid fa-users text-dark"></i>
+                        <span>Hijos dependientes</span>
+                    </div>
+
+                    <div class="grid-2-cols grid-compact">
+                        <div class="form-group">
+                            <label class="form-label">Hijos Dependientes</label>
+                            {{ form.family_dependents }}
+                            {% if form.family_dependents.errors %}
+                                <span class="text-red small">{{ form.family_dependents.errors.0 }}</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Hijos con Discapacidad</label>
+                            {{ form.education_dependents }}
+                            {% if form.education_dependents.errors %}
+                                <span class="text-red small">{{ form.education_dependents.errors.0 }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <hr class="modal-section-divider">
+
+                    <!-- SECCIÓN 3: INFORMACIÓN DE ROLES -->
+                    <div class="modal-section-heading">
+                        <i class="fa-solid fa-file-invoice text-dark"></i>
+                        <span>Información de Roles</span>
+                    </div>
+
+                    <div class="grid-2-cols grid-compact">
+                        <div class="form-group">
+                            <label class="form-label">Fecha Ingreso a Roles</label>
+                            {{ form.roles_entry_date }}
+                            {% if form.roles_entry_date.errors %}
+                                <span class="text-red small">{{ form.roles_entry_date.errors.0 }}</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Número de Roles</label>
+                            {{ form.roles_count }}
+                            {% if form.roles_count.errors %}
+                                <span class="text-red small">{{ form.roles_count.errors.0 }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- FOOTER FIJO -->
+            <div class="modal-footer-fixed">
+                <button type="button" onclick="closeModal()" class="btn-secondary">
+                    <i class="fa-solid fa-xmark"></i> Cancelar
+                </button>
+                <button type="submit" class="btn-success">
+                    <i class="fa-solid fa-floppy-disk"></i> Guardar Datos
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

@@ -1,0 +1,93 @@
+<div class="modal-overlay" id="modalContractDetailOverlay">
+    <div class="modal-container-medium">
+        <!-- HEADER -->
+        <div class="modal-header">
+            <div class="header-content-group">
+                <div class="header-icon-circle">
+                    <i class="fa-solid fa-file-contract"></i>
+                </div>
+                <div>
+                    <h3 class="header-title">Detalle de Contrato / Nombramiento</h3>
+                    <p class="small text-muted mb-0">{{ person.full_name }}</p>
+                </div>
+            </div>
+            <button type="button" onclick="closeModal()" class="btn-close-circle" aria-label="Cerrar">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <!-- BODY -->
+        <div class="modal-body-custom">
+            <div class="form-section-card">
+
+                <!-- DENOMINACIÓN Y DOCUMENTO -->
+                <div class="contract-detail-grid mb-3">
+                    <div class="contract-detail-item">
+                        <span class="contract-detail-label">Cargo / Posición</span>
+                        <span class="contract-detail-value">{{ contract.get_dynamic_position|default:"Sin cargo especificado" }}</span>
+                    </div>
+
+                    <div class="contract-detail-item">
+                        <span class="contract-detail-label">N° Documento / Acción</span>
+                        <span class="contract-detail-value">{{ contract.document_number|default:"Sin código" }}</span>
+                    </div>
+                </div>
+
+                <!-- TIPO Y UNIDAD -->
+                <div class="contract-detail-grid mb-3">
+                    <div class="contract-detail-item">
+                        <span class="contract-detail-label">Tipo de Contrato</span>
+                        <span class="contract-detail-value">{{ contract.contract_type|default:"No especificado" }}</span>
+                    </div>
+
+                    <div class="contract-detail-item">
+                        <span class="contract-detail-label">Unidad Administrativa</span>
+                        <span class="contract-detail-value">{{ contract.administrative_unit.name|default:"Sin asignar" }}</span>
+                    </div>
+                </div>
+
+                <!-- ESTADO Y FECHAS -->
+                <div class="contract-detail-grid mb-3">
+                    <div class="contract-detail-item">
+                        <span class="contract-detail-label">Estado de Vigencia</span>
+                        <div>
+                            <span class="status-badge active">{{ contract.status.name|default:"REGISTRADO" }}</span>
+                        </div>
+                    </div>
+
+                    <div class="contract-detail-item">
+                        <span class="contract-detail-label">Vigencia Temporal</span>
+                        <span class="contract-detail-value">
+                            {{ contract.start_date|date:"d/m/Y"|default:"—" }}
+                            {% if contract.end_date %} al {{ contract.end_date|date:"d/m/Y" }}{% else %} (Indefinido /
+                                Permanente){% endif %}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- DOCUMENTO DIGITAL ADJUNTO -->
+                {% if contract.signed_document %}
+                    <div class="contract-detail-item border-top pt-3">
+                        <span class="contract-detail-label">Documento Digital Firmado</span>
+                        <div class="mt-1">
+                            <a href="{{ contract.signed_document.url }}"
+                               target="_blank"
+                               download
+                               class="btn-secondary d-inline-flex align-items-center gap-2">
+                                <i class="fa-solid fa-file-pdf text-red"></i> Descargar Documento Firmado
+                            </a>
+                        </div>
+                    </div>
+                {% endif %}
+
+            </div>
+        </div>
+
+        <!-- FOOTER FIJO -->
+        <div class="modal-footer-fixed">
+            <button type="button" onclick="closeModal()" class="btn-secondary">
+                <i class="fa-solid fa-xmark"></i> Cerrar
+            </button>
+        </div>
+    </div>
+</div>

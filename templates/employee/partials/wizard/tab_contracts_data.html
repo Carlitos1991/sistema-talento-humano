@@ -1,71 +1,88 @@
-<!-- Partida Contratos - Pestaña de Contratos -->
-<div class="grid-general mt-3">
-    <div class="info-box-styled info-box-accent-gold" style="grid-column: span 3;">
-        <h6 class="section-title section-title-accent-gold"><i class="fa-solid fa-file-contract"></i> Contrato Actual
+<!-- CONTRATO ACTUAL -->
+<div class="grid-general">
+    <div class="card-large brown-border">
+        <h6 class="section-title">
+            <i class="fa-solid fa-file-contract"></i> Contrato Vigente
         </h6>
         {% if current_contract %}
             <div class="budget-history-item">
                 <div class="budget-history-left">
                     <div class="budget-history-title">
-                        <a href="#" class="open-contract contract-title-link" data-id="{{ current_contract.id }}">
+                        <button type="button"
+                                class="contract-title-btn"
+                                onclick="openAjaxModal('{% url 'employee:contract_detail_modal' current_contract.id %}')">
                             {{ current_contract.position_name }}
-                        </a>
+                        </button>
                     </div>
-                    <div class="budget-history-sub">Tipo: {{ current_contract.contract_type_name }} &nbsp; | &nbsp;
-                        Unidad: {{ current_contract.administrative_unit }}</div>
+                    <div class="budget-history-sub">
+                        Tipo: {{ current_contract.contract_type_name|default:'—' }} &nbsp;|&nbsp;
+                        Unidad: {{ current_contract.administrative_unit|default:'—' }}
+                    </div>
                 </div>
-                <div class="budget-history-right" style="display:flex;flex-direction:column;align-items:flex-end">
-                    <div style="display:flex;align-items:center;gap:8px">
-                        <div class="budget-history-rem">Estado: <span
-                                class="status-badge">{{ current_contract.status_name }}</span></div>
+                <div class="budget-history-right">
+                    <div class="d-flex align-items-center gap-2">
                         {% if current_contract.signed_document_url %}
-                            <a href="{{ current_contract.signed_document_url }}" class="btn btn-sm btn-outline"
-                               target="_blank" download title="Descargar contrato">
+                            <a href="{{ current_contract.signed_document_url }}"
+                               class="btn-icon btn-action-yellow"
+                               target="_blank"
+                               download
+                               title="Descargar contrato firmado">
                                 <i class="fa-solid fa-download"></i>
                             </a>
                         {% endif %}
                     </div>
-                    <div class="budget-history-cat" style="margin-top:6px">Período:
-                        {{ current_contract.start_date|default:'—' }}{% if current_contract.end_date %} -
-                            {{ current_contract.end_date }}{% endif %}</div>
+                    <div class="budget-history-cat">
+                        Período: {{ current_contract.start_date|default:'—' }}{% if current_contract.end_date %} al
+                        {{ current_contract.end_date }}{% endif %}
+                    </div>
                 </div>
             </div>
         {% else %}
-            <div class="text-center py-3 opacity-60">
+            <div class="text-center py-4 opacity-60">
                 <i class="fa-solid fa-file-circle-xmark fa-2x mb-2 text-secondary"></i>
-                <p class="text-muted mb-0 small">Sin contrato vigente.</p>
+                <p class="text-muted mb-0 small">Sin contrato vigente registrado.</p>
             </div>
         {% endif %}
     </div>
 </div>
 
-<!-- Historial de Contratos -->
+<!-- HISTORIAL DE CONTRATOS -->
 <div class="grid-general mt-3">
-    <div class="info-box-styled info-box-accent-gold" style="grid-column: span 3;">
-        <h6 class="section-title section-title-accent-gold"><i class="fa-solid fa-history"></i> Historial de Contratos
+    <div class="card-large brown-border col-span-full">
+        <h6 class="section-title">
+            <i class="fa-solid fa-clock-rotate-left"></i> Historial de Contratos
         </h6>
-        <div class="p-3 bg-light rounded" style="max-height: 260px; overflow-y: auto;">
-            {% if contract_history and contract_history|length > 0 %}
+
+        {% if contract_history and contract_history|length > 0 %}
+            <div class="scrollable-history-box">
                 <div class="budget-history-list">
                     {% for c in contract_history %}
                         <div class="budget-history-item">
                             <div class="budget-history-left">
                                 <div class="budget-history-title">
-                                    <a href="#" class="open-contract contract-title-link" data-id="{{ c.id }}">
+                                    <button type="button"
+                                            class="contract-title-btn"
+                                            onclick="openAjaxModal('{% url 'employee:contract_detail_modal' c.id %}')">
                                         {{ c.position_name }}
-                                    </a>
+                                    </button>
                                 </div>
-                                <div class="budget-history-sub">Tipo: {{ c.contract_type_name|default:'—' }} &nbsp; |
-                                    &nbsp; Unidad: {{ c.administrative_unit|default:'—' }}</div>
+                                <div class="budget-history-sub">
+                                    Tipo: {{ c.contract_type_name|default:'—' }} &nbsp;|&nbsp;
+                                    Unidad: {{ c.administrative_unit|default:'—' }}
+                                </div>
                             </div>
                             <div class="budget-history-right">
-                                <div style="display:flex;align-items:center;gap:8px">
-                                    <div class="budget-history-cat">Período:
-                                        {{ c.start_date|default:'—' }}{% if c.end_date %} -
-                                            {{ c.end_date }}{% endif %}</div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="budget-history-cat">
+                                        Período:
+                                        {{ c.start_date|default:'—' }}{% if c.end_date %} al {{ c.end_date }}{% endif %}
+                                    </div>
                                     {% if c.signed_document_url %}
-                                        <a href="{{ c.signed_document_url }}" class="btn btn-sm btn-outline"
-                                           target="_blank" download title="Descargar contrato">
+                                        <a href="{{ c.signed_document_url }}"
+                                           class="btn-icon btn-action-yellow"
+                                           target="_blank"
+                                           download
+                                           title="Descargar contrato firmado">
                                             <i class="fa-solid fa-download"></i>
                                         </a>
                                     {% endif %}
@@ -74,12 +91,12 @@
                         </div>
                     {% endfor %}
                 </div>
-            {% else %}
-                <div class="text-center py-3 opacity-50">
-                    <i class="fa-solid fa-box-open fa-2x mb-2 text-secondary"></i>
-                    <p class="text-muted mb-0 small">No hay historial de contratos.</p>
-                </div>
-            {% endif %}
-        </div>
+            </div>
+        {% else %}
+            <div class="text-center py-4 opacity-50">
+                <i class="fa-solid fa-folder-open fa-2x mb-2 text-secondary"></i>
+                <p class="text-muted mb-0 small">No registra historial de contratos anteriores.</p>
+            </div>
+        {% endif %}
     </div>
 </div>

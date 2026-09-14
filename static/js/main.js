@@ -44,9 +44,14 @@ window.openModal = function (id) {
         console.error("No se encontró el modal con ID: " + id);
     }
 };
-
+let currentScrollY = 0;
 // 3. MODALES DINÁMICOS
 window.openAjaxModal = function (url, callback = null) {
+    // 1. Guardar posición y bloquear scroll en html y body simultáneamente
+    currentScrollY = window.scrollY;
+    document.documentElement.classList.add('no-scroll');
+    document.body.classList.add('no-scroll');
+
     fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
         .then(response => {
             if (!response.ok) throw new Error('Error al cargar modal');
@@ -54,28 +59,37 @@ window.openAjaxModal = function (url, callback = null) {
         })
         .then(html => {
             const root = document.getElementById('modal-root');
+            if (!root) return;
             root.innerHTML = html;
 
             const modal = root.querySelector('.modal-overlay');
             if (modal) {
-                document.body.classList.add('no-scroll');
-
-                // 1. PRIMERO quitamos el hidden para que el navegador asigne el alto real
+                // Quitamos el hidden para que tome dimensiones reales
                 modal.classList.remove('hidden');
 
-                // 2. LUEGO inicializamos Select2 dándole tiempo al DOM de pintar (10ms es suficiente)
+                // Inicializar Select2 respetando el modal-body-custom
                 setTimeout(() => {
-                    $(modal).find('select').select2({
-                        width: '100%',
-                        // Al estar ya visible, no forzará un recálculo violento en Flexbox
-                        dropdownParent: $(modal).find('.modal-body-custom').length ? $(modal).find('.modal-body-custom') : $(modal)
-                    });
+                    if (window.$ && $.fn.select2) {
+                        $(modal).find('select').select2({
+                            width: '100%',
+                            dropdownParent: $(modal).find('.modal-body-custom').length
+                                ? $(modal).find('.modal-body-custom')
+                                : $(modal)
+                        });
+                    }
                 }, 10);
             }
+
             if (callback) callback(root);
         })
         .catch(error => {
+            // Restaurar scroll si falla la petición
+            document.documentElement.classList.remove('no-scroll');
+            document.body.classList.remove('no-scroll');
+            window.scrollTo(0, currentScrollY);
+
             Swal.fire('Error', 'No se pudo cargar el formulario.', 'error');
+            console.error(error);
         });
 };
 
@@ -85,11 +99,17 @@ window.closeModal = function (id = null) {
         const modal = document.getElementById(id);
         if (modal) modal.classList.add('hidden');
     }
-    // Si se cargó por Ajax, limpiamos el root
+
+    // Si se cargó por AJAX, limpiamos el root
     const root = document.getElementById('modal-root');
     if (root) root.innerHTML = '';
 
+    // Reactivar scroll en html y body
+    document.documentElement.classList.remove('no-scroll');
     document.body.classList.remove('no-scroll');
+
+    // Mantener la posición vertical exacta
+    window.scrollTo(0, currentScrollY);
 };
 
 // Alias para compatibilidad con botones que digan "closeAjaxModal"
@@ -969,5 +989,217 @@ document.addEventListener('change', function (e) {
         } else {
             endWrap.classList.remove('hidden');
         }
+    }
+});
+
+// static/js/main.js
+
+// 1. CARGA DINÁMICA DE DATOS DE TELETRABAJO
+// static/js/main.js
+
+window.loadTeleworkData = function (personId) {
+    if (!personId) {
+        const pane = document.querySelector('.tab-pane-telework');
+        if (pane) personId = pane.getAttribute('data-person-id');
+    }
+    if (!personId) return;
+
+    fetch(`/employee/person/${personId}/telework/data/`, {
+        headers: {'X-Requested-With': 'XMLHttpRequest'}
+    })
+        .then(res => res.json())
+        .then(data => {
+            if (!data.success) return;
+
+            const readOnlyAlert = document.getElementById('teleworkReadOnlyAlert');
+            const punchGroup = document.getElementById('teleworkAttendanceGroup');
+            const actionContainer = document.getElementById('teleworkActivityActionContainer');
+
+            // A. Estado de perfil y botones de acción
+            if (readOnlyAlert && punchGroup && actionContainer) {
+                if (!data.is_own_profile) {
+                    readOnlyAlert.classList.remove('hidden');
+                    punchGroup.classList.add('hidden');
+                    actionContainer.innerHTML = `
+                    <button type="button" class="btn-telework-square green"
+            onclick="openAjaxModal('/employee/person/${personId}/telework/activity/modal/')">
+        <i class="fa-solid fa-plus"></i>
+        <span>Nueva<br>Actividad</span>
+    </button>
+    <button type="button" class="btn-telework-square neutral"
+            onclick="openAjaxModal('/employee/person/${personId}/telework/report/modal/')">
+        <i class="fa-solid fa-file-pdf text-red"></i>
+        <span>Reporte<br>PDF</span>
+    </button>`;
+                } else {
+                    readOnlyAlert.classList.add('hidden');
+                    punchGroup.classList.remove('hidden');
+
+                    const btnIncome = document.getElementById('btnPunchIncome');
+                    const btnExit = document.getElementById('btnPunchExit');
+
+                    if (btnIncome) btnIncome.disabled = (data.last_punch_type === 'INCOME');
+                    if (btnExit) btnExit.disabled = (data.last_punch_type !== 'INCOME');
+
+                    // Botones centrados de actividad
+                    if (data.last_punch_type === 'EXIT') {
+                        actionContainer.innerHTML = `
+                        <div class="text-center p-2 bg-light border rounded">
+                            <i class="fa-solid fa-lock text-red me-1"></i>
+                            <span class="small fw-bold text-muted">Salida registrada para el día de hoy</span>
+                        </div>
+                        <button type="button" class="btn-telework-square green"
+            onclick="openAjaxModal('/employee/person/${personId}/telework/activity/modal/')">
+        <i class="fa-solid fa-plus"></i>
+        <span>Nueva<br>Actividad</span>
+    </button>
+    <button type="button" class="btn-telework-square neutral"
+            onclick="openAjaxModal('/employee/person/${personId}/telework/report/modal/')">
+        <i class="fa-solid fa-file-pdf text-red"></i>
+        <span>Reporte<br>PDF</span>
+    </button>`;
+                    } else if (!data.has_income) {
+                        actionContainer.innerHTML = `
+                        <div class="text-center p-2 bg-light border rounded">
+                            <i class="fa-solid fa-circle-exclamation text-warning me-1"></i>
+                            <span class="small fw-bold text-muted">Debe marcar entrada para reportar actividades</span>
+                        </div>`;
+                    } else {
+                        actionContainer.innerHTML = `
+                        <button type="button" class="btn-telework-square green"
+            onclick="openAjaxModal('/employee/person/${personId}/telework/activity/modal/')">
+        <i class="fa-solid fa-plus"></i>
+        <span>Nueva<br>Actividad</span>
+    </button>
+    <button type="button" class="btn-telework-square neutral"
+            onclick="openAjaxModal('/employee/person/${personId}/telework/report/modal/')">
+        <i class="fa-solid fa-file-pdf text-red"></i>
+        <span>Reporte<br>PDF</span>
+    </button>`;
+                    }
+                }
+            }
+
+            // B. Listado de marcaciones
+            const punchesContainer = document.getElementById('teleworkPunchesContainer');
+            if (punchesContainer) {
+                if (!data.punches || data.punches.length === 0) {
+                    punchesContainer.innerHTML = `
+                    <div class="text-center py-4 opacity-50">
+                        <i class="fa-solid fa-clock-rotate-left fa-2x mb-2 text-secondary"></i>
+                        <p class="small text-muted mb-0">No hay marcaciones registradas hoy.</p>
+                    </div>`;
+                } else {
+                    punchesContainer.innerHTML = data.punches.map(p => {
+                        const isIncome = p.type_code === 'INCOME';
+                        return `
+                        <div class="day-card-compact">
+                            <div class="day-col">
+                                <span class="day-label">EVENTO</span>
+                                <span class="${isIncome ? 'text-green' : 'text-red'} fw-bold small">
+                                    ${p.type.toUpperCase()}
+                                </span>
+                            </div>
+                            <div class="day-col-center">
+                                <span class="day-label">HORA</span>
+                                <span class="day-time">${p.time}</span>
+                            </div>
+                            <div class="day-col-right">
+                                <span class="day-label">UBICACIÓN</span>
+                                <span class="badge-gps">
+                                    <i class="fa-solid fa-location-dot text-red me-1"></i> GPS VÁLIDO
+                                </span>
+                            </div>
+                        </div>`;
+                    }).join('');
+                }
+            }
+
+            // C. Listado de actividades (idéntico a la imagen)
+            const activitiesContainer = document.getElementById('teleworkActivitiesContainer');
+            if (activitiesContainer) {
+                if (!data.activities || data.activities.length === 0) {
+                    activitiesContainer.innerHTML = `
+                    <div class="text-center py-4 opacity-50">
+                        <i class="fa-solid fa-folder-open fa-2x mb-2 text-secondary"></i>
+                        <p class="small text-muted mb-0">No hay actividades reportadas hoy.</p>
+                    </div>`;
+                } else {
+                    activitiesContainer.innerHTML = data.activities.map(a => `
+                    <div class="telework-activity-card">
+                        <div>
+                            <div class="fw-bold small text-dark">${a.title}</div>
+                            ${a.detail ? `<div class="telework-badge-sub">${a.detail}</div>` : ''}
+                        </div>
+                        <div class="telework-progress-group">
+                            <span class="fw-bold small text-dark">${a.time}</span>
+                            <div class="progress-track" title="${a.percentage}%">
+                                <div class="progress-fill" style="width: ${a.percentage}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+                }
+            }
+        })
+        .catch(err => console.error("Error al cargar datos de teletrabajo:", err));
+};
+
+// 2. REGISTRO DE ASISTENCIA CON GEOLOCALIZACIÓN
+window.markTeleworkAttendance = function (punchType, personId) {
+    const doSubmit = (lat = 0, lng = 0) => {
+        const formData = new FormData();
+        formData.append('punch_type', punchType);
+        formData.append('latitude', lat);
+        formData.append('longitude', lng);
+
+        const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+
+        fetch(`/employee/person/${personId}/telework/attendance/mark/`, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': csrf
+            },
+            body: formData
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Marcación Registrada',
+                        text: data.message,
+                        timer: 1600,
+                        showConfirmButton: false
+                    });
+                    loadTeleworkData(personId);
+                } else {
+                    Swal.fire('Atención', data.message || 'No se pudo registrar la marcación.', 'warning');
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                Swal.fire('Error', 'Error de comunicación al registrar marcación.', 'error');
+            });
+    };
+
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            pos => doSubmit(pos.coords.latitude, pos.coords.longitude),
+            () => doSubmit(0, 0),
+            {timeout: 6000}
+        );
+    } else {
+        doSubmit(0, 0);
+    }
+};
+
+// 3. AUTO-CARGA AL VISUALIZAR EL TAB
+document.addEventListener('DOMContentLoaded', function () {
+    const teleworkPane = document.querySelector('.tab-pane-telework');
+    if (teleworkPane) {
+        const personId = teleworkPane.getAttribute('data-person-id');
+        loadTeleworkData(personId);
     }
 });

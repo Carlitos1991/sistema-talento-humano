@@ -6,6 +6,7 @@ from django.contrib.auth import get_user_model
 from .models import EconomicData
 from .forms import BankAccountForm, PayrollInfoForm
 from .forms import InstitutionalDataForm
+
 User = get_user_model()
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
@@ -690,6 +691,97 @@ def upload_cv_pdf(request, person_id):
             return JsonResponse({'success': True, 'message': 'PDF actualizado correctamente.'})
     return JsonResponse({'success': False, 'message': 'Error al subir archivo.'}, status=400)
 
+
+class BankAccountUpdateView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'person.change_person'
+    template_name = 'employee/modals/modal_bank_account_form.html'
+
+    def get(self, request, person_id):
+        person = get_object_or_404(Person, pk=person_id)
+        economic_data, _ = EconomicData.objects.get_or_create(person=person)
+        instance = getattr(economic_data, 'bank_account', None)
+        form = BankAccountForm(instance=instance)
+        return render(request, self.template_name, {'form': form, 'person': person})
+
+    def post(self, request, person_id):
+        person = get_object_or_404(Person, pk=person_id)
+        economic_data, _ = EconomicData.objects.get_or_create(person=person)
+        instance = getattr(economic_data, 'bank_account', None)
+        form = BankAccountForm(request.POST, instance=instance)
+        if form.is_valid():
+            bank_acc = form.save(commit=False)
+            bank_acc.economic_data = economic_data
+            bank_acc.save()
+            log_person_audit(
+                request, person, PersonAuditLog.Action.UPDATE,
+                PERSON_AUDIT_SECTIONS['economic'], 'Actualizó cuenta bancaria'
+            )
+            return JsonResponse({'success': True, 'message': 'Cuenta bancaria guardada correctamente.'})
+        return render(request, self.template_name, {'form': form, 'person': person}, status=400)
+
+
+class PayrollInfoUpdateView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'person.change_person'
+    template_name = 'employee/modals/modal_payroll_info_form.html'
+
+    def get(self, request, person_id):
+        person = get_object_or_404(Person, pk=person_id)
+        economic_data, _ = EconomicData.objects.get_or_create(person=person)
+        instance = getattr(economic_data, 'payroll_info', None)
+        form = PayrollInfoForm(instance=instance)
+        return render(request, self.template_name, {'form': form, 'person': person})
+
+    def post(self, request, person_id):
+        person = get_object_or_404(Person, pk=person_id)
+        economic_data, _ = EconomicData.objects.get_or_create(person=person)
+        instance = getattr(economic_data, 'payroll_info', None)
+        form = PayrollInfoForm(request.POST, instance=instance)
+        if form.is_valid():
+            payroll = form.save(commit=False)
+            payroll.economic_data = economic_data
+            payroll.save()
+            log_person_audit(
+                request, person, PersonAuditLog.Action.UPDATE,
+                PERSON_AUDIT_SECTIONS['economic'], 'Actualizó información de nómina'
+            )
+            return JsonResponse({'success': True, 'message': 'Información de nómina actualizada correctamente.'})
+        return render(request, self.template_name, {'form': form, 'person': person}, status=400)
+
+
+class ContractDetailModalView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
+    model = ManagementPeriod
+    template_name = 'employee/modals/modal_contract_detail.html'
+    context_object_name = 'contract'
+    permission_required = 'person.view_person'
+
+    def get_queryset(self):
+        return ManagementPeriod.objects.select_related(
+            'contract_type', 'status', 'administrative_unit', 'employee__person'
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['person'] = self.object.employee.person
+        return context
+
+
+@login_required
+def telework_activity_modal_view(request, person_id):
+    person = get_object_or_404(Person, pk=person_id)
+    return render(request, 'employee/modals/modal_activity_telework_form.html', {'person': person})
+
+
+@login_required
+def telework_report_modal_view(request, person_id):
+    person = get_object_or_404(Person, pk=person_id)
+    today = timezone.now().date()
+    first_day = today.replace(day=1)
+    # Debe ser la plantilla del MODAL, NO la del PDF
+    return render(request, 'employee/modals/modal_telework_report.html', {
+        'person': person,
+        'today': today.isoformat(),
+        'first_day': first_day.isoformat(),
+    })
 
 @transaction.atomic
 def add_bank_account(request, person_id):
@@ -1479,13 +1571,10 @@ def mark_telework_attendance_api(request, person_id):
 @login_required
 def generate_telework_report_pdf(request, person_id):
     person = get_object_or_404(Person, pk=person_id)
-    employee = person.employee_profile
+    employee = getattr(person, 'employee_profile', None)
 
     start_date_str = request.GET.get('start')
     end_date_str = request.GET.get('end')
-
-    if not all([start_date_str, end_date_str]):
-        return HttpResponse("Fechas de inicio y fin son requeridas.", status=400)
 
     start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
     end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
@@ -1497,20 +1586,22 @@ def generate_telework_report_pdf(request, person_id):
 
     activities_by_date = {}
     for activity in activities:
-        date = activity.created_at.date()
-        if date not in activities_by_date:
-            activities_by_date[date] = []
-        activities_by_date[date].append(activity)
+        d = activity.created_at.date()
+        activities_by_date.setdefault(d, []).append(activity)
 
-    # Obtener el membrete activo
-    letterhead = SystemConfiguration.objects.filter(is_active=True).first()
+    # Ruta absoluta del membrete
     letterhead_data = None
-    if letterhead and letterhead.header_img:
-        try:
-            with open(letterhead.header_img.path, "rb") as image_file:
-                letterhead_data = "data:image/png;base64," + base64.b64encode(image_file.read()).decode('utf-8')
-        except FileNotFoundError:
-            letterhead_data = None
+    config = SystemConfiguration.objects.filter(is_active=True).first()
+    if config:
+        image_field = (
+            getattr(config, 'letterhead', None) or
+            getattr(config, 'header_image', None) or
+            getattr(config, 'logo', None) or
+            getattr(config, 'institution_logo', None) or
+            getattr(config, 'header_img', None)
+        )
+        if image_field and hasattr(image_field, 'path'):
+            letterhead_data = image_field.path.replace('\\', '/')
 
     context = {
         'employee': employee,
@@ -1521,16 +1612,14 @@ def generate_telework_report_pdf(request, person_id):
         'letterhead_data': letterhead_data,
     }
 
-    template_path = 'biometric/reports/pdf_telework_report.html'
-    template = get_template(template_path)
+    template = get_template('biometric/reports/pdf_telework_report.html')
     html = template.render(context)
-
     result = BytesIO()
     pdf = pisa.pisaDocument(BytesIO(html.encode("UTF-8")), result)
 
     if not pdf.err:
         response = HttpResponse(result.getvalue(), content_type='application/pdf')
-        filename = f"reporte_teletrabajo_{employee.person.document_number}_{start_date_str}_a_{end_date_str}.pdf"
+        filename = f"reporte_teletrabajo_{person.document_number}_{start_date_str}_a_{end_date_str}.pdf"
         response['Content-Disposition'] = f'inline; filename="{filename}"'
         return response
 
