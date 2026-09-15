@@ -793,14 +793,6 @@ body.modal-open {
     align-items: center;
     background-color: #f8fafc;
 }
-
-.modal-title {
-    margin: 0;
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #1e293b;
-}
-
 .modal-footer {
     padding: 1rem 1.5rem;
     background-color: #f8fafc;

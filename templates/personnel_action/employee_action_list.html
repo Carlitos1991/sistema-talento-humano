@@ -32,9 +32,7 @@
 {% endblock %}
 
 {% block modals %}
-    <div id="modal-create-action" class="modal-overlay hidden">
-        <div class="modal-container-large" id="modal-body-content"></div>
-    </div>
+    {% include 'personnel_action/modals/modal_personnel_action_form.html' %}
 {% endblock %}
 
 {% block extra_js %}

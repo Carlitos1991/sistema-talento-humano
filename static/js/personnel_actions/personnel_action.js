@@ -1,7 +1,5 @@
 document.addEventListener('DOMContentLoaded', function () {
     const tableContainer = document.getElementById('table-content-wrapper');
-    const modalOverlay = document.getElementById('modal-create-action');
-    const modalContentContainer = document.getElementById('modal-body-content');
 
     // Delegación de eventos de la tabla
     if (tableContainer) {
@@ -9,7 +7,10 @@ document.addEventListener('DOMContentLoaded', function () {
             const generateBtn = e.target.closest('.js-generate-action');
             if (generateBtn) {
                 e.preventDefault();
-                openGenerateActionModal(generateBtn.dataset.employeeId);
+                openAjaxModal(
+                    `/personnel_actions/create/?employee_id=${generateBtn.dataset.employeeId}`,
+                    () => PersonnelActionModal.init()
+                );
                 return;
             }
 
@@ -18,51 +19,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 e.preventDefault();
                 window.location.href = `/personnel_actions/history/${historyBtn.dataset.employeeId}/`;
             }
-        });
-    }
-
-    function openGenerateActionModal(employeeId) {
-        fetch(`/personnel_actions/create/?employee_id=${employeeId}`, {
-            headers: {'X-Requested-With': 'XMLHttpRequest'}
-        })
-            .then(res => res.text())
-            .then(html => {
-                if (modalContentContainer && modalOverlay) {
-                    modalContentContainer.innerHTML = html;
-                    modalOverlay.classList.remove('hidden');
-                    document.body.classList.add('modal-open');
-                    initModalPlugins();
-                }
-            })
-            .catch(err => {
-                console.error('Error al abrir modal:', err);
-                if (typeof Swal !== 'undefined') Swal.fire('Error', 'No se pudo cargar el formulario', 'error');
-            });
-    }
-
-    function closeModal() {
-        if (modalOverlay) modalOverlay.classList.add('hidden');
-        if (modalContentContainer) modalContentContainer.innerHTML = '';
-        document.body.classList.remove('modal-open');
-    }
-
-    window.closeModal = closeModal;
-
-    if (modalOverlay) {
-        modalOverlay.addEventListener('click', (e) => {
-            if (e.target === modalOverlay) closeModal();
-        });
-    }
-
-    function initModalPlugins() {
-        if (typeof $ !== 'undefined' && $.fn.select2) {
-            $('.select2').select2({dropdownParent: $('#modal-create-action'), width: '100%'});
-        }
-        if (window.PersonnelActionModal && typeof window.PersonnelActionModal.init === 'function') {
-            window.PersonnelActionModal.init();
-        }
-        modalContentContainer?.querySelectorAll('.btn-cancel, .btn-close-circle').forEach(btn => {
-            btn.addEventListener('click', closeModal);
         });
     }
 });
@@ -374,56 +330,44 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
     };
-    $(document).ready(function () {
+    // Delegado en document: el select #id_action_type no existe hasta que
+    // el modal se inyecta vía openAjaxModal, así que no se puede bindear una
+    // sola vez al cargar la página.
+    $(document).on('change', '#id_action_type', function () {
         const form = document.getElementById('form-create-action');
         const isCreateMode = !form || form.dataset.formMode !== 'edit';
 
-        // Escuchar el cambio en el Tipo de Acción
-        $('#id_action_type').on('change', function () {
-            if (!isCreateMode) {
-                return;
-            }
+        if (!isCreateMode) {
+            return;
+        }
 
-            let typeId = $(this).val();
+        let typeId = $(this).val();
 
-            if (typeId) {
-                // Cargar firmas por defecto del tipo de acción
-                $.get('/personnel_actions/types/api/detail/' + typeId + '/', function (data) {
+        if (typeId) {
+            // Cargar firmas por defecto del tipo de acción
+            $.get('/personnel_actions/types/api/detail/' + typeId + '/', function (data) {
 
-                    // Función auxiliar para auto-seleccionar en Select2
-                    function setSelect2Value(elementId, id, text) {
-                        let element = $('#' + elementId);
-                        if (id && text) {
-                            // Crear la opción y seleccionarla
-                            let newOption = new Option(text, id, true, true);
-                            element.append(newOption).trigger('change');
-                        } else {
-                            // Limpiar si no hay firma por defecto
-                            element.val(null).trigger('change');
-                        }
+                // Función auxiliar para auto-seleccionar en Select2
+                function setSelect2Value(elementId, id, text) {
+                    let element = $('#' + elementId);
+                    if (id && text) {
+                        // Crear la opción y seleccionarla
+                        let newOption = new Option(text, id, true, true);
+                        element.append(newOption).trigger('change');
+                    } else {
+                        // Limpiar si no hay firma por defecto
+                        element.val(null).trigger('change');
                     }
+                }
 
-                    // Inyectar las firmas obtenidas
-                    setSelect2Value('id_authority_1', data.auth1_id, data.auth1_text);
-                    setSelect2Value('id_authority_2', data.auth2_id, data.auth2_text);
-                    setSelect2Value('id_reviewer', data.reviewer_id, data.reviewer_text);
-                    setSelect2Value('id_register', data.register_id, data.register_text);
-                }).fail(function () {
-                    console.warn('No se pudieron cargar las firmas por defecto del tipo de acción.');
-                });
-            }
-        });
-    });
-
-    // ==========================================
-    // INICIALIZACIÓN AL CARGAR EL DOM
-    // ==========================================
-
-    document.addEventListener('DOMContentLoaded', () => {
-        // Inicializar cuando el modal esté visible
-        const modal = document.getElementById('form-create-action');
-        if (modal) {
-            PersonnelActionModal.init();
+                // Inyectar las firmas obtenidas
+                setSelect2Value('id_authority_1', data.auth1_id, data.auth1_text);
+                setSelect2Value('id_authority_2', data.auth2_id, data.auth2_text);
+                setSelect2Value('id_reviewer', data.reviewer_id, data.reviewer_text);
+                setSelect2Value('id_register', data.register_id, data.register_text);
+            }).fail(function () {
+                console.warn('No se pudieron cargar las firmas por defecto del tipo de acción.');
+            });
         }
     });
 

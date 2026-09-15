@@ -1,4 +1,4 @@
-<div class="modal-overlay hidden" id="modal-create-action">
+<div class="modal-overlay hidden">
     <div class="modal-container-medium">
         <form method="post" action="{{ request.path }}" id="form-create-action"
               data-form-mode="{% if is_edit %}edit{% else %}create{% endif %}"
@@ -6,8 +6,8 @@
             {% csrf_token %}
 
             <!-- HEADER -->
-            <div class="modal-header-medium modal-header-gradient">
-                <h3 class="modal-title text-white">
+            <div class="modal-header-medium">
+                <h3 class="header-title">
                     <i class="fa-solid fa-file-signature me-2"></i>
                     <span>{% if is_edit %}Editar Acción de Personal{% else %}Nueva Acción de Personal{% endif %}</span>
                 </h3>
