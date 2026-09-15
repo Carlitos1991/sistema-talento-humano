@@ -13,6 +13,7 @@ from django.views.generic import ListView, CreateView, UpdateView
 
 from budget.models import BudgetLine, BudgetAssignmentHistory, BudgetModificationHistory
 from core.models import CatalogItem, User
+from employee.models import Employee
 from institution.models import AdministrativeUnit
 from .forms import PersonnelActionForm, ActionTypeForm
 from .models import PersonnelAction, ActionMovement, ActionType
@@ -534,28 +535,29 @@ class EmployeeActionListView(LoginRequiredMixin, ListView):
     model = PersonnelAction
     template_name = 'personnel_action/employee_action_list.html'
     context_object_name = 'employees'
-    paginate_by = 10
 
     def get_queryset(self):
-        from employee.models import Employee
-
-        queryset = Employee.objects.filter(
+        qs = Employee.objects.filter(
             is_active=True
         ).select_related(
             'person',
             'area'
-        ).order_by('person__last_name', 'person__first_name')
+        ).order_by('person__last_name', 'person__first_name', 'pk')
+
+        q = (self.request.GET.get('q') or '').strip()
 
         # Search filter
-        query = self.request.GET.get('q', '').strip()
-        if query:
-            queryset = queryset.filter(
-                Q(person__first_name__icontains=query) |
-                Q(person__last_name__icontains=query) |
-                Q(person__document_number__icontains=query)
-            )
+        if q:
+            terms = [t.strip() for t in q.split() if t.strip()]
+            for term in terms:
+                qs = qs.filter(
+                    Q(person__first_name__icontains=term) |
+                    Q(person__last_name__icontains=term) |
+                    Q(person__document_number__icontains=term) |
+                    Q(area__name__icontains=term)
+                )
 
-        return queryset
+        return qs
 
     def render_to_response(self, context, **response_kwargs):
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':

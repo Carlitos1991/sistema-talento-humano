@@ -1,254 +1,102 @@
-const {createApp} = Vue;
+document.addEventListener('DOMContentLoaded', function () {
+    const tableContainer = document.getElementById('table-content-wrapper');
+    const modalOverlay = document.getElementById('modal-create-action');
+    const modalContentContainer = document.getElementById('modal-body-content');
 
-createApp({
-    delimiters: ['[[', ']]'],
-    data() {
-        return {
-            stats: {total: 0, registered: 0, pending: 0},
-
-            // UI State
-            isLoading: false,
-            isModalOpen: false,
-            isSearchModalOpen: false,
-            modalTitle: '',
-            modalHtml: '',
-
-            // Filtros
-            currentStatus: 'all',
-            filters: {
-                q: '',
-                date_start: '',
-                date_end: ''
-            },
-
-            // Paginación
-            pagination: {
-                page: 1,
-                numPages: 1,
-                hasNext: false,
-                hasPrev: false,
-                totalRecords: 0
+    // Delegación de eventos de la tabla
+    if (tableContainer) {
+        tableContainer.addEventListener('click', function (e) {
+            const generateBtn = e.target.closest('.js-generate-action');
+            if (generateBtn) {
+                e.preventDefault();
+                openGenerateActionModal(generateBtn.dataset.employeeId);
+                return;
             }
-        }
-    },
-    mounted() {
-        // 1. Cargar Estadísticas Iniciales
-        const initialStatsEl = document.getElementById('initial-stats');
-        if (initialStatsEl) {
-            try {
-                this.stats = JSON.parse(initialStatsEl.textContent);
-            } catch (e) {
-                console.error("Error parseando stats", e);
-            }
-        }
 
-        // 2. Cargar Paginación Inicial desde Django
-        const initialPagEl = document.getElementById('initial-pagination');
-        if (initialPagEl) {
-            try {
-                const pagData = JSON.parse(initialPagEl.textContent);
-                this.pagination = pagData;
-            } catch (e) {
-                console.error("Error parseando paginación inicial", e);
+            const historyBtn = e.target.closest('.js-view-history');
+            if (historyBtn) {
+                e.preventDefault();
+                window.location.href = `/personnel_actions/history/${historyBtn.dataset.employeeId}/`;
             }
+        });
+    }
+
+    function openGenerateActionModal(employeeId) {
+        fetch(`/personnel_actions/create/?employee_id=${employeeId}`, {
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        })
+            .then(res => res.text())
+            .then(html => {
+                if (modalContentContainer && modalOverlay) {
+                    modalContentContainer.innerHTML = html;
+                    modalOverlay.classList.remove('hidden');
+                    document.body.classList.add('modal-open');
+                    initModalPlugins();
+                }
+            })
+            .catch(err => {
+                console.error('Error al abrir modal:', err);
+                if (typeof Swal !== 'undefined') Swal.fire('Error', 'No se pudo cargar el formulario', 'error');
+            });
+    }
+
+    function closeModal() {
+        if (modalOverlay) modalOverlay.classList.add('hidden');
+        if (modalContentContainer) modalContentContainer.innerHTML = '';
+        document.body.classList.remove('modal-open');
+    }
+
+    window.closeModal = closeModal;
+
+    if (modalOverlay) {
+        modalOverlay.addEventListener('click', (e) => {
+            if (e.target === modalOverlay) closeModal();
+        });
+    }
+
+    function initModalPlugins() {
+        if (typeof $ !== 'undefined' && $.fn.select2) {
+            $('.select2').select2({dropdownParent: $('#modal-create-action'), width: '100%'});
         }
-    },
-    computed: {
-        hasActiveFilters() {
-            return this.currentStatus !== 'all' ||
-                this.filters.q !== '' ||
-                this.filters.date_start !== '';
+        if (window.PersonnelActionModal && typeof window.PersonnelActionModal.init === 'function') {
+            window.PersonnelActionModal.init();
         }
-    },
-    methods: {
-        async openCreateModal() {
-            this.modalTitle = 'Nueva Acción de Personal';
-            this.modalHtml = '<div style="text-align:center; padding:20px;"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
-            this.isModalOpen = true;
-            try {
-                const response = await fetch('/personnel_actions/create/', {
-                    headers: {'X-Requested-With': 'XMLHttpRequest'}
-                });
-                if (response.ok) {
-                    this.modalHtml = await response.text();
-                    this.$nextTick(() => {
-                        this.initializePluginsInModal();
-                        this.bindFormSubmit();
+        const form = modalContentContainer?.querySelector('form');
+        if (form) {
+            form.addEventListener('submit', handleFormSubmit);
+        }
+        modalContentContainer?.querySelectorAll('.btn-cancel, .btn-close-circle').forEach(btn => {
+            btn.addEventListener('click', closeModal);
+        });
+    }
+
+    function handleFormSubmit(e) {
+        e.preventDefault();
+        const form = e.target;
+        const formData = new FormData(form);
+
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Éxito',
+                        text: data.message || 'Acción guardada correctamente',
+                        timer: 1500,
+                        showConfirmButton: false
+                    }).then(() => {
+                        closeModal();
+                        window.location.reload();
                     });
                 } else {
-                    this.modalHtml = '<p>Error.</p>';
+                    Swal.fire('Atención', data.message || 'Error al procesar el formulario', 'warning');
                 }
-            } catch (e) {
-                this.modalHtml = '<p>Error conexión.</p>';
-            }
-        },
-        closeModal() {
-            this.isModalOpen = false;
-            this.modalHtml = '';
-        },
-
-        openSearchModal() {
-            this.isSearchModalOpen = true;
-        },
-        closeSearchModal() {
-            this.isSearchModalOpen = false;
-        },
-
-        // --- LÓGICA DE TABLA ---
-
-        applyBackendSearch() {
-            this.pagination.page = 1;
-            this.fetchTableData();
-            this.closeSearchModal();
-        },
-
-        clearFilters() {
-            this.currentStatus = 'all';
-            this.filters.q = '';
-            this.filters.date_start = '';
-            this.filters.date_end = '';
-            this.pagination.page = 1;
-
-            // Limpiar input visual
-            const localInput = document.getElementById('local-search-input');
-            if (localInput) localInput.value = '';
-
-            this.fetchTableData();
-        },
-
-        filterByStatus(status) {
-            if (this.currentStatus === status) return;
-            this.currentStatus = status;
-            this.pagination.page = 1;
-            this.fetchTableData();
-        },
-
-        changePage(newPage) {
-            if (newPage < 1) return;
-            this.pagination.page = newPage;
-            this.fetchTableData();
-        },
-
-        async fetchTableData() {
-            // 1. Activamos "Cargando".
-            this.isLoading = true;
-
-            const params = new URLSearchParams();
-            params.append('page', this.pagination.page);
-            if (this.currentStatus !== 'all') params.append('status', this.currentStatus);
-            if (this.filters.q) params.append('q', this.filters.q);
-            if (this.filters.date_start) params.append('date_start', this.filters.date_start);
-            if (this.filters.date_end) params.append('date_end', this.filters.date_end);
-
-            try {
-                const response = await fetch(`?${params.toString()}`, {
-                    headers: {'X-Requested-With': 'XMLHttpRequest'}
-                });
-                if (response.ok) {
-                    const data = await response.json();
-
-                    // Reemplazo del HTML
-                    document.getElementById('table-content-wrapper').innerHTML = data.html;
-
-                    // Actualizar Paginación
-                    this.pagination = {
-                        page: data.page_number,
-                        numPages: data.num_pages,
-                        hasNext: data.has_next,
-                        hasPrev: data.has_previous,
-                        totalRecords: data.total_records
-                    };
-
-                    this.$nextTick(() => { this.localSearch(); });
-                }
-            } catch (error) {
-                console.error(error);
-            } finally {
-                this.isLoading = false;
-            }
-        },
-
-        // Búsqueda Local
-        localSearch() {
-            const input = document.getElementById('local-search-input');
-            if (!input) return;
-
-            const filter = input.value.toUpperCase();
-            // Busca por ID ahora que lo agregamos al partial
-            const table = document.getElementById('main-data-table');
-
-            if (!table) return;
-
-            const tr = table.getElementsByTagName('tr');
-
-            // Comenzamos en i=1 para saltar el thead
-            for (let i = 1; i < tr.length; i++) {
-                // Aseguramos que sea una fila de datos y no el mensaje de "No records"
-                if (tr[i].getElementsByTagName('td').length > 1) {
-                    let txtValue = tr[i].textContent || tr[i].innerText;
-                    tr[i].style.display = txtValue.toUpperCase().indexOf(filter) > -1 ? "" : "none";
-                }
-            }
-        },
-
-        initializePluginsInModal() {
-            if (window.jQuery && $.fn.select2) {
-                const $modal = $('.modal-container');
-
-                // Inicializar selects con AJAX (tienen data-ajax-url)
-                $modal.find('select[data-ajax-url]').each(function () {
-                    const $s = $(this);
-                    if ($s.data('select2')) return; // ya inicializado
-                    $s.select2({
-                        width: '100%',
-                        dropdownParent: $modal,
-                        placeholder: $s.data('placeholder') || '',
-                        minimumInputLength: parseInt($s.data('minimum-input-length') || 1),
-                        ajax: {
-                            url: $s.data('ajax-url'),
-                            dataType: 'json',
-                            delay: 250,
-                            data: function (params) { return {term: params.term}; },
-                            processResults: function (data) { return {results: data.results || []}; }
-                        }
-                    });
-                });
-
-                // Inicializar el resto de select2 (no-AJAX)
-                $modal.find('select.select2').not('[data-ajax-url]').each(function () {
-                    const $s = $(this);
-                    if ($s.data('select2')) return;
-                    $s.select2({width: '100%', dropdownParent: $modal});
-                });
-            }
-        },
-        bindFormSubmit() {
-            const form = document.querySelector('.modal-container form');
-            if (!form) return;
-            form.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const formData = new FormData(form);
-                try {
-                    const response = await fetch(form.action, {
-                        method: 'POST',
-                        body: formData,
-                        headers: {'X-Requested-With': 'XMLHttpRequest'}
-                    });
-                    if (response.ok) {
-                        Swal.fire({icon: 'success', title: 'Guardado', timer: 1500, showConfirmButton: false});
-                        this.closeModal();
-                        this.fetchTableData(); // Recargar tabla
-                    } else {
-                        this.modalHtml = await response.text();
-                        this.$nextTick(() => {
-                            this.initializePluginsInModal();
-                            this.bindFormSubmit();
-                        });
-                    }
-                } catch (err) {
-                    Swal.fire('Error', 'Error inesperado', 'error');
-                }
-            });
-        }
+            })
+            .catch(err => console.error(err));
     }
-}).mount('#personnelActionApp');
+});

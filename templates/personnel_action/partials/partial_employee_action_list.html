@@ -1,60 +1,68 @@
+{% load static %}
 <div class="table-container">
-    <table>
-        <thead>
-        <tr>
-            <th style="width: 25%;">Empleado</th>
-            <th style="width: 15%;">Cédula</th>
-            <th style="width: 20%;">Área</th>
-            <th style="width: 15%;">Estado</th>
-            <th class="text-center actions" style="width: 10%;">Acciones</th>
-        </tr>
-        </thead>
-        <tbody>
-        {% for employee in employees %}
+    <div class="table-scroll-top">
+        <table class="managed-table exportable-table"
+               data-title="Reporte de Empleados para Acción de Personal"
+               data-filename="Reporte_Accion_Personal"
+               data-page-size="10">
+            <thead>
             <tr>
-                <td>
-                    <div style="font-weight: 600;">{{ employee.person.name_and_last_name }}</div>
-                </td>
-                <td>{{ employee.person.document_number }}</td>
-                <td>
-                    {% if employee.area %}
-                        {{ employee.area.name }}
-                    {% else %}
-                        <span class="text-muted">Sin área</span>
-                    {% endif %}
-                </td>
-                <td class="text-center">
-                    {% if employee.is_active %}
-                        <span class="status-badge active">Activo</span>
-                    {% else %}
-                        <span class="status-badge inactive">Inactivo</span>
-                    {% endif %}
-                </td>
-                <td class="actions">
-                    <div class="actions-wrapper">
-                        {% if perms.personnel_actions.add_personnelaction %}
-                            <button class="btn-eleventh js-generate-action"
-                                    data-employee-id="{{ employee.id }}"
-                                    title="Generar Acción">
-                                <i class="fa-solid fa-file-circle-plus"></i>
-                            </button>
+                <th class="width-25">Servidor / Empleado</th>
+                <th class="width-15">Cédula</th>
+                <th class="width-25">Unidad Administrativa</th>
+                <th class="width-15 no-sort">Estado</th>
+                <th class="width-10 no-sort">Acciones</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for employee in employees %}
+                <tr>
+                    <td>
+                        <strong>{{ employee.person.name_and_last_name|default:employee.person.full_name }}</strong>
+                    </td>
+                    <td>{{ employee.person.document_number }}</td>
+                    <td>
+                        {% if employee.area %}
+                            {{ employee.area.name }}
+                        {% else %}
+                            <span class="text-muted">Sin área</span>
                         {% endif %}
-                        <button class="btn-fourth js-view-history"
-                                data-employee-id="{{ employee.id }}"
-                                title="Ver Historial">
-                            <i class="fa-solid fa-clock-rotate-left"></i>
-                        </button>
-                    </div>
-                </td>
-            </tr>
-        {% empty %}
-            <tr>
-                <td colspan="6" class="text-center" style="padding: 2rem;">
-                    <i class="fa-solid fa-inbox" style="font-size: 3rem; color: #ccc;"></i>
-                    <p style="margin-top: 1rem; color: #666;">No hay empleados activos</p>
-                </td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+                    </td>
+                    <td class="text-center">
+                        {% if employee.is_active %}
+                            <span class="badge badge-green">Activo</span>
+                        {% else %}
+                            <span class="badge badge-red">Inactivo</span>
+                        {% endif %}
+                    </td>
+                    <td class="actions">
+                        <div class="actions-wrapper justify-content-center">
+                            {% if perms.personnel_actions.add_personnelaction %}
+                                <button type="button"
+                                        class="btn-eleventh js-generate-action"
+                                        data-employee-id="{{ employee.id }}"
+                                        title="Generar Acción">
+                                    <i class="fa-solid fa-file-circle-plus"></i>
+                                </button>
+                            {% endif %}
+                            <button type="button"
+                                    class="btn-sixth js-view-history"
+                                    data-employee-id="{{ employee.id }}"
+                                    title="Ver Historial">
+                                <i class="fa-solid fa-clock-rotate-left"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center py-4 text-muted">
+                        <i class="fa-solid fa-inbox fa-2x mb-2 opacity-50"></i>
+                        <p class="mb-0">No hay empleados registrados</p>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>

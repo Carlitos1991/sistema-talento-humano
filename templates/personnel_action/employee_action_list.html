@@ -1,127 +1,43 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Generar Acción de Personal{% endblock %}
+{% block title %}Generar Acción de Personal | SIGETH{% endblock %}
 
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/personnel_action.css' %}">
-    <style>
-        #modal-body-content {
-            overflow: hidden;
-            max-height: 95vh;
-            padding: 0;
-        }
-    </style>
 {% endblock %}
 
 {% block content %}
-    <div class="content-wrapper">
-        <!-- Configuración oculta -->
-        <input type="hidden" id="csrf-token" value="{{ csrf_token }}">
-        <input type="hidden" id="url-list" value="{% url 'personnel_actions:action_employee_list' %}">
-
-        <!-- Encabezado -->
-        <div class="header-card">
-            <div>
-                <h1><i class="fas fa-user-plus"></i> Generar Acción de Personal</h1>
-                <p>Seleccione un empleado para generar una nueva acción de personal.</p>
-            </div>
-        </div>
-
-        <!-- Tabla de empleados -->
-        <div id="table-app">
-            <div class="content-table">
-                <div class="table-controls">
-                    <div class="search-box">
-                        <input type="text" id="table-search" class="input-field table-search-input"
-                               placeholder="Buscar por nombre, apellido o cédula">
-                        <button type="button" class="search-btn" id="table-search-btn" title="Buscar">
-                            <i class="fas fa-search"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Zona de recarga AJAX -->
-                <div id="table-content-wrapper">
-                    {% include 'personnel_action/partials/partial_employee_action_list.html' %}
-                </div>
-
-                <!-- Paginación -->
-                <div class="pagination-container" id="js-pagination">
-                    <span class="pagination-info" id="page-info">
-                        {% if page_obj %}
-                            Mostrando {{ page_obj.start_index }} a {{ page_obj.end_index }} de
-                            {{ page_obj.paginator.count }} empleados
-                        {% else %}
-                            Mostrando 0 a 0 de 0 empleados
-                        {% endif %}
-                    </span>
-
-                    <div class="pagination-controls" id="pagination-controls"
-                         style="{% if not page_obj or page_obj.paginator.num_pages <= 1 %}visibility:hidden;{% endif %}">
-                        <button id="btn-first" class="page-btn" title="Primera"
-                                {% if not page_obj or not page_obj.has_previous %}disabled{% endif %}>
-                            <i class="fas fa-angle-double-left"></i>
-                        </button>
-                        <button id="btn-prev" class="page-btn" title="Anterior"
-                                {% if not page_obj or not page_obj.has_previous %}disabled{% endif %}>
-                            <i class="fas fa-angle-left"></i>
-                        </button>
-
-                        <div class="page-input-wrapper">
-                            <input type="number" id="page-input" class="page-input" min="1"
-                                   max="{% if page_obj %}{{ page_obj.paginator.num_pages }}{% else %}1{% endif %}"
-                                   value="{% if page_obj %}{{ page_obj.number }}{% else %}1{% endif %}">
-                            <span class="total-pages-badge" id="total-pages-display">
-                                de {% if page_obj %}{{ page_obj.paginator.num_pages }}{% else %}1{% endif %}
-                            </span>
-                        </div>
-
-                        <button id="btn-next" class="page-btn" title="Siguiente"
-                                {% if not page_obj or not page_obj.has_next %}disabled{% endif %}>
-                            <i class="fas fa-angle-right"></i>
-                        </button>
-                        <button id="btn-last" class="page-btn" title="Última"
-                                {% if not page_obj or not page_obj.has_next %}disabled{% endif %}>
-                            <i class="fas fa-angle-double-right"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
+    <div class="header-card">
+        <div>
+            <h1><i class="fa-solid fa-user-gear me-2"></i> Generar Acción de Personal</h1>
+            <p>Seleccione un empleado para generar una nueva acción de personal.</p>
         </div>
     </div>
 
-    <!-- Modal de Creación de Acción -->
-    <div id="modal-create-action" class="modal-overlay hidden"
-         style="align-items: flex-start !important; padding-top: 6vh !important; overflow-y: auto !important;">
+    <div id="table-app">
+        <div class="content-table">
+            <div class="table-controls toolbar-row">
+                <div class="toolbar-right ms-auto">
+                    <input type="text"
+                           class="table-search-input"
+                           placeholder="Buscar por nombres, apellidos o cédula">
+                </div>
+            </div>
 
-        <div class="modal-container-medium animate-scale-in"
-             style="max-width: 750px; margin-top: 0 !important; margin-bottom: 6vh !important;"
-             id="modal-body-content">
-
+            <div id="table-content-wrapper">
+                {% include 'personnel_action/partials/partial_employee_action_list.html' %}
+            </div>
         </div>
+    </div>
+{% endblock %}
+
+{% block modals %}
+    <div id="modal-create-action" class="modal-overlay hidden">
+        <div class="modal-container-large" id="modal-body-content"></div>
     </div>
 {% endblock %}
 
 {% block extra_js %}
-    <script>
-        // Inicializar paginación desde el servidor
-        {% if page_obj %}
-            window.initialPagination = {
-                current_page: {{ page_obj.number }},
-                total_pages: {{ page_obj.paginator.num_pages }},
-                has_previous: {{ page_obj.has_previous|yesno:"true,false" }},
-                has_next: {{ page_obj.has_next|yesno:"true,false" }}
-            };
-        {% else %}
-            window.initialPagination = {
-                current_page: 1,
-                total_pages: 1,
-                has_previous: false,
-                has_next: false
-            };
-        {% endif %}
-    </script>
-    <script src="{% static 'js/personnel_actions/modal_movements_init.js' %}"></script>
-    <script src="{% static 'js/personnel_actions/employee_action.js' %}"></script>
+    <script src="{% static 'js/personnel_actions/personnel_action.js' %}"></script>
 {% endblock %}
