@@ -1,18 +1,18 @@
-/*!* Alineación de la barra de herramientas y buscador *!*/
-/*.table-controls.toolbar-row {*/
-/*    display: flex !important;*/
-/*    align-items: center;*/
-/*    justify-content: space-between;*/
-/*    width: 100%;*/
-/*}*/
+/* Alineación de la barra de herramientas y buscador */
+.table-controls.toolbar-row {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
 
-/*.table-controls .toolbar-right {*/
-/*    margin-left: auto !important;*/
-/*    display: flex;*/
-/*    justify-content: flex-end;*/
-/*}*/
+.table-controls .toolbar-right {
+    margin-left: auto !important;
+    display: flex;
+    justify-content: flex-end;
+}
 
-/*.table-controls .toolbar-right .table-search-input {*/
-/*    min-width: 280px;*/
-/*    max-width: 340px;*/
-/*}*/
+.table-controls .toolbar-right .table-search-input {
+    min-width: 280px;
+    max-width: 340px;
+}

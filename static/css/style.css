@@ -3084,11 +3084,6 @@ th.no-sort, .no-sort {
     min-width: 0;
 }
 
-.toolbar-right {
-    justify-self: end;
-    min-width: 0;
-}
-
 .rubric-export-btns {
     display: flex;
     gap: 10px;
@@ -3127,8 +3122,11 @@ th.no-sort, .no-sort {
     }
 
     .toolbar-right {
-        width: 100%;
-        justify-self: right;
+        margin-left: auto;
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 0.75rem;
     }
 
     .toolbar-left {
