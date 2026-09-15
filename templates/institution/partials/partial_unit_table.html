@@ -81,9 +81,9 @@
                                                 title="Asignar Jefe Inmediato"><i class="fas fa-user-tie"></i>
                                         </button>
                                     {% endif %}
-                                    <button class="btn-seventh"
-                                            onclick="openAjaxModal('{% url 'institution:unit_update' unit.id %}')"
-                                            title="Editar Unidad"><i class="fas fa-pencil"></i>
+                                    <button type="button" class="btn-seventh"
+                                            onclick="openAjaxModal('{% url 'institution:unit_update' unit.pk %}', window.initUnitModal)">
+                                        <i class="fas fa-edit"></i>
                                     </button>
                                     <a href="{% url 'institution:unit_detail_view' unit.id %}" class="btn-second"
                                        title="Ver Detalle"> <i class="fas fa-eye"></i>

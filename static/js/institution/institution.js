@@ -1,271 +1,327 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const {createApp, ref} = Vue;
+        const {createApp, ref} = Vue;
 
-    // =========================================================================
-    // 1. MAPA DE TARJETAS DE NIVEL Y FILTRADO
-    // =========================================================================
-    const levelCards = {};
-    document.querySelectorAll('.stat-card[id^="card-filter-"]').forEach(card => {
-        const levelId = card.id.replace('card-filter-', '');
-        levelCards[levelId] = card;
-    });
-
-    window.filterByLevel = function (levelId, clickedCard = null) {
-        Object.values(levelCards).forEach(c => {
-            if (c) c.classList.add('opacity-low');
+        // =========================================================================
+        // 1. MAPA DE TARJETAS DE NIVEL Y FILTRADO
+        // =========================================================================
+        const levelCards = {};
+        document.querySelectorAll('.stat-card[id^="card-filter-"]').forEach(card => {
+            const levelId = card.id.replace('card-filter-', '');
+            levelCards[levelId] = card;
         });
-        const activeCard = clickedCard || levelCards[levelId];
-        if (activeCard) activeCard.classList.remove('opacity-low');
 
-        const table = document.querySelector('.managed-table');
-        if (table && table._tableManager) {
-            if (levelId === 'total') {
-                table._tableManager.filterByColumnData('level', 'all');
-            } else {
-                table._tableManager.filterByColumnData('level', String(levelId));
+        window.filterByLevel = function (levelId, clickedCard = null) {
+            Object.values(levelCards).forEach(c => {
+                if (c) c.classList.add('opacity-low');
+            });
+            const activeCard = clickedCard || levelCards[levelId];
+            if (activeCard) activeCard.classList.remove('opacity-low');
+
+            const table = document.querySelector('.managed-table');
+            if (table && table._tableManager) {
+                if (levelId === 'total') {
+                    table._tableManager.filterByColumnData('level', 'all');
+                } else {
+                    table._tableManager.filterByColumnData('level', String(levelId));
+                }
+            }
+        };
+
+        // Estado actual de navegación (padre y nivel)
+        let currentParentId = null;
+        let currentLevelOrder = null;
+        let currentEditUnit = null;
+
+        function ensureSelectOption(selectEl, value, label) {
+            if (!selectEl || value === null || value === undefined || value === '') {
+                return;
+            }
+
+            const stringValue = String(value);
+            const existing = Array.from(selectEl.options).find(option => option.value === stringValue);
+            if (existing) {
+                selectEl.value = stringValue;
+                return;
+            }
+
+            const option = document.createElement('option');
+            option.value = stringValue;
+            option.textContent = label || stringValue;
+            option.selected = true;
+            selectEl.appendChild(option);
+            selectEl.value = stringValue;
+        }
+
+        // Función para cargar la tabla parcial respetando el parent y show_inactive
+        async function loadUnitsPartial({parentId = null, showInactive = false, q = ''} = {}) {
+            const params = new URLSearchParams();
+            if (parentId) params.set('parent_id', parentId);
+            if (showInactive) params.set('show_inactive', 'true');
+            if (q) params.set('q', q);
+
+            const url = '/institution/units/partial_table/?' + params.toString();
+            try {
+                const r = await fetch(url);
+                const html = await r.text();
+                document.getElementById('table-content-wrapper').innerHTML = html;
+                const newTable = document.querySelector('.managed-table');
+                if (newTable) new TableManager(newTable);
+            } catch (e) {
+                console.error('Error cargando unidades:', e);
             }
         }
-    };
 
-    // Estado actual de navegación (padre y nivel)
-    let currentParentId = null;
-    let currentLevelOrder = null;
-    let currentEditUnit = null;
+        // Filtrar por padre: hace drill-down y actualiza estado
+        window.filterByParent = function (parentId, nextLevelOrder) {
+            // Normalizar
+            if (!parentId || parentId === '' || parentId === 'None') {
+                currentParentId = null;
+                currentLevelOrder = 1;
+            } else {
+                currentParentId = parentId;
+                currentLevelOrder = nextLevelOrder || null;
+            }
 
-    function ensureSelectOption(selectEl, value, label) {
-        if (!selectEl || value === null || value === undefined || value === '') {
-            return;
-        }
+            const toggleEl = document.getElementById('toggleInactiveUnits');
+            const showInactive = toggleEl && toggleEl.checked;
+            const input = document.querySelector('.table-search-input');
+            const q = input ? input.value.trim() : '';
 
-        const stringValue = String(value);
-        const existing = Array.from(selectEl.options).find(option => option.value === stringValue);
-        if (existing) {
-            selectEl.value = stringValue;
-            return;
-        }
+            loadUnitsPartial({parentId: currentParentId, showInactive: showInactive, q: q});
+        };
 
-        const option = document.createElement('option');
-        option.value = stringValue;
-        option.textContent = label || stringValue;
-        option.selected = true;
-        selectEl.appendChild(option);
-        selectEl.value = stringValue;
-    }
+        // Inicialización visual
+        // Removed stats-driven initialization to improve performance
 
-    // Función para cargar la tabla parcial respetando el parent y show_inactive
-    async function loadUnitsPartial({parentId = null, showInactive = false, q = ''} = {}) {
-        const params = new URLSearchParams();
-        if (parentId) params.set('parent_id', parentId);
-        if (showInactive) params.set('show_inactive', 'true');
-        if (q) params.set('q', q);
+        Object.entries(levelCards).forEach(([levelId, card]) => {
+            if (card) {
+                card.addEventListener('click', () => window.filterByLevel(levelId, card));
+            }
+        });
 
-        const url = '/institution/units/partial_table/?' + params.toString();
-        try {
-            const r = await fetch(url);
+        // =========================================================================
+        // 2. TOGGLE STATUS (ACTIVAR/DESACTIVAR)
+        // =========================================================================
+        window.toggleUnitStatus = async (btnElement, url, name, id) => {
+            const isDeactivate = btnElement.classList.contains('btn-delete-action');
+            const result = await Swal.fire({
+                title: `¿${isDeactivate ? 'Desactivar' : 'Activar'} unidad?`,
+                text: `Vas a cambiar el estado de "${name}"`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, cambiar',
+                cancelButtonText: 'Cancelar'
+            });
+
+            if (result.isConfirmed) {
+                try {
+                    const formData = new FormData();
+                    const token = document.querySelector('[name=csrfmiddlewaretoken]');
+                    if (token) formData.append('csrfmiddlewaretoken', token.value);
+
+                    const res = await fetch(url, {
+                        method: 'POST',
+                        body: formData,
+                        headers: {'X-Requested-With': 'XMLHttpRequest'}
+                    });
+                    const data = await res.json();
+
+                    if (data.success) {
+                        await refreshTablePartial();
+                        Swal.fire('Éxito', data.message, 'success');
+                    } else {
+                        Swal.fire('Error', data.message, 'error');
+                    }
+                } catch (e) {
+                    console.error(e);
+                    Swal.fire('Error', 'Error de conexión', 'error');
+                }
+            }
+        };
+
+        // Auxiliar para recargar la tabla sin perder filtros
+        async function refreshTablePartial() {
+            const tm = document.querySelector('.managed-table')?._tableManager;
+            const savedSearch = tm?.filterState.search || '';
+            const savedFilter = {...tm?.filterState};
+            // Respect current toggle state and parent when refreshing
+            const toggleEl = document.getElementById('toggleInactiveUnits');
+            const showInactive = toggleEl && toggleEl.checked;
+            const input = document.querySelector('.table-search-input');
+            const q = input ? input.value.trim() : '';
+            const params = new URLSearchParams();
+            if (currentParentId) params.set('parent_id', currentParentId);
+            if (showInactive) params.set('show_inactive', 'true');
+            if (q) params.set('q', q);
+            const r = await fetch('/institution/units/partial_table/?' + params.toString());
             const html = await r.text();
             document.getElementById('table-content-wrapper').innerHTML = html;
+
             const newTable = document.querySelector('.managed-table');
             if (newTable) new TableManager(newTable);
-        } catch (e) {
-            console.error('Error cargando unidades:', e);
-        }
-    }
 
-    // Filtrar por padre: hace drill-down y actualiza estado
-    window.filterByParent = function (parentId, nextLevelOrder) {
-        // Normalizar
-        if (!parentId || parentId === '' || parentId === 'None') {
-            currentParentId = null;
-            currentLevelOrder = 1;
-        } else {
-            currentParentId = parentId;
-            currentLevelOrder = nextLevelOrder || null;
-        }
-
-        const toggleEl = document.getElementById('toggleInactiveUnits');
-        const showInactive = toggleEl && toggleEl.checked;
-        const input = document.querySelector('.table-search-input');
-        const q = input ? input.value.trim() : '';
-
-        loadUnitsPartial({parentId: currentParentId, showInactive: showInactive, q: q});
-    };
-
-    // Inicialización visual
-    // Removed stats-driven initialization to improve performance
-
-    Object.entries(levelCards).forEach(([levelId, card]) => {
-        if (card) {
-            card.addEventListener('click', () => window.filterByLevel(levelId, card));
-        }
-    });
-
-    // =========================================================================
-    // 2. TOGGLE STATUS (ACTIVAR/DESACTIVAR)
-    // =========================================================================
-    window.toggleUnitStatus = async (btnElement, url, name, id) => {
-        const isDeactivate = btnElement.classList.contains('btn-delete-action');
-        const result = await Swal.fire({
-            title: `¿${isDeactivate ? 'Desactivar' : 'Activar'} unidad?`,
-            text: `Vas a cambiar el estado de "${name}"`,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Sí, cambiar',
-            cancelButtonText: 'Cancelar'
-        });
-
-        if (result.isConfirmed) {
-            try {
-                const formData = new FormData();
-                const token = document.querySelector('[name=csrfmiddlewaretoken]');
-                if (token) formData.append('csrfmiddlewaretoken', token.value);
-
-                const res = await fetch(url, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {'X-Requested-With': 'XMLHttpRequest'}
-                });
-                const data = await res.json();
-
-                if (data.success) {
-                    await refreshTablePartial();
-                    Swal.fire('Éxito', data.message, 'success');
-                } else {
-                    Swal.fire('Error', data.message, 'error');
+            if (newTable && newTable._tableManager) {
+                if (savedSearch) {
+                    const input = document.querySelector('.table-search-input');
+                    if (input) input.value = savedSearch;
                 }
-            } catch (e) {
-                console.error(e);
-                Swal.fire('Error', 'Error de conexión', 'error');
-            }
-        }
-    };
-
-    // Auxiliar para recargar la tabla sin perder filtros
-    async function refreshTablePartial() {
-        const tm = document.querySelector('.managed-table')?._tableManager;
-        const savedSearch = tm?.filterState.search || '';
-        const savedFilter = {...tm?.filterState};
-        // Respect current toggle state and parent when refreshing
-        const toggleEl = document.getElementById('toggleInactiveUnits');
-        const showInactive = toggleEl && toggleEl.checked;
-        const input = document.querySelector('.table-search-input');
-        const q = input ? input.value.trim() : '';
-        const params = new URLSearchParams();
-        if (currentParentId) params.set('parent_id', currentParentId);
-        if (showInactive) params.set('show_inactive', 'true');
-        if (q) params.set('q', q);
-        const r = await fetch('/institution/units/partial_table/?' + params.toString());
-        const html = await r.text();
-        document.getElementById('table-content-wrapper').innerHTML = html;
-
-        const newTable = document.querySelector('.managed-table');
-        if (newTable) new TableManager(newTable);
-
-        if (newTable && newTable._tableManager) {
-            if (savedSearch) {
-                const input = document.querySelector('.table-search-input');
-                if (input) input.value = savedSearch;
-            }
-            newTable._tableManager.filterState = savedFilter;
-            newTable._tableManager.applyGlobalFilters();
-        }
-
-        const activeCard = document.querySelector('.stat-card:not(.opacity-low)');
-        if (activeCard) {
-            window.filterByLevel(activeCard.id.replace('card-filter-', ''), activeCard);
-        }
-    }
-
-    // Exponer helper para volver al listado previo cuando la tabla está vacía
-    window.handleEmptyBack = async function () {
-        try {
-            if (!currentParentId) {
-                await refreshTablePartial();
-                return;
+                newTable._tableManager.filterState = savedFilter;
+                newTable._tableManager.applyGlobalFilters();
             }
 
-            const res = await fetch(`/institution/units/detail/${currentParentId}/json/`);
-            const data = await res.json();
-
-            if (data.success && data.data) {
-                const parentId = data.data.parent || null;
-                const parentLevel = data.data.parent_level || 1;
-                window.filterByParent(parentId, parentLevel);
-                return;
+            const activeCard = document.querySelector('.stat-card:not(.opacity-low)');
+            if (activeCard) {
+                window.filterByLevel(activeCard.id.replace('card-filter-', ''), activeCard);
             }
-
-            await refreshTablePartial();
-        } catch (e) {
-            console.error('Error en handleEmptyBack:', e);
-            // Fallback: recargar la página
-            window.location.reload();
-        }
-    };
-
-    // Toggle para mostrar unidades inactivas
-    window.toggleInactiveUnits = function (showInactive) {
-        const val = showInactive ? true : false;
-        const input = document.querySelector('.table-search-input');
-        const q = input ? input.value.trim() : '';
-        loadUnitsPartial({parentId: currentParentId, showInactive: val, q: q});
-    };
-
-    // =========================================================================
-    // 3. MODAL CREAR / EDITAR UNIDAD (VUE APP)
-    // =========================================================================
-    let shouldLoadParentsOnLevelChange = true;
-
-    async function loadParents(levelId, preselectedParentId = null) {
-        const parentSelectEl = document.getElementById('id_parent');
-        if (!parentSelectEl) {
-            console.error('[loadParents] No se encontró elemento id_parent');
-            return;
         }
 
-        // Limpiar opciones anteriores
-        parentSelectEl.innerHTML = '';
-        
-        let isDisabled = true;
-        let placeholderText = '--- Seleccione Nivel Primero ---';
-
-        if (levelId) {
+        // Exponer helper para volver al listado previo cuando la tabla está vacía
+        window.handleEmptyBack = async function () {
             try {
-                const res = await fetch(`/institution/api/parents/?level_id=${levelId}`);
+                if (!currentParentId) {
+                    await refreshTablePartial();
+                    return;
+                }
+
+                const res = await fetch(`/institution/units/detail/${currentParentId}/json/`);
                 const data = await res.json();
-                
-                if (data.results && data.results.length > 0) {
-                    isDisabled = false;
-                    placeholderText = '--- Seleccione Unidad Padre ---';
-                    
-                    // Opción vacía/placeholder
-                    const emptyOption = document.createElement('option');
-                    emptyOption.value = '';
-                    emptyOption.textContent = placeholderText;
-                    parentSelectEl.appendChild(emptyOption);
-                    
-                    // Agregar opciones de padres disponibles
-                    data.results.forEach(item => {
-                        const option = document.createElement('option');
-                        option.value = item.id;
-                        option.textContent = item.text;
-                        if (String(item.id) === String(preselectedParentId)) {
-                            option.selected = true;
+
+                if (data.success && data.data) {
+                    const parentId = data.data.parent || null;
+                    const parentLevel = data.data.parent_level || 1;
+                    window.filterByParent(parentId, parentLevel);
+                    return;
+                }
+
+                await refreshTablePartial();
+            } catch (e) {
+                console.error('Error en handleEmptyBack:', e);
+                // Fallback: recargar la página
+                window.location.reload();
+            }
+        };
+
+        // Toggle para mostrar unidades inactivas
+        window.toggleInactiveUnits = function (showInactive) {
+            const val = showInactive ? true : false;
+            const input = document.querySelector('.table-search-input');
+            const q = input ? input.value.trim() : '';
+            loadUnitsPartial({parentId: currentParentId, showInactive: val, q: q});
+        };
+
+        // =========================================================================
+        // 3. LÓGICA NATIVA MODAL UNIDADES
+        // =========================================================================
+        let shouldLoadParentsOnLevelChange = true;
+        window.initUnitModal = function () {
+            // 1. Buscamos los elementos exactos del formulario
+            const codeInput = document.getElementById('id_code');
+            const levelInput = document.getElementById('id_level');
+            const parentInput = document.getElementById('id_parent');
+
+            // 2. Leemos el ID del padre oculto en el HTML (inyectado por la URL)
+            const contextParentInput = document.getElementById('modal-context-parent');
+            const contextParentId = contextParentInput ? contextParentInput.value : '';
+
+            const formElement = document.getElementById('unitForm');
+            if (!formElement) return;
+
+            // 3. Verificamos si estamos editando o creando
+            const isEditing = formElement.action.includes('update');
+
+            // 4. EL MOTOR AUTOMÁTICO: Si es un registro Nuevo y el código está vacío
+            if (!isEditing && codeInput && codeInput.value === '') {
+                codeInput.value = 'Calculando...';
+                // Armamos la URL exacta como la tenías en Vue
+                const url = contextParentId
+                    ? '/institution/api/next-code/?parent_id=' + contextParentId
+                    : '/institution/api/next-code/?parent_id=null';
+
+                // Hacemos la consulta silenciosa al backend
+                fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            // ¡Bingo! Colocamos el código autogenerado en la pantalla
+                            codeInput.value = data.next_code;
+
+                            // Llenamos los campos ocultos de jerarquía en segundo plano
+                            if (data.suggested_level && levelInput) {
+                                levelInput.value = data.suggested_level;
+                            }
+
+                            if (contextParentId && parentInput) {
+                                parentInput.value = contextParentId;
+                            } else if (parentInput) {
+                                parentInput.value = ''; // Es un nivel Raíz
+                            }
                         }
-                        parentSelectEl.appendChild(option);
-                    });
-                } else {
-                    // Sin padres activos en la respuesta. Si estamos en edición y
-                    // tenemos un parent preseleccionado, intentar obtener su info
-                    // y agregarlo como opción para que el select NO quede deshabilitado
-                    if (preselectedParentId) {
-                        try {
-                            const detailRes = await fetch(`/institution/units/detail/${preselectedParentId}/json/`);
-                            const detailData = await detailRes.json();
-                            if (detailData.success && detailData.data) {
-                                const p = detailData.data;
+                    })
+                    .catch(err => console.error("Error autogenerando el código correlativo:", err));
+            }
+        };
+
+        async function loadParents(levelId, preselectedParentId = null) {
+            const parentSelectEl = document.getElementById('id_parent');
+            if (!parentSelectEl) {
+                console.error('[loadParents] No se encontró elemento id_parent');
+                return;
+            }
+
+            // Limpiar opciones anteriores
+            parentSelectEl.innerHTML = '';
+
+            let isDisabled = true;
+            let placeholderText = '--- Seleccione Nivel Primero ---';
+
+            if (levelId) {
+                try {
+                    const res = await fetch(`/institution/api/parents/?level_id=${levelId}`);
+                    const data = await res.json();
+
+                    if (data.results && data.results.length > 0) {
+                        isDisabled = false;
+                        placeholderText = '--- Seleccione Unidad Padre ---';
+
+                        // Opción vacía/placeholder
+                        const emptyOption = document.createElement('option');
+                        emptyOption.value = '';
+                        emptyOption.textContent = placeholderText;
+                        parentSelectEl.appendChild(emptyOption);
+
+                        // Agregar opciones de padres disponibles
+                        data.results.forEach(item => {
+                            const option = document.createElement('option');
+                            option.value = item.id;
+                            option.textContent = item.text;
+                            if (String(item.id) === String(preselectedParentId)) {
+                                option.selected = true;
+                            }
+                            parentSelectEl.appendChild(option);
+                        });
+                    } else {
+                        // Sin padres activos en la respuesta. Si estamos en edición y
+                        // tenemos un parent preseleccionado, intentar obtener su info
+                        // y agregarlo como opción para que el select NO quede deshabilitado
+                        if (preselectedParentId) {
+                            try {
+                                const detailRes = await fetch(`/institution/units/detail/${preselectedParentId}/json/`);
+                                const detailData = await detailRes.json();
+                                if (detailData.success && detailData.data) {
+                                    const p = detailData.data;
                                     ensureSelectOption(parentSelectEl, preselectedParentId, p.name || `Unidad ${preselectedParentId}`);
-                                isDisabled = false;
-                            } else {
-                                // Fallback: opción raíz
+                                    isDisabled = false;
+                                } else {
+                                    // Fallback: opción raíz
+                                    placeholderText = '--- Unidad Raíz (No requiere padre) ---';
+                                    const emptyOption = document.createElement('option');
+                                    emptyOption.value = '';
+                                    emptyOption.textContent = placeholderText;
+                                    emptyOption.selected = true;
+                                    parentSelectEl.appendChild(emptyOption);
+                                }
+                            } catch (e) {
+                                console.error('[loadParents] Error obteniendo parent preseleccionado:', e);
                                 placeholderText = '--- Unidad Raíz (No requiere padre) ---';
                                 const emptyOption = document.createElement('option');
                                 emptyOption.value = '';
@@ -273,8 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 emptyOption.selected = true;
                                 parentSelectEl.appendChild(emptyOption);
                             }
-                        } catch (e) {
-                            console.error('[loadParents] Error obteniendo parent preseleccionado:', e);
+                        } else {
                             placeholderText = '--- Unidad Raíz (No requiere padre) ---';
                             const emptyOption = document.createElement('option');
                             emptyOption.value = '';
@@ -282,352 +337,122 @@ document.addEventListener('DOMContentLoaded', () => {
                             emptyOption.selected = true;
                             parentSelectEl.appendChild(emptyOption);
                         }
-                    } else {
-                        placeholderText = '--- Unidad Raíz (No requiere padre) ---';
-                        const emptyOption = document.createElement('option');
-                        emptyOption.value = '';
-                        emptyOption.textContent = placeholderText;
-                        emptyOption.selected = true;
-                        parentSelectEl.appendChild(emptyOption);
                     }
+                } catch (e) {
+                    console.error('[loadParents] Error cargando padres:', e);
                 }
-            } catch (e) {
-                console.error('[loadParents] Error cargando padres:', e);
+            } else {
+                // Si no hay levelId, mostrar solo opción de raíz
+                const emptyOption = document.createElement('option');
+                emptyOption.value = '';
+                emptyOption.textContent = '--- Seleccione Nivel Primero ---';
+                emptyOption.selected = true;
+                parentSelectEl.appendChild(emptyOption);
             }
-        } else {
-            // Si no hay levelId, mostrar solo opción de raíz
-            const emptyOption = document.createElement('option');
-            emptyOption.value = '';
-            emptyOption.textContent = '--- Seleccione Nivel Primero ---';
-            emptyOption.selected = true;
-            parentSelectEl.appendChild(emptyOption);
+
+            // Habilitar o deshabilitar el select según corresponda
+            parentSelectEl.disabled = isDisabled;
         }
-        
-        // Habilitar o deshabilitar el select según corresponda
-        parentSelectEl.disabled = isDisabled;
-    }
 
-    const unitModalEl = document.getElementById('unit-modal-app');
-    const searchInput = document.querySelector('.table-search-input');
-    if (unitModalEl && !unitModalEl.__vue_app__) {
-        const app = createApp({
-            delimiters: ['[[', ']]'],
-            setup() {
-                const isVisible = ref(false);
-                const isEditing = ref(false);
-                const errors = ref({});
-                const currentId = ref(null);
-                const modalTitle = ref('Nueva Unidad');
-                const isActive = ref(true);  // Nueva variable para manejar el estado
-                const formEl = 'unitForm';
+        const btnAdd = document.getElementById('btn-add-unit');
+        if (btnAdd) btnAdd.onclick = () => openAjaxModal('/institution/units/create/', window.initUnitModal);
 
-                const openCreate = async (parentId = null) => {
-                    isEditing.value = false;
-                    currentId.value = null;
-                    errors.value = {};
-                    isActive.value = true;  // Por defecto las nuevas unidades están activas
-                    const f = document.getElementById(formEl);
-                    if (f) f.reset();
-                    isVisible.value = true;
-                    document.body.classList.add('no-scroll');
-
-                    const levelSelect = document.getElementById('id_level');
-                    const parentSelectEl = document.getElementById('id_parent');
-                    const codeInput = document.getElementById('id_code');
-
-                    // Resetear estados de bloqueo
-                    if (levelSelect) levelSelect.disabled = false;
-                    if (parentSelectEl) parentSelectEl.disabled = false;
-
-                    const url = parentId ? `/institution/api/next-code/?parent_id=${parentId}` : `/institution/api/next-code/?parent_id=null`;
-
-                    try {
-                        const res = await fetch(url);
-                        const data = await res.json();
-                        if (data.success) {
-                            if (codeInput) codeInput.value = data.next_code;
-                            if (levelSelect) levelSelect.value = data.suggested_level;
-
-                            if (parentId) {
-                                modalTitle.value = 'Nueva Unidad Dependiente';
-                                await loadParents(data.suggested_level, parentId);
-                                if (parentSelectEl) {
-                                    parentSelectEl.value = parentId;
-                                    parentSelectEl.disabled = true;
-                                }
-                                if (levelSelect) levelSelect.disabled = true;
-                            } else {
-                                modalTitle.value = 'Nueva Unidad Administrativa';
-                                await loadParents(data.suggested_level);
-                            }
-                        }
-                    } catch (e) {
-                        console.error(e);
-                    }
-
-                    // Configurar listener manual para cambios de nivel en modo Raíz
-                    if (levelSelect) {
-                        levelSelect.onchange = async () => {
-                            if (!isEditing.value && !parentId) {
-                                await loadParents(levelSelect.value);
-                            }
-                        };
-                    }
-                };
-
-                const openEdit = async (id) => {
-                    isEditing.value = true;
-                    currentId.value = id;
-                    errors.value = {};
-                    try {
-                        const res = await fetch(`/institution/units/detail/${id}/json/`);
-                        const data = await res.json();
-                        if (data.success) {
-                            isVisible.value = true;
-                            const d = data.data;
-                            
-                            // Esperar a que el DOM esté listo
-                            await new Promise(resolve => setTimeout(resolve, 100));
-                            
-                            // Llenar los campos de texto (verificando existencia)
-                            const elName = document.getElementById('id_name');
-                            if (elName) elName.value = d.name || '';
-                            const elCode = document.getElementById('id_code');
-                            if (elCode) elCode.value = d.code || '';
-                            const elAddress = document.getElementById('id_address');
-                            if (elAddress) elAddress.value = d.address || '';
-                            const elPhone = document.getElementById('id_phone');
-                            if (elPhone) elPhone.value = d.phone || '';
-                            const elMission = document.getElementById('id_mission');
-                            if (elMission) elMission.value = d.mission || '';
-                            const elLevel = document.getElementById('id_level');
-                            if (elLevel) elLevel.value = d.level || '';
-                            isActive.value = d.is_active;
-                            currentEditUnit = d;
-                            
-                            // Cargar padres y esperar a que se complete
-                            await loadParents(d.level, d.parent);
-                            
-                            // EXPLICITAR: Establecer el valor parent después de que loadParents() haya completado
-                            const parentSelectEl = document.getElementById('id_parent');
-                            if (parentSelectEl && d.parent) {
-                                ensureSelectOption(parentSelectEl, d.parent, d.parent_name || `Unidad ${d.parent}`);
-                            } else if (parentSelectEl) {
-                                parentSelectEl.value = '';
-                            }
-
-                            // Establecer boss (input oculto) si viene en el payload
-                            const bossInputEl = document.getElementById('id_boss');
-                            if (bossInputEl) {
-                                if (d.boss) {
-                                    bossInputEl.value = String(d.boss);
-                                } else {
-                                    bossInputEl.value = '';
-                                }
-                            }
-                        }
-                    } catch (e) {
-                        console.error(e);
-                    }
-                };
-
-                const submitForm = async () => {
-                    const form = document.getElementById(formEl);
-                    const parentSelectEl = document.getElementById('id_parent');
-                    const levelSelectEl = document.getElementById('id_level');
-
-                    if (isEditing.value && currentEditUnit) {
-                        ensureSelectOption(levelSelectEl, currentEditUnit.level, currentEditUnit.level_name || String(currentEditUnit.level));
-                        ensureSelectOption(parentSelectEl, currentEditUnit.parent, currentEditUnit.parent_name || `Unidad ${currentEditUnit.parent}`);
-
-                        const bossInputEl = document.getElementById('id_boss');
-                        if (bossInputEl && currentEditUnit.boss) {
-                            bossInputEl.value = String(currentEditUnit.boss);
-                        }
-                    }
-
-                    const formData = new FormData(form);
-                    
-                    const url = isEditing.value
-                        ? `/institution/units/update/${currentId.value}/`
-                        : '/institution/units/create/';
-
-                    try {
-                        const res = await fetch(url, {
-                            method: 'POST',
-                            body: formData,
-                            headers: {'X-Requested-With': 'XMLHttpRequest'}
-                        });
-                        const data = await res.json();
-
-                        if (data.success) {
-                            // 2. Cerrar modal y limpiar estados de scroll
-                            closeModal();
-                            isVisible.value = false;
-                            document.body.classList.remove('no-scroll');
-
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Guardado correctamente',
-                                toast: true,
-                                position: 'top-end',
-                                showConfirmButton: false,
-                                timer: 2000
-                            });
-
-                            const tableWrapper = document.getElementById('table-content-wrapper');
-
-                            if (tableWrapper) {
-                                await refreshTablePartial();
-                            } else {
-                                setTimeout(() => {
-                                    location.reload();
-                                }, 1200);
-                            }
-
-                        } else {
-                            errors.value = data.errors || {};
-                            if (!isEditing.value && modalTitle.value.includes('Dependiente')) {
-                                $('#id_parent').attr('disabled', true);
-                                if (levelEl) levelEl.readOnly = true;
-                            }
-                        }
-                    } catch (e) {
-                        console.error("Error al enviar formulario:", e);
-                        Swal.fire('Error', 'No se pudo conectar con el servidor', 'error');
-                    }
-                };
-
-                const closeModal = () => {
-                    isVisible.value = false;
-                    document.body.classList.remove('no-scroll');
-                };
-
-                // Exponer funciones al objeto window para acceso desde HTML
-                window.openCreateUnit = openCreate;
-                window.openEditUnit = openEdit;
-                window.openCreateDependency = (pid) => openCreate(pid);
-
-                return {isVisible, isEditing, errors, modalTitle, isActive, closeModal, submitForm};
+        // =============================================================================
+        // 4. ASIGNAR JEFE
+        // =============================================================================
+        window.openAssignBoss = async function (unitId) {
+            // 1. Create a container for the modal if it doesn't exist
+            let modalContainer = document.getElementById('dynamic-modal-container');
+            if (!modalContainer) {
+                modalContainer = document.createElement('div');
+                modalContainer.id = 'dynamic-modal-container';
+                // Add the overlay class for proper styling
+                modalContainer.classList.add('custom-modal-overlay');
+                document.body.appendChild(modalContainer);
             }
-        });
-        unitModalEl.__vue_app__ = app.mount('#unit-modal-app');
-    }
 
-    if (searchInput) {
-        searchInput.addEventListener('keydown', (e) => {
-            if (e.key !== 'Enter') {
+            try {
+                // 2. Fetch the modal content from the server
+                const response = await fetch(`/institution/units/assign-boss/${unitId}/`, {
+                    headers: {'X-Requested-With': 'XMLHttpRequest'}
+                });
+                const html = await response.text();
+
+                // 3. Inject the HTML and show the modal
+                modalContainer.innerHTML = html;
+                modalContainer.style.display = 'flex'; // Explicitly show the overlay
+
+                const modalElement = modalContainer.querySelector('.custom-modal-dialog'); // Use the project's specific modal class
+                if (modalElement) {
+                    modalElement.classList.add('active'); // Use 'active' class to show
+                }
+
+                // 4. Initialize Select2 for the employee search
+                $('#id_boss_assign').select2({
+                    dropdownParent: $(modalContainer.querySelector('.custom-modal-dialog')), // Attach to the visible modal
+                    width: '100%',
+                    placeholder: 'Buscar empleado...',
+                    ajax: {
+                        url: '/institution/api/employee/search/',
+                        dataType: 'json',
+                        data: (params) => ({term: params.term}),
+                        processResults: (data) => ({results: data.results})
+                    }
+                });
+
+            } catch (e) {
+                console.error('Error opening assign boss modal:', e);
+            }
+        };
+
+        // This function should be called by the 'Cancel' or 'Close' button inside the modal's HTML
+        window.closeDynamicModal = function () {
+            const modalContainer = document.getElementById('dynamic-modal-container');
+            if (modalContainer) {
+                modalContainer.innerHTML = ''; // Just clear the content
+                modalContainer.style.display = 'none'; // Re-hide the overlay
+            }
+        };
+
+        window.submitAssignBoss = async function () {
+            const form = document.getElementById('assignBossForm');
+            if (!form) {
+                console.error('Assign boss form not found');
                 return;
             }
+            const unitId = form.dataset.unitId;
+            const btn = form.querySelector('button[type="submit"]');
 
-            e.preventDefault();
-            const toggleEl = document.getElementById('toggleInactiveUnits');
-            const showInactive = toggleEl && toggleEl.checked;
-            const q = searchInput.value.trim();
-            loadUnitsPartial({parentId: null, showInactive: showInactive, q: q});
-        });
-    }
+            try {
+                if (btn) btn.disabled = true;
+                const formData = new FormData(form);
+                const res = await fetch(`/institution/units/assign-boss/${unitId}/`, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {'X-Requested-With': 'XMLHttpRequest'}
+                });
+                const data = await res.json();
 
-    // Vincular botón principal
-    const btnAdd = document.getElementById('btn-add-unit');
-    if (btnAdd) btnAdd.onclick = () => window.openCreateUnit();
+                if (data.success) {
+                    closeDynamicModal();
+                    await Swal.fire('Éxito', data.message, 'success');
 
-    // =============================================================================
-    // 4. ASIGNAR JEFE
-    // =============================================================================
-    window.openAssignBoss = async function (unitId) {
-        // 1. Create a container for the modal if it doesn't exist
-        let modalContainer = document.getElementById('dynamic-modal-container');
-        if (!modalContainer) {
-            modalContainer = document.createElement('div');
-            modalContainer.id = 'dynamic-modal-container';
-            // Add the overlay class for proper styling
-            modalContainer.classList.add('custom-modal-overlay');
-            document.body.appendChild(modalContainer);
-        }
-
-        try {
-            // 2. Fetch the modal content from the server
-            const response = await fetch(`/institution/units/assign-boss/${unitId}/`, {
-                headers: {'X-Requested-With': 'XMLHttpRequest'}
-            });
-            const html = await response.text();
-
-            // 3. Inject the HTML and show the modal
-            modalContainer.innerHTML = html;
-            modalContainer.style.display = 'flex'; // Explicitly show the overlay
-            
-            const modalElement = modalContainer.querySelector('.custom-modal-dialog'); // Use the project's specific modal class
-            if (modalElement) {
-                modalElement.classList.add('active'); // Use 'active' class to show
-            }
-
-            // 4. Initialize Select2 for the employee search
-            $('#id_boss_assign').select2({
-                dropdownParent: $(modalContainer.querySelector('.custom-modal-dialog')), // Attach to the visible modal
-                width: '100%',
-                placeholder: 'Buscar empleado...',
-                ajax: {
-                    url: '/institution/api/employee/search/',
-                    dataType: 'json',
-                    data: (params) => ({term: params.term}),
-                    processResults: (data) => ({results: data.results})
-                }
-            });
-
-        } catch (e) {
-            console.error('Error opening assign boss modal:', e);
-        }
-    };
-
-    // This function should be called by the 'Cancel' or 'Close' button inside the modal's HTML
-    window.closeDynamicModal = function () {
-        const modalContainer = document.getElementById('dynamic-modal-container');
-        if (modalContainer) {
-            modalContainer.innerHTML = ''; // Just clear the content
-            modalContainer.style.display = 'none'; // Re-hide the overlay
-        }
-    };
-
-    window.submitAssignBoss = async function () {
-        const form = document.getElementById('assignBossForm');
-        if (!form) {
-            console.error('Assign boss form not found');
-            return;
-        }
-        const unitId = form.dataset.unitId;
-        const btn = form.querySelector('button[type="submit"]');
-
-        try {
-            if(btn) btn.disabled = true;
-            const formData = new FormData(form);
-            const res = await fetch(`/institution/units/assign-boss/${unitId}/`, {
-                method: 'POST',
-                body: formData,
-                headers: {'X-Requested-With': 'XMLHttpRequest'}
-            });
-            const data = await res.json();
-
-            if (data.success) {
-                closeDynamicModal();
-                await Swal.fire('Éxito', data.message, 'success');
-
-                // Si estamos en la página de detalle, actualizamos el header.
-                // Si no, refrescamos la tabla.
-                if (document.getElementById('deliverables-app')) {
-                    try {
-                        const detailRes = await fetch(`/institution/units/detail/${unitId}/json/`);
-                        const detailData = await detailRes.json();
-                        if (detailData.success && detailData.data) {
-                            const hdr = document.querySelector('.institution-header .header-right');
-                            if (hdr) {
-                                const d = detailData.data;
-                                if (d.boss_data) {
-                                    const photo = d.boss_data.photo_url ? `<img src="${d.boss_data.photo_url}" class="boss-photo boss-photo-xl" alt="Foto Jefe">` : `<div class="boss-photo boss-photo-xl boss-photo-initials">${(d.boss_data.text||'').split(' ').map(n=>n[0]||'').slice(0,2).join('')}</div>`;
-                                    const profileBtn = d.boss_data.person_id ? `<a href="/employee/detail/${d.boss_data.person_id}/" class="btn btn-profile-custom btn-profile-green mt-2 btn-boss-profile" title="Ver Detalle Completo"><i class="fa-solid fa-user"></i> Ver perfil</a>` : '';
-                                    const changeBtn = `<button type="button" class="btn btn-profile-custom btn-profile-green mt-2 btn-boss-profile" onclick="openAssignBoss('${unitId}')" title="Asignar Jefe Inmediato"><i class="fa-solid fa-retweet"></i> Cambiar</button>`;
-                                    const positionLabel = d.boss_data.position ? d.boss_data.position : 'JEFE INMEDIATO';
-                                    hdr.innerHTML = `
+                    // Si estamos en la página de detalle, actualizamos el header.
+                    // Si no, refrescamos la tabla.
+                    if (document.getElementById('deliverables-app')) {
+                        try {
+                            const detailRes = await fetch(`/institution/units/detail/${unitId}/json/`);
+                            const detailData = await detailRes.json();
+                            if (detailData.success && detailData.data) {
+                                const hdr = document.querySelector('.institution-header .header-right');
+                                if (hdr) {
+                                    const d = detailData.data;
+                                    if (d.boss_data) {
+                                        const photo = d.boss_data.photo_url ? `<img src="${d.boss_data.photo_url}" class="boss-photo boss-photo-xl" alt="Foto Jefe">` : `<div class="boss-photo boss-photo-xl boss-photo-initials">${(d.boss_data.text || '').split(' ').map(n => n[0] || '').slice(0, 2).join('')}</div>`;
+                                        const profileBtn = d.boss_data.person_id ? `<a href="/employee/detail/${d.boss_data.person_id}/" class="btn btn-profile-custom btn-profile-green mt-2 btn-boss-profile" title="Ver Detalle Completo"><i class="fa-solid fa-user"></i> Ver perfil</a>` : '';
+                                        const changeBtn = `<button type="button" class="btn btn-profile-custom btn-profile-green mt-2 btn-boss-profile" onclick="openAssignBoss('${unitId}')" title="Asignar Jefe Inmediato"><i class="fa-solid fa-retweet"></i> Cambiar</button>`;
+                                        const positionLabel = d.boss_data.position ? d.boss_data.position : 'JEFE INMEDIATO';
+                                        hdr.innerHTML = `
                                         <div class="boss-section boss-section-header boss-section-green-light header-boss-card">
                                             ${photo}
                                             <div class="boss-info">
@@ -636,37 +461,41 @@ document.addEventListener('DOMContentLoaded', () => {
                                                 <div class="nomina-actions">${profileBtn}${changeBtn}</div>
                                             </div>
                                         </div>`;
-                                } else {
-                                    hdr.innerHTML = `
+                                    } else {
+                                        hdr.innerHTML = `
                                         <div class="boss-section boss-section-header boss-section-green-light header-boss-card">
                                             <h2 class="boss-name" style="font-size: 14px"><i class="fa-solid fa-user-tie"></i> ASIGNAR JEFE INMEDIATO</h2>
                                             <button type="button" class="btn-icon btn-list-action" onclick="openAssignBoss('${unitId}')" title="Asignar Jefe Inmediato">
                                                 <i class="fas fa-user-tie"></i>
                                             </button>
                                         </div>`;
+                                    }
                                 }
                             }
+                        } catch (e) {
+                            console.error('Error actualizando header tras asignar jefe:', e);
+                            // Fallback: recargar la página si ocurre un error
+                            setTimeout(function () {
+                                window.location.reload();
+                            }, 600);
                         }
-                    } catch (e) {
-                        console.error('Error actualizando header tras asignar jefe:', e);
-                        // Fallback: recargar la página si ocurre un error
-                        setTimeout(function() { window.location.reload(); }, 600);
+                    } else {
+                        // Si no es la vista de detalle, refrescar la tabla parcial
+                        await refreshTablePartial();
                     }
                 } else {
-                    // Si no es la vista de detalle, refrescar la tabla parcial
-                    await refreshTablePartial();
+                    Swal.fire('Error', data.message || 'Revise los datos', 'error');
                 }
-            } else {
-                Swal.fire('Error', data.message || 'Revise los datos', 'error');
+            } catch (e) {
+                console.error(e);
+                Swal.fire('Error', 'Error de conexión', 'error');
+            } finally {
+                if (btn) btn.disabled = false;
             }
-        } catch (e) {
-            console.error(e);
-            Swal.fire('Error', 'Error de conexión', 'error');
-        } finally {
-            if(btn) btn.disabled = false;
-        }
-    };
-});
+        };
+    }
+)
+;
 /* --- LÓGICA DE REUBICACIÓN DE EMPLEADOS (Migrada de person.js) --- */
 
 window.openRelocateEmployeeModal = function (personId, personFullName, personArea) {
@@ -787,7 +616,7 @@ $(document).on('submit', '#form-relocate-employee', function (e) {
 // =========================================================================
 // FUNCIÓN PARA EXPORTAR EMPLEADOS DE UNA UNIDAD A EXCEL
 // =========================================================================
-window.exportUnitEmployees = function(unitId, statusCode) {
+window.exportUnitEmployees = function (unitId, statusCode) {
     const url = `/institution/units/${unitId}/export-employees/?status=${statusCode}`;
     window.location.href = url;
 };

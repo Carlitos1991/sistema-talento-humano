@@ -1,21 +1,21 @@
-<div class="modal-overlay hidden">
-    <div class="modal-container-small">
-        <form id="unitForm" method="post" action="
-                
-                {% if form.instance.pk %}{% url 'institution:unit_update' form.instance.pk %}{% else %}{% url 'institution:unit_create' %}{% endif %}"
-              onsubmit="submitAjaxForm(event);">
+<div class="modal-overlay hidden" id="unitModal">
+    <div class="modal-container-medium">
+        <form action="{{ request.path }}" method="POST" id="unitForm" onsubmit="submitAjaxForm(event)">
             {% csrf_token %}
-            <div>
+
+            <!-- TODOS LOS CAMPOS OCULTOS -->
+            <div style="display: none;">
                 {{ form.level }}
                 {{ form.parent }}
                 {{ form.boss }}
                 {{ form.is_active }}
+                <input type="hidden" id="modal-context-parent" value="{{ request.GET.parent_id|default:'' }}">
             </div>
 
-            <div class="modal-header">
+            <div class="modal-header-medium">
                 <h3 class="header-title">
-                    <i class="fa-solid fa-layer-group me-2"></i>
-                    <span>Estructura Organizacional</span>
+                    <i class="fa-solid fa-building me-2"></i>
+                    <span>{% if form.instance.pk %}Editar Unidad{% else %}Nueva Unidad{% endif %}</span>
                 </h3>
                 <button type="button" class="btn-close-circle" onclick="closeModal()">
                     <i class="fas fa-times"></i>
@@ -23,31 +23,36 @@
             </div>
 
             <div class="modal-body-content modal-body-custom">
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger mb-3">
+                        {% for error in form.non_field_errors %}
+                            <span>{{ error }}</span><br>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
                 <div class="form-section-card">
-                    <!-- CÓDIGO -->
-                    <div class="form-group mb-3">
-                        <label class="form-label">
-                            Código <span class="text-danger">*</span>
-                            <small class="text-muted ms-1">(generado automáticamente)</small>
-                        </label>
-                        {{ form.code }}
-                    </div>
-
-                    <!-- NOMBRE -->
-                    <div class="form-group mb-3">
-                        <label class="form-label">
-                            Nombre de la Unidad <span class="text-danger">*</span>
-                        </label>
-                        {{ form.name }}
-                    </div>
-
                     <div class="row g-3">
-                        <!-- UBICACIÓN -->
+                        <div class="col-md-6 form-group">
+                            <label class="form-label">
+                                Código <span class="text-danger">*</span>
+                            </label>
+                            {{ form.code }}
+                            {% if form.code.errors %}
+                                <div class="text-error">{{ form.code.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label class="form-label">Nombre de la Unidad <span class="text-danger">*</span></label>
+                            {{ form.name }}
+                            {% if form.name.errors %}
+                                <div class="text-error">{{ form.name.errors.0 }}</div>{% endif %}
+                        </div>
+                    </div>
+                    <div class="row g-3">
                         <div class="col-md-6 form-group">
                             <label class="form-label">Ubicación</label>
                             {{ form.address }}
                         </div>
-                        <!-- TELÉFONO -->
                         <div class="col-md-6 form-group">
                             <label class="form-label">Teléfono</label>
                             {{ form.phone }}
@@ -59,7 +64,7 @@
             <div class="modal-footer-medium modal-footer-spaced">
                 <button type="button" class="btn-default-outline" onclick="closeModal()">Cancelar</button>
                 <button type="submit" class="btn-default">
-                    <i class="fas fa-save me-1"></i> Guardar
+                    <i class="fas fa-save me-1"></i> {% if form.instance.pk %}Actualizar{% else %}Guardar{% endif %}
                 </button>
             </div>
         </form>

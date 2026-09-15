@@ -3126,9 +3126,14 @@ th.no-sort, .no-sort {
         width: 100%;
     }
 
-    .toolbar-left,
     .toolbar-right {
-        justify-self: center;
+        width: 100%;
+        justify-self: right;
+    }
+
+    .toolbar-left {
+        width: 100%;
+        justify-self: left;
     }
 
     .toolbar-center {

@@ -13,8 +13,6 @@ class AdministrativeUnitForm(BaseFormMixin, forms.ModelForm):
             'code': forms.TextInput(attrs={'class': 'input-field', 'placeholder': 'Generado automáticamente'}),
             'address': forms.TextInput(attrs={'class': 'input-field', 'placeholder': 'Ubicación física'}),
             'phone': forms.TextInput(attrs={'class': 'input-field', 'placeholder': 'Extensión'}),
-
-            # CAMPOS OCULTOS
             'level': forms.HiddenInput(),
             'parent': forms.HiddenInput(),
             'boss': forms.HiddenInput(),
@@ -22,22 +20,15 @@ class AdministrativeUnitForm(BaseFormMixin, forms.ModelForm):
         }
         labels = {
             'name': 'Nombre de la Unidad',
-            'code': 'Código / Partida (Único)',
-            'address': 'Ubicación',
-            'phone': 'Teléfono',
-            'is_active': 'Estado'
+            'code': 'Código / Partida (Único)'
         }
 
     def clean_code(self):
         code = self.cleaned_data.get('code')
-        # Validación de unicidad manual para mensaje personalizado
         if code:
-            # Excluimos la propia instancia si estamos editando
-            # Solo considerar unidades activas para la validación
             qs = AdministrativeUnit.objects.filter(code=code, is_active=True)
             if self.instance.pk:
                 qs = qs.exclude(pk=self.instance.pk)
-
             if qs.exists():
                 raise forms.ValidationError(f"El código '{code}' ya pertenece a otra unidad administrativa.")
         return code
@@ -48,16 +39,10 @@ class AdministrativeUnitForm(BaseFormMixin, forms.ModelForm):
         self.fields['parent'].required = False
         self.fields['level'].required = False
 
-        # Asegurarse de que los selects tengan todas las opciones disponibles
-        self.fields['level'].queryset = OrganizationalLevel.objects.filter(is_active=True).order_by('level_order')
-        self.fields['parent'].queryset = AdministrativeUnit.objects.filter(is_active=True).order_by('name')
-
     def clean(self):
         cleaned_data = super().clean()
-        # Si se proporciona un 'level', validar que sea válido
         level = cleaned_data.get('level')
         if level is None and self.instance.pk:
-            # En edición, si no se proporciona level, usar el existente
             cleaned_data['level'] = self.instance.level
         return cleaned_data
 
@@ -147,7 +132,6 @@ class AssignBossForm(BaseFormMixin, forms.ModelForm):
         if self.instance and self.instance.boss:
             boss_id = self.instance.boss.pk
             boss_qs = Employee.objects.filter(pk=boss_id)
-        # Si viene un valor por POST (Select2), incluirlo también
         data = kwargs.get('data') or getattr(self, 'data', None)
         if data and data.get('boss'):
             try:

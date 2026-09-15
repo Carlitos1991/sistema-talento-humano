@@ -79,6 +79,7 @@
                                     </button>
                                 </div>
                             </div>
+                        </div>
                     {% else %}
                         <div class="boss-section boss-section-header boss-section-green-light header-boss-card boss-card-empty">
                             <div class="boss-empty-content">
@@ -95,7 +96,6 @@
                     {% endif %}
                 </div>
             </div>
-
             <!-- Botones de Estadísticas de Personal -->
             <div class="stats-buttons-container">
                 {% if unit_stats.total > 0 %}
@@ -317,9 +317,9 @@
                     <span><i class="fa-solid fa-sitemap"></i> Sub-dependencias / Áreas</span>
 
                     {% if perms.institution.add_administrativeunit %}
-                        <button class="btn btn-nuevo-entregable btn-cta-action"
-                                onclick="window.openCreateUnit('{{ unit.id }}')">
-                            <i class="fa-solid fa-plus"></i> Crear Dependencia
+                        <button type="button" class="btn-default"
+                                onclick="openAjaxModal('{% url 'institution:unit_create' %}?parent_id={{ unit.id }}', window.initUnitModal)">
+                            <i class="fas fa-plus"></i> Crear Dependencia
                         </button>
                     {% endif %}
                 </div>
@@ -346,7 +346,6 @@
     <!-- MODAL PARA REUBICAR UNIDAD -->
     {% include 'institution/modals/modal_relocate_unit.html' %}
     {% include 'person/modals/modal_relocate_employee.html' %}
-    {% include 'institution/modals/modal_unit_form.html' %}
 {% endblock %}
 
 {% block extra_js %}
