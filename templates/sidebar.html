@@ -6,12 +6,14 @@
         }
     </script>
     <div class="sidebar-header">
-        {% if sidebar_logo_url %}
-            <img src="{{ sidebar_logo_url }}?v={{ current_system_configuration.updated_at|date:'U' }}"
-                 alt="Logo institucional" class="sidebar-logo-img">
-        {% else %}
-            <img src="{% static 'img/LOGO2027.png' %}" alt="Logo institucional" class="sidebar-logo-img">
-        {% endif %}
+        <a href="{% url 'core:dashboard' %}">
+            {% if sidebar_logo_url %}
+                <img src="{{ sidebar_logo_url }}?v={{ current_system_configuration.updated_at|date:'U' }}"
+                     alt="Logo institucional" class="sidebar-logo-img">
+            {% else %}
+                <img src="{% static 'img/LOGO2027.png' %}" alt="Logo institucional" class="sidebar-logo-img">
+            {% endif %}
+        </a>
     </div>
 
     <div class="sidebar-body">
@@ -711,24 +713,21 @@
 
     </div>
     <div class="sidebar-footer">
-        <a href="{% url 'security:help_message_list' %}" class="sidebar-footer-action" id="sidebarMessagesBtn"
+        <a href="{% url 'security:help_message_list' %}" class="sidebar-footer-card" id="sidebarMessagesBtn"
            title="Mensajes">
             <i class="fa-solid fa-message"></i>
             <span class="menu-text">Mensajes</span>
-            {% if help_messages_show_notifications %}
-                <span class="sidebar-badge" id="helpMessagesBadge">{{ help_messages_unread_count }}</span>
-            {% else %}
-                <span class="sidebar-badge hidden" id="helpMessagesBadge">0</span>
+            {% if help_messages_show_notifications and help_messages_unread_count > 0 %}
+                <span class="sidebar-badge">{{ help_messages_unread_count }}</span>
             {% endif %}
         </a>
-        <form action="{% url 'core:logout' %}" method="post" id="sidebar-logout-form">
+        <form action="{% url 'core:logout' %}" method="post" id="sidebar-logout-form" class="sidebar-footer-form">
             {% csrf_token %}
             <input type="hidden" name="next" value="{{ request.get_full_path }}">
-            <a href="#" class="sidebar-footer-action sidebar-footer-logout" title="Salir del sistema"
-               onclick="document.getElementById('sidebar-logout-form').submit(); return false;">
+            <button type="submit" class="sidebar-footer-card logout" title="Salir del sistema">
                 <i class="fa-solid fa-power-off"></i>
                 <span class="menu-text">Salir</span>
-            </a>
+            </button>
         </form>
     </div>
 </aside>

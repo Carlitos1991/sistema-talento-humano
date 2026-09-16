@@ -12,7 +12,9 @@
     <link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/favicon.png' %}?v=20260415">
 
     <!-- Fuentes y CSS Externos -->
-    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&display=swap"
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300..700&family=Lexend:wght@400;600;700;800&display=swap"
           rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
@@ -23,7 +25,6 @@
     <link rel="stylesheet" href="{% static 'css/sidebar.css' %}">
     <link rel="stylesheet" href="{% static 'css/table-export.css' %}">
     <link rel="stylesheet" href="{% static 'css/table-manager.css' %}">
-    <link rel="stylesheet" href="{% static 'css/sidebar-submenu-ellipsis.css' %}">
     <link rel="stylesheet" href="{% static 'css/modal-change-password.css' %}">
     {% block extra_css %}{% endblock %}
     <style>[v-cloak] {

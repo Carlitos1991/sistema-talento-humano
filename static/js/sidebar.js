@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const wrapper = document.querySelector('.layout-wrapper');
     const toggleBtn = document.querySelector('.sidebar-toggle');
     const sidebar = document.querySelector('.sidebar');
+    const sidebarBody = sidebar ? sidebar.querySelector('.sidebar-body') : null;
     const tooltip = document.createElement('div');
 
     if (!wrapper || !sidebar) {
@@ -12,6 +13,9 @@ document.addEventListener('DOMContentLoaded', () => {
     tooltip.setAttribute('role', 'tooltip');
     document.body.appendChild(tooltip);
 
+    // =====================================================================
+    // 1. TOOLTIPS (MODO COLAPSADO)
+    // =====================================================================
     function hideTooltip() {
         tooltip.classList.remove('is-visible');
         tooltip.textContent = '';
@@ -30,12 +34,13 @@ document.addEventListener('DOMContentLoaded', () => {
         tooltip.style.left = `${left}px`;
     }
 
+    // =====================================================================
+    // 2. TRUNCADO DE TEXTO
+    // =====================================================================
     function truncateWithEllipsis(textElement) {
         let fullLabel = textElement.dataset.fullLabel || textElement.textContent.trim();
-        // Guardar original
         textElement.dataset.fullLabel = fullLabel;
 
-        // Evita truncar etiquetas cortas como "Inicio".
         if (fullLabel.length <= 8) {
             textElement.textContent = fullLabel;
             return false;
@@ -47,12 +52,9 @@ document.addEventListener('DOMContentLoaded', () => {
             return false;
         }
 
-        // Limpiar terminadores existentes (puntos, espacios) para evitar múltiples puntos
         fullLabel = fullLabel.replace(/[\.\s]+$/g, '').trim();
-
         textElement.textContent = fullLabel;
 
-        // Si cabe completo, nada que hacer
         if (textElement.scrollWidth <= (textElement.clientWidth + 1)) {
             textElement.textContent = fullLabel;
             return false;
@@ -77,35 +79,6 @@ document.addEventListener('DOMContentLoaded', () => {
         textElement.textContent = best;
         return true;
     }
-
-        function clearCollapsedFloatingSubmenus() {
-            document.querySelectorAll('.sidebar .has-submenu.collapsed-open').forEach((item) => {
-                const submenu = item.querySelector('.submenu');
-                if (submenu) {
-                    submenu.classList.remove('collapsed-floating');
-                    submenu.style.top = '';
-                    submenu.style.left = '';
-                    submenu.style.minWidth = '';
-                    submenu.style.transform = '';
-                    submenu.style.maxHeight = '';
-                    submenu.style.display = '';
-                    submenu.style.position = '';
-                }
-                item.classList.remove('collapsed-open');
-            });
-        }
-
-    const applyCollapsedState = (collapsed) => {
-        wrapper.classList.toggle('is-collapsed', collapsed);
-        sidebar.classList.toggle('collapsed', collapsed);
-
-            if (!collapsed) {
-                clearCollapsedFloatingSubmenus();
-                hideTooltip();
-            }
-
-        syncMenuLabels();
-    };
 
     function syncMenuLabels() {
         const collapsed = wrapper.classList.contains('is-collapsed');
@@ -146,25 +119,52 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // =====================================================================
+    // 3. LIMPIEZA DE SUBMENÚS FLOTANTES
+    // =====================================================================
+    function clearCollapsedFloatingSubmenus() {
+        document.querySelectorAll('.sidebar .has-submenu').forEach((item) => {
+            item.classList.remove('collapsed-open');
+            const submenu = item.querySelector('.submenu');
+            if (submenu) {
+                submenu.removeAttribute('style'); // Borra coordenadas y estilos en línea
+            }
+        });
+    }
+
+    const applyCollapsedState = (collapsed) => {
+        wrapper.classList.toggle('is-collapsed', collapsed);
+        sidebar.classList.toggle('collapsed', collapsed);
+
+        clearCollapsedFloatingSubmenus();
+        hideTooltip();
+
+        if (collapsed) {
+            document.querySelectorAll('.sidebar-menu li.open').forEach(el => el.classList.remove('open'));
+        }
+
+        syncMenuLabels();
+    };
+
     const isCollapsed = localStorage.getItem('sidebar_collapsed') === 'true';
     applyCollapsedState(isCollapsed);
 
     if (toggleBtn) {
         toggleBtn.addEventListener('click', (event) => {
             event.preventDefault();
-            const collapsed = !wrapper.classList.contains('is-collapsed');
-            applyCollapsedState(collapsed);
-            localStorage.setItem('sidebar_collapsed', collapsed);
+            const nextState = !wrapper.classList.contains('is-collapsed');
+            applyCollapsedState(nextState);
+            localStorage.setItem('sidebar_collapsed', nextState);
         });
     }
 
+    // =====================================================================
+    // 4. RESTAURAR MENÚS ACTIVOS AL CARGAR
+    // =====================================================================
     const openActiveMenus = () => {
-        document.querySelectorAll('.sidebar-menu .has-submenu.open').forEach((item) => {
-            item.classList.remove('open');
-        });
-        document.querySelectorAll('.sidebar-menu .has-inner-submenu.is-open').forEach((item) => {
-            item.classList.remove('is-open');
-        });
+        if (wrapper.classList.contains('is-collapsed')) {
+            return;
+        }
 
         const activeLinks = document.querySelectorAll('.sidebar-menu a.active, .sidebar-menu a.active-child');
 
@@ -186,18 +186,40 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('load', syncMenuLabels);
     window.addEventListener('resize', syncMenuLabels);
     window.addEventListener('scroll', hideTooltip, true);
-    document.addEventListener('click', hideTooltip);
 
+    // =====================================================================
+    // 5. CLIC EN SUBMENÚS (EXPANDIDO Y COLAPSADO)
+    // =====================================================================
     const menuItems = document.querySelectorAll('.has-submenu > a');
+
     menuItems.forEach((item) => {
         item.addEventListener('click', (event) => {
-            if (wrapper.classList.contains('is-collapsed')) {
+            event.preventDefault();
+            const parentLi = item.parentElement;
+            const submenu = parentLi.querySelector('.submenu');
+            const isCurrentlyCollapsed = wrapper.classList.contains('is-collapsed');
+
+            if (isCurrentlyCollapsed) {
+                const wasOpen = parentLi.classList.contains('collapsed-open');
+
+                // 1. Cierra absolutamente todos los submenús previos
+                clearCollapsedFloatingSubmenus();
+
+                // 2. Si este no estaba abierto, abrirlo en su posición exacta
+                if (!wasOpen && submenu) {
+                    const rect = item.getBoundingClientRect();
+                    parentLi.classList.add('collapsed-open');
+
+                    submenu.style.position = 'fixed';
+                    submenu.style.top = `${Math.round(rect.top)}px`;
+                    submenu.style.left = `${Math.round(rect.right)}px`;
+                    submenu.style.zIndex = '999999';
+                    submenu.style.display = 'block';
+                }
                 return;
             }
 
-            event.preventDefault();
-            const parentLi = item.parentElement;
-
+            // Modo expandido: acordeón estándar
             document.querySelectorAll('.sidebar-menu li.open').forEach((li) => {
                 if (li !== parentLi) {
                     li.classList.remove('open');
@@ -213,11 +235,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            // Recalcula truncado/tooltip cuando cambia visibilidad de submenús.
             window.setTimeout(syncMenuLabels, 0);
         });
     });
 
+    // =====================================================================
+    // 6. TERCER NIVEL (ADMINISTRACIÓN)
+    // =====================================================================
     const innerToggles = document.querySelectorAll('.inner-toggle');
     innerToggles.forEach((innerToggle) => {
         innerToggle.addEventListener('click', (event) => {
@@ -227,12 +251,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             parent.classList.toggle('is-open');
-
-            // Recalcula truncado/tooltip cuando cambia visibilidad de submenús internos.
             window.setTimeout(syncMenuLabels, 0);
         });
     });
 
+    // =====================================================================
+    // 7. CIERRE DE FLOTANTES AL CLIC AFUERA O SCROLL
+    // =====================================================================
+    document.addEventListener('click', (event) => {
+        if (wrapper.classList.contains('is-collapsed')) {
+            if (!event.target.closest('.has-submenu')) {
+                clearCollapsedFloatingSubmenus();
+            }
+        }
+        hideTooltip();
+    });
+
+    if (sidebarBody) {
+        sidebarBody.addEventListener('scroll', () => {
+            if (wrapper.classList.contains('is-collapsed')) {
+                clearCollapsedFloatingSubmenus();
+            }
+        });
+    }
+
+    // Tooltips al pasar el mouse
     sidebar.addEventListener('mouseover', (event) => {
         const link = event.target.closest('.sidebar-menu a.has-tooltip');
         if (!link || !sidebar.contains(link)) {
@@ -263,32 +306,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
         hideTooltip();
     });
+});
 
-    sidebar.addEventListener('focusin', (event) => {
-        const link = event.target.closest('.sidebar-menu a.has-tooltip');
-        if (!link || !sidebar.contains(link)) {
-            return;
-        }
+// Función global toggle
+function toggleSidebar() {
+    const wrapper = document.getElementById('mainWrapper');
+    const sidebar = document.getElementById('mainSidebar');
+    if (!wrapper || !sidebar) return;
 
-        if (link.closest('.has-submenu.collapsed-open')) {
-            hideTooltip();
-            return;
-        }
+    const isCollapsed = wrapper.classList.toggle('is-collapsed');
+    sidebar.classList.toggle('collapsed', isCollapsed);
+    localStorage.setItem('sidebar_collapsed', isCollapsed);
 
-        const label = link.dataset.tooltip;
-        if (label) {
-            showTooltip(link, label);
+    document.querySelectorAll('.sidebar-menu li.open').forEach(el => el.classList.remove('open'));
+    document.querySelectorAll('.sidebar .has-submenu').forEach(el => {
+        el.classList.remove('collapsed-open');
+        const sub = el.querySelector('.submenu');
+        if (sub) {
+            sub.removeAttribute('style');
         }
     });
-
-    sidebar.addEventListener('focusout', hideTooltip);
-
-    sidebar.addEventListener('click', (event) => {
-        const link = event.target.closest('.sidebar-menu a');
-        if (!link) {
-            return;
-        }
-
-        hideTooltip();
-    }, true);
-});
+}
