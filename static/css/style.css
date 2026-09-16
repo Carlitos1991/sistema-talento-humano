@@ -31,7 +31,9 @@
    ===================================================================== */
 :root {
     /* Paleta Corporativa */
-    --primary-color: #0f172a;
+    --primary-color: #203c7d;
+    --primary-hover: #162b5a;
+    --primary-dark: #122248;
     --secondary-color: #475569;
     --accent-color: #059669;
     --accent-hover: #047857;
@@ -40,6 +42,16 @@
     --text-color: #334155;
     --error: #e11d48;
     --card-bg: #ffffff;
+
+    /* Tipografías de Marca */
+    --font-heading: 'Lexend', sans-serif;
+    --font-subheading: 'Bricolage Grotesque', sans-serif;
+    --font-body: 'Inter', sans-serif;
+
+
+    /* Tracking del manual (Tracking / 1000 = em) */
+    --tracking-bricolage: -0.025em; /* Tracking: -25 */
+    --tracking-lexend: -0.075em; /* Tracking: -75 */
 
     /* Dimensiones Layout (ajustadas para UI más compacta) */
     --sidebar-width: 220px;
@@ -61,6 +73,13 @@
 
     --swal2-confirm-button-color: #28a745;
     --swal2-cancel-button-color: #dc3545;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
 }
 
 * {
@@ -105,41 +124,74 @@ h1, h2, h3, h4, h5, h6 {
    02. LOGIN
    ===================================================================== */
 .login-container {
-    min-height: 100vh;
+    height: 100vh;
+    height: 100dvh; /* Altura dinámica para navegadores modernos */
+    width: 100vw;
     display: flex;
     justify-content: center;
     align-items: center;
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-    padding: 20px;
+    background-color: var(--primary-color);
+    position: relative;
+    overflow: hidden; /* Elimina cualquier scroll espurio */
+    padding: 1.5rem;
+    box-sizing: border-box;
+}
+
+.login-container::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: url('../img/HOJA_SAUCE.png');
+    background-repeat: repeat;
+    background-size: 240px auto;
+    opacity: 0.03; /* 3% para web según manual */
+    pointer-events: none;
+    z-index: 1;
 }
 
 .login-card {
+    position: relative;
+    z-index: 2;
     background-color: var(--white);
     width: 100%;
-    max-width: 420px;
-    padding: 2.5rem 3rem;
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow-card);
-    animation: slideUp 0.6s ease-out;
+    max-width: 410px;
+    padding: 2.5rem 2.25rem;
+    border-radius: 18px;
+    box-shadow: 0 25px 50px -12px rgba(10, 20, 50, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.15);
+    animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .login-header {
     text-align: center;
-    margin-bottom: 2rem;
+    margin-bottom: 1.75rem;
 }
 
+
 .login-logo {
-    max-width: 260px;
+    max-width: 220px;
     height: auto;
     margin-bottom: 1rem;
     display: inline-block;
 }
 
 .login-header h2 {
+    font-family: var(--font-subheading), sans-serif;
+    letter-spacing: var(--tracking-bricolage);
+    font-weight: 600;
     color: var(--primary-color);
-    margin: 0 0 0.5rem 0;
-    font-weight: 700;
-    font-size: 1.5rem;
+    font-size: 1.15rem;
+    line-height: 1.35;
+    margin: 0;
+}
+
+.login-card .form-control:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(32, 60, 125, 0.15);
+    background-color: #fff;
+}
+
+.login-card .input-icon-wrapper:focus-within .input-icon-left {
+    color: var(--primary-color);
 }
 
 .login-header p {
@@ -214,7 +266,7 @@ h1, h2, h3, h4, h5, h6 {
 .sidebar {
     background-color: var(--primary-color);
     color: #fff;
-    border-right: 1px solid rgba(255, 255, 255, 0.05);
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
     white-space: nowrap;
     display: flex;
     flex-direction: column;
@@ -222,6 +274,25 @@ h1, h2, h3, h4, h5, h6 {
     transition: width 0.3s ease;
     overflow-y: auto;
     overflow-x: auto;
+    position: relative;
+}
+
+.sidebar::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: url('../img/HOJA_SAUCE.png');
+    background-repeat: repeat;
+    background-size: 220px auto;
+    opacity: 0.03;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.sidebar-header,
+.sidebar-menu {
+    position: relative;
+    z-index: 1;
 }
 
 .sidebar::-webkit-scrollbar {
@@ -1015,7 +1086,7 @@ h1, h2, h3, h4, h5, h6 {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: linear-gradient(135deg, #0f172a 0%, #111827 100%);
+    background: linear-gradient(135deg, #203c7d 0%, #162955 100%);
     color: white;
     border-radius: 20px;
     margin-bottom: 1.5rem;
@@ -2401,38 +2472,46 @@ input.is-valid:focus, select.is-valid:focus, textarea.is-valid:focus, .input-fie
 .btn-success-login {
     display: flex;
     justify-content: center;
+    align-items: center;
     width: 100%;
-    margin: 1.5rem auto 0;
-
-    /* 2. Bordes menos redondeados */
-    border-radius: 8px; /* Un radio de 8px es el estándar para campos de formularios de login */
-
-    /* 3. Verde menos brillante (más profesional y corporativo) */
-    background: linear-gradient(135deg, #059669 0%, #059669 100%);
-    color: #ffffff;
-
-    /* Estilos base para mantener la forma del botón */
-    font-family: 'Inter', 'Roboto', sans-serif;
-    padding: 0.8rem 1.6rem;
-    font-size: 0.9rem;
-    font-weight: 700;
+    margin: 1.5rem auto 0.75rem;
+    padding: 0.8rem 1.5rem;
+    font-family: var(--font-heading), sans-serif;
+    letter-spacing: var(--tracking-lexend);
+    font-size: 0.92rem;
+    font-weight: 800;
     text-transform: uppercase;
-    cursor: pointer;
+    color: #ffffff;
+    background: linear-gradient(135deg, #254796 0%, #172d61 100%);
     border: none;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
-    transition: all 0.2s ease;
+    border-radius: 10px;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(32, 60, 125, 0.35);
+    transition: all 0.25s ease;
 }
 
 /* Efecto hover para que mantenga la interactividad de tu sistema */
 .btn-success-login:hover {
-    background: linear-gradient(135deg, #059669 0%, #059669 100%); /* Se oscurece ligeramente */
+    background: linear-gradient(135deg, #2c54b0 0%, #1e397b 100%);
     transform: translateY(-2px);
-    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 6px 18px rgba(32, 60, 125, 0.45);
 }
 
 .btn-success-login:active {
     transform: translateY(1px);
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 6px rgba(32, 60, 125, 0.25);
+}
+
+/* Enlaces del login */
+.login-card .btn-link {
+    font-family: var(--font-subheading), sans-serif;
+    color: #475569;
+    font-size: 0.82rem;
+    transition: color 0.2s ease;
+}
+
+.login-card .btn-link:hover {
+    color: var(--primary-color);
 }
 
 /* ==========================================
@@ -2724,7 +2803,7 @@ table {
 }
 
 .table-container thead {
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #1a3a5c 100%);
+    background: linear-gradient(135deg, #203c7d 0%, #1b3269 100%);
     position: sticky;
     top: 0;
     z-index: 20;
