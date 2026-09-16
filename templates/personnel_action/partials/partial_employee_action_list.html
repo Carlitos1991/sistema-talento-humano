@@ -4,6 +4,9 @@
         <table class="managed-table exportable-table"
                data-title="Reporte de Empleados para Acción de Personal"
                data-filename="Reporte_Accion_Personal"
+               data-list-url="{% url 'personnel_actions:action_employee_list' %}"
+               data-external-pagination="true"
+               data-external-search="true"
                data-page-size="10">
             <thead>
             <tr>
@@ -66,3 +69,37 @@
         </table>
     </div>
 </div>
+
+{% if paginator.num_pages > 0 %}
+    <div id="js-pagination" class="pagination-container">
+        <span class="pagination-info">
+            Mostrando {{ page_obj.start_index|default:'0' }}-{{ page_obj.end_index|default:'0' }} de {{ paginator.count|default:'0' }}
+        </span>
+        <div class="pagination-controls">
+            <button type="button" class="page-btn {% if not page_obj.has_previous %}disabled{% endif %}"
+                    title="Primera" data-page="1" {% if not page_obj.has_previous %}disabled{% endif %}>
+                <i class="fas fa-angle-double-left"></i>
+            </button>
+            <button type="button" class="page-btn {% if not page_obj.has_previous %}disabled{% endif %}"
+                    title="Anterior"
+                    data-page="{% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% else %}1{% endif %}"
+                    {% if not page_obj.has_previous %}disabled{% endif %}>
+                <i class="fas fa-angle-left"></i>
+            </button>
+            <div class="page-input-wrapper">
+                <input type="number" class="page-input" value="{{ page_obj.number }}" readonly style="cursor: default;">
+                <span class="total-pages-badge">de {{ paginator.num_pages }}</span>
+            </div>
+            <button type="button" class="page-btn {% if not page_obj.has_next %}disabled{% endif %}"
+                    title="Siguiente"
+                    data-page="{% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages }}{% endif %}"
+                    {% if not page_obj.has_next %}disabled{% endif %}>
+                <i class="fas fa-angle-right"></i>
+            </button>
+            <button type="button" class="page-btn {% if not page_obj.has_next %}disabled{% endif %}"
+                    title="Última" data-page="{{ paginator.num_pages }}" {% if not page_obj.has_next %}disabled{% endif %}>
+                <i class="fas fa-angle-double-right"></i>
+            </button>
+        </div>
+    </div>
+{% endif %}

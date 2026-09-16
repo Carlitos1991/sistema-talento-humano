@@ -1,26 +1,67 @@
 document.addEventListener('DOMContentLoaded', function () {
     const tableContainer = document.getElementById('table-content-wrapper');
+    const searchInput = document.getElementById('table-search');
 
-    // Delegación de eventos de la tabla
-    if (tableContainer) {
-        tableContainer.addEventListener('click', function (e) {
-            const generateBtn = e.target.closest('.js-generate-action');
-            if (generateBtn) {
-                e.preventDefault();
-                openAjaxModal(
-                    `/personnel_actions/create/?employee_id=${generateBtn.dataset.employeeId}`,
-                    () => PersonnelActionModal.init()
-                );
-                return;
-            }
-
-            const historyBtn = e.target.closest('.js-view-history');
-            if (historyBtn) {
-                e.preventDefault();
-                window.location.href = `/personnel_actions/history/${historyBtn.dataset.employeeId}/`;
-            }
-        });
+    if (!tableContainer || !searchInput) {
+        return;
     }
+
+    const table = tableContainer.querySelector('.managed-table');
+    const listUrl = table?.dataset.listUrl || window.location.pathname;
+
+    if (!table) {
+        return;
+    }
+
+    tableContainer.addEventListener('click', function (e) {
+        const generateBtn = e.target.closest('.js-generate-action');
+        if (generateBtn) {
+            e.preventDefault();
+            openAjaxModal(
+                `/personnel_actions/create/?employee_id=${generateBtn.dataset.employeeId}`,
+                () => PersonnelActionModal.init()
+            );
+            return;
+        }
+
+        const historyBtn = e.target.closest('.js-view-history');
+        if (historyBtn) {
+            e.preventDefault();
+            window.location.href = `/personnel_actions/history/${historyBtn.dataset.employeeId}/`;
+        }
+    });
+
+    let timeout = null;
+    searchInput.addEventListener('input', function () {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+            const q = searchInput.value.trim();
+            const params = new URLSearchParams(window.location.search);
+            params.set('page', '1');
+            if (q) params.set('q', q); else params.delete('q');
+
+            fetch(`${listUrl}?${params.toString()}`, {
+                headers: {'X-Requested-With': 'XMLHttpRequest'}
+            })
+                .then(async (response) => {
+                    const contentType = response.headers.get('content-type');
+                    if (contentType && contentType.includes('application/json')) {
+                        const data = await response.json();
+                        return data.html || '';
+                    }
+                    return await response.text();
+                })
+                .then((html) => {
+                    if (!html) return;
+                    tableContainer.innerHTML = html;
+                    const newTable = tableContainer.querySelector('.managed-table');
+                    if (newTable) {
+                        new TableManager(newTable);
+                    }
+                })
+                .catch((err) => console.error('Error al buscar empleados:', err));
+        }, 300);
+    });
 });
 /**
  * Maneja: Cascadas de Unidades Administrativas, Búsqueda de Partidas Presupuestarias

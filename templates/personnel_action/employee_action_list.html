@@ -20,8 +20,10 @@
             <div class="table-controls toolbar-row">
                 <div class="toolbar-right">
                     <input type="text"
+                           id="table-search"
                            class="table-search-input large"
-                           placeholder="Buscar por nombres, apellidos o cédula">
+                           placeholder="Buscar por nombres, apellidos o cédula"
+                           value="{{ request.GET.q|default:'' }}">
                 </div>
             </div>
             <div id="table-content-wrapper">
@@ -36,5 +38,13 @@
 {% endblock %}
 
 {% block extra_js %}
+    <script>
+        window.initialPagination = {
+            current_page: {% if page_obj %}{{ page_obj.number }}{% else %}1{% endif %},
+            total_pages: {% if page_obj %}{{ page_obj.paginator.num_pages }}{% else %}1{% endif %},
+            has_previous: {% if page_obj %}{{ page_obj.has_previous|lower }}{% else %}false{% endif %},
+            has_next: {% if page_obj %}{{ page_obj.has_next|lower }}{% else %}false{% endif %}
+        };
+    </script>
     <script src="{% static 'js/personnel_actions/personnel_action.js' %}"></script>
 {% endblock %}

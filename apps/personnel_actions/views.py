@@ -531,70 +531,42 @@ class ActionTypeToggleStatusView(LoginRequiredMixin, View):
 
 
 class EmployeeActionListView(LoginRequiredMixin, ListView):
-    """View to list active employees for generating personnel actions"""
-    model = PersonnelAction
+    model = Employee
     template_name = 'personnel_action/employee_action_list.html'
     context_object_name = 'employees'
+    paginate_by = 10
 
     def get_queryset(self):
-        qs = Employee.objects.filter(
-            is_active=True
-        ).select_related(
-            'person',
-            'area'
-        ).order_by('person__last_name', 'person__first_name', 'pk')
+        qs = Employee.objects.filter(is_active=True).select_related('person', 'area')
 
-        q = (self.request.GET.get('q') or '').strip()
-
-        # Search filter
+        q = self.request.GET.get('q', '').strip()
         if q:
-            terms = [t.strip() for t in q.split() if t.strip()]
+            terms = q.split()
             for term in terms:
                 qs = qs.filter(
                     Q(person__first_name__icontains=term) |
                     Q(person__last_name__icontains=term) |
-                    Q(person__document_number__icontains=term) |
-                    Q(area__name__icontains=term)
+                    Q(person__document_number__icontains=term)
                 )
-
-        return qs
+        return qs.order_by('person__last_name', 'person__first_name', 'person__document_number')
 
     def render_to_response(self, context, **response_kwargs):
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            from employee.models import Employee
-
             html = render_to_string(
                 'personnel_action/partials/partial_employee_action_list.html',
                 context,
                 request=self.request
             )
-
-            # Pagination information
             page_obj = context.get('page_obj')
-            if page_obj:
-                pagination_data = {
-                    'start_index': page_obj.start_index(),
-                    'end_index': page_obj.end_index(),
-                    'total_count': page_obj.paginator.count,
-                    'current_page': page_obj.number,
-                    'total_pages': page_obj.paginator.num_pages,
-                    'has_previous': page_obj.has_previous(),
-                    'has_next': page_obj.has_next(),
-                }
-            else:
-                pagination_data = {
-                    'start_index': 0,
-                    'end_index': 0,
-                    'total_count': 0,
-                    'current_page': 1,
-                    'total_pages': 1,
-                    'has_previous': False,
-                    'has_next': False,
-                }
-
+            paginator = context.get('paginator')
             return JsonResponse({
                 'html': html,
-                'pagination': pagination_data
+                'success': True,
+                'page_number': page_obj.number if page_obj else 1,
+                'has_next': page_obj.has_next() if page_obj else False,
+                'has_previous': page_obj.has_previous() if page_obj else False,
+                'num_pages': paginator.num_pages if paginator else 1,
+                'total_records': paginator.count if paginator else 0,
             })
         return super().render_to_response(context, **response_kwargs)
 
