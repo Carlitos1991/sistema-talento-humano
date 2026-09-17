@@ -6,9 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Crear usuario | SIGETH</title>
     <link rel="icon" type="image/png" href="{% static 'img/favicon.png' %}">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..700&family=Lexend:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'css/login.css' %}">
     <style>
         .swal2-popup.swal2-loading-modern {
             border-radius: 14px;
@@ -49,14 +52,14 @@
 <div class="login-container">
     <div class="login-card">
         <div class="login-header">
-            <img src="{% static 'img/logo.png' %}" alt="Logo" class="login-logo">
+            <img src="{% static 'img/LOGO2027.png' %}" alt="Logo" class="login-logo">
             <h2>Crear usuario</h2>
         </div>
 
-        <p style="font-size:0.9rem;color:#64748b;margin-bottom:12px;">
+        <p class="login-description login-description-compact">
             Para crear un usuario debe estar registrado como empleado o trabajador en la institución.
         </p>
-        <p style="font-size:0.9rem;color:#64748b;margin-bottom:18px;">
+        <p class="login-description">
             Busque por cédula y, si el registro es válido, el sistema enviará usuario y contraseña al correo institucional registrado.
         </p>
 
@@ -70,7 +73,9 @@
             </div>
 
             <button type="submit" class="btn-success-login">Crear usuario y enviar credenciales</button>
-            <a href="{% url 'core:login' %}" class="btn-link" style="display:block;text-align:right;margin-top:12px;">Volver a Inicio de Sesión</a>
+            <div class="login-back-link">
+                <a href="{% url 'core:login' %}" class="btn-link">Volver a Inicio de Sesión</a>
+            </div>
         </form>
     </div>
 </div>

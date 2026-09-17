@@ -1,0 +1,111 @@
+/* =====================================================================
+   02. LOGIN
+   ===================================================================== */
+.login-container {
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: var(--primary-color);
+    position: relative;
+    overflow: hidden;
+    padding: 1.5rem;
+    box-sizing: border-box;
+}
+
+@supports (height: 100dvh) {
+    .login-container {
+        height: 100dvh;
+    }
+}
+
+.login-container::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: url('../img/HOJA_SAUCE.png');
+    background-repeat: repeat;
+    background-size: 240px auto;
+    opacity: 0.03; /* 3% para web según manual */
+    pointer-events: none;
+    z-index: 1;
+}
+
+.login-card {
+    position: relative;
+    z-index: 2;
+    background-color: var(--white);
+    width: 100%;
+    max-width: 410px;
+    padding: 2.5rem 2.25rem;
+    border-radius: 18px;
+    box-shadow: 0 25px 50px -12px rgba(10, 20, 50, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.15);
+    animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.login-header {
+    text-align: center;
+    margin-bottom: 1.75rem;
+}
+
+
+.login-logo {
+    max-width: 220px;
+    height: auto;
+    margin-bottom: 1rem;
+    display: inline-block;
+}
+
+.login-header h2 {
+    font-family: var(--font-subheading), sans-serif;
+    letter-spacing: var(--tracking-bricolage);
+    font-weight: 600;
+    color: var(--primary-color);
+    font-size: 1.15rem;
+    line-height: 1.35;
+    margin: 0;
+}
+
+.login-card .form-control:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(32, 60, 125, 0.15);
+    background-color: #fff;
+}
+
+.login-card .input-icon-wrapper:focus-within .input-icon-left {
+    color: var(--primary-color);
+}
+
+.login-header p {
+    color: #64748b;
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+/* Pantallas auxiliares de acceso: creación y recuperación de credenciales. */
+.login-description {
+    color: #64748b;
+    font-size: 0.9rem;
+    line-height: 1.55;
+    margin: -0.45rem 0 1.25rem;
+}
+
+.login-description-compact {
+    margin-bottom: 0.55rem;
+}
+
+.login-back-link {
+    margin-top: 0.85rem;
+    text-align: right;
+}
+
+@media (max-width: 480px) {
+    .login-card {
+        padding: 2rem 1.35rem;
+    }
+
+    .login-logo {
+        max-width: 185px;
+    }
+}
