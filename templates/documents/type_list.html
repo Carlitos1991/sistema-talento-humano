@@ -10,7 +10,7 @@
                 <p>Configuración de categorías para la gestión documental</p>
             </div>
             {% if perms.documents.add_documenttype %}
-                <button class="btn btn-create" onclick="openCreateModal()">
+                <button class="btn-secondary" onclick="openCreateModal()">
                     <i class="fa-solid fa-plus"></i> Nuevo Tipo
                 </button>
             {% endif %}
@@ -19,13 +19,10 @@
         <div id="table-app">
             <div class="content-table">
                 <!-- Controles -->
-                <div class="table-controls">
-                    <div class="search-box">
-                        <input type="text" id="searchInput" class="input-field"
+                <div class="table-controls toolbar-row">
+                    <div class="toolbar-right">
+                        <input type="text" id="searchInput" class="table-search-input table-search-input--large"
                                placeholder="Buscar tipo de documento">
-                        <button type="submit" class="search-btn">
-                            <i class="fas fa-search"></i>
-                        </button>
                     </div>
                 </div>
                 <div id="table-content-wrapper">

@@ -3,37 +3,35 @@
            data-external-pagination="true" data-external-search="true" id="main-data-table">
         <thead>
         <tr>
-            <th style="width:18%;">
+            <th class="width-17">
                 <a href="#" class="sortable text-decoration-none text-dark" data-order="employee__person__last_name">
                     Empleado <span class="sort-arrow">⇅</span>
                 </a>
             </th>
-            <th style="width:12%;">
+            <th class="width-13">
                 <a href="#" class="sortable text-decoration-none text-dark" data-order="action_type__name">
                     Tipo <span class="sort-arrow">⇅</span>
                 </a>
             </th>
-            <th style="width:14%;">
+            <th class="width-13">
                 <a href="#" class="sortable text-decoration-none text-dark" data-order="movement__previous_position">
                     Cargo<span class="sort-arrow">⇅</span>
                 </a>
             </th>
-            <th style="width:15%;">
+            <th class="width-15">
                 <a href="#" class="sortable text-decoration-none text-dark" data-order="movement__previous_unit">
                     Unidad Adm. <span class="sort-arrow">⇅</span>
                 </a>
             </th>
-            <th style="width:15%;">
+            <th class="width-15">
                 <a href="#" class="sortable text-decoration-none text-dark" data-order="movement__new_unit">
                     Fecha <span class="sort-arrow">⇅</span>
                 </a>
             </th>
-            <th style="width:8%;">
-                <a href="#" class="sortable text-decoration-none text-dark" data-order="is_registered">
-                    Estado <span class="sort-arrow">⇅</span>
-                </a>
+            <th class="width-7 no-sort">
+                Estado
             </th>
-            <th class="actions text-center" style="width:12%;">Acciones</th>
+            <th class="width-15 actions no-sort">Acciones</th>
         </tr>
         </thead>
         <tbody>
@@ -43,7 +41,7 @@
                     <td>{{ action.employee.person.name_and_last_name }}
                         <div class="person-doc">CI: {{ action.employee.person.document_number }}</div>
                     </td>
-                    <td><span class="badge-code" style="background:#dbeafe;color:#1e40af;">
+                    <td><span class="badge badge-blue">
                         {{ action.action_type.name }}
                     </span>
                         <div class="person-doc"><b>Acción:</b> {{ action.number }}</div>
@@ -75,26 +73,27 @@
                     </td>
 
                     <td>
-                    <span class="status-badge {% if action.is_registered %}active{% else %}pending{% endif %}">
+                    <span class="badge {% if action.is_registered %}badge-green{% else %}badge-red{% endif %}">
                         {{ action.is_registered|yesno:"Registrado,Borrador" }}
                     </span>
                     </td>
                     <td class="actions">
                         <div class="actions-wrapper">
                             {% if perms.personnel_actions.view_personnelaction %}
-                                <button class="btn-icon btn-info-action js-view-detail"
-                                        data-action-id="{{ action.pk }}" title="Ver Detalle">
+                                <button type="button" class="btn-second"
+                                        onclick="openAjaxModal('{% url 'personnel_actions:action_detail' action.pk %}')"
+                                        title="Ver Detalle">
                                     <i class="fa-solid fa-eye"></i>
                                 </button>
                             {% endif %}
                             {% if perms.personnel_actions.change_personnelaction and not action.is_registered %}
-                                <button class="btn-icon btn-views-action js-edit-action"
+                                <button class="btn-seventh js-edit-action"
                                         data-action-id="{{ action.pk }}" title="Editar Acción">
                                     <i class="fa-solid fa-edit"></i>
                                 </button>
                             {% endif %}
                             {% if not action.is_registered %}
-                                <button class="btn-icon btn-delete-action js-inactivate-action"
+                                <button class="btn-sixth js-inactivate-action"
                                         data-action-id="{{ action.pk }}"
                                         data-number="{{ action.number }}"
                                         title="Anular Acción">
@@ -102,13 +101,13 @@
                                 </button>
                             {% endif %}
                             {% if perms.personnel_actions.change_personnelaction and not action.is_registered %}
-                                <button class="btn-icon btn-success-action js-register-action"
+                                <button class="btn-eleventh js-register-action"
                                         data-action-id="{{ action.pk }}" title="Registrar Acción">
                                     <i class="fa-solid fa-check-circle"></i>
                                 </button>
                             {% endif %}
                             {% if perms.personnel_actions.view_personnelaction %}
-                                <button class="btn-icon btn-list-action js-print-action"
+                                <button class="btn-first js-print-action"
                                         data-action-id="{{ action.pk }}" title="Imprimir PDF">
                                     <i class="fa-solid fa-print"></i>
                                 </button>

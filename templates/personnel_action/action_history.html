@@ -1,95 +1,122 @@
 {% extends 'base.html' %}
 {% load static %}
-
 {% block title %}Historial de Acciones - {{ filtered_employee.person.full_name }}{% endblock %}
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/personnel_action.css' %}">
+{% endblock %}
 
 {% block content %}
-    <div class="content-wrapper">
-        <!-- Configuración oculta -->
-        <input type="hidden" id="csrf-token" value="{{ csrf_token }}">
-        <input type="hidden" id="url-list" value="{% url 'personnel_actions:action_history' filtered_employee.pk %}">
-
-        <!-- Encabezado -->
-        <div class="header-card">
-            <div>
-                <h1><i class="fas fa-history"></i> Historial de Acciones - {{ filtered_employee.person.full_name }}</h1>
-                <p>Acciones de personal registradas para {{ filtered_employee.person.document_number }}</p>
-            </div>
-            <button type="button" class="btn btn-create" onclick="window.history.back()">
-                <i class="fas fa-arrow-left"></i> Volver Atrás
-            </button>
+    <!-- Encabezado -->
+    <div class="header-card">
+        <div>
+            <h1><i class="fas fa-history"></i> Historial de Acciones - {{ filtered_employee.person.full_name }}</h1>
+            <p>Acciones de personal registradas para {{ filtered_employee.person.document_number }}</p>
         </div>
+        <button type="button" class="btn btn-secondary" onclick="window.history.back()">
+            <i class="fas fa-arrow-left"></i> Volver Atrás
+        </button>
+    </div>
 
-        <!-- Filtros y búsqueda -->
-        <div id="table-app">
-            <div class="content-table">
-                <div class="table-controls">
-                    <div class="search-box">
-                        <input type="text" id="table-search" class="input-field"
-                               placeholder="Buscar por número, fecha (dd/mm/aaaa) o tipo">
-                    </div>
+    <!-- Filtros y búsqueda -->
+    <div id="table-app">
+        <div class="content-table">
+            <div class="table-controls toolbar-row">
+                <div class="toolbar-left"></div>
+                <div class="toolbar-right">
+                    <input type="text" id="actionSearchInput"
+                           class="table-search-input table-search-input--large"
+                           placeholder="Buscar por número, fecha o tipo">
                 </div>
-
-                <!-- Zona de recarga AJAX -->
-                <div id="table-content-wrapper">
-                    {% include 'personnel_action/partials/partial_action_history_table.html' %}
-                </div>
-
-                <!-- Paginación -->
-                <div class="pagination-container" id="js-pagination">
-                    <span class="pagination-info" id="page-info">
-                        {% if page_obj %}
-                            Mostrando {{ page_obj.start_index }} a {{ page_obj.end_index }} registros de {{ page_obj.paginator.count }} registros
-                        {% else %}
-                            Mostrando 0 a 0 registros de 0 registros
-                        {% endif %}
-                    </span>
-                    <ul class="pagination-list">
-                        <li>
-                            <button id="btn-prev" class="page-btn" {% if not page_obj.has_previous %}disabled{% endif %}>
-                                <i class="fas fa-chevron-left"></i>
-                            </button>
-                        </li>
-                        <li>
-                            <span id="current-page-display" style="padding: 0 10px; font-weight: bold;">
-                                {% if page_obj %}{{ page_obj.number }}{% else %}1{% endif %}
-                            </span>
-                        </li>
-                        <li>
-                            <button id="btn-next" class="page-btn" {% if not page_obj.has_next %}disabled{% endif %}>
-                                <i class="fas fa-chevron-right"></i>
-                            </button>
-                        </li>
-                    </ul>
-                </div>
+            </div>
+            <div id="table-content-wrapper">
+                {% include 'personnel_action/partials/partial_action_history_table.html' %}
             </div>
         </div>
     </div>
 
-    <!-- Modal para detalles -->
-    <div id="actionDetailModal" class="modal-overlay hidden">
-        <div class="modal-container-medium animate-scale-in" id="modal-detail-content">
-            <!-- Contenido dinámico del detalle -->
-        </div>
-    </div>
-    
-    <!-- Modal para editar -->
-    <div id="actionEditModal" class="modal-overlay hidden">
-        <div class="modal-container-medium animate-scale-in" style="max-width: 750px; max-height: 95vh;" id="modal-edit-content">
-            <!-- Contenido dinámico del formulario -->
-        </div>
-    </div>
+    <!-- Contenedor dinámico obligatorio para openAjaxModal de main.js -->
+    <div id="modal-root"></div>
 {% endblock %}
 
 {% block extra_js %}
     <script>
-        // Inicializar paginación desde el servidor
-        window.initialPagination = {
-            current_page: {% if page_obj %}{{ page_obj.number }}{% else %}1{% endif %},
-            total_pages: {% if page_obj %}{{ page_obj.paginator.num_pages }}{% else %}1{% endif %},
-            has_previous: {% if page_obj %}{{ page_obj.has_previous|lower }}{% else %}false{% endif %},
-            has_next: {% if page_obj %}{{ page_obj.has_next|lower }}{% else %}false{% endif %}
-        };
+        document.addEventListener('DOMContentLoaded', () => {
+            let searchRequestId = 0;
+            let searchDebounceTimer = null;
+            const historyBaseUrl = "{% url 'personnel_actions:action_history' filtered_employee.pk %}";
+
+            // Carga parcial de la tabla por AJAX con control de concurrencia
+            async function loadActionsPartial(q = '') {
+                const requestId = ++searchRequestId;
+                const params = new URLSearchParams();
+                if (q) params.set('q', q);
+
+                try {
+                    const response = await fetch(`${historyBaseUrl}?${params.toString()}`, {
+                        headers: {'X-Requested-With': 'XMLHttpRequest'}
+                    });
+                    const html = await response.text();
+
+                    if (requestId !== searchRequestId) return;
+
+                    document.getElementById('table-content-wrapper').innerHTML = html;
+                    const newTable = document.querySelector('.managed-table');
+                    if (newTable) {
+                        newTable.dataset.externalSearch = 'true';
+                        new TableManager(newTable);
+                    }
+                } catch (e) {
+                    console.error('Error cargando historial de acciones:', e);
+                }
+            }
+
+            // Buscador con debounce idéntico a institution.js
+            const searchInput = document.getElementById('actionSearchInput');
+            if (searchInput) {
+                searchInput.addEventListener('input', function () {
+                    const q = this.value.trim();
+                    clearTimeout(searchDebounceTimer);
+                    searchDebounceTimer = setTimeout(() => {
+                        loadActionsPartial(q);
+                    }, 250);
+                });
+            }
+
+            // Función global para registrar acción con confirmación de SweetAlert2
+            window.registerActionDirect = async function (url, actionNumber) {
+                const result = await Swal.fire({
+                    title: '¿Registrar Acción de Personal?',
+                    text: `Vas a registrar la acción Nº ${actionNumber}. Esto afectará la partida presupuestaria del empleado.`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, registrar',
+                    cancelButtonText: 'Cancelar'
+                });
+
+                if (result.isConfirmed) {
+                    try {
+                        const response = await fetch(url, {
+                            method: 'POST',
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRFToken': getCSRF()
+                            }
+                        });
+                        const data = await response.json();
+
+                        if (data.success) {
+                            await Swal.fire('Registrada', data.message, 'success');
+                            const q = searchInput ? searchInput.value.trim() : '';
+                            loadActionsPartial(q);
+                        } else {
+                            Swal.fire('Error', data.message || 'No se pudo registrar la acción.', 'error');
+                        }
+                    } catch (err) {
+                        console.error('Error al registrar acción:', err);
+                        Swal.fire('Error', 'Problema de conexión con el servidor.', 'error');
+                    }
+                }
+            };
+        });
     </script>
-    <script src="{% static 'js/personnel_actions/action_history.js' %}"></script>
 {% endblock %}

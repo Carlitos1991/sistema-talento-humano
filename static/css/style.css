@@ -2841,6 +2841,9 @@ th.no-sort, .no-sort {
 .width-10 {
     width: 10%;
 }
+.width-12 {
+    width: 12%;
+}
 
 .width-13 {
     width: 13%;
@@ -2848,6 +2851,9 @@ th.no-sort, .no-sort {
 
 .width-15 {
     width: 15%;
+}
+.width-16 {
+    width: 16%;
 }
 
 .width-17 {

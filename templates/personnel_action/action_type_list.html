@@ -10,18 +10,18 @@
                 <h1><i class="fa-solid fa-file-pen mr-2"></i> Tipos de Acción</h1>
                 <p>Catálogo de movimientos de personal.</p>
             </div>
-            <button class="btn-create" onclick="window.openActionTypeModal()">
+            <button class="btn-secondary" onclick="window.openActionTypeModal()">
                 <i class="fas fa-plus"></i> NUEVO TIPO
             </button>
         </div>
 
         <div class="table-app">
             <div class="content-table">
-                <div class="table-controls">
-                    <div class="search-box">
+                <div class="table-controls toolbar-row">
+                    <div class="toolbar-right">
                         <input type="text" id="searchInput" onkeyup="window.debouncedSearch()"
                                class="table-search-input" placeholder="Buscar por nombre">
-                        <button type="button" class="search-btn" onclick="window.debouncedSearch()">
+                        <button type="button" class="stable-search-input table-search-input--large" onclick="window.debouncedSearch()">
                             <i class="fas fa-search"></i>
                         </button>
                     </div>

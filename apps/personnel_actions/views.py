@@ -591,17 +591,16 @@ class ActionHistoryView(LoginRequiredMixin, ListView):
     model = PersonnelAction
     template_name = 'personnel_action/action_history.html'
     context_object_name = 'actions'
-    paginate_by = 10
 
     def get_queryset(self):
         from employee.models import Employee
         self.employee = get_object_or_404(Employee, pk=self.kwargs['employee_id'])
 
         queryset = PersonnelAction.objects.filter(
-            employee=self.employee
+            employee=self.employee,
+            is_active=True
         ).select_related('action_type').order_by('-date_issue', '-number')
 
-        # Búsqueda
         query = self.request.GET.get('q', '').strip()
         if query:
             queryset = queryset.filter(
@@ -624,16 +623,7 @@ class ActionHistoryView(LoginRequiredMixin, ListView):
                 context,
                 request=self.request
             )
-            page_obj = context['page_obj']
-
-            return JsonResponse({
-                'html': html,
-                'page_number': page_obj.number,
-                'has_next': page_obj.has_next(),
-                'has_previous': page_obj.has_previous(),
-                'num_pages': context['paginator'].num_pages,
-                'total_records': context['paginator'].count
-            })
+            return HttpResponse(html)
         return super().render_to_response(context, **response_kwargs)
 
 
@@ -663,9 +653,6 @@ class ActionDetailView(LoginRequiredMixin, View):
             {'action': action, 'history_action': movement},
             request=request
         )
-
-        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return JsonResponse({'html': html})
 
         return HttpResponse(html)
 
