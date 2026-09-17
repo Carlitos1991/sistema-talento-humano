@@ -2488,7 +2488,6 @@ input.is-valid:focus, select.is-valid:focus, textarea.is-valid:focus, .input-fie
     padding: 20px;
 }
 
-/* Tabla global */
 table {
     width: 100%;
     border-collapse: collapse;
@@ -2498,7 +2497,7 @@ table {
 /* Contenedor tabla */
 .table-container {
     width: 100%;
-    min-height: 550px; /*Alto Tabla*/
+    min-height: 550px;
     max-height: 550px;
     overflow-x: hidden;
     overflow-y: auto;
@@ -2727,6 +2726,45 @@ th.no-sort, .no-sort {
     width: 100%;
 }
 
+.table-search-input {
+    width: min(220px, 100%);
+    min-width: 180px;
+    max-width: 260px;
+    height: 38px;
+    padding: 0.5rem 0.85rem;
+    font-size: 0.9rem;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    border-radius: 8px;
+    box-sizing: border-box;
+}
+
+.table-search-input.small,
+.table-search-input--small,
+.table-search-input-small,
+.table-search-input--sm {
+    width: 180px !important;
+    min-width: 150px;
+    max-width: 200px;
+}
+
+.table-search-input.medium,
+.table-search-input--medium,
+.table-search-input-medium,
+.table-search-input--md {
+    width: 220px !important;
+    min-width: 180px;
+    max-width: 260px;
+}
+
+.table-search-input.large,
+.table-search-input--large,
+.table-search-input-large,
+.table-search-input--lg {
+    width: 300px !important;
+    min-width: 220px;
+    max-width: 360px;
+}
+
 .global-table-filter-form select.input-field,
 .global-table-filter-form .form-control {
     min-height: 44px;
@@ -2888,6 +2926,14 @@ th.no-sort, .no-sort {
     min-width: 0;
 }
 
+.toolbar-right {
+    justify-self: end;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    min-width: 0;
+}
+
 .toolbar-center {
     justify-self: center;
     display: flex;
@@ -2936,11 +2982,11 @@ th.no-sort, .no-sort {
     }
 
     .toolbar-right {
-        margin-left: auto;
-        display: flex;
-        justify-content: flex-end;
-        align-items: center;
-        gap: 0.75rem;
+        display: flex !important;
+        justify-content: flex-end !important;
+        align-items: center !important;
+        justify-self: end !important; /* Evita que el grid lo estire a 1fr */
+        width: auto !important;
     }
 
     .toolbar-left {
@@ -4272,7 +4318,11 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
     align-items: center;
 }
 
-.search-box .table-search-input {
+.search-input {
+    border: hidden;
+}
+
+.search-box {
     width: 100%;
     padding: 0.8rem 2.5rem 0.8rem 1rem;
     font-size: 0.9rem;

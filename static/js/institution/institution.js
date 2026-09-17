@@ -31,6 +31,8 @@ document.addEventListener('DOMContentLoaded', () => {
         let currentParentId = null;
         let currentLevelOrder = null;
         let currentEditUnit = null;
+        let unitSearchRequestId = 0;
+        let unitSearchDebounceTimer = null;
 
         function ensureSelectOption(selectEl, value, label) {
             if (!selectEl || value === null || value === undefined || value === '') {
@@ -54,6 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Función para cargar la tabla parcial respetando el parent y show_inactive
         async function loadUnitsPartial({parentId = null, showInactive = false, q = ''} = {}) {
+            const requestId = ++unitSearchRequestId;
             const params = new URLSearchParams();
             if (parentId) params.set('parent_id', parentId);
             if (showInactive) params.set('show_inactive', 'true');
@@ -63,15 +66,36 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const r = await fetch(url);
                 const html = await r.text();
+
+                if (requestId !== unitSearchRequestId) {
+                    return;
+                }
+
                 document.getElementById('table-content-wrapper').innerHTML = html;
                 const newTable = document.querySelector('.managed-table');
-                if (newTable) new TableManager(newTable);
+                if (newTable) {
+                    newTable.dataset.externalSearch = 'true';
+                    new TableManager(newTable);
+                }
             } catch (e) {
                 console.error('Error cargando unidades:', e);
             }
         }
 
         // Filtrar por padre: hace drill-down y actualiza estado
+        function getUnitSearchInput() {
+            return document.getElementById('unitSearchInput')
+                || document.querySelector('[data-search-role="unit-search"]')
+                || document.querySelector('#searchInput')
+                || document.querySelector('.table-search-input')
+                || document.querySelector('.search-input');
+        }
+
+        function getCurrentUnitSearchQuery() {
+            const input = getUnitSearchInput();
+            return input ? input.value.trim() : '';
+        }
+
         window.filterByParent = function (parentId, nextLevelOrder) {
             // Normalizar
             if (!parentId || parentId === '' || parentId === 'None') {
@@ -84,11 +108,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const toggleEl = document.getElementById('toggleInactiveUnits');
             const showInactive = toggleEl && toggleEl.checked;
-            const input = document.querySelector('.table-search-input');
-            const q = input ? input.value.trim() : '';
+            const q = getCurrentUnitSearchQuery();
 
             loadUnitsPartial({parentId: currentParentId, showInactive: showInactive, q: q});
         };
+
+        const unitSearchInput = getUnitSearchInput();
+        if (unitSearchInput) {
+            unitSearchInput.addEventListener('input', function () {
+                const q = this.value.trim();
+                const toggleEl = document.getElementById('toggleInactiveUnits');
+                const showInactive = toggleEl && toggleEl.checked;
+
+                clearTimeout(unitSearchDebounceTimer);
+                unitSearchDebounceTimer = setTimeout(() => {
+                    loadUnitsPartial({parentId: currentParentId, showInactive: showInactive, q: q});
+                }, 250);
+            });
+        }
 
         // Inicialización visual
         // Removed stats-driven initialization to improve performance
@@ -147,8 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Respect current toggle state and parent when refreshing
             const toggleEl = document.getElementById('toggleInactiveUnits');
             const showInactive = toggleEl && toggleEl.checked;
-            const input = document.querySelector('.table-search-input');
-            const q = input ? input.value.trim() : '';
+            const q = getCurrentUnitSearchQuery();
             const params = new URLSearchParams();
             if (currentParentId) params.set('parent_id', currentParentId);
             if (showInactive) params.set('show_inactive', 'true');
@@ -158,7 +194,10 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('table-content-wrapper').innerHTML = html;
 
             const newTable = document.querySelector('.managed-table');
-            if (newTable) new TableManager(newTable);
+            if (newTable) {
+                newTable.dataset.externalSearch = 'true';
+                new TableManager(newTable);
+            }
 
             if (newTable && newTable._tableManager) {
                 if (savedSearch) {
@@ -204,8 +243,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Toggle para mostrar unidades inactivas
         window.toggleInactiveUnits = function (showInactive) {
             const val = showInactive ? true : false;
-            const input = document.querySelector('.table-search-input');
-            const q = input ? input.value.trim() : '';
+            const q = getCurrentUnitSearchQuery();
             loadUnitsPartial({parentId: currentParentId, showInactive: val, q: q});
         };
 
