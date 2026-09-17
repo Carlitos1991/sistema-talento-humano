@@ -16,3 +16,158 @@
     min-width: 280px;
     max-width: 340px;
 }
+
+/* ==========================================
+   TARJETA / AVATAR DE EMPLEADO EN MODAL
+   ========================================== */
+.employee-card-badge {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.85rem 1.15rem;
+    background-color: #f0f7ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 10px;
+}
+
+.employee-avatar-wrapper {
+    width: 56px;
+    height: 56px;
+    flex-shrink: 0;
+}
+
+.employee-avatar-img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #3b82f6;
+    box-shadow: 0 2px 6px rgba(59, 130, 246, 0.2);
+}
+
+.employee-avatar-placeholder {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background-color: #dbeafe;
+    color: #1d4ed8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    border: 2px solid #93c5fd;
+}
+
+.employee-card-details {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.employee-card-name {
+    font-size: 0.98rem;
+    font-weight: 700;
+    color: #1e293b;
+    line-height: 1.2;
+}
+
+.employee-card-doc {
+    font-size: 0.82rem;
+    color: #64748b;
+    font-weight: 600;
+}
+
+/* ==========================================
+   ACORDEONES (COLAPSADOS POR DEFECTO)
+   ========================================== */
+.accordion-item {
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 0.75rem;
+    background-color: #ffffff;
+    transition: border-color 0.2s ease;
+}
+
+.accordion-item:last-child {
+    margin-bottom: 0;
+}
+
+.accordion-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.85rem 1.15rem;
+    background-color: #f8fafc;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #334155;
+    text-align: left;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.accordion-header i:first-child {
+    margin-right: 0.5rem;
+    color: #059669;
+}
+
+.accordion-header:hover {
+    background-color: #f1f5f9;
+    color: #0f172a;
+}
+
+.accordion-arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    color: #64748b;
+}
+
+/* Estado abierto */
+.accordion-header.active {
+    background-color: #f0fdf4;
+    color: #065f46;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.accordion-header.active .accordion-arrow {
+    transform: rotate(180deg);
+    color: #059669;
+}
+
+/* Oculto por defecto */
+.accordion-content {
+    display: none;
+    padding: 1.25rem;
+    background-color: #ffffff;
+    animation: fadeIn 0.2s ease;
+}
+
+/* Se muestra con la clase inyectada por toggleAccordion */
+.accordion-content.show {
+    display: block;
+}
+
+/* Caja de datos de partida presupuestaria */
+.budget-info-box {
+    display: none;
+    margin-top: 1rem;
+    padding: 0.85rem 1rem;
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-left: 4px solid #059669;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    gap: 6px;
+    flex-direction: column;
+}
+
+.budget-info-box.show {
+    display: flex;
+}

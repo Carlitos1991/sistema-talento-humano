@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Generar Acción de Personal | SIGETH{% endblock %}
+{% block title %}Acción de Personal | SIGETH{% endblock %}
 
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/personnel_action.css' %}">
@@ -19,9 +19,8 @@
         <div class="content-table">
             <div class="table-controls toolbar-row">
                 <div class="toolbar-right">
-                    <input type="text"
-                           id="table-search" placeholder="Buscar por nombres, apellidos o cédula"
-                           value="{{ request.GET.q|default:'' }}">
+                    <input type="text" class="table-search-input table-search-input--large" id="table-search"
+                           placeholder="Buscar por nombres, apellidos o cédula" value="{{ request.GET.q|default:'' }}">
                 </div>
             </div>
             <div id="table-content-wrapper">

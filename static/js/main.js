@@ -67,14 +67,22 @@ window.openAjaxModal = function (url, callback = null) {
                 // Quitamos el hidden para que tome dimensiones reales
                 modal.classList.remove('hidden');
 
-                // Inicializar Select2 respetando el modal-body-custom
+                // Inicializamos solo los selects que todavía no tienen una configuración propia.
                 setTimeout(() => {
                     if (window.$ && $.fn.select2) {
-                        $(modal).find('select').select2({
-                            width: '100%',
-                            dropdownParent: $(modal).find('.modal-body-custom').length
-                                ? $(modal).find('.modal-body-custom')
-                                : $(modal)
+                        $(modal).find('select').each(function () {
+                            const $select = $(this);
+
+                            if ($select.hasClass('select2-hidden-accessible')) {
+                                return;
+                            }
+
+                            $select.select2({
+                                width: '100%',
+                                dropdownParent: $(modal).find('.modal-body-custom').length
+                                    ? $(modal).find('.modal-body-custom')
+                                    : $(modal)
+                            });
                         });
                     }
                 }, 10);
@@ -123,48 +131,103 @@ window.submitAjaxForm = function (event, successCallback = null) {
 
     // Limpiar errores visuales previos
     form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+    form.querySelectorAll('.invalid-feedback').forEach(el => {
+        el.textContent = '';
+        el.style.display = 'none';
+    });
 
     fetch(form.action, {
         method: 'POST',
         body: formData,
-        headers: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCSRF()}
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': typeof getCSRF === 'function' ? getCSRF() : ''
+        }
     })
         .then(async response => {
             const contentType = response.headers.get('content-type');
 
-            // Si Django devuelve HTML, es porque el formulario falló (errores de validación)
+            // 1. Manejo cuando la vista responde HTML con errores
             if (contentType && contentType.includes('text/html')) {
                 const html = await response.text();
-                // Si el form es de un modal-root, lo actualizamos
                 const root = document.getElementById('modal-root');
                 if (root && root.innerHTML !== "") {
                     root.innerHTML = html;
-                } else {
-                    // Si es un modal estático, podrías necesitar otra lógica o recargar el div
-                    console.warn("Validación fallida en modal estático.");
                 }
-                Swal.fire('Atención', 'Corrija los errores en el formulario.', 'warning');
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Atención',
+                    text: 'Corrija los errores en el formulario.'
+                });
                 return;
             }
 
-            // Si devuelve JSON, la operación fue exitosa
+            // 2. Manejo cuando la vista responde JSON
             const data = await response.json();
-            if (data.status === 'success' || data.success) {
-                window.closeModal();
+
+            // Si fue exitoso (HTTP 200 y flag true)
+            if (response.ok && (data.status === 'success' || data.success)) {
+                if (typeof window.closeModal === 'function') window.closeModal();
                 Swal.fire({
                     icon: 'success',
                     title: '¡Operación Exitosa!',
-                    text: data.message,
+                    text: data.message || 'Registro guardado correctamente.',
                     timer: 1500,
                     showConfirmButton: false
                 }).then(() => {
                     if (successCallback) successCallback(); else location.reload();
                 });
-            } else {
-                Swal.fire('Error', data.message || 'Error al procesar la solicitud.', 'error');
+                return;
             }
+
+            // 3. Si falló la validación (HTTP 400 u otro error en JSON)
+            let errorHtml = data.message || 'Existen errores en el formulario.';
+
+            if (data.errors) {
+                const errorItems = [];
+
+                Object.keys(data.errors).forEach(field => {
+                    const rawMsg = data.errors[field];
+                    const msg = Array.isArray(rawMsg) ? rawMsg[0] : rawMsg;
+
+                    // Marcar el input en el DOM
+                    const input = form.querySelector(`[name="${field}"]`);
+                    if (input) {
+                        input.classList.add('is-invalid');
+                        const container = input.closest('.form-group') || input.parentElement;
+                        const feedback = container ? container.querySelector('.invalid-feedback') : null;
+                        if (feedback) {
+                            feedback.textContent = msg;
+                            feedback.style.display = 'block';
+                        }
+                    }
+
+                    // Obtener nombre del campo desde el label si existe
+                    const label = form.querySelector(`label[for="${field}"], label[for="id_${field}"]`);
+                    const fieldName = label ? label.textContent.replace('*', '').trim() : field;
+                    errorItems.push(`• <b>${fieldName}:</b> ${msg}`);
+                });
+
+                if (errorItems.length > 0) {
+                    errorHtml = errorItems.join('<br>');
+                }
+            }
+
+            Swal.fire({
+                icon: 'warning',
+                title: 'Atención',
+                html: errorHtml,
+                confirmButtonText: 'Entendido'
+            });
         })
-        .catch(() => Swal.fire('Error', 'Problema de conexión con el servidor.', 'error'));
+        .catch(err => {
+            console.error('Error Ajax Form:', err);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Problema de conexión con el servidor.'
+            });
+        });
 };
 
 // 6. ELIMINACIÓN GENÉRICA

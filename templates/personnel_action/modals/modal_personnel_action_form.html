@@ -31,15 +31,21 @@
                         <h5 class="section-title">
                             <i class="fa-regular fa-id-badge"></i> INFORMACIÓN DEL EMPLEADO
                         </h5>
-                        <div class="alert-info">
-                            {% if employee.person.photo %}
-                                <img src="{{ employee.person.photo.url }}" alt="{{ employee.person.full_name }}">
-                            {% else %}
-                                <div><i class="fas fa-user"></i></div>
-                            {% endif %}
-                            <div>
-                                <div>{{ employee.person.full_name }}</div>
-                                <div>CI: {{ employee.person.document_number }}</div>
+                        <div class="employee-card-badge">
+                            <div class="employee-avatar-wrapper">
+                                {% if employee.person.photo %}
+                                    <img src="{{ employee.person.photo.url }}" alt="{{ employee.person.full_name }}"
+                                         class="employee-avatar-img">
+                                {% else %}
+                                    <div class="employee-avatar-placeholder">
+                                        <i class="fas fa-user"></i>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="employee-card-details">
+                                <span class="employee-card-name">{{ employee.person.full_name }}</span>
+                                <span class="employee-card-doc"><i
+                                        class="fa-solid fa-id-card me-1"></i>CI: {{ employee.person.document_number }}</span>
                             </div>
                         </div>
                         <input type="hidden" name="employee" value="{{ employee_id }}">
@@ -143,7 +149,7 @@
                                 <label class="form-label">Partida Presupuestaria</label>
                                 <select name="movement_new_budget_line" id="id_new_budget_line"
                                         class="input-field form-control" style="width: 100%;">
-                                    <option value="">-- Seleccione una partida --</option>
+                                    <option value=""></option>
                                 </select>
                                 <div id="budget-info" class="budget-info-box">
                                     <div><strong>Código:</strong> <span id="budget-code">-</span></div>
@@ -160,7 +166,7 @@
             <!-- FOOTER ESTANDARIZADO -->
             <div class="modal-footer-medium modal-footer-spaced">
                 <button type="button" class="btn-default-outline" onclick="closeModal()">Cancelar</button>
-                <button type="submit" class="btn-save shadow-md">
+                <button type="submit" class="btn-default">
                     <i class="fa-solid fa-save me-1"></i> {% if is_edit %}Actualizar{% else %}Guardar{% endif %}
                 </button>
             </div>

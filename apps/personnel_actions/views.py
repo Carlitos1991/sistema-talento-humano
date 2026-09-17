@@ -353,10 +353,25 @@ class PersonnelActionCreateView(LoginRequiredMixin, CreateView):
 
     def form_invalid(self, form):
         if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            errors_data = {field: errors[0] for field, errors in form.errors.items()}
+            # Extraer el primer mensaje de error para mostrar en la alerta
+            error_list = []
+            errors_data = {}
+
+            for field, errors in form.errors.items():
+                msg = errors[0]
+                errors_data[field] = msg
+                # Si el error es de un campo específico o global
+                field_label = form.fields[field].label if field in form.fields and form.fields[field].label else field
+                if field == '__all__':
+                    error_list.append(f"• {msg}")
+                else:
+                    error_list.append(f"• <b>{field_label}:</b> {msg}")
+
+            detailed_message = "<br>".join(error_list)
+
             return JsonResponse({
                 'success': False,
-                'message': 'Error de validación',
+                'message': detailed_message or 'Por favor, revise los campos del formulario.',
                 'errors': errors_data
             }, status=400)
 
@@ -753,10 +768,15 @@ class ActionUpdateView(LoginRequiredMixin, UpdateView):
             raise e
 
     def form_invalid(self, form):
+        import logging
+        print("❌ ERRORES DE VALIDACIÓN EN PERSONNEL ACTION:")
+        print(form.errors.as_json())
         if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            errors_data = {field: errors[0] for field, errors in form.errors.items()}
             return JsonResponse({
                 'success': False,
-                'errors': form.errors
+                'message': 'Error de validación en el formulario',
+                'errors': errors_data
             }, status=400)
         return super().form_invalid(form)
 
@@ -1068,27 +1088,22 @@ class AdministrativeUnitChildrenJsonView(LoginRequiredMixin, View):
 
 
 class SearchBudgetLinesJsonView(LoginRequiredMixin, View):
-    """API para buscar partidas presupuestarias con estado LIBRE"""
+    """API para buscar partidas presupuestarias disponibles"""
 
     def get(self, request):
         search_term = request.GET.get('term', '').strip()
 
-        # Base queryset: partidas con estado LIBRE
+        # Partidas libres: por estado 'LIBRE' o que no tengan empleado actual asignado
         qs = BudgetLine.objects.filter(
-            status_item__code='LIBRE'
+            is_active=True
+        ).filter(
+            Q(status_item__code__iexact='LIBRE') |
+            Q(current_employee__isnull=True)
         ).select_related(
-            'activity__project__subprogram__program',
             'position_item',
-            'current_employee__person'
-        ).only(
-            'id', 'code', 'number_individual', 'remuneration',
-            'activity__project__subprogram__program__name',
-            'position_item__name',
-            'current_employee__person__first_name',
-            'current_employee__person__last_name'
+            'activity__project__subprogram__program'
         )
 
-        # Filtrar por búsqueda si existe
         if search_term:
             qs = qs.filter(
                 Q(code__icontains=search_term) |
@@ -1096,22 +1111,28 @@ class SearchBudgetLinesJsonView(LoginRequiredMixin, View):
                 Q(position_item__name__icontains=search_term)
             )
 
-        # Limitar los resultados
-        qs = qs[:20]
+        qs = qs.order_by('code')[:30]
 
-        # Formato de respuesta para Select2
         results = []
         for line in qs:
-            program_name = line.activity.project.subprogram.program.name if line.activity else ''
-            position_name = line.position_item.name if line.position_item else ''
+            program_name = ''
+            try:
+                if line.activity and line.activity.project and line.activity.project.subprogram:
+                    program_name = line.activity.project.subprogram.program.name or ''
+            except Exception:
+                program_name = ''
+
+            position_name = line.position_item.name if line.position_item else 'Sin cargo asignado'
+            display_code = line.number_individual or line.code or f"Partida #{line.id}"
+            remun = float(line.remuneration) if line.remuneration else 0.0
 
             results.append({
                 'id': line.id,
-                'text': f"{line.code} - {position_name} - RMU: ${line.remuneration:.2f}",
-                'code': line.code,
+                'text': f"{display_code} - {position_name} (RMU: ${remun:.2f})",
+                'code': display_code,
                 'position': position_name,
-                'remuneration': str(line.remuneration),
-                'program': program_name
+                'remuneration': f"{remun:.2f}",
+                'program': program_name or 'N/A'
             })
 
         return JsonResponse({'results': results})

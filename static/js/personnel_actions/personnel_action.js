@@ -210,45 +210,56 @@ document.addEventListener('DOMContentLoaded', function () {
         // ==========================================
 
         initBudgetLineSearch: function () {
-            const select = document.getElementById('id_new_budget_line');
-            if (!select) return;
+            const selectElement = document.getElementById('id_new_budget_line');
+            if (!selectElement) return;
 
-            // Inicializar Select2 si está disponible
+            const $select = $(selectElement);
+            const $modal = $select.closest('.modal-container-medium');
+
             if (typeof jQuery !== 'undefined' && jQuery.fn.select2) {
-                jQuery(select).select2({
-                    placeholder: 'Buscar partida por código o cargo...',
+                if ($select.hasClass('select2-hidden-accessible')) {
+                    $select.select2('destroy');
+                }
+
+                $select.select2({
+                    placeholder: '-- Busque por código o cargo --',
+                    allowClear: true,
                     width: '100%',
+                    dropdownParent: $modal.length ? $modal : $(document.body),
+                    minimumInputLength: 0,
                     ajax: {
                         url: '/personnel_actions/api/search-budget-lines/',
                         dataType: 'json',
-                        delay: 300,
-                        data: (params) => ({
-                            term: params.term
-                        }),
-                        processResults: (data) => {
-                            return {
-                                results: data.results || []
-                            };
-                        }
-                    },
-                    minimumInputLength: 1
-                });
-
-                // Event listener para cambio de selección
-                jQuery(select).on('change', (e) => {
-                    const selectedData = jQuery(select).select2('data')[0];
-                    if (selectedData) {
-                        this.selectedBudgetLineId = selectedData.id;
-                        this.displayBudgetInfo(selectedData);
+                        delay: 250,
+                        data: function (params) {
+                            return {term: params.term || ''};
+                        },
+                        processResults: function (data) {
+                            console.log('Partidas recibidas:', data.results); // Verifica la respuesta aquí
+                            return {results: data.results || []};
+                        },
+                        error: function (xhr, status, error) {
+                            console.error('Error al consultar partidas:', error, xhr.responseText);
+                        },
+                        cache: true
                     }
                 });
-            } else {
-                // Fallback sin Select2: búsqueda básica
-                console.warn('Select2 not available, using basic search');
-                this.initBasicBudgetSearch(select);
+
+                $select.on('select2:select', (e) => {
+                    const data = e.params.data;
+                    if (data) {
+                        this.selectedBudgetLineId = data.id;
+                        this.displayBudgetInfo(data);
+                    }
+                });
+
+                $select.on('select2:clear', () => {
+                    this.selectedBudgetLineId = null;
+                    const infoBox = document.getElementById('budget-info');
+                    if (infoBox) infoBox.classList.remove('show');
+                });
             }
         },
-
         initSignatureSelects: function () {
             if (typeof jQuery === 'undefined' || !jQuery.fn.select2) return;
 
@@ -346,10 +357,8 @@ document.addEventListener('DOMContentLoaded', function () {
         // ==========================================
 
         onFormSubmit: function (form) {
-            // Guardar los valores seleccionados en inputs ocultos
-
             if (this.selectedUnitId) {
-                let input = document.querySelector('input[name="movement_new_unit"]');
+                let input = form.querySelector('input[name="movement_new_unit"]');
                 if (!input) {
                     input = document.createElement('input');
                     input.type = 'hidden';
@@ -357,17 +366,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     form.appendChild(input);
                 }
                 input.value = this.selectedUnitId;
-            }
-
-            if (this.selectedBudgetLineId) {
-                let input = document.querySelector('input[name="movement_new_budget_line"]');
-                if (!input) {
-                    input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = 'movement_new_budget_line';
-                    form.appendChild(input);
-                }
-                input.value = this.selectedBudgetLineId;
             }
         }
     };
