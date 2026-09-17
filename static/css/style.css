@@ -105,17 +105,27 @@ body {
    BLOQUEO EN MODALES Y SWEETALERT (FONDO INMÓVIL, CERO SALTOS)
    ===================================================================== */
 
-/* 1. Modales estándar y SweetAlert: fondo congelado sin perder el riel */
+/* 1. Bloqueo del fondo sin cambio de ancho en modales ni SweetAlert. */
 html.modal-open,
-body.modal-open,
 html.swal2-shown,
-body.swal2-shown,
-html.no-scroll,
-body.no-scroll {
+html.no-scroll {
     overflow: hidden !important; /* Inhabilita la rueda y el scroll del fondo */
-    padding-right: 0 !important; /* Neutraliza el padding-right inyectado por SweetAlert */
+}
+
+body.modal-open,
+body.swal2-shown,
+body.no-scroll {
+    overflow: hidden !important;
+    padding-right: 0 !important;
     margin-right: 0 !important;
     position: static !important; /* Evita que la pantalla salte al inicio */
+}
+
+/* main-content usa un ancho propio; compensar aquí conserva su geometría al ocultar el scroll. */
+body.modal-open .main-content,
+body.swal2-shown .main-content,
+body.no-scroll .main-content {
+    padding-right: var(--viewport-scrollbar-width, 0px) !important;
 }
 
 /* 2. Neutralizar el colapso de altura de SweetAlert en HTML */
@@ -3518,25 +3528,6 @@ th.sorted-desc .sort-arrow {
     color: #605f5f;
 }
 
-/* Scrollbar personalizada para .stats-row horizontal scroll */
-.stats-row::-webkit-scrollbar {
-    height: 6px;
-}
-
-.stats-row::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.stats-row::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 3px;
-}
-
-.stats-row::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
-}
-
-
 /* =====================================================================
    13. MODALES
    ===================================================================== */
@@ -3700,7 +3691,7 @@ th.sorted-desc .sort-arrow {
     background-color: #f8fafc;
     padding: 1.5rem;
     flex: 1;
-    overflow-y: scroll !important;
+    overflow-y: auto;
     overflow-x: hidden;
     max-height: calc(90vh - 180px);
 }
@@ -4094,7 +4085,7 @@ th.sorted-desc .sort-arrow {
 
 body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
     overflow: hidden !important;
-    overflow-y: scroll !important;
+    overflow-y: hidden !important;
 }
 
 .swal2-actions {
@@ -4717,11 +4708,6 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
     margin-bottom: 0;
     padding-top: 8px; /* Espacio superior para que el hover (salto) no se corte */
     padding-bottom: 12px; /* Espacio inferior para que no se corte la sombra */
-    scrollbar-width: none; /* Oculta scroll en Firefox */
-}
-
-.module-grid-premium::-webkit-scrollbar {
-    display: none; /* Oculta scroll en Chrome/Edge/Safari */
 }
 
 .module-card-item {
@@ -6324,7 +6310,7 @@ body.employee-dashboard-page .grid-general > :last-child:nth-child(odd) {
 /* SweetAlert2 */
 body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
     overflow: hidden !important;
-    overflow-y: scroll !important; /* Evita que la tabla brinque al saltar una alerta */
+    overflow-y: hidden !important;
 }
 
 /* Evitar que el scroll del modal rebote a la página trasera */

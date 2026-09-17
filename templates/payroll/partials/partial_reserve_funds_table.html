@@ -52,7 +52,7 @@
                                 <input id="rf_{{ emp.person.id|stringformat:"d" }}_reserve"
                                        class="switch-input switch-green fr-checkbox" type="checkbox"
                                        data-person-id="{{ emp.person.id|stringformat:"d" }}" data-field="reserve_funds"
-                                       data-update-url="{% url 'employee:update_payroll_info' emp.person.id|stringformat:"d" %}"
+                                       data-update-url="{% url 'employee:payroll_info_update' emp.person.id|stringformat:"d" %}"
                                        {% if pi and pi.reserve_funds %}checked{% endif %}>
 
                                 <label class="switch-wrapper mb-0"
@@ -86,7 +86,7 @@
                                        class="switch-input switch-blue fr-checkbox" type="checkbox"
                                        data-person-id="{{ emp.person.id|stringformat:"d" }}"
                                        data-field="monthly_payment"
-                                       data-update-url="{% url 'employee:update_payroll_info' emp.person.id|stringformat:"d" %}"
+                                       data-update-url="{% url 'employee:payroll_info_update' emp.person.id|stringformat:"d" %}"
                                        {% if pi and pi.monthly_payment %}checked{% endif %}>
 
                                 <label class="switch-wrapper mb-0"

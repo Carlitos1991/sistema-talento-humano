@@ -1,6 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="app-loading">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -27,9 +27,16 @@
     <link rel="stylesheet" href="{% static 'css/table-manager.css' %}">
     <link rel="stylesheet" href="{% static 'css/modal-change-password.css' %}">
     {% block extra_css %}{% endblock %}
-    <style>[v-cloak] {
-        display: none !important;
-    }</style>
+    <style>
+        [v-cloak] {
+            display: none !important;
+        }
+
+        /* Evita mostrar el HTML antes de que los scripts inicialicen el layout y las tablas. */
+        html.app-loading body {
+            visibility: hidden;
+        }
+    </style>
 </head>
 <body {% if request.user.is_authenticated and request.session.force_change_on_login %}data-force-change="1"{% endif %}>
 
@@ -168,5 +175,23 @@
 
 <!-- Captura de Información del Dispositivo -->
 <script src="{% static 'js/capture_device_info.js' %}"></script>
+<script>
+    function syncScrollbarCompensation() {
+        const width = Math.max(0, window.innerWidth - document.documentElement.clientWidth);
+        document.documentElement.style.setProperty('--viewport-scrollbar-width', `${width}px`);
+    }
+
+    syncScrollbarCompensation();
+    window.addEventListener('resize', syncScrollbarCompensation);
+
+    document.addEventListener('DOMContentLoaded', function () {
+        syncScrollbarCompensation();
+        requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+                document.documentElement.classList.remove('app-loading');
+            });
+        });
+    });
+</script>
 </body>
 </html>
