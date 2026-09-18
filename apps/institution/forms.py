@@ -9,7 +9,9 @@ class AdministrativeUnitForm(BaseFormMixin, forms.ModelForm):
         model = AdministrativeUnit
         fields = ['name', 'level', 'parent', 'boss', 'code', 'address', 'phone', 'is_active']
         widgets = {
-            'name': forms.TextInput(attrs={'class': 'input-field', 'placeholder': 'Ej: Dirección Financiera'}),
+            'name': forms.TextInput(
+                attrs={'placeholder': 'Ej: DIRECCIÓN GENERAL', 'class': 'uppercase-input input-field',
+                       'style': 'text-transform: uppercase;', 'oninput': 'this.value = this.value.toUpperCase()'}),
             'code': forms.TextInput(attrs={'class': 'input-field', 'placeholder': 'Generado automáticamente'}),
             'address': forms.TextInput(attrs={'class': 'input-field', 'placeholder': 'Ubicación física'}),
             'phone': forms.TextInput(attrs={'class': 'input-field', 'placeholder': 'Extensión'}),
@@ -52,10 +54,18 @@ class OrganizationalLevelForm(BaseFormMixin, forms.ModelForm):
         model = OrganizationalLevel
         fields = ['name']
         widgets = {
-            'name': forms.TextInput(attrs={'placeholder': 'Ej: DIRECCIÓN GENERAL', 'class': 'uppercase-input'}),
+            'name': forms.TextInput(
+                attrs={'placeholder': 'Ej: DIRECCIÓN GENERAL', 'class': 'uppercase-input input-field',
+                       'style': 'text-transform: uppercase;', 'oninput': 'this.value = this.value.toUpperCase()'
+                       }),
         }
         labels = {
             'name': 'Nombre del Nivel',
+        }
+        error_messages = {
+            'name': {
+                'unique': 'Ya existe un nivel jerárquico con este nombre.'
+            }
         }
 
     def clean_name(self):

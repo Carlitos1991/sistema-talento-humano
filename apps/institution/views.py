@@ -31,7 +31,7 @@ def _get_reassigned_unit_names_for_boss(boss, exclude_unit_id=None):
 class ParentOptionsJsonView(LoginRequiredMixin, View):
     def get(self, request):
         level_id = request.GET.get('level_id')
-        direct_parent_only = request.GET.get('direct_parent_only', 'false').lower() == 'true'
+        direct_parent_only = self.request.GET.get('direct_parent_only', 'false').lower() == 'true'
 
         if not level_id or not str(level_id).isdigit():
             return JsonResponse({'results': []})
@@ -107,7 +107,7 @@ class UnitListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
                                                                                 'code', 'name')
         q = self.request.GET.get('q')
         show_inactive = self.request.GET.get('show_inactive')
-        
+
         qs = qs.filter(level__level_order=1)
         if show_inactive == 'true':
             qs = qs.filter(is_active=False)
@@ -889,8 +889,6 @@ def get_all_descendant_unit_ids(unit):
     return descendants
 
 
-@login_required
-@permission_required('institution.view_administrativeunit', raise_exception=True)
 @login_required
 @permission_required('institution.view_administrativeunit', raise_exception=True)
 def export_unit_employees_excel(request, pk):

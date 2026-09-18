@@ -1,15 +1,13 @@
-# apps/institution/models.py
 from django.db import models
 from django.db import transaction
 from core.models import BaseModel
 
 
 class OrganizationalLevel(BaseModel):
-    name = models.CharField(max_length=100, unique=True, verbose_name="Nombre del Nivel")
-    level_order = models.PositiveIntegerField(
-        verbose_name="Orden Jerárquico",
-        help_text="1 para la cabeza (Institución), números mayores para dependencias."
-    )
+    name = models.CharField(max_length=100, unique=True, verbose_name="Nombre del Nivel",
+                            error_messages={'unique': 'Ya existe un nivel jerárquico con este nombre.'})
+    level_order = models.PositiveIntegerField(verbose_name="Orden Jerárquico",
+                                              help_text="1 para la cabeza (Institución), números mayores para dependencias.")
 
     class Meta:
         verbose_name = "Nivel Organizacional"
@@ -21,31 +19,12 @@ class OrganizationalLevel(BaseModel):
 
 
 class AdministrativeUnit(BaseModel):
-    level = models.ForeignKey(
-        OrganizationalLevel,
-        on_delete=models.PROTECT,
-        verbose_name="Nivel Jerárquico",
-        related_name="units"
-    )
-    parent = models.ForeignKey(
-        'self',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='children',
-        verbose_name="Pertenece a (Padre)"
-    )
-
-
-    # --- NUEVO CAMPO SOLICITADO: JEFE INMEDIATO ---
-    boss = models.ForeignKey(
-        'employee.Employee',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='managed_units',
-        verbose_name="Jefe Inmediato / Responsable"
-    )
+    level = models.ForeignKey(OrganizationalLevel, on_delete=models.PROTECT, verbose_name="Nivel Jerárquico",
+                              related_name="units")
+    parent = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='children',
+                               verbose_name="Pertenece a (Padre)")
+    boss = models.ForeignKey('employee.Employee', on_delete=models.SET_NULL, null=True, blank=True,
+                             related_name='managed_units', verbose_name="Jefe Inmediato / Responsable")
 
     name = models.CharField(max_length=150, verbose_name="Nombre de la Unidad")
     ruc = models.CharField(max_length=13, blank=True, null=True, verbose_name="RUC (Opcional)")
@@ -82,7 +61,6 @@ class AdministrativeUnit(BaseModel):
             from employee.models import Employee
 
             if self.boss_id:
-                # Quitar este jefe de cualquier otra unidad para evitar duplicidad.
                 AdministrativeUnit.objects.filter(
                     boss_id=self.boss_id
                 ).exclude(pk=self.pk).update(boss=None)
@@ -90,7 +68,6 @@ class AdministrativeUnit(BaseModel):
                 # Marcar al jefe actual como jefe activo.
                 Employee.objects.filter(pk=self.boss_id).update(is_boss=True)
 
-            # Si cambió el jefe de esta unidad, revisar si el anterior sigue a cargo de otra.
             if previous_boss_id and previous_boss_id != self.boss_id:
                 old_still_manages = AdministrativeUnit.objects.filter(boss_id=previous_boss_id).exists()
                 if not old_still_manages:
