@@ -1,0 +1,35 @@
+<div class="table-container deliverables-table-container">
+    <table class="managed-table">
+        <thead>
+        <tr>
+            <th><i class="fa-solid fa-box"></i> Nombre</th>
+            <th><i class="fa-solid fa-align-left"></i> Descripción</th>
+            <th class="actions no-sort"><i class="fa-solid fa-gears"></i> Acciones</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for deliverable in deliverables %}
+            <tr>
+                <td>{{ deliverable.name }}</td>
+                <td>{{ deliverable.description|default:'-' }}</td>
+                <td class="actions">
+                    <div class="actions-wrapper">
+                        <button type="button" class="btn-views-action" title="Editar Entregable"
+                                onclick="openAjaxModal('{% url 'institution:api_deliverable_update' unit.id deliverable.id %}')">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                        <button type="button" class="btn-action-delete" title="Eliminar Entregable"
+                                onclick="deleteRecordAjax('{% url 'institution:api_deliverable_delete' deliverable.id %}', 'el entregable {{ deliverable.name|escapejs }}')">
+                            <i class="fa-solid fa-trash-alt"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="3" class="text-center text-muted py-4">Sin entregables registrados.</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>

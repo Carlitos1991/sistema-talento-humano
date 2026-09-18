@@ -89,14 +89,14 @@
                                        title="Ver Detalle"> <i class="fas fa-eye"></i>
                                     </a>
                                     {% if unit.is_active %}
-                                        <button class="btn-red-circle"
-                                                onclick="toggleUnitStatus(this, '{% url 'institution:unit_toggle' unit.id %}', '{{ unit.name|escapejs }}', '{{ unit.id }}')"
+                                        <button type="button" class="btn-red-circle"
+                                                onclick="toggleStatusAjax('{% url 'institution:unit_toggle' unit.id %}', 'la unidad {{ unit.name|escapejs }}', true)"
                                                 title="Desactivar">
                                             <i class="fa-solid fa-toggle-off"></i>
                                         </button>
                                     {% else %}
-                                        <button class="btn-green-circle"
-                                                onclick="toggleUnitStatus(this, '{% url 'institution:unit_toggle' unit.id %}', '{{ unit.name|escapejs }}', '{{ unit.id }}')"
+                                        <button type="button" class="btn-green-circle"
+                                                onclick="toggleStatusAjax('{% url 'institution:unit_toggle' unit.id %}', 'la unidad {{ unit.name|escapejs }}', false)"
                                                 title="Activar">
                                             <i class="fas fa-toggle-on"></i>
                                         </button>

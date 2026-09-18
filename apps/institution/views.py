@@ -239,7 +239,10 @@ class UnitDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
             'propios': propios_count,
             'reubicados': reubicados_count,
         }
-
+        context['deliverables'] = Deliverable.objects.filter(
+            unit=current_unit,
+            is_active=True
+        ).order_by('-created_at')
         context['children'] = children
         context['employees'] = employees  # Solo de la unidad actual para mostrar
         context['unit_stats'] = unit_stats  # Incluye todas las subdependencias
@@ -670,6 +673,18 @@ class DeliverableListJsonView(LoginRequiredMixin, View):
 
 
 class DeliverableCreateUpdateView(LoginRequiredMixin, View):
+    template_name = 'institution/modals/modal_deliverable_form.html'
+
+    def get(self, request, unit_id, pk=None):
+        """Retorna el HTML del modal para crear o editar vía AJAX."""
+        instance = get_object_or_404(Deliverable, pk=pk, unit_id=unit_id) if pk else None
+        form = DeliverableForm(instance=instance)
+        return render(request, self.template_name, {
+            'form': form,
+            'unit_id': unit_id,
+            'object': instance
+        })
+
     def post(self, request, unit_id, pk=None):
         if pk:
             instance = get_object_or_404(Deliverable, pk=pk, unit_id=unit_id)

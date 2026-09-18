@@ -2109,7 +2109,7 @@ input.is-valid:focus, select.is-valid:focus, textarea.is-valid:focus, .input-fie
 
 /* --- Base compartida para TODOS los botones (Sólidos y Outline) --- */
 .btn-blue-rectangle, .btn-dark-blue-rectangle, .btn-light, .btn-white-rectangle, .btn-success, .btn-info, .btn-warning, .btn-danger,
-.btn-primary-outline, .btn-default-outline, .btn-secondary-outline, .btn-success-outline,
+.btn-blue-rectangle-outline, .btn-default-outline, .btn-secondary-outline, .btn-success-outline,
 .btn-info-outline, .btn-warning-outline, .btn-danger-outline {
     font-family: 'Inter', 'Roboto', sans-serif;
     padding: 0.6rem 1.6rem;
@@ -2131,7 +2131,7 @@ input.is-valid:focus, select.is-valid:focus, textarea.is-valid:focus, .input-fie
 
 /* Forzar que los iconos NUNCA tengan subrayado y preparar su transición */
 .btn-blue-rectangle i, .btn-dark-blue-rectangle i, .btn-light i, .btn-white-rectangle i, .btn-success i, .btn-info i, .btn-warning i, .btn-danger i,
-.btn-primary-outline i, .btn-default-outline i, .btn-secondary-outline i, .btn-success-outline i,
+.btn-blue-rectangle-outline i, .btn-default-outline i, .btn-secondary-outline i, .btn-success-outline i,
 .btn-info-outline i, .btn-warning-outline i, .btn-danger-outline i, .btn-close-circle i {
     text-decoration: none;
     font-size: 1.15em;
@@ -2141,7 +2141,7 @@ input.is-valid:focus, select.is-valid:focus, textarea.is-valid:focus, .input-fie
 /* Hover general (todos suben -2px excepto los de cerrar) */
 .btn-blue-rectangle:hover, .btn-light:hover, .btn-dark-blue-rectangle:hover, .btn-white-rectangle:hover, .btn-success:hover,
 .btn-info:hover, .btn-warning:hover, .btn-danger:hover,
-.btn-primary-outline:hover, .btn-default-outline:hover, .btn-secondary-outline:hover,
+.btn-blue-rectangle-outline:hover, .btn-default-outline:hover, .btn-secondary-outline:hover,
 .btn-success-outline:hover, .btn-info-outline:hover, .btn-warning-outline:hover, .btn-danger-outline:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
@@ -2150,7 +2150,7 @@ input.is-valid:focus, select.is-valid:focus, textarea.is-valid:focus, .input-fie
 /* Efecto al hacer clic (hundimiento) para todos */
 .btn-blue-rectangle:active, .btn-dark-blue-rectangle:active, .btn-light:active, .btn-white-rectangle:active, .btn-success:active,
 .btn-info:active, .btn-warning:active, .btn-danger:active,
-.btn-primary-outline:active, .btn-default-outline:active, .btn-secondary-outline:active,
+.btn-blue-rectangle-outline:active, .btn-default-outline:active, .btn-secondary-outline:active,
 .btn-success-outline:active, .btn-info-outline:active, .btn-warning-outline:active, .btn-danger-outline:active {
     transform: translateY(1px);
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
@@ -2252,7 +2252,7 @@ input.is-valid:focus, select.is-valid:focus, textarea.is-valid:focus, .input-fie
 /* ==========================================
    ESTILOS OUTLINE (Fondo blanco, Borde color, Texto color)
    ========================================== */
-.btn-primary-outline {
+.btn-blue-rectangle-outline {
     background-color: #ffffff;
     border-color: #4a89f3;
     color: #4a89f3;
@@ -2295,7 +2295,7 @@ input.is-valid:focus, select.is-valid:focus, textarea.is-valid:focus, .input-fie
 }
 
 /* Hover para rellenar los outline */
-.btn-primary-outline:hover {
+.btn-blue-rectangle-outline:hover {
     background-color: #f8fafc;
     color: #4a89f3;
     border-color: #4a89f3;
@@ -2985,7 +2985,7 @@ th.no-sort, .no-sort {
 
     .global-table-filter-actions .btn,
     .global-table-filter-actions .btn-blue-rectangle,
-    .global-table-filter-actions .btn-primary-outline {
+    .global-table-filter-actions .btn-blue-rectangle-outline {
         width: 100%;
     }
 
@@ -3628,23 +3628,24 @@ th.sorted-desc .sort-arrow {
 }
 
 .modal-container-small {
-    width: 100%;
-    max-width: 500px;
+    width: 95% !important;
+    max-width: 500px !important;
     max-height: 90vh;
     min-height: 200px;
 }
 
 .modal-container-medium {
-    width: 100%;
-    max-width: 1050px;
+    width: 95% !important;
+    max-width: 760px !important;
     max-height: 90vh;
     min-height: 200px;
 }
 
 .modal-container-large {
-    width: 200%;
-    max-width: 850px;
-    max-height: 100vh;
+    width: 95% !important;
+    max-width: 1050px !important;
+    max-height: 90vh;
+    min-height: 200px;
 }
 
 

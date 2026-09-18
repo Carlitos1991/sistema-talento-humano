@@ -1,35 +1,33 @@
-<div id="relocate-modal-container" class="custom-modal-overlay" >
-    <div class="custom-modal-dialog">
-        <form id="relocateForm" >
+<div id="relocate-modal-container" class="modal-overlay hidden">
+    <div class="modal-container-small">
+        <form id="relocateForm">
             {% csrf_token %}
 
-            <div class="modal-header-medium modal-header-gradient">
-                <h3 class="modal-title text-white">
-                    <i class="fa-solid fa-arrows-alt-v me-2"></i> Reubicar Unidad
+            <div class="modal-header-medium">
+                <h3 class="header-title">
+                    <i class="fa-solid fa-arrows-alt-v me-2"></i>
+                    <span>Reubicar Unidad</span>
                 </h3>
-                <button type="button" class="btn-close-modal text-white-opacity" id="closeModalBtn" onclick="closeRelocateModal(); return false;">&times;</button>
+                <button type="button" class="btn-close-circle" onclick="closeModal('relocate-modal-container')">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
 
-            <div class="modal-body-content modal-body-custom">
-                <!-- Info removed as requested: previously showed 'Selecciona una nueva unidad padre...' -->
-
+            <div class="modal-body">
                 <div class="form-section-card">
-                    <!-- NOMBRE DE LA UNIDAD (Read-only) -->
                     <div class="form-group mb-3">
                         <label class="form-label">Unidad a Reubicar</label>
-                        <input type="text" class="input-field" id="unitNameField" readonly disabled>
+                        <input type="text" class="form-control" id="unitNameField" readonly disabled>
                     </div>
 
-                    <!-- PADRE ACTUAL (Read-only) -->
                     <div class="form-group mb-3">
                         <label class="form-label">Padre Actual</label>
-                        <input type="text" class="input-field" id="currentParentField" readonly disabled>
+                        <input type="text" class="form-control" id="currentParentField" readonly disabled>
                     </div>
 
-                    <!-- NUEVO PADRE (Select) -->
                     <div class="form-group mb-3">
                         <label class="form-label">Nueva Unidad Padre <span class="text-danger">*</span></label>
-                        <select id="id_new_parent" class="input-field" required>
+                        <select id="id_new_parent" class="form-control" required>
                             <option value="">--- Cargando padres disponibles ---</option>
                         </select>
                         <div class="text-error" id="errorParent"></div>
@@ -39,16 +37,14 @@
                 </div>
             </div>
 
-            <div class="modal-footer-medium modal-footer-spaced">
-                <button type="button" class="btn-cancel" id="cancelBtn" onclick="closeRelocateModal(); return false;">Cancelar</button>
-                <button type="submit" class="btn-save shadow-md">
-                    <i class="fa-solid fa-check me-2"></i> Reubicar
+            <div class="modal-footer-medium">
+                <button type="button" class="btn-default-outline" onclick="closeModal('relocate-modal-container')">
+                    Cancelar
+                </button>
+                <button type="submit" class="btn-dark-blue-rectangle">
+                    <i class="fa-solid fa-check me-1"></i> Reubicar
                 </button>
             </div>
         </form>
     </div>
 </div>
-
-<script>
-
-</script>

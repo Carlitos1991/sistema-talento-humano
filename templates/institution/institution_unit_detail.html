@@ -5,351 +5,277 @@
     <link rel="stylesheet" href="{% static 'css/institution.css' %}">
 {% endblock %}
 {% block content %}
-    <div id="deliverables-app" data-unit-id="{{ unit.id }}" data-csrf="{{ csrf_token }}" v-cloak>
+    <div class="institution-detail-container" data-unit-id="{{ unit.id }}">
 
-        <!-- DETALLE DE INSTITUCIÓN -->
-        <div class="institution-detail-container">
-
-            <!-- Header  -->
-            <div class="header-card institution-header-card">
-                <div class="header-left">
-                    <span class="icon icon-circle-large"><i class="fa-solid fa-building"></i></span>
-                    <button class="btn-white-rectangle" onclick="window.history.back()">
-                        <i class="fa-solid fa-arrow-left"></i> Regresar
-                    </button>
-                </div>
-                <div class="header-center">
-                    <span class="title title-wide">{{ unit.name }}</span>
-                    <div class="info-card-single info-card-compact header-data-card">
-                        <div class="info-green-grid">
-                            <div><b>Código:</b> <span>{{ unit.code|default:'-' }}</span></div>
-                            <div><b>Nivel:</b> <span>{{ unit.level.name|default:'-' }}</span></div>
-                            <div><b>Ubicación:</b> <span>{{ unit.address|default:'Sin asignar' }}</span></div>
-                            <div><b>Teléfono:</b> <span>{{ unit.phone|default:'Sin asignar' }}</span></div>
-                            {% if perms.institution.change_administrativeunit %}
-                                <div class="unit-actions {% if unit.level.level_order <= 1 %}unit-actions-single{% endif %}">
-                                    <button type="button" class="btn-warning " title="Editar Unidad"
-                                            onclick="openAjaxModal('{% url 'institution:unit_update' unit.id %}')">
-                                        <i class="fas fa-pencil"></i>Editar
+        <!-- Header -->
+        <div class="header-card institution-header-card">
+            <div class="header-left">
+                <span class="icon icon-circle-large"><i class="fa-solid fa-building"></i></span>
+                <button type="button" class="btn-white-rectangle" onclick="window.history.back()">
+                    <i class="fa-solid fa-arrow-left"></i> Regresar
+                </button>
+            </div>
+            <div class="header-center">
+                <span class="title title-wide">{{ unit.name }}</span>
+                <div class="info-card-single info-card-compact header-data-card">
+                    <div class="info-green-grid">
+                        <div><b>Código:</b> <span>{{ unit.code|default:'-' }}</span></div>
+                        <div><b>Nivel:</b> <span>{{ unit.level.name|default:'-' }}</span></div>
+                        <div><b>Ubicación:</b> <span>{{ unit.address|default:'Sin asignar' }}</span></div>
+                        <div><b>Teléfono:</b> <span>{{ unit.phone|default:'Sin asignar' }}</span></div>
+                        {% if perms.institution.change_administrativeunit %}
+                            <div class="unit-actions {% if unit.level.level_order <= 1 %}unit-actions-single{% endif %}">
+                                <button type="button" class="btn-warning" title="Editar Unidad"
+                                        onclick="openAjaxModal('{% url 'institution:unit_update' unit.id %}')">
+                                    <i class="fas fa-pencil"></i> Editar
+                                </button>
+                                {% if unit.level.level_order > 1 %}
+                                    <button type="button" class="btn-blue-rectangle"
+                                            onclick="openModal('relocate-modal-container'); initRelocateUnitModal({{ unit.id }})"
+                                            title="Cambiar Unidad Padre">
+                                        <i class="fas fa-arrows-alt-v"></i> Reubicar
                                     </button>
-                                    {% if unit.level.level_order > 1 %}
-                                        <button type="button"
-                                                class="btn-blue-rectangle"
-                                                onclick="openRelocateUnit({{ unit.id }})"
-                                                title="Cambiar Unidad Padre">
-                                            <i class="fas fa-arrows-alt-v"></i> Reubicar
-                                        </button>
-                                    {% endif %}
-                                </div>
-                            {% endif %}
-                        </div>
+                                {% endif %}
+                            </div>
+                        {% endif %}
                     </div>
                 </div>
-                <div class="header-right">
-                    {% if unit.boss %}
-                        <div class="boss-section boss-section-header boss-section-green-light header-boss-card">
-                            {% if unit.boss.person.photo %}
-                                <img src="{{ unit.boss.person.photo.url }}" class="boss-photo boss-photo-xl"
-                                     alt="Foto Jefe">
-                            {% else %}
-                                <div class="boss-photo boss-photo-xl boss-photo-initials">
-                                    {{ unit.boss.person.first_name|first }}{{ unit.boss.person.last_name|first }}
-                                </div>
-                            {% endif %}
-                            <div class="boss-info">
-                                <span class="boss-name">{{ unit.boss.person.first_name }} {{ unit.boss.person.last_name }}</span>
-                                <span class="boss-role boss-role-gray"><i class="fa-solid fa-user-tie"></i>
-                                    {% if unit.boss.current_budget_line.first and unit.boss.current_budget_line.first.position_item %}
-                                        {{ unit.boss.current_budget_line.first.position_item.name }}
-                                    {% else %}
-                                        JEFE INMEDIATO
-                                    {% endif %}
-                                </span>
-                                <div class="nomina-actions">
-                                    <a href="{% url 'employee:employee_detail' unit.boss.person.id %}"
-                                       class="btn btn-profile-custom btn-profile-green mt-2 btn-boss-profile"
-                                       title="Ver Detalle Completo">
-                                        <i class="fa-solid fa-user"></i> Ver perfil
-                                    </a>
-                                    <button type="button"
-                                            class="btn btn-profile-custom btn-profile-green mt-2 btn-boss-profile"
-                                            onclick="openAjaxModal('{% url 'institution:unit_assign_boss' unit.id %}')"
-                                            title="Asignar Jefe Inmediato">
-                                        <i class="fa-solid fa-retweet"></i> Cambiar
-                                    </button>
-                                </div>
+            </div>
+            <div class="header-right">
+                {% if unit.boss %}
+                    <div class="boss-section boss-section-header boss-section-green-light header-boss-card">
+                        {% if unit.boss.person.photo %}
+                            <img src="{{ unit.boss.person.photo.url }}" class="boss-photo boss-photo-xl"
+                                 alt="Foto Jefe">
+                        {% else %}
+                            <div class="boss-photo boss-photo-xl boss-photo-initials">
+                                {{ unit.boss.person.first_name|first }}{{ unit.boss.person.last_name|first }}
                             </div>
-                        </div>
-                    {% else %}
-                        <div class="boss-section boss-section-header boss-section-green-light header-boss-card boss-card-empty">
-                            <div class="boss-empty-content">
-                                <h2 class="boss-name boss-empty-title"><i
-                                        class="fa-solid fa-user-tie"></i> ASIGNAR JEFE INMEDIATO</h2>
+                        {% endif %}
+                        <div class="boss-info">
+                            <span class="boss-name">{{ unit.boss.person.first_name }} {{ unit.boss.person.last_name }}</span>
+                            <span class="boss-role boss-role-gray"><i class="fa-solid fa-user-tie"></i>
+                                {% if unit.boss.current_budget_line.first and unit.boss.current_budget_line.first.position_item %}
+                                    {{ unit.boss.current_budget_line.first.position_item.name }}
+                                {% else %}
+                                    JEFE INMEDIATO
+                                {% endif %}
+                            </span>
+                            <div class="nomina-actions">
+                                <a href="{% url 'employee:employee_detail' unit.boss.person.id %}"
+                                   class="btn btn-profile-custom btn-profile-green mt-2 btn-boss-profile"
+                                   title="Ver Detalle Completo">
+                                    <i class="fa-solid fa-user"></i> Ver perfil
+                                </a>
                                 <button type="button"
-                                        class="btn-red-circle"
+                                        class="btn btn-profile-custom btn-profile-green mt-2 btn-boss-profile"
                                         onclick="openAjaxModal('{% url 'institution:unit_assign_boss' unit.id %}')"
                                         title="Asignar Jefe Inmediato">
-                                    <i class="fas fa-user-tie"></i>
+                                    <i class="fa-solid fa-retweet"></i> Cambiar
                                 </button>
                             </div>
                         </div>
-                    {% endif %}
-                </div>
-            </div>
-            <!-- Botones de Estadísticas de Personal -->
-            <div class="stats-buttons-container">
-                {% if unit_stats.total > 0 %}
-                    <button class="stat-btn stat-btn-total" onclick="exportUnitEmployees('{{ unit.id }}', 'total')"
-                            title="Total de empleados (incluye subdependencias) - Clic para exportar a Excel">
-                        <i class="fas fa-users"></i>
-                        <div class="stat-btn-content">
-                            <span class="stat-btn-label">Total</span>
-                            <span class="stat-btn-count">{{ unit_stats.total }}</span>
-                        </div>
-                    </button>
-                {% endif %}
-
-                {% if unit_stats.empleado > 0 %}
-                    <button class="stat-btn stat-btn-employee"
-                            onclick="exportUnitEmployees('{{ unit.id }}', 'EMPLEADO')"
-                            title="Empleados (incluye subdependencias) - Clic para exportar a Excel">
-                        <i class="fas fa-user-tie"></i>
-                        <div class="stat-btn-content">
-                            <span class="stat-btn-label">Empleados</span>
-                            <span class="stat-btn-count">{{ unit_stats.empleado }}</span>
-                        </div>
-                    </button>
-                {% endif %}
-
-                {% if unit_stats.trabajador > 0 %}
-                    <button class="stat-btn stat-btn-worker"
-                            onclick="exportUnitEmployees('{{ unit.id }}', 'TRABAJADOR')"
-                            title="Trabajadores (incluye subdependencias) - Clic para exportar a Excel">
-                        <i class="fas fa-hard-hat"></i>
-                        <div class="stat-btn-content">
-                            <span class="stat-btn-label">Trabajadores</span>
-                            <span class="stat-btn-count">{{ unit_stats.trabajador }}</span>
-                        </div>
-                    </button>
-                {% endif %}
-
-                {% if unit_stats.contratado > 0 %}
-                    <button class="stat-btn stat-btn-contractor"
-                            onclick="exportUnitEmployees('{{ unit.id }}', 'CONTRATADO')"
-                            title="Contratados (incluye subdependencias) - Clic para exportar a Excel">
-                        <i class="fas fa-user-clock"></i>
-                        <div class="stat-btn-content">
-                            <span class="stat-btn-label">Contratados</span>
-                            <span class="stat-btn-count">{{ unit_stats.contratado }}</span>
-                        </div>
-                    </button>
-                {% endif %}
-                {% if unit_stats.propios > 0 %}
-                    <button class="stat-btn stat-btn-total" style="background-color: #0d6efd; color: white;"
-                            onclick="exportUnitEmployees('{{ unit.id }}', 'PROPIOS')"
-                            title="Empleados originarios de esta unidad - Clic para exportar a Excel">
-                        <i class="fas fa-building-user"></i>
-                        <div class="stat-btn-content">
-                            <span class="stat-btn-label">Propios</span>
-                            <span class="stat-btn-count">{{ unit_stats.propios }}</span>
-                        </div>
-                    </button>
-                {% endif %}
-
-                {% if unit_stats.reubicados > 0 %}
-                    <button class="stat-btn stat-btn-changes"
-                            onclick="exportUnitEmployees('{{ unit.id }}', 'REUBICADOS')"
-                            title="Empleados reubicados desde otra unidad - Clic para exportar a Excel">
-                        <i class="fas fa-person-walking-luggage"></i>
-                        <div class="stat-btn-content">
-                            <span class="stat-btn-label">Reubicados</span>
-                            <span class="stat-btn-count">{{ unit_stats.reubicados }}</span>
-                        </div>
-                    </button>
-                {% endif %}
-            </div>
-
-            <!-- Entregables tipo acordeón -->
-            <div class="card-section">
-                <div class="card-section-header accordion-header" @click="showDeliverables = !showDeliverables">
-                    <span><i class="fa-solid fa-box"></i> Entregables</span>
-                    <i :class="showDeliverables ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down'"
-                       style="margin-left:6px;"></i>
-                    <button class="btn btn-nuevo-entregable btn-cta-action" @click.stop="openModal()">
-                        <i class="fa-solid fa-plus"></i> Nuevo Entregable
-                    </button>
-                </div>
-                <transition name="fade">
-                    <div v-show="showDeliverables" class="card-section-content">
-                        <div class="table-container deliverables-table-container">
-                            <table>
-                                <thead>
-                                <tr>
-                                    <th><i class="fa-solid fa-box"></i> Nombre</th>
-                                    <th><i class="fa-solid fa-align-left"></i> Descripción</th>
-                                    <th class="actions"><i class="fa-solid fa-gears"></i> Acciones</th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                <tr v-for="d in deliverables" :key="d.id">
-                                    <td>[[ d.name ]]</td>
-                                    <td>[[ d.description ]]</td>
-                                    <td class="actions">
-                                        <div class="actions-wrapper">
-                                            <button class="btn-views-action" type="button" @click="openModal(d)"
-                                                    title="Editar Entregable">
-                                                <i class="fa-solid fa-pen"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr v-if="deliverables.length === 0">
-                                    <td colspan="3" class="text-center text-muted">Sin entregables registrados.</td>
-                                </tr>
-                                </tbody>
-                            </table>
+                    </div>
+                {% else %}
+                    <div class="boss-section boss-section-header boss-section-green-light header-boss-card boss-card-empty">
+                        <div class="boss-empty-content">
+                            <h2 class="boss-name boss-empty-title">
+                                <i class="fa-solid fa-user-tie"></i> ASIGNAR JEFE INMEDIATO
+                            </h2>
+                            <button type="button"
+                                    class="btn-red-circle"
+                                    onclick="openAjaxModal('{% url 'institution:unit_assign_boss' unit.id %}')"
+                                    title="Asignar Jefe Inmediato">
+                                <i class="fas fa-user-tie"></i>
+                            </button>
                         </div>
                     </div>
-                </transition>
+                {% endif %}
             </div>
-
-            <!-- Modal Vue para nuevo/edit entregable -->
-            <div class="modal-overlay" :class="{ hidden: !showModal }" role="dialog" aria-modal="true">
-                <div class="modal-container-medium animate-scale-in deliverable-modal-container">
-                    <form @submit.prevent="saveDeliverable">
-                        <div class="modal-header-medium modal-header-gradient">
-                            <h3 class="modal-title text-white">
-                                <i class="fa-solid fa-box me-2"></i>
-                                <span v-if="editingId">Editar Entregable</span>
-                                <span v-else>Nuevo Entregable</span>
-                            </h3>
-                            <button type="button" class="btn-close-modal text-white-opacity" @click="closeModal">
-                                &times;
-                            </button>
-                        </div>
-
-                        <div class="modal-body-content modal-body-custom deliverable-modal-body">
-                            <div class="form-section-card">
-                                <div class="form-group mb-3">
-                                    <label class="form-label">Nombre <span class="text-danger">*</span></label>
-                                    <input type="text" v-model="form.name" class="form-control" required>
-                                </div>
-                                <div class="form-group mb-3">
-                                    <label class="form-label">Descripción</label>
-                                    <textarea v-model="form.description" class="form-control" rows="4"></textarea>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="modal-footer-medium modal-footer-spaced">
-                            <button type="button" class="btn-cancel" @click="closeModal">Cancelar</button>
-                            <button type="submit" class="btn-save">
-                                <i class="fa-solid fa-save me-2"></i> Guardar
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Nómina de personal -->
-            <div class="nomina-section">
-                <div class="nomina-title"><i class="fa-solid fa-users"></i> Nómina de Personal</div>
-                <div class="nomina-list">
-                    {% if employees and employees|length > 0 %}
-                        {% for emp in employees %}
-                            {% if unit.boss and emp.id == unit.boss.id %}
-                            {% else %}
-                                <div class="nomina-card {% if emp.institutional_data.original_dependency and emp.institutional_data.original_dependency.id != unit.id %}nomina-card-relocated{% endif %}">
-                                    {% if emp.person.photo %}
-                                        <img src="{{ emp.person.photo.url }}" class="nomina-photo" alt="Foto">
-                                    {% else %}
-                                        <div class="nomina-photo"
-                                             style="display:flex;align-items:center;justify-content:center;background:#e2e8f0;color:#198754;font-weight:700;font-size:1rem;">
-                                            {{ emp.person.first_name|first }}{{ emp.person.last_name|first }}
-                                        </div>
-                                    {% endif %}
-                                    <span class="nomina-name">{{ emp.person.first_name }} {{ emp.person.last_name }}</span>
-                                    <span class="nomina-document">CI: {{ emp.person.document_number|default:'-' }}</span>
-                                    <span class="nomina-role">
-                                        {% if emp.current_budget_line.first and emp.current_budget_line.first.position_item %}
-                                            {{ emp.current_budget_line.first.position_item.name }}
-                                        {% else %}
-                                            -
-                                        {% endif %}
-                                    </span>
-
-                                    {% if emp.institutional_data.original_dependency and emp.institutional_data.original_dependency.id != unit.id %}
-                                        <div class="badge-info"
-                                             title="Motivo: {{ emp.institutional_data.original_dependency_reason|default:'Sin motivo detallado' }}">
-                                            <b>Origen:</b> {{ emp.institutional_data.original_dependency.name|truncatechars:20 }}
-                                        </div>
-                                    {% endif %}
-
-                                    <div class="nomina-actions">
-                                        <a href="{% url 'employee:employee_detail' emp.person.id %}"
-                                           class="action-btn btn-profile-blue"
-                                           title="Ver Perfil Completo">
-                                            <i class="fa-solid fa-user"></i>
-                                        </a>
-
-                                        <button type="button"
-                                                class="action-btn btn-relocate-green"
-                                                title="Reubicar Empleado"
-                                                onclick="window.openRelocateEmployeeModal('{{ emp.person.id }}', '{{ emp.person.first_name }} {{ emp.person.last_name }}', '{{ unit.name }}')">
-                                            <i class="fa-solid fa-sitemap"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            {% endif %}
-                        {% endfor %}
-                    {% else %}
-                        <div class="nomina-empty-row">
-                            <span class="nomina-empty-message">Sin personal registrado directamente en esta dependencia.</span>
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Subdependencias -->
-            <div class="subdependencias-section">
-
-                <div class="institution-section-title section-title-row">
-                    <span><i class="fa-solid fa-sitemap"></i> Sub-dependencias / Áreas</span>
-
-                    {% if perms.institution.add_administrativeunit %}
-                        <button type="button" class="btn-dark-blue-rectangle"
-                                onclick="openAjaxModal('{% url 'institution:unit_create' %}?parent_id={{ unit.id }}', window.initUnitModal)">
-                            <i class="fas fa-plus"></i> Crear Dependencia
-                        </button>
-                    {% endif %}
-                </div>
-                <div class="subdependencias-list">
-                    {% if children and children|length > 0 %}
-                        {% for sub in children %}
-                            <div class="subdependencia-card-blue"
-                                 onclick="window.location.href='/institution/units/detail/{{ sub.id }}/view/'">
-                                <i class="fa-solid fa-users"></i>
-                                <span class="sub-name">{{ sub.name }}</span>
-                            </div>
-                        {% endfor %}
-                    {% else %}
-                        <div class="subdependencia-card-blue subdependencia-card-empty">
-                            <span class="sub-name">Sin subdependencias.</span>
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-
         </div>
+
+        <!-- Botones de Estadísticas -->
+        <div class="stats-buttons-container">
+            {% if unit_stats.total > 0 %}
+                <button type="button" class="stat-btn stat-btn-total"
+                        onclick="exportUnitEmployees('{{ unit.id }}', 'total')"
+                        title="Total de empleados - Clic para exportar a Excel">
+                    <i class="fas fa-users"></i>
+                    <div class="stat-btn-content">
+                        <span class="stat-btn-label">Total</span>
+                        <span class="stat-btn-count">{{ unit_stats.total }}</span>
+                    </div>
+                </button>
+            {% endif %}
+
+            {% if unit_stats.empleado > 0 %}
+                <button type="button" class="stat-btn stat-btn-employee"
+                        onclick="exportUnitEmployees('{{ unit.id }}', 'EMPLEADO')"
+                        title="Empleados - Clic para exportar a Excel">
+                    <i class="fas fa-user-tie"></i>
+                    <div class="stat-btn-content">
+                        <span class="stat-btn-label">Empleados</span>
+                        <span class="stat-btn-count">{{ unit_stats.empleado }}</span>
+                    </div>
+                </button>
+            {% endif %}
+
+            {% if unit_stats.trabajador > 0 %}
+                <button type="button" class="stat-btn stat-btn-worker"
+                        onclick="exportUnitEmployees('{{ unit.id }}', 'TRABAJADOR')"
+                        title="Trabajadores - Clic para exportar a Excel">
+                    <i class="fas fa-hard-hat"></i>
+                    <div class="stat-btn-content">
+                        <span class="stat-btn-label">Trabajadores</span>
+                        <span class="stat-btn-count">{{ unit_stats.trabajador }}</span>
+                    </div>
+                </button>
+            {% endif %}
+
+            {% if unit_stats.contratado > 0 %}
+                <button type="button" class="stat-btn stat-btn-contractor"
+                        onclick="exportUnitEmployees('{{ unit.id }}', 'CONTRATADO')"
+                        title="Contratados - Clic para exportar a Excel">
+                    <i class="fas fa-user-clock"></i>
+                    <div class="stat-btn-content">
+                        <span class="stat-btn-label">Contratados</span>
+                        <span class="stat-btn-count">{{ unit_stats.contratado }}</span>
+                    </div>
+                </button>
+            {% endif %}
+
+            {% if unit_stats.propios > 0 %}
+                <button type="button" class="stat-btn stat-btn-total stat-btn-propios"
+                        onclick="exportUnitEmployees('{{ unit.id }}', 'PROPIOS')"
+                        title="Empleados originarios - Clic para exportar a Excel">
+                    <i class="fas fa-building-user"></i>
+                    <div class="stat-btn-content">
+                        <span class="stat-btn-label">Propios</span>
+                        <span class="stat-btn-count">{{ unit_stats.propios }}</span>
+                    </div>
+                </button>
+            {% endif %}
+
+            {% if unit_stats.reubicados > 0 %}
+                <button type="button" class="stat-btn stat-btn-changes"
+                        onclick="exportUnitEmployees('{{ unit.id }}', 'REUBICADOS')"
+                        title="Empleados reubicados - Clic para exportar a Excel">
+                    <i class="fas fa-person-walking-luggage"></i>
+                    <div class="stat-btn-content">
+                        <span class="stat-btn-label">Reubicados</span>
+                        <span class="stat-btn-count">{{ unit_stats.reubicados }}</span>
+                    </div>
+                </button>
+            {% endif %}
+        </div>
+
+        <!-- Entregable Acordeón -->
+        <div class="card-section">
+            <div class="card-section-header accordion-header" onclick="toggleDeliverablesAccordion(this)">
+                <span><i class="fa-solid fa-box"></i> Entregables</span>
+                <i class="fa-solid fa-chevron-down accordion-indicator"></i>
+                <button type="button" class="btn btn-nuevo-entregable btn-cta-action"
+                        onclick="event.stopPropagation(); openAjaxModal('{% url 'institution:api_deliverable_create' unit.id %}')">
+                    <i class="fa-solid fa-plus"></i> Nuevo Entregable
+                </button>
+            </div>
+            <div id="table-content-wrapper" class="card-section-content" style="display: none;">
+                {% include 'institution/partials/partial_deliverables_table.html' %}
+            </div>
+        </div>
+
+        <!-- Nómina de personal -->
+        <div class="nomina-section">
+            <div class="nomina-title"><i class="fa-solid fa-users"></i> Nómina de Personal</div>
+            <div class="nomina-list">
+                {% if employees and employees|length > 0 %}
+                    {% for emp in employees %}
+                        {% if not unit.boss or emp.id != unit.boss.id %}
+                            <div class="nomina-card {% if emp.institutional_data.original_dependency and emp.institutional_data.original_dependency.id != unit.id %}nomina-card-relocated{% endif %}">
+                                {% if emp.person.photo %}
+                                    <img src="{{ emp.person.photo.url }}" class="nomina-photo" alt="Foto">
+                                {% else %}
+                                    <div class="nomina-photo nomina-photo-initials">
+                                        {{ emp.person.first_name|first }}{{ emp.person.last_name|first }}
+                                    </div>
+                                {% endif %}
+                                <span class="nomina-name">{{ emp.person.first_name }} {{ emp.person.last_name }}</span>
+                                <span class="nomina-document">CI: {{ emp.person.document_number|default:'-' }}</span>
+                                <span class="nomina-role">
+                                    {% if emp.current_budget_line.first and emp.current_budget_line.first.position_item %}
+                                        {{ emp.current_budget_line.first.position_item.name }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </span>
+
+                                {% if emp.institutional_data.original_dependency and emp.institutional_data.original_dependency.id != unit.id %}
+                                    <div class="badge-info"
+                                         title="Motivo: {{ emp.institutional_data.original_dependency_reason|default:'Sin motivo detallado' }}">
+                                        <b>Origen:</b> {{ emp.institutional_data.original_dependency.name|truncatechars:20 }}
+                                    </div>
+                                {% endif %}
+
+                                <div class="nomina-actions">
+                                    <a href="{% url 'employee:employee_detail' emp.person.id %}"
+                                       class="action-btn btn-profile-blue" title="Ver Perfil Completo">
+                                        <i class="fa-solid fa-user"></i>
+                                    </a>
+
+                                    <button type="button" class="action-btn btn-relocate-green"
+                                            title="Reubicar Empleado"
+                                            onclick="window.openRelocateEmployeeModal('{{ emp.person.id }}', '{{ emp.person.first_name|escapejs }} {{ emp.person.last_name|escapejs }}', '{{ unit.name|escapejs }}')">
+                                        <i class="fa-solid fa-sitemap"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                {% else %}
+                    <div class="nomina-empty-row">
+                        <span class="nomina-empty-message">Sin personal registrado directamente en esta dependencia.</span>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Subdependencias -->
+        <div class="subdependencias-section">
+            <div class="institution-section-title section-title-row">
+                <span><i class="fa-solid fa-sitemap"></i> Sub-dependencias / Áreas</span>
+
+                {% if perms.institution.add_administrativeunit %}
+                    <button type="button" class="btn-dark-blue-rectangle"
+                            onclick="openAjaxModal('{% url 'institution:unit_create' %}?parent_id={{ unit.id }}', window.initUnitModal)">
+                        <i class="fas fa-plus"></i> Crear Dependencia
+                    </button>
+                {% endif %}
+            </div>
+            <div class="subdependencias-list">
+                {% if children and children|length > 0 %}
+                    {% for sub in children %}
+                        <div class="subdependencia-card-blue"
+                             onclick="window.location.href='/institution/units/detail/{{ sub.id }}/view/'">
+                            <i class="fa-solid fa-users"></i>
+                            <span class="sub-name">{{ sub.name }}</span>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="subdependencia-card-blue subdependencia-card-empty">
+                        <span class="sub-name">Sin subdependencias.</span>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
     </div>
 
-    <!-- MODAL PARA REUBICAR UNIDAD -->
+    <!-- Modales adicionales estáticos -->
     {% include 'institution/modals/modal_relocate_unit.html' %}
     {% include 'person/modals/modal_relocate_employee.html' %}
 {% endblock %}
 
 {% block extra_js %}
     <script src="{% static 'js/person.js' %}"></script>
-    <script src="{% static 'js/institution/institution_deliverables.js' %}"></script>
     <script src="{% static 'js/institution/institution.js' %}"></script>
 {% endblock %}
