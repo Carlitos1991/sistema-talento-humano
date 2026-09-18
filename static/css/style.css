@@ -876,7 +876,7 @@ body.swal2-height-auto {
 .header-card > div,
 .header-card > a,
 .header-card > button,
-.header-card .btn-secondary {
+.header-card {
     position: relative;
     z-index: 2;
 }
@@ -2108,7 +2108,7 @@ input.is-valid:focus, select.is-valid:focus, textarea.is-valid:focus, .input-fie
    ===================================================================== */
 
 /* --- Base compartida para TODOS los botones (Sólidos y Outline) --- */
-.btn-primary, .btn-default, .btn-light, .btn-secondary, .btn-success, .btn-info, .btn-warning, .btn-danger,
+.btn-blue-rectangle, .btn-dark-blue-rectangle, .btn-light, .btn-white-rectangle, .btn-success, .btn-info, .btn-warning, .btn-danger,
 .btn-primary-outline, .btn-default-outline, .btn-secondary-outline, .btn-success-outline,
 .btn-info-outline, .btn-warning-outline, .btn-danger-outline {
     font-family: 'Inter', 'Roboto', sans-serif;
@@ -2130,7 +2130,7 @@ input.is-valid:focus, select.is-valid:focus, textarea.is-valid:focus, .input-fie
 }
 
 /* Forzar que los iconos NUNCA tengan subrayado y preparar su transición */
-.btn-primary i, .btn-default i, .btn-light i, .btn-secondary i, .btn-success i, .btn-info i, .btn-warning i, .btn-danger i,
+.btn-blue-rectangle i, .btn-dark-blue-rectangle i, .btn-light i, .btn-white-rectangle i, .btn-success i, .btn-info i, .btn-warning i, .btn-danger i,
 .btn-primary-outline i, .btn-default-outline i, .btn-secondary-outline i, .btn-success-outline i,
 .btn-info-outline i, .btn-warning-outline i, .btn-danger-outline i, .btn-close-circle i {
     text-decoration: none;
@@ -2139,7 +2139,7 @@ input.is-valid:focus, select.is-valid:focus, textarea.is-valid:focus, .input-fie
 }
 
 /* Hover general (todos suben -2px excepto los de cerrar) */
-.btn-primary:hover, .btn-light:hover, .btn-default:hover, .btn-secondary:hover, .btn-success:hover,
+.btn-blue-rectangle:hover, .btn-light:hover, .btn-dark-blue-rectangle:hover, .btn-white-rectangle:hover, .btn-success:hover,
 .btn-info:hover, .btn-warning:hover, .btn-danger:hover,
 .btn-primary-outline:hover, .btn-default-outline:hover, .btn-secondary-outline:hover,
 .btn-success-outline:hover, .btn-info-outline:hover, .btn-warning-outline:hover, .btn-danger-outline:hover {
@@ -2148,7 +2148,7 @@ input.is-valid:focus, select.is-valid:focus, textarea.is-valid:focus, .input-fie
 }
 
 /* Efecto al hacer clic (hundimiento) para todos */
-.btn-primary:active, .btn-default:active, .btn-light:active, .btn-secondary:active, .btn-success:active,
+.btn-blue-rectangle:active, .btn-dark-blue-rectangle:active, .btn-light:active, .btn-white-rectangle:active, .btn-success:active,
 .btn-info:active, .btn-warning:active, .btn-danger:active,
 .btn-primary-outline:active, .btn-default-outline:active, .btn-secondary-outline:active,
 .btn-success-outline:active, .btn-info-outline:active, .btn-warning-outline:active, .btn-danger-outline:active {
@@ -2159,21 +2159,21 @@ input.is-valid:focus, select.is-valid:focus, textarea.is-valid:focus, .input-fie
 /* ==========================================
    ESTILOS SÓLIDOS (Fondo color, Borde color, Texto blanco)
    ========================================== */
-.btn-primary, .btn-default, .btn-secondary, .btn-success, .btn-info, .btn-warning, .btn-danger {
+.btn-blue-rectangle, .btn-dark-blue-rectangle, .btn-white-rectangle, .btn-success, .btn-info, .btn-warning, .btn-danger {
     border: none !important; /* Se quita el borde para que el degradado luzca bien */
 }
 
-.btn-primary {
+.btn-blue-rectangle {
     background: linear-gradient(135deg, #4a89f3 0%, #4d5c88 100%);
     color: #ffffff;
 }
 
-.btn-default {
+.btn-dark-blue-rectangle {
     background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
     color: #ffffff;
 }
 
-.btn-secondary {
+.btn-white-rectangle {
     background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
     color: #334155;
 }
@@ -2984,7 +2984,7 @@ th.no-sort, .no-sort {
     }
 
     .global-table-filter-actions .btn,
-    .global-table-filter-actions .btn-primary,
+    .global-table-filter-actions .btn-blue-rectangle,
     .global-table-filter-actions .btn-primary-outline {
         width: 100%;
     }
@@ -3726,8 +3726,8 @@ th.sorted-desc .sort-arrow {
 }
 
 .header-actions-group .btn-warning-outline,
-.header-actions-group .btn-secondary,
-.header-actions-group .btn-primary {
+.header-actions-group .btn-white-rectangle,
+.header-actions-group .btn-blue-rectangle {
     display: inline-flex;
     align-items: center;
     gap: 0.45rem;

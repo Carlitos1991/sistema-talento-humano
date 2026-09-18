@@ -5,7 +5,7 @@
   <p>¿Confirma eliminar la cuenta: <strong>{{ object }}</strong>?</p>
   <form method="post">{% csrf_token %}
     <button class="btn btn-danger" type="submit">Eliminar</button>
-    <a class="btn btn-secondary" href="{% url 'accounting:account_list' %}">Cancelar</a>
+    <a class="btn btn-white-rectangle" href="{% url 'accounting:account_list' %}">Cancelar</a>
   </form>
 </div>
 {% endblock %}

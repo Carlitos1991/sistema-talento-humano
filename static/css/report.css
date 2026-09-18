@@ -118,7 +118,7 @@ label > input[type="radio"][name="target"] { vertical-align: middle; }
 .report-actions .btn:hover { transform: translateY(-2px); }
 .report-actions .btn.btn-success { background: linear-gradient(90deg,#059669,#10b981); border: none; color: #fff; }
 .report-actions .btn.btn-success i { margin-right: 8px; }
-.report-actions .btn.btn-secondary { background: #f8fafc; border: 1px solid #e6eef2; color: #0f172a; }
+.report-actions .btn.btn-white-rectangle { background: #f8fafc; border: 1px solid #e6eef2; color: #0f172a; }
 .report-actions .btn.btn-light { background: #fff; border: 1px solid #e6eef2; color: #0f172a; }
 
 /* Grid wrapper for fields: ensures consistent columns and equal cell sizes */

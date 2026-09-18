@@ -10,7 +10,7 @@
                 <p>Configuración de categorías para la gestión documental</p>
             </div>
             {% if perms.documents.add_documenttype %}
-                <button type="button" class="btn-primary"
+                <button type="button" class="btn-blue-rectangle"
                         onclick="openAjaxModal('{% url 'documents:doc_type_create' %}')">
                     <i class="fa-solid fa-plus me-1"></i> Nuevo Tipo
                 </button>

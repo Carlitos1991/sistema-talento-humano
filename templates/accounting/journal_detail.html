@@ -3,7 +3,7 @@
 <div class="container">
   <h2>Asiento {{ journal.id }}</h2>
   <p>Fecha: {{ journal.date }} - {{ journal.description }}</p>
-  <a class="btn btn-sm btn-secondary" href="{% url 'accounting:journal_export' journal.pk %}">Exportar CSV</a>
+  <a class="btn btn-sm btn-white-rectangle" href="{% url 'accounting:journal_export' journal.pk %}">Exportar CSV</a>
   <table class="table mt-3">
     <thead><tr><th>Cuenta</th><th>Débito</th><th>Crédito</th><th>Partida</th><th>Ref</th></tr></thead>
     <tbody>

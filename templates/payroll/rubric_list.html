@@ -14,7 +14,7 @@
                 <p>Configuración unificada de la matriz contable y presupuestaria.</p>
             </div>
             {% if perms.payroll.add_payrollrubric %}
-                <button id="btn-add-rubric" type="button" class="btn-primary"
+                <button id="btn-add-rubric" type="button" class="btn-blue-rectangle"
                         onclick="openAjaxModal('{% url 'payroll:rubric_create' %}', '.modal-overlay', 'initializeRubricModal')">
                     <i class="fas fa-plus"></i> Nuevo Rubro
                 </button>
@@ -64,7 +64,7 @@
                     </div>
 
                     <div class="toolbar-center">
-                        <button type="button" class="btn-primary" data-filter-apply>
+                        <button type="button" class="btn-blue-rectangle" data-filter-apply>
                             <i class="fa-solid fa-magnifying-glass"></i> Buscar
                         </button>
                         <button type="button" class="btn-primary-outline" data-filter-clear>

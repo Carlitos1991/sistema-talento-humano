@@ -144,13 +144,13 @@
             <ul class="page-buttons pagination-list"
                 style="list-style:none; display:flex; align-items:center; gap:8px; margin:0; padding:0;">
                 <li>
-                    <button id="notifications-btn-first" class="page-btn btn-secondary"
+                    <button id="notifications-btn-first" class="page-btn btn-white-rectangle"
                             {% if not latest_notifications_page_obj.has_previous %}disabled{% endif %} title="Primera">
                         <i class="fas fa-angle-double-left"></i>
                     </button>
                 </li>
                 <li>
-                    <button id="notifications-btn-prev" class="page-btn btn-secondary"
+                    <button id="notifications-btn-prev" class="page-btn btn-white-rectangle"
                             {% if not latest_notifications_page_obj.has_previous %}disabled{% endif %} title="Anterior">
                         <i class="fas fa-chevron-left"></i>
                     </button>
@@ -164,13 +164,13 @@
                     </div>
                 </li>
                 <li>
-                    <button id="notifications-btn-next" class="page-btn btn-secondary"
+                    <button id="notifications-btn-next" class="page-btn btn-white-rectangle"
                             {% if not latest_notifications_page_obj.has_next %}disabled{% endif %} title="Siguiente">
                         <i class="fas fa-chevron-right"></i>
                     </button>
                 </li>
                 <li>
-                    <button id="notifications-btn-last" class="page-btn btn-secondary"
+                    <button id="notifications-btn-last" class="page-btn btn-white-rectangle"
                             {% if not latest_notifications_page_obj.has_next %}disabled{% endif %} title="Última">
                         <i class="fas fa-angle-double-right"></i>
                     </button>

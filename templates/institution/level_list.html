@@ -8,7 +8,7 @@
             <p>Definición de la estructura de mando (Direcciones, Jefaturas, etc).</p>
         </div>
         {% if perms.institution.add_organizationallevel %}
-            <button type="button" class="btn-secondary"
+            <button type="button" class="btn-white-rectangle"
                     onclick="openAjaxModal('{% url 'institution:level_create' %}')">
                 <i class="fas fa-plus"></i> Nuevo Nivel
             </button>
@@ -18,8 +18,7 @@
         <div class="content-table">
             <div class="table-controls toolbar-row">
                 <div class="toolbar-center">
-                    <input class="switch-input switch-red" type="checkbox" id="toggleInactiveLevels"
-                           onchange="toggleInactiveLevels(this.checked)">
+                    <input class="switch-input switch-red" type="checkbox" id="toggleInactiveLevels">
                     <label class="switch-wrapper" for="toggleInactiveLevels">
                         <div class="switch-circle"></div>
                         <span class="switch-text">Mostrar Niveles Inactivos</span>
@@ -39,8 +38,4 @@
 
 {% block modals %}
     {% include 'institution/modals/modal_level_form.html' %}
-{% endblock %}
-
-{% block extra_js %}
-    <script src="{% static 'js/institution/levels.js' %}"></script>
 {% endblock %}

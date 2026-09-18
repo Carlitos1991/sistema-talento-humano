@@ -119,7 +119,7 @@ if (typeof Swal !== 'undefined') {
    3. RECARGA DINÁMICA DE TABLAS PARCIALES AJAX
    ========================================================================== */
 
-window.refreshCurrentTable = function (callback = null) {
+window.refreshCurrentTable = function (extraParams = {}, callback = null) {
     const wrapper = document.getElementById('table-content-wrapper')
         || document.querySelector('.table-container')?.parentElement;
 
@@ -128,7 +128,12 @@ window.refreshCurrentTable = function (callback = null) {
         return;
     }
 
-    fetch(window.location.href, {
+    const requestUrl = new URL(window.location.href);
+    Object.keys(extraParams).forEach(key => {
+        requestUrl.searchParams.set(key, extraParams[key]);
+    });
+
+    fetch(requestUrl.toString(), {
         headers: {'X-Requested-With': 'XMLHttpRequest'}
     })
         .then(async response => {
@@ -143,7 +148,6 @@ window.refreshCurrentTable = function (callback = null) {
             if (!html) return;
             wrapper.innerHTML = html;
 
-            // Reinstanciar TableManager sobre la nueva tabla
             if (typeof TableManager !== 'undefined') {
                 const table = wrapper.querySelector('.managed-table');
                 if (table) new TableManager(table);
@@ -1394,3 +1398,13 @@ window.markTeleworkAttendance = function (punchType, personId) {
         doSubmit(0, 0);
     }
 };
+// ESCUCHADOR GLOBAL DE SWITCHES DE INACTIVOS (Sin clases ni funciones en línea)
+document.addEventListener('change', function (e) {
+    const el = e.target;
+    if (el && el.type === 'checkbox' && (el.id?.toLowerCase().includes('inactive') || el.name?.toLowerCase().includes('inactive'))) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('show_inactive', el.checked);
+        if (url.searchParams.has('page')) url.searchParams.set('page', 1);
+        refreshCurrentTable({show_inactive: el.checked});
+    }
+});

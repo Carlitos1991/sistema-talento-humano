@@ -160,13 +160,13 @@
     box-shadow: 0 10px 18px rgba(30, 64, 175, 0.18);
 }
 
-.person-filter-actions .btn-secondary {
+.person-filter-actions .btn-white-rectangle {
     background: #ffffff;
     color: #334155;
     border: 1px solid rgba(148, 163, 184, 0.35);
 }
 
-.person-filter-actions .btn-secondary:hover {
+.person-filter-actions .btn-white-rectangle:hover {
     border-color: #94a3b8;
     box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08);
 }

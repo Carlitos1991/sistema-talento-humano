@@ -167,11 +167,6 @@ a:hover {
     cursor: not-allowed;
 }
 
-.btn-secondary {
-    background: var(--text-secondary);
-    color: white;
-}
-
 .btn-success {
     background: var(--success-color);
     color: white;

@@ -241,10 +241,6 @@
     min-width: 250px !important;
 }
 
-.btn-secondary:hover {
-    background-color: #5c636a;
-}
-
 .btn-icon {
     padding: 6px 10px;
 }

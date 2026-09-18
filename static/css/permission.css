@@ -33,12 +33,6 @@
     padding: 5px;
     font-size: 14px;
 }
-
-
-.btn-secondary:hover {
-    background-color: #5c636a;
-}
-
 .btn-icon {
     padding: 6px 10px;
 }
@@ -141,7 +135,7 @@
 }
 
 /* Estilo para botón limpiar dentro de modal */
-#bitacora-list-app .btn.btn-secondary {
+#bitacora-list-app .btn.btn-white-rectangle {
     background: transparent;
     border: 1px dashed rgba(15, 23, 42, 0.08);
     color: #1f2937;

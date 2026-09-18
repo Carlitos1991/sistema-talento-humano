@@ -14,7 +14,7 @@
             <div class="header-card institution-header-card">
                 <div class="header-left">
                     <span class="icon icon-circle-large"><i class="fa-solid fa-building"></i></span>
-                    <button class="btn-secondary" onclick="window.history.back()">
+                    <button class="btn-white-rectangle" onclick="window.history.back()">
                         <i class="fa-solid fa-arrow-left"></i> Regresar
                     </button>
                 </div>
@@ -34,7 +34,7 @@
                                     </button>
                                     {% if unit.level.level_order > 1 %}
                                         <button type="button"
-                                                class="btn-primary"
+                                                class="btn-blue-rectangle"
                                                 onclick="openRelocateUnit({{ unit.id }})"
                                                 title="Cambiar Unidad Padre">
                                             <i class="fas fa-arrows-alt-v"></i> Reubicar
@@ -317,7 +317,7 @@
                     <span><i class="fa-solid fa-sitemap"></i> Sub-dependencias / Áreas</span>
 
                     {% if perms.institution.add_administrativeunit %}
-                        <button type="button" class="btn-default"
+                        <button type="button" class="btn-dark-blue-rectangle"
                                 onclick="openAjaxModal('{% url 'institution:unit_create' %}?parent_id={{ unit.id }}', window.initUnitModal)">
                             <i class="fas fa-plus"></i> Crear Dependencia
                         </button>

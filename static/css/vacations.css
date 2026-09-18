@@ -1052,12 +1052,12 @@ th.sortable:hover .sort-icon {
     background-color: #218838;
 }
 
-.btn-icon.btn-primary {
+.btn-icon.btn-blue-rectangle {
     background-color: #007bff;
     color: white;
 }
 
-.btn-icon.btn-primary:hover {
+.btn-icon.btn-blue-rectangle:hover {
     background-color: #0056b3;
 }
 

@@ -434,7 +434,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 detailContent.innerHTML = '<div class="alert alert-danger m-4 text-center">' +
                     '<i class="fas fa-exclamation-circle fa-2x"></i>' +
                     '<p class="mt-2">No se pudo cargar la información.</p>' +
-                    '<button class="btn btn-secondary mt-2" onclick="document.getElementById(\'actionDetailModal\').classList.add(\'hidden\')">Cerrar</button></div>';
+                    '<button class="btn btn-white-rectangle mt-2" onclick="document.getElementById(\'actionDetailModal\').classList.add(\'hidden\')">Cerrar</button></div>';
             });
     }
 

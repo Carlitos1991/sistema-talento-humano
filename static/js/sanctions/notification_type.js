@@ -175,7 +175,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary js-close-modal">Cerrar</button>
+                    <button type="button" class="btn btn-white-rectangle js-close-modal">Cerrar</button>
                 </div>
             </div>
         `;

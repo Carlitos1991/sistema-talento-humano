@@ -4,8 +4,8 @@
   <h2>Cuenta</h2>
   <form method="post">{% csrf_token %}
     {{ form.as_p }}
-    <button class="btn btn-primary" type="submit">Guardar</button>
-    <a class="btn btn-secondary" href="{% url 'accounting:account_list' %}">Cancelar</a>
+    <button class="btn btn-blue-rectangle" type="submit">Guardar</button>
+    <a class="btn btn-white-rectangle" href="{% url 'accounting:account_list' %}">Cancelar</a>
   </form>
 </div>
 {% endblock %}

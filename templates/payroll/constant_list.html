@@ -16,7 +16,7 @@
                 <p>Gestión de valores constantes (SBU, Porcentajes IESS, etc.)</p>
             </div>
             {% if perms.payroll.add_payrollconstant %}
-                <button type="button" class="btn-secondary"
+                <button type="button" class="btn-white-rectangle"
                         onclick="openAjaxModal('{% url 'payroll:constant_create' %}')">
                     <i class="fas fa-plus"></i> Nueva Constante
                 </button>

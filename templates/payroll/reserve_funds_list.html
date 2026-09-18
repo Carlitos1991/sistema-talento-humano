@@ -16,14 +16,14 @@
         <div class="header-actions">
 
             <!-- 1. Botón IESS -->
-            <button type="button" class="btn-secondary" onclick="document.getElementById('fileMassReserve').click();">
+            <button type="button" class="btn-white-rectangle" onclick="document.getElementById('fileMassReserve').click();">
                 <i class="fas fa-file-excel"></i> Excel IESS
             </button>
             <input type="file" id="fileMassReserve" accept=".xlsx, .xls" class="hidden"
                    onchange="uploadMassExcel(this, '{% url 'payroll:reserve_funds_mass_update' %}', 'Configurando fondos de reserva...')">
 
             <!-- 2. Botón Décimos -->
-            <button type="button" class="btn-secondary" onclick="document.getElementById('fileMassTenths').click();">
+            <button type="button" class="btn-white-rectangle" onclick="document.getElementById('fileMassTenths').click();">
                 <i class="fas fa-file-excel"></i> Excel Décimos
             </button>
             <!-- Nota: Le agregué "?tipo=decimos" a la URL como sugerencia, puedes cambiar la URL a tu nueva vista en Django -->
