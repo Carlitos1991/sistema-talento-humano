@@ -845,7 +845,7 @@ body.swal2-height-auto {
     height: 300px;
     border-radius: 50%;
     background: radial-gradient(circle,
-    rgba(16, 185, 129, 0.4) 0%,
+    rgb(105, 118, 149) 0%,
     rgba(5, 150, 105, 0.1) 40%,
     transparent 70%);
     filter: blur(20px);
@@ -6879,79 +6879,119 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
     border-radius: 9999px;
 }
 
-/* Posicionamiento fijo arriba a la derecha */
-.swal2-container.swal2-top-end {
-    top: 15px !important;
-    right: 15px !important;
-    bottom: auto !important;
-    left: auto !important;
-    z-index: 99999 !important;
-}
+/* ==========================================================================
+   TOAST FLOTANTE MODERNO (SUPERIOR DERECHO)
+   ========================================================================== */
 
-/* Toast compacto y estilizado */
-.swal2-popup.swal2-toast {
-    width: auto !important;
-    max-width: 320px !important;
-    padding: 8px 14px !important;
-    font-size: 0.85rem !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
-    border-radius: 8px !important;
-    display: flex !important;
-    align-items: center !important;
-}
-
-.swal2-popup.swal2-toast .swal2-title {
-    font-size: 0.85rem !important;
-    font-weight: 600 !important;
-    margin: 0 8px !important;
-    color: #1e293b !important;
-}
-
-.swal2-popup.swal2-toast .swal2-icon {
-    width: 20px !important;
-    height: 20px !important;
-    min-width: 20px !important;
-    margin: 0 !important;
-}
-
-/* Ocultar definitivamente cualquier contenedor de botones en toast */
-.swal2-popup.swal2-toast .swal2-actions {
-    display: none !important;
-}
-
-/* Toast Flotante Compacto */
 .custom-toast-pill {
     position: fixed;
-    top: 25px;
-    right: 25px;
+    top: 28px;
+    right: 28px;
     z-index: 999999;
     background: #ffffff;
-    color: #1e293b;
-    font-size: 0.88rem;
-    font-weight: 500;
-    padding: 10px 18px;
-    border-radius: 6px;
-    border: 1px solid #e2e8f0;
-    border-left: 4px solid #10b981; /* Verde lateral idéntico a tu captura */
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    min-width: 320px;
+    max-width: 440px;
+    padding: 14px 18px 16px 18px;
+    border-radius: 12px;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.1),
+    0 8px 10px -6px rgba(15, 23, 42, 0.06);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
     opacity: 0;
-    transform: translateY(-10px);
-    transition: all 0.25s ease;
+    transform: translateY(-16px) scale(0.96);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     pointer-events: none;
     font-family: inherit;
 }
 
-/* Estado visible */
+/* Estado visible al entrar */
 .custom-toast-pill.show {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
 }
 
-/* Variantes opcionales para errores o alertas */
-.custom-toast-pill.custom-toast-error {
-    border-left-color: #ef4444;
+/* Contenedor del contenido (Icono + Texto) */
+.toast-content-body {
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
-.custom-toast-pill.custom-toast-warning {
-    border-left-color: #f59e0b;
+/* Icono circular */
+.toast-icon {
+    font-size: 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+/* Texto del mensaje */
+.toast-message-text {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #1e293b;
+    line-height: 1.4;
+    letter-spacing: -0.01em;
+}
+
+/* Franja decorativa lateral izquierda */
+.toast-indicator-strip {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 5px;
+}
+
+/* Barra de progreso inferior temporizada */
+.toast-progress-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    width: 100%;
+    animation: toastProgress 2.8s linear forwards;
+}
+
+@keyframes toastProgress {
+    from {
+        width: 100%;
+    }
+    to {
+        width: 0%;
+    }
+}
+
+/* Variantes de Color Institucional */
+/* Success (Verde esmeralda moderno) */
+.custom-toast-success .toast-indicator-strip,
+.custom-toast-success .toast-progress-bar {
+    background: #10b981;
+}
+
+.custom-toast-success .toast-icon {
+    color: #10b981;
+}
+
+/* Error */
+.custom-toast-error .toast-indicator-strip,
+.custom-toast-error .toast-progress-bar {
+    background: #ef4444;
+}
+
+.custom-toast-error .toast-icon {
+    color: #ef4444;
+}
+
+/* Warning */
+.custom-toast-warning .toast-indicator-strip,
+.custom-toast-warning .toast-progress-bar {
+    background: #f59e0b;
+}
+
+.custom-toast-warning .toast-icon {
+    color: #f59e0b;
 }

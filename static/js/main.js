@@ -28,18 +28,38 @@ window.showToast = function (message, type = 'success') {
     const oldToast = document.querySelector('.custom-toast-pill');
     if (oldToast) oldToast.remove();
 
+    // Mapeo de iconos SVG/FontAwesome según el tipo
+    const icons = {
+        'success': '<i class="fas fa-check-circle"></i>',
+        'error': '<i class="fas fa-circle-exclamation"></i>',
+        'warning': '<i class="fas fa-triangle-exclamation"></i>',
+        'info': '<i class="fas fa-circle-info"></i>'
+    };
+
+    const iconHtml = icons[type] || icons['success'];
+
     const toast = document.createElement('div');
     toast.className = `custom-toast-pill custom-toast-${type}`;
-    toast.textContent = message;
+    toast.innerHTML = `
+        <div class="toast-indicator-strip"></div>
+        <div class="toast-content-body">
+            <span class="toast-icon">${iconHtml}</span>
+            <span class="toast-message-text">${message}</span>
+        </div>
+        <div class="toast-progress-bar"></div>
+    `;
 
     document.body.appendChild(toast);
 
+    // Animación fluida de entrada
     requestAnimationFrame(() => toast.classList.add('show'));
 
+    // Tiempo visible y transición de salida
+    const duration = 2800;
     setTimeout(() => {
         toast.classList.remove('show');
-        setTimeout(() => toast.remove(), 300);
-    }, 2600);
+        setTimeout(() => toast.remove(), 320);
+    }, duration);
 };
 
 // 2.2 Configuración Global Robusta de SweetAlert2 (Preguntas y Advertencias)
