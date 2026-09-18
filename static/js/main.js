@@ -417,7 +417,12 @@ window.toggleStatusAjax = function (url, itemName, currentStatus, callback = nul
                         showToast(data.message || 'Estado actualizado correctamente.', 'success');
 
                         if (typeof callback === 'function') {
-                            callback(data);
+                            try {
+                                callback(data);
+                            } catch (e) {
+                                console.warn("Callback error, recargando tabla:", e);
+                                refreshCurrentTable();
+                            }
                         } else {
                             refreshCurrentTable();
                         }

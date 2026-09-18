@@ -11,26 +11,22 @@
             <p>Gestión de direcciones, departamentos y unidades administrativas.</p>
         </div>
     </div>
-    <div id="table-app">
-        <div class="content-table">
-            <div class="table-controls toolbar-row">
-                <div class="toolbar-center">
-                    <input class="switch-input switch-red" type="checkbox" id="toggleInactiveUnits"
-                           onchange="toggleInactiveUnits(this.checked)">
-                    <label class="switch-wrapper" for="toggleInactiveUnits">
-                        <div class="switch-circle"></div>
-                        <span class="switch-text">Mostrar Inactivos</span>
-                    </label>
-                </div>
-                <div class="toolbar-right">
-                    <input type="text" id="unitSearchInput" data-search-role="unit-search"
-                           class="table-search-input table-search-input--large"
-                           placeholder="Buscar por nombres">
-                </div>
+    <div class="content-table">
+        <div class="table-controls toolbar-row">
+            <div class="toolbar-center">
+                <input class="switch-input switch-red" type="checkbox" id="toggleInactiveUnits">
+                <label class="switch-wrapper" for="toggleInactiveUnits">
+                    <div class="switch-circle"></div>
+                    <span class="switch-text">Mostrar Unidades Inactivas</span>
+                </label>
             </div>
-            <div id="table-content-wrapper">
-                {% include 'institution/partials/partial_unit_table.html' %}
+            <div class="toolbar-right">
+                <input type="text" class="table-search-input table-search-input--large"
+                       placeholder="Buscar por nombre">
             </div>
+        </div>
+        <div id="table-content-wrapper">
+            {% include 'institution/partials/partial_unit_table.html' %}
         </div>
     </div>
 {% endblock %}

@@ -34,13 +34,13 @@
                                     </button>
                                     {% if lvl.is_active %}
                                         <button type="button" class="btn-red-circle"
-                                                onclick="toggleStatusAjax('{% url 'institution:level_toggle' lvl.id %}', 'el nivel {{ lvl.name|escapejs }}', true, () => toggleInactiveLevels(document.getElementById('toggleInactiveLevels')?.checked || false))"
+                                                onclick="toggleStatusAjax('{% url 'institution:level_toggle' lvl.id %}', 'el nivel {{ lvl.name|escapejs }}', true)"
                                                 title="Desactivar">
                                             <i class="fas fa-toggle-off"></i>
                                         </button>
                                     {% else %}
                                         <button type="button" class="btn-green-circle"
-                                                onclick="toggleStatusAjax('{% url 'institution:level_toggle' lvl.id %}', 'el nivel {{ lvl.name|escapejs }}', false, () => toggleInactiveLevels(document.getElementById('toggleInactiveLevels')?.checked || false))"
+                                                onclick="toggleStatusAjax('{% url 'institution:level_toggle' lvl.id %}', 'el nivel {{ lvl.name|escapejs }}', false)"
                                                 title="Activar">
                                             <i class="fas fa-toggle-on"></i>
                                         </button>
