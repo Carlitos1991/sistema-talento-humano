@@ -49,16 +49,29 @@
     <div class="card-large yellow-border">
         <h6 class="section-title"><i class="fa-regular fa-id-card"></i> Hoja de Vida</h6>
         <div class="stat-inner-container">
-            <div id="stat-courses" class="stat-number"><a
-                    href="{{ curriculum_obj.pdf_file.url }}" target="_blank"
-                    class="btn-yellow-circle">
-                <i class="fa-solid fa-file-pdf"></i>
-            </a></div>
-            <div class="stat-label">Hoja de Vida</div>
+            <div id="stat-courses" class="stat-number">
+                {% if curriculum_obj and curriculum_obj.pdf_file %}
+                    <a href="{{ curriculum_obj.pdf_file.url }}" target="_blank"
+                       class="btn-yellow-circle" title="Ver Hoja de Vida">
+                        <i class="fa-solid fa-file-pdf"></i>
+                    </a>
+                {% else %}
+                    <span class="btn-yellow-circle opacity-50" title="Sin archivo disponible">
+                        <i class="fa-solid fa-file-excel text-muted"></i>
+                    </span>
+                {% endif %}
+            </div>
+            <div class="stat-label">
+                {% if curriculum_obj and curriculum_obj.pdf_file %}
+                    Hoja de Vida
+                {% else %}
+                    Sin registrar
+                {% endif %}
+            </div>
         </div>
         <div class="buttons-centered">
             {% if can_edit_person %}
-                <button class="btn-light"
+                <button type="button" class="btn-light"
                         onclick="document.getElementById('pdfInput').click()">
                     <i class="fa-solid fa-cloud-arrow-up"></i>
                     SUBIR
