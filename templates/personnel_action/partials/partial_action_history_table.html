@@ -38,7 +38,7 @@
                         <div class="actions-wrapper">
                             <!-- Ver Detalle -->
                             {% if perms.personnel_actions.view_personnelaction %}
-                                <button type="button" class="btn-second"
+                                <button type="button" class="btn-blue-circle"
                                         onclick="openAjaxModal('{% url 'personnel_actions:action_detail' action.pk %}')"
                                         title="Ver Detalle">
                                     <i class="fa-solid fa-eye"></i>
@@ -47,7 +47,7 @@
 
                             <!-- Editar (solo si no está registrada) -->
                             {% if perms.personnel_actions.change_personnelaction and not action.is_registered %}
-                                <button type="button" class="btn-seventh"
+                                <button type="button" class="btn-yellow-circle"
                                         onclick="openAjaxModal('{% url 'personnel_actions:action_update' action.pk %}')"
                                         title="Editar Acción">
                                     <i class="fa-solid fa-edit"></i>
@@ -56,7 +56,7 @@
 
                             <!-- Registrar (solo si no está registrada) -->
                             {% if perms.personnel_actions.change_personnelaction and not action.is_registered %}
-                                <button type="button" class="btn-eleventh"
+                                <button type="button" class="btn-green-circle"
                                         onclick="registerActionDirect('{% url 'personnel_actions:action_register' action.pk %}', '{{ action.number|escapejs }}')"
                                         title="Registrar Acción">
                                     <i class="fa-solid fa-check-circle"></i>

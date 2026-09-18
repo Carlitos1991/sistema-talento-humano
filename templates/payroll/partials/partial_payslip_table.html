@@ -77,12 +77,12 @@
                             </button>
 
                             <a href="{% url 'payroll:payslip_print' p.id %}" target="_blank"
-                               class="btn-sixth"
+                               class="btn-red-circle"
                                title="Imprimir Rol Oficial">
                                 <i class="fas fa-print"></i>
                             </a>
 
-                            <button class="btn-seventh" onclick="sendPayslipEmail({{ p.id }})"
+                            <button class="btn-yellow-circle" onclick="sendPayslipEmail({{ p.id }})"
                                     title="Enviar por Correo">
                                 <i class="fas fa-envelope"></i>
                             </button>

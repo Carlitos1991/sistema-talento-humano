@@ -91,7 +91,7 @@
                         <div class="actions-wrapper">
                             {% if p.status_code == 'APPROVED' %}
                                 <a href="{% url 'permissions:permit_report' p.id %}" target="_blank"
-                                   class="btn-sixth" title="Imprimir reporte">
+                                   class="btn-red-circle" title="Imprimir reporte">
                                     <i class="fa-solid fa-print"></i>
                                 </a>
                             {% elif p.status_code == 'REJECTED' and can_insist_rejected_permits %}

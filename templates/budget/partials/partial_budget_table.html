@@ -72,7 +72,7 @@
                             <span class="text-xs fw-bold">{{ line.current_employee.person.full_name }}</span>
                         </div>
                     {% else %}
-                        <span class="status-badge badge-neutral">SIN ASIGNAR</span>
+                        <span class="badge badge-blue">SIN ASIGNAR</span>
                     {% endif %}
                 </td>
 
@@ -88,7 +88,7 @@
                 <!-- Columna 6: Estado -->
                 <td>
                     {% with code=line.status_item.code %}
-                        <span class="status-badge {{ code|lower }}">
+                        <span class="badge {{ code|lower }}">
                         {% if code == 'LIBRE' %}
                             <i class="fa-solid fa-lock-open"></i>
                         {% elif code == 'OCUPADA' %}
@@ -111,48 +111,44 @@
                 <td class="actions">
                     <div class="actions-wrapper">
                         {% if not line.number_individual %}
-                            <button class="btn-icon btn-create-action"
+                            <button class="btn-red-circle"
                                     onclick="openAssignNumberModal({{ line.id }})"
-                                    title="Asignar Número Individual"
-                                    style="background: linear-gradient(to right, #0d9488, #14b8a6);">
+                                    title="Asignar Número Individual">
                                 <i class="fa-solid fa-hashtag"></i>
                             </button>
                         {% endif %}
                         {% if line.current_employee %}
-                            <!-- Botón Liberar (Rojo) -->
-                            <button class="btn-views-action btn-delete-action" onclick="openReleaseModal({{ line.id }})"
+                            <button class="btn-red-circle" onclick="openReleaseModal({{ line.id }})"
                                     title="Liberar Partida">
                                 <i class="fa-solid fa-user-minus"></i>
                             </button>
                         {% else %}
-                            <!-- Botón Asignar (Azul) -->
-                            <button class="btn-views-action" style="background: #2563eb; color:white;"
+                            <button class="btn-blue-circle"
                                     onclick="openAssignEmployeeModal({{ line.id }})" title="Asignar Persona">
                                 <i class="fa-solid fa-user-plus"></i>
                             </button>
                         {% endif %}
                         {% if not line.current_employee %}
-                            <button class="btn-views-action"
+                            <button class="btn-third"
                                     onclick="openChangeStatusModal({{ line.id }})"
-                                    title="Pasar a Concurso/Litigio/Inactiva"
-                                    style="background: linear-gradient(to right, #6366f1, #818cf8); color: white;">
+                                    title="Pasar a Concurso/Litigio/Inactiva">
                                 <i class="fa-solid fa-arrows-rotate"></i>
                             </button>
                         {% endif %}
                         <a href="{% url 'budget:budget_detail' line.id %}"
-                           class="btn-list-action"
+                           class="btn-fifth"
                            title="Ver Detalle Completo">
                             <i class="fa-solid fa-folder-closed"></i>
                         </a>
                     </div>
                 </td>
                 <td>
-                    <button onclick="window.openChangesHistory({{ line.pk }})" class="btn-views-action"
-                            style="background: linear-gradient(to right, #0515c1, #1a37ca);">
+                    <button onclick="window.openChangesHistory({{ line.pk }})" class="btn-dark-blue-circle"
+                            title="Historial de personas">
                         <i class="fas fa-timeline"></i>
                     </button>
-                    <button onclick="window.openOccupantsHistory({{ line.pk }})" class="btn-views-action"
-                            style="background: linear-gradient(to right, #61bd93, #118f5f)">
+                    <button onclick="window.openOccupantsHistory({{ line.pk }})" class="btn-yellow-circle"
+                            title="Historial de partida">
                         <i class="fa-solid fa-people-arrows"></i>
                     </button>
                 </td>

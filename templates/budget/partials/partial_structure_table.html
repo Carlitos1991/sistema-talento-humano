@@ -1,4 +1,3 @@
-<!-- templates/budget/partials/partial_structure_table.html -->
 {% load static %}
 <div class="table-container">
     <table>
@@ -26,20 +25,20 @@
                     <div class="actions-wrapper">
                         <!-- NAVEGACIÓN DINÁMICA: Usa nav_url_name de la vista -->
                         {% if nav_url_name %}
-                            <a href="{% url nav_url_name item.id %}" class="btn-icon btn-list-action"
+                            <a href="{% url nav_url_name item.id %}" class="btn-blue-circle"
                                title="Ver Siguiente Nivel">
                                 <i class="fas {% if model_type == 'program' %}fa-sitemap{% elif model_type == 'subprogram' %}fa-folder-tree{% else %}fa-tasks{% endif %}"></i>
                             </a>
                         {% endif %}
 
-                        <button class="btn-icon btn-views-action"
+                        <button class="btn-yellow-circle"
                                 onclick="openEditStructure('{{ model_type }}', {{ item.id }})" title="Editar">
                             <i class="fas fa-pencil"></i>
                         </button>
 
                         <button id="btn-toggle-{{ item.id }}"
                                 type="button"
-                                class="btn-icon {% if item.is_active %}btn-delete-action{% else %}btn-create-action{% endif %}"
+                                class="{% if item.is_active %}btn-red-circle{% else %}btn-green-circle{% endif %}"
                                 onclick="toggleStructureActive('{{ model_type }}', {{ item.id }}, {{ item.is_active|yesno:'true,false' }})"
                                 title="{% if item.is_active %}Desactivar{% else %}Activar{% endif %}">
                             <i class="fas {% if item.is_active %}fa-power-off{% else %}fa-toggle-on{% endif %}"></i>

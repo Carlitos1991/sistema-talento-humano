@@ -23,7 +23,7 @@
             {% if perms.permitrequest.add_permittype %}
                 <button id="btn-add-type" type="button"
                         data-url="{% url 'permissions:permit_type_create' %}"
-                        class="btn btn-create">
+                        class="btn-secondary">
                     <i class="fas fa-plus"></i> Nuevo Tipo de permiso
                 </button>
             {% endif %}

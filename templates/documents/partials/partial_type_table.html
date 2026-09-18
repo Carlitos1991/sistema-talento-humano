@@ -24,9 +24,9 @@
                         {% endif %}
                     </td>
                     <td class="text-end">
-                        <button class="btn-seventh btn-views-action"
-                                onclick="openEditModal('{{ type.id }}', '{{ type.name }}', '{{ type.is_active|yesno:'true,false' }}')">
-                            <i class="fa-solid fa-pen"></i>
+                        <button type="button" class="btn-yellow-circle"
+                                onclick="openAjaxModal('{% url 'documents:doc_type_update' type.pk %}')" title="Editar">
+                            <i class="fa-solid fa-edit"></i>
                         </button>
                         <!-- Botón Toggle Estado -->
                         <button class="{% if type.is_active %}btn-sixth{% else %}btn-eleventh{% endif %}"

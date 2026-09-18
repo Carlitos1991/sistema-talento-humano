@@ -6,13 +6,11 @@
            data-external-search="true">
         <thead>
         <tr>
-            <th><i class="fa-solid fa-list-ol"></i></th>
-            <th style="width:6%"><i class="fas fa-image"></i> Foto</th>
-            <th data-field="full_name_str" onclick="sortPersonTable(this)" class="sortable-header" style="cursor: pointer;">
+            <th class="width-5"><i class="fa-solid fa-list-ol"></i></th>
+            <th class="width-35">
                 <i class="fas fa-user"></i>&nbsp;Empleado
-                <span class="sort-arrow">⇅</span>
             </th>
-            <th data-field="document_number" onclick="sortPersonTable(this)" class="sortable-header" style="cursor: pointer;">
+            <th data-field="document_number" onclick="sortPersonTable(this)" class="sortable-header">
                 <i class="fas fa-id-card"></i>&nbsp;Cédula
                 <span class="sort-arrow">⇅</span>
             </th>
@@ -27,13 +25,6 @@
             <tr class="location-row" id="row-{{ item.employee.id }}"
                 data-search-text="{{ item.employee.person.full_name|default:''|lower }} {{ item.employee.person.first_name|default:''|lower }} {{ item.employee.person.last_name|default:''|lower }} {{ item.employee.person.document_number|default:''|lower }} {{ item.employee.person.email|default:''|lower }} {{ item.employee.person.phone_number|default:''|lower }} {{ item.employee.area.name|default:''|lower }}">
                 <td>{{ page_obj.start_index|add:forloop.counter0 }}</td>
-                <td class="text-center" style="width:6%;">
-                    {% if item.employee.person.photo %}
-                        <img src="{{ item.employee.person.photo.url }}" alt="{{ item.employee.person.first_name }}" class="person-avatar">
-                    {% else %}
-                        <div class="person-avatar-placeholder">{{ item.employee.person.first_name|first }}{{ item.employee.person.last_name|first }}</div>
-                    {% endif %}
-                </td>
                 <td>
                     <div class="person-details">
                         <h4>{{ item.employee.person.full_name }}</h4>
@@ -41,9 +32,9 @@
                 </td>
                 <td>{{ item.employee.person.document_number|default:"--" }}</td>
                 <td class="text-center">
-                    <div class="actions-wrapper" style="justify-content: center;">
+                    <div class="actions-wrapper">
                         {% if perms.permitrequest.add_permitrequest %}
-                            <button type="button" class="btn-create-action js-register-bitacora"
+                            <button type="button" class="btn-green-circle js-register-bitacora"
                                     data-employee-id="{{ item.employee.pk }}"
                                     data-employee-name="{{ item.employee.person.get_full_name }}"
                                     title="Ingresar Bitácora">
@@ -52,13 +43,13 @@
                         {% endif %}
 
                         {% if perms.permitrequest.view_permitrequest %}
-                            <button type="button" class="btn-views-action js-list-bitacoras"
+                            <button type="button" class="btn-blue-circle js-list-bitacoras"
                                     data-employee-id="{{ item.employee.pk }}"
                                     data-employee-name="{{ item.employee.person.get_full_name }}"
                                     title="Listar Bitácoras">
                                 <i class="fas fa-list-ul"></i>
                             </button>
-                            <button type="button" class="btn-info-action js-approved-bitacoras"
+                            <button type="button" class="btn-dark-blue-circle js-approved-bitacoras"
                                     data-employee-id="{{ item.employee.pk }}"
                                     data-employee-name="{{ item.employee.person.get_full_name }}"
                                     title="Historial Bitácoras Aprobadas">
@@ -72,7 +63,7 @@
                     <td>
                         <div class="actions-wrapper">
                             {% if perms.permitrequest.add_permitrequest %}
-                                <button type="button" class="btn-create-action js-generate-permit"
+                                <button type="button" class="btn-green-circle js-generate-permit"
                                         data-employee-id="{{ item.employee.pk }}"
                                         data-employee-name="{{ item.employee.person.get_full_name }}"
                                         title="Generar Permiso">
@@ -81,7 +72,7 @@
                             {% endif %}
 
                             {% if perms.permitrequest.view_permitrequest %}
-                                <button type="button" class="btn-list-action js-view-history"
+                                <button type="button" class="btn-fifth js-view-history"
                                         data-employee-id="{{ item.employee.pk }}"
                                         title="Ver Historial de Permisos">
                                     <i class="fa-solid fa-list"></i>

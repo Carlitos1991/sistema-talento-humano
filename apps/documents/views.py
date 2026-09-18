@@ -11,7 +11,7 @@ from django.utils import timezone
 from datetime import datetime
 import re
 import os
-
+from django.shortcuts import render
 from .forms import DocumentForm
 from .forms import DocumentTypeForm
 from .models import Document
@@ -52,7 +52,8 @@ class DocumentListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
             queryset = queryset.filter(registration_date__year=year)
 
         # Si el usuario NO tiene permiso de eliminar, además restringir a sus propios documentos
-        if not getattr(self.request.user, 'is_superuser', False) and not self.request.user.has_perm('documents.delete_document'):
+        if not getattr(self.request.user, 'is_superuser', False) and not self.request.user.has_perm(
+                'documents.delete_document'):
             queryset = queryset.filter(created_by=self.request.user)
         q = self.request.GET.get('q')
         if q:
@@ -102,11 +103,12 @@ class DocumentListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
             if is_export:
                 self.object_list = self.get_queryset()
                 # Calcular índice global para la exportación
-                global_order = list(Document.objects.filter(is_active=True).order_by('-registration_date').values_list('id', flat=True))
+                global_order = list(
+                    Document.objects.filter(is_active=True).order_by('-registration_date').values_list('id', flat=True))
                 rank_map = {did: idx + 1 for idx, did in enumerate(global_order)}
                 for o in self.object_list:
                     o.global_index = rank_map.get(o.id)
-                
+
                 html = render_to_string(
                     'documents/partials/partial_document_table.html',
                     {'documents': self.object_list},
@@ -119,7 +121,8 @@ class DocumentListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
             paginator, page_obj, object_list, is_paginated = self.paginate_queryset(self.object_list, self.paginate_by)
 
             # Calcular índice global para la página actual
-            global_order = list(Document.objects.filter(is_active=True).order_by('-registration_date').values_list('id', flat=True))
+            global_order = list(
+                Document.objects.filter(is_active=True).order_by('-registration_date').values_list('id', flat=True))
             rank_map = {did: idx + 1 for idx, did in enumerate(global_order)}
             for o in object_list:
                 o.global_index = rank_map.get(o.id)
@@ -159,7 +162,8 @@ class DocumentListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
             stats = {
                 'total': Document.objects.filter(stats_total_filter).count(),
                 'total_user': Document.objects.filter(stats_total_filter, created_by=request.user).count(),
-                'regimes': [{'code': t.id, 'name': t.name, 'count': t.count, 'user_count': t.user_count} for t in types_qs]
+                'regimes': [{'code': t.id, 'name': t.name, 'count': t.count, 'user_count': t.user_count} for t in
+                            types_qs]
             }
 
             pagination = {
@@ -181,13 +185,18 @@ class DocumentListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
                 d_from = datetime.strptime(date_from, '%Y-%m-%d').date()
                 d_to = datetime.strptime(date_to, '%Y-%m-%d').date()
                 types_qs = DocumentType.objects.filter(is_active=True).annotate(
-                    count=Count('documents', filter=Q(documents__is_active=True, documents__registration_date__date__range=(d_from, d_to))),
-                    user_count=Count('documents', filter=Q(documents__is_active=True, documents__registration_date__date__range=(d_from, d_to), documents__created_by=self.request.user))
+                    count=Count('documents', filter=Q(documents__is_active=True,
+                                                      documents__registration_date__date__range=(d_from, d_to))),
+                    user_count=Count('documents', filter=Q(documents__is_active=True,
+                                                           documents__registration_date__date__range=(d_from, d_to),
+                                                           documents__created_by=self.request.user))
                 ).order_by('name')
 
                 ctx['stats'] = {
-                    'total': Document.objects.filter(is_active=True, registration_date__date__range=(d_from, d_to)).count(),
-                    'total_user': Document.objects.filter(is_active=True, registration_date__date__range=(d_from, d_to), created_by=self.request.user).count(),
+                    'total': Document.objects.filter(is_active=True,
+                                                     registration_date__date__range=(d_from, d_to)).count(),
+                    'total_user': Document.objects.filter(is_active=True, registration_date__date__range=(d_from, d_to),
+                                                          created_by=self.request.user).count(),
                     'regimes': [
                         {'code': t.id, 'name': t.name, 'count': t.count, 'user_count': t.user_count}
                         for t in types_qs
@@ -200,13 +209,17 @@ class DocumentListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
                 except (TypeError, ValueError):
                     year = timezone.now().year
                 types_qs = DocumentType.objects.filter(is_active=True).annotate(
-                    count=Count('documents', filter=Q(documents__is_active=True, documents__registration_date__year=year)),
-                    user_count=Count('documents', filter=Q(documents__is_active=True, documents__registration_date__year=year, documents__created_by=self.request.user))
+                    count=Count('documents',
+                                filter=Q(documents__is_active=True, documents__registration_date__year=year)),
+                    user_count=Count('documents',
+                                     filter=Q(documents__is_active=True, documents__registration_date__year=year,
+                                              documents__created_by=self.request.user))
                 ).order_by('name')
 
                 ctx['stats'] = {
                     'total': Document.objects.filter(is_active=True, registration_date__year=year).count(),
-                    'total_user': Document.objects.filter(is_active=True, registration_date__year=year, created_by=self.request.user).count(),
+                    'total_user': Document.objects.filter(is_active=True, registration_date__year=year,
+                                                          created_by=self.request.user).count(),
                     'regimes': [
                         {'code': t.id, 'name': t.name, 'count': t.count, 'user_count': t.user_count}
                         for t in types_qs
@@ -219,12 +232,15 @@ class DocumentListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
                 year = timezone.now().year
             types_qs = DocumentType.objects.filter(is_active=True).annotate(
                 count=Count('documents', filter=Q(documents__is_active=True, documents__registration_date__year=year)),
-                user_count=Count('documents', filter=Q(documents__is_active=True, documents__registration_date__year=year, documents__created_by=self.request.user))
+                user_count=Count('documents',
+                                 filter=Q(documents__is_active=True, documents__registration_date__year=year,
+                                          documents__created_by=self.request.user))
             ).order_by('name')
 
             ctx['stats'] = {
                 'total': Document.objects.filter(is_active=True, registration_date__year=year).count(),
-                'total_user': Document.objects.filter(is_active=True, registration_date__year=year, created_by=self.request.user).count(),
+                'total_user': Document.objects.filter(is_active=True, registration_date__year=year,
+                                                      created_by=self.request.user).count(),
                 'regimes': [
                     {'code': t.id, 'name': t.name, 'count': t.count, 'user_count': t.user_count}
                     for t in types_qs
@@ -232,7 +248,8 @@ class DocumentListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
             }
         # Anotar índices globales para los objetos de la página (mismo criterio que en la petición AJAX)
         try:
-            global_order = list(Document.objects.filter(is_active=True).order_by('-registration_date').values_list('id', flat=True))
+            global_order = list(
+                Document.objects.filter(is_active=True).order_by('-registration_date').values_list('id', flat=True))
             rank_map = {did: idx + 1 for idx, did in enumerate(global_order)}
             docs = ctx.get('documents')
             if docs:
@@ -291,40 +308,72 @@ class DocumentTypeListView(LoginRequiredMixin, PermissionRequiredMixin, ListView
 class DocumentTypeCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     model = DocumentType
     form_class = DocumentTypeForm
+    template_name = 'documents/modals/modal_type_form.html'  # Revisa que coincida exactamente con la carpeta
     permission_required = 'documents.add_documenttype'
+
+    def get(self, request, *args, **kwargs):
+        try:
+            self.object = None
+            form = self.get_form()
+            return render(request, self.template_name, {'form': form})
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return HttpResponse(f"Error cargando formulario: {str(e)}", status=500)
 
     def form_valid(self, form):
         self.object = form.save()
-        return JsonResponse({
-            'success': True,
-            'message': 'Tipo de documento creado correctamente.'
-        })
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': True,
+                'message': 'Tipo de documento creado correctamente.'
+            })
+        return super().form_valid(form)
 
     def form_invalid(self, form):
-        return JsonResponse({
-            'success': False,
-            'errors': form.errors
-        }, status=400)
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            errors_data = {field: errors[0] for field, errors in form.errors.items()}
+            return JsonResponse({
+                'success': False,
+                'errors': errors_data
+            }, status=400)
+        return super().form_invalid(form)
 
 
 # --- EDITAR (Responde JSON para Vue) ---
 class DocumentTypeUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     model = DocumentType
     form_class = DocumentTypeForm
+    template_name = 'documents/modals/modal_type_form.html'
     permission_required = 'documents.change_documenttype'
+
+    def get(self, request, *args, **kwargs):
+        try:
+            self.object = self.get_object()
+            form = self.get_form()
+            return render(request, self.template_name, {'form': form, 'object': self.object})
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return HttpResponse(f"Error cargando formulario: {str(e)}", status=500)
 
     def form_valid(self, form):
         self.object = form.save()
-        return JsonResponse({
-            'success': True,
-            'message': 'Registro actualizado correctamente.'
-        })
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': True,
+                'message': 'Registro actualizado correctamente.'
+            })
+        return super().form_valid(form)
 
     def form_invalid(self, form):
-        return JsonResponse({
-            'success': False,
-            'errors': form.errors
-        }, status=400)
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            errors_data = {field: errors[0] for field, errors in form.errors.items()}
+            return JsonResponse({
+                'success': False,
+                'errors': errors_data
+            }, status=400)
+        return super().form_invalid(form)
 
 
 class DocumentUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
@@ -385,7 +434,8 @@ def upload_document_file(request, pk):
     # Reemplazar o asignar archivo
     doc.file_attachment = file
     doc.save()
-    return JsonResponse({'success': True, 'message': 'Archivo guardado correctamente.', 'file_url': doc.file_attachment.url})
+    return JsonResponse(
+        {'success': True, 'message': 'Archivo guardado correctamente.', 'file_url': doc.file_attachment.url})
 
 
 @require_POST
@@ -503,7 +553,8 @@ def create_multiple_documents(request):
         doc.save()
         created.append({'id': doc.id, 'filing_code': doc.filing_code})
 
-    return JsonResponse({'success': True, 'created': created, 'message': f'Documento{"s" if len(created) > 1 else ""} creado{"s" if len(created) > 1 else ""} exitosamente'})
+    return JsonResponse({'success': True, 'created': created,
+                         'message': f'Documento{"s" if len(created) > 1 else ""} creado{"s" if len(created) > 1 else ""} exitosamente'})
 
 
 def next_filing_code(request, category_id):

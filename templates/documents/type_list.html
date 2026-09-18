@@ -10,8 +10,9 @@
                 <p>Configuración de categorías para la gestión documental</p>
             </div>
             {% if perms.documents.add_documenttype %}
-                <button class="btn-secondary" onclick="openCreateModal()">
-                    <i class="fa-solid fa-plus"></i> Nuevo Tipo
+                <button type="button" class="btn-primary"
+                        onclick="openAjaxModal('{% url 'documents:doc_type_create' %}')">
+                    <i class="fa-solid fa-plus me-1"></i> Nuevo Tipo
                 </button>
             {% endif %}
         </div>
@@ -20,6 +21,7 @@
             <div class="content-table">
                 <!-- Controles -->
                 <div class="table-controls toolbar-row">
+                    <div class="toolbar-left"></div>
                     <div class="toolbar-right">
                         <input type="text" id="searchInput" class="table-search-input table-search-input--large"
                                placeholder="Buscar tipo de documento">

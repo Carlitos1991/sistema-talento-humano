@@ -58,7 +58,7 @@
                                 {% if perms.employee_archive.change_employeedocumenttype %}
                                     <div class="actions-wrapper">
                                         <button type="button"
-                                                class="btn-icon btn-detail-action"
+                                                class="btn-yellow-circle"
                                                 title="Editar"
                                                 data-update-url="{% url 'employee_archive:archive_type_update' row.id %}"
                                                 data-code="{{ row.code|default_if_none:'' }}"

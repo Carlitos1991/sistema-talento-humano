@@ -59,14 +59,14 @@
                     <div class="action-buttons" style="display: flex; justify-content: center; gap: 5px;">
                         {% if item.has_vacation %}
                             <!-- Botón Ver Vacaciones -->
-                            <button class="btn-list-action"
+                            <button class="btn-blue-circle"
                                     onclick="openVacationModal({{ item.employee.id }})"
                                     title="Ver Vacaciones">
                                 <i class="fas fa-plane"></i>
                             </button>
                         {% else %}
                             <!-- Botón Crear Primera Vacación -->
-                            <button class="btn-success-action"
+                            <button class="btn-green-circle"
                                     onclick="createFirstVacation({{ item.employee.id }})"
                                     title="Crear Primera Vacación">
                                 <i class="fas fa-plus"></i>

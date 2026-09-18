@@ -42,14 +42,14 @@
                         <div class="actions-wrapper justify-content-center">
                             {% if perms.personnel_actions.add_personnelaction %}
                                 <button type="button"
-                                        class="btn-eleventh js-generate-action"
+                                        class="btn-green-circle js-generate-action"
                                         data-employee-id="{{ employee.id }}"
                                         title="Generar Acción">
                                     <i class="fa-solid fa-file-circle-plus"></i>
                                 </button>
                             {% endif %}
                             <button type="button"
-                                    class="btn-sixth js-view-history"
+                                    class="btn-red-circle js-view-history"
                                     data-employee-id="{{ employee.id }}"
                                     title="Ver Historial">
                                 <i class="fa-solid fa-clock-rotate-left"></i>

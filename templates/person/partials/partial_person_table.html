@@ -96,7 +96,7 @@
                                 <div class="actions-wrapper">
                                     {% if perms.person.change_person %}
                                         <button type="button"
-                                                class="btn-second"
+                                                class="btn-blue-circle"
                                                 title="Reubicar Empleado"
                                                 onclick="window.openRelocateEmployeeModal('{{ person.id }}', '{{ person.first_name }} {{ person.last_name }}', '{{ person.employee_profile.area.name|default:'' }}')">
                                             <i class="fa-solid fa-sitemap"></i>

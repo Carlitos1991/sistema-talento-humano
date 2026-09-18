@@ -26,10 +26,10 @@
         {% for type in types %}
             <tr>
                 <!-- Nombre + Badge de hijos -->
-                <td style="font-weight: 500;">
+                <td>
                     {{ type.name }}
                     {% if type.sub_types.exists %}
-                        <span class="badge-code ms-2" style="font-size: 0.7rem;">
+                        <span class="badge-sm badge-blue">
                             {{ type.sub_types.count }} Sub-tipos
                         </span>
                     {% endif %}
@@ -58,9 +58,9 @@
                 <!-- Badge de Estado (Usando tus clases status-badge) -->
                 <td class="text-center">
                     {% if type.is_active %}
-                        <span class="status-badge active">Activo</span>
+                        <span class="badge badge-green">Activo</span>
                     {% else %}
-                        <span class="status-badge inactive">Inactivo</span>
+                        <span class="badge badge-red">Inactivo</span>
                     {% endif %}
                 </td>
 
@@ -70,7 +70,7 @@
 
                         <!-- 1. EDITAR (Amarillo/Ambar) -->
                         {% if perms.permitrequest.change_permittype %}
-                            <button class="btn-views-action js-edit"
+                            <button class="btn-yellow-circle js-edit"
                                     data-url="{% url 'permissions:permit_type_update' type.pk %}"
                                     title="Editar">
                                 <i class="fa-solid fa-pen"></i>
@@ -79,7 +79,7 @@
 
                         <!-- 2. ALTA/BAJA (Cyan) -->
                         {% if perms.permitrequest.change_permittype %}
-                            <button class="btn-restore-action js-toggle"
+                            <button class="btn-red-circle js-toggle"
                                     data-url="{% url 'permissions:permit_type_toggle' type.pk %}"
                                     title="{% if type.is_active %}Dar de Baja{% else %}Dar de Alta{% endif %}">
                                 <i class="fa-solid fa-power-off"></i>
@@ -88,7 +88,7 @@
 
                         <!-- 3. AGREGAR SUB-ITEM (Verde) -->
                         {% if perms.permitrequest.add_permittype %}
-                            <button class="btn-create-action js-add-sub"
+                            <button class="btn-green-circle js-add-sub"
                                     data-url="{% url 'permissions:permit_type_create' %}?parent={{ type.pk }}"
                                     title="Agregar Sub-item">
                                 <i class="fa-solid fa-plus"></i>
@@ -96,7 +96,7 @@
                         {% endif %}
 
                         <!-- 4. LISTAR SUB-ITEMS (Azul oscuro) -->
-                        <button class="btn-list-action js-view-subs-modal"
+                        <button class="btn-dark-blue-circle js-view-subs-modal"
                                 data-parent-id="{{ type.pk }}"
                                 title="Ver Sub-items">
                             <i class="fa-solid fa-list-ul"></i>

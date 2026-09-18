@@ -1,56 +1,69 @@
-<div id="document-type-app" v-cloak>
-    <!-- Overlay principal controlado por isVisible -->
-    <div class="modal-overlay" :class="{ 'hidden': !isVisible }" id="type-modal-overlay">
-        <div class="modal-container animate-scale-in">
+{% load static %}
 
-            <!-- HEADER GRADIENTE -->
-            <div class="modal-header modal-header-gradient">
-                <h3 class="modal-title text-white">
-                    <i class="fa-solid fa-tags me-2"></i> [[ modalTitle ]]
-                </h3>
-                <button type="button" class="btn-close-modal text-white-opacity" @click="closeModal">
-                    &times;
-                </button>
+<div class="modal-overlay hidden" id="modal-document-type">
+    <div class="modal-container-small animate-scale-in">
+
+        <!-- HEADER -->
+        <div class="modal-header">
+            <div class="header-content-group">
+                <div class="header-icon-circle">
+                    <i class="fa-solid fa-tags"></i>
+                </div>
+                <div>
+                    <h2 class="header-title">
+                        {% if form.instance.pk %}Editar Tipo de Documento{% else %}Nuevo Tipo de Documento{% endif %}
+                    </h2>
+                </div>
+            </div>
+            <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <form method="POST"
+              action="
+                      {% if form.instance.pk %}{% url 'documents:doc_type_update' form.instance.pk %}{% else %}{% url 'documents:doc_type_create' %}{% endif %}"
+              onsubmit="submitAjaxForm(event)">
+            {% csrf_token %}
+
+            <!-- BODY -->
+            <div class="modal-body-custom">
+                <!-- Campo Nombre -->
+                <div class="form-group mb-3">
+                    <label class="form-label" for="{{ form.name.id_for_label }}">
+                        Nombre del Tipo <span class="text-red">*</span>
+                    </label>
+                    <input type="text"
+                           name="{{ form.name.name }}"
+                           id="{{ form.name.id_for_label }}"
+                           value="{{ form.name.value|default:'' }}"
+                           required
+                           class="form-control"
+                           placeholder="Ej: Memorando, Oficio, Informe Técnico">
+                    <div class="invalid-feedback"></div>
+                </div>
+
+                <!-- Campo Activo -->
+                <div class="form-check form-switch mt-3">
+                    <input class="form-check-input"
+                           type="checkbox"
+                           name="{{ form.is_active.name }}"
+                           id="{{ form.is_active.id_for_label }}"
+                           {% if form.is_active.value or not form.instance.pk %}checked{% endif %}>
+                    <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                        Registro Activo
+                    </label>
+                </div>
             </div>
 
-            <form @submit.prevent="submitForm">
-                <!-- BODY -->
-                <div class="modal-body">
-                    {% csrf_token %}
-
-                    <!-- Campo Nombre -->
-                    <div class="form-group mb-3">
-                        <label class="form-label required">Nombre del Tipo</label>
-                        <input
-                                type="text"
-                                v-model="form.name"
-                                required
-                                class="form-control"
-                                :class="{ 'is-invalid': errors.name }"
-                                placeholder="Ej: Memorando, Oficio, Informe Técnico">
-                        <div v-if="errors.name" class="invalid-feedback">
-                            [[ errors.name[0] ]]
-                        </div>
-                    </div>
-
-                    <!-- Campo Activo -->
-                    <div class="form-check form-switch mt-3">
-                        <input class="form-check-input" type="checkbox" id="isActiveCheck" v-model="form.is_active">
-                        <label class="form-check-label" for="isActiveCheck">
-                            [[ form.is_active ? 'Registro Activo' : 'Registro Inactivo' ]]
-                        </label>
-                    </div>
-                </div>
-
-                <!-- FOOTER -->
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-cancel" @click="closeModal">Cancelar</button>
-                    <button type="submit" class="btn btn-save">
-                        <i class="fas fa-save me-1"></i>
-                        [[ isEditing ? 'Actualizar' : 'Crear' ]]
-                    </button>
-                </div>
-            </form>
-        </div>
+            <!-- FOOTER -->
+            <div class="modal-footer-medium">
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-1"></i>
+                    {% if form.instance.pk %}Actualizar{% else %}Guardar{% endif %}
+                </button>
+            </div>
+        </form>
     </div>
 </div>

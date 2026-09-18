@@ -28,18 +28,18 @@
                         {% if perms.institution.change_organizationallevel %}
                             <td class="actions text-center">
                                 <div class="actions-wrapper">
-                                    <button class="btn-seventh"
+                                    <button class="btn-yellow-circle"
                                             onclick="openAjaxModal('{% url 'institution:level_update' lvl.id %}')">
                                         <i class="fas fa-pencil"></i>
                                     </button>
                                     {% if lvl.is_active %}
-                                        <button class="btn-sixth"
+                                        <button class="btn-red-circle"
                                                 onclick="toggleLevelStatus('{% url 'institution:level_toggle' lvl.id %}', '{{ lvl.name|escapejs }}')"
                                                 title="Desactivar">
                                             <i class="fas fa-toggle-off"></i>
                                         </button>
                                     {% else %}
-                                        <button class="btn-eleventh"
+                                        <button class="btn-green-circle"
                                                 onclick="toggleLevelStatus('{% url 'institution:level_toggle' lvl.id %}', '{{ lvl.name|escapejs }}')"
                                                 title="Activar">
                                             <i class="fas fa-toggle-on"></i>

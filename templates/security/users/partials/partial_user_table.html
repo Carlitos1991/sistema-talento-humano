@@ -87,13 +87,13 @@
                             {% endif %}
                             {% if person.user and perms.core.change_user %}
                                 {% if person.user.is_active %}
-                                    <button class="btn-sixth"
+                                    <button class="btn-red-circle"
                                             onclick="toggleUserStatus('{{ person.id }}', '{{ person.first_name }}', true)"
                                             title="Desactivar Acceso">
                                         <i class="fas fa-power-off"></i>
                                     </button>
                                 {% else %}
-                                    <button class="btn-eleventh"
+                                    <button class="btn-green-circle"
                                             onclick="toggleUserStatus('{{ person.id }}', '{{ person.first_name }}', false)"
                                             title="Activar Acceso">
                                         <i class="fas fa-toggle-on"></i>

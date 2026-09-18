@@ -80,20 +80,20 @@
                     <td class="actions">
                         <div class="actions-wrapper">
                             {% if perms.personnel_actions.view_personnelaction %}
-                                <button type="button" class="btn-second"
+                                <button type="button" class="btn-blue-circle"
                                         onclick="openAjaxModal('{% url 'personnel_actions:action_detail' action.pk %}')"
                                         title="Ver Detalle">
                                     <i class="fa-solid fa-eye"></i>
                                 </button>
                             {% endif %}
                             {% if perms.personnel_actions.change_personnelaction and not action.is_registered %}
-                                <button class="btn-seventh js-edit-action"
+                                <button class="btn-yellow-circle js-edit-action"
                                         data-action-id="{{ action.pk }}" title="Editar Acción">
                                     <i class="fa-solid fa-edit"></i>
                                 </button>
                             {% endif %}
                             {% if not action.is_registered %}
-                                <button class="btn-sixth js-inactivate-action"
+                                <button class="btn-red-circle js-inactivate-action"
                                         data-action-id="{{ action.pk }}"
                                         data-number="{{ action.number }}"
                                         title="Anular Acción">
@@ -101,7 +101,7 @@
                                 </button>
                             {% endif %}
                             {% if perms.personnel_actions.change_personnelaction and not action.is_registered %}
-                                <button class="btn-eleventh js-register-action"
+                                <button class="btn-green-circle js-register-action"
                                         data-action-id="{{ action.pk }}" title="Registrar Acción">
                                     <i class="fa-solid fa-check-circle"></i>
                                 </button>

@@ -2334,9 +2334,9 @@ input.is-valid:focus, select.is-valid:focus, textarea.is-valid:focus, .input-fie
 
 
 /* --- Base compartida para botones circulares (Primera Fila) --- */
-.btn-first, .btn-second, .btn-third, .btn-fourth, .btn-fifth,
-.btn-sixth, .btn-seventh, .btn-eighth, .btn-ninth, .btn-tenth,
-.btn-eleventh, .btn-twelfth, .btn-thirteenth, .btn-close-circle {
+.btn-first, .btn-blue-circle, .btn-third, .btn-dark-blue-circle, .btn-fifth,
+.btn-red-circle, .btn-yellow-circle, .btn-eighth, .btn-ninth, .btn-tenth,
+.btn-green-circle, .btn-gray-circle, .btn-thirteenth, .btn-close-circle {
     width: 40px;
     height: 40px;
     border-radius: 50%;
@@ -2352,18 +2352,18 @@ input.is-valid:focus, select.is-valid:focus, textarea.is-valid:focus, .input-fie
     text-decoration: none;
 }
 
-.btn-first:hover, .btn-second:hover, .btn-third:hover, .btn-fourth:hover,
-.btn-fifth:hover, .btn-sixth:hover, .btn-seventh:hover, .btn-eighth:hover,
-.btn-ninth:hover, .btn-tenth:hover, .btn-eleventh:hover, .btn-twelfth:hover,
+.btn-first:hover, .btn-blue-circle:hover, .btn-third:hover, .btn-dark-blue-circle:hover,
+.btn-fifth:hover, .btn-red-circle:hover, .btn-yellow-circle:hover, .btn-eighth:hover,
+.btn-ninth:hover, .btn-tenth:hover, .btn-green-circle:hover, .btn-gray-circle:hover,
 .btn-thirteenth:hover {
     transform: translateY(-3px);
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
     color: #ffffff;
 }
 
-.btn-first:active, .btn-second:active, .btn-third:active, .btn-fourth:active,
-.btn-fifth:active, .btn-sixth:active, .btn-seventh:active, .btn-eighth:active,
-.btn-ninth:active, .btn-tenth:active, .btn-eleventh:active, .btn-twelfth:active,
+.btn-first:active, .btn-blue-circle:active, .btn-third:active, .btn-dark-blue-circle:active,
+.btn-fifth:active, .btn-red-circle:active, .btn-yellow-circle:active, .btn-eighth:active,
+.btn-ninth:active, .btn-tenth:active, .btn-green-circle:active, .btn-gray-circle:active,
 .btn-thirteenth:active, .btn-close-circle:active {
     transform: translateY(-1px);
 }
@@ -2391,7 +2391,7 @@ input.is-valid:focus, select.is-valid:focus, textarea.is-valid:focus, .input-fie
     background-color: #3b5998;
 }
 
-.btn-second {
+.btn-blue-circle {
     background: linear-gradient(135deg, #55acee 0%, #1e73be 100%);
     color: #ffffff;
 }
@@ -2400,7 +2400,7 @@ input.is-valid:focus, select.is-valid:focus, textarea.is-valid:focus, .input-fie
     background-color: #dd4b39;
 }
 
-.btn-fourth {
+.btn-dark-blue-circle {
     background: linear-gradient(135deg, #007bb5 0%, #004372 100%);
     color: #ffffff;
 }
@@ -2409,12 +2409,12 @@ input.is-valid:focus, select.is-valid:focus, textarea.is-valid:focus, .input-fie
     background-color: #3f729b;
 }
 
-.btn-sixth {
+.btn-red-circle {
     background: linear-gradient(135deg, #cb2027 0%, #ef4444 100%);
     color: #ffffff;
 }
 
-.btn-seventh {
+.btn-yellow-circle {
     background: linear-gradient(135deg, #f6d218 0%, #ea580c 100%);
     color: #ffffff;
 }
@@ -2431,12 +2431,12 @@ input.is-valid:focus, select.is-valid:focus, textarea.is-valid:focus, .input-fie
     background-color: #f48024;
 }
 
-.btn-eleventh {
+.btn-green-circle {
     background: linear-gradient(135deg, #54b689 0%, #0d8a7a 100%);
     color: #ffffff;
 }
 
-.btn-twelfth {
+.btn-gray-circle {
     background: linear-gradient(135deg, #333333 0%, #555555 100%);
     color: #ffffff;
 }
@@ -2841,6 +2841,7 @@ th.no-sort, .no-sort {
 .width-10 {
     width: 10%;
 }
+
 .width-12 {
     width: 12%;
 }
@@ -2852,6 +2853,7 @@ th.no-sort, .no-sort {
 .width-15 {
     width: 15%;
 }
+
 .width-16 {
     width: 16%;
 }
@@ -3262,10 +3264,10 @@ th.sorted-desc .sort-arrow {
 
 /* --- Tamaños (combinar con un color, ej: "badge badge-sm badge-green") --- */
 .badge-sm {
-    font-size: 0.65rem;
+    font-size: 0.55rem;
     padding: 2px 10px;
     border-radius: 50px;
-    font-weight: 800;
+    font-weight: 500;
     letter-spacing: 0.05em;
     min-width: 28px;
 }
@@ -3299,6 +3301,11 @@ th.sorted-desc .sort-arrow {
 }
 
 .badge-blue {
+    background-color: #dbeafe;
+    color: #1e40af;
+    border-color: #bfdbfe;
+}
+.badge-blue-mini {
     background-color: #dbeafe;
     color: #1e40af;
     border-color: #bfdbfe;
