@@ -14,24 +14,22 @@
             </button>
         {% endif %}
     </div>
-    <div id="table-app">
-        <div class="content-table">
-            <div class="table-controls toolbar-row">
-                <div class="toolbar-center">
-                    <input class="switch-input switch-red" type="checkbox" id="toggleInactiveLevels">
-                    <label class="switch-wrapper" for="toggleInactiveLevels">
-                        <div class="switch-circle"></div>
-                        <span class="switch-text">Mostrar Niveles Inactivos</span>
-                    </label>
-                </div>
-                <div class="toolbar-right">
-                    <input type="text" class="table-search-input table-search-input--large"
-                           placeholder="Buscar por nombre">
-                </div>
+    <div class="content-table">
+        <div class="table-controls toolbar-row">
+            <div class="toolbar-center">
+                <input class="switch-input switch-red" type="checkbox" id="toggleInactiveLevels">
+                <label class="switch-wrapper" for="toggleInactiveLevels">
+                    <div class="switch-circle"></div>
+                    <span class="switch-text">Mostrar Niveles Inactivos</span>
+                </label>
             </div>
-            <div id="table-content-wrapper">
-                {% include 'institution/partials/partial_level_table.html' %}
+            <div class="toolbar-right">
+                <input type="text" class="table-search-input table-search-input--large"
+                       placeholder="Buscar por nombre">
             </div>
+        </div>
+        <div id="table-content-wrapper">
+            {% include 'institution/partials/partial_level_table.html' %}
         </div>
     </div>
 {% endblock %}
