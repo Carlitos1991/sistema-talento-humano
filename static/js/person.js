@@ -625,13 +625,23 @@ setupToggle('id_has_disability', 'content_has_disability', 'header_has_disabilit
 setupToggle('id_has_catastrophic_illness', 'content_has_catastrophic_illness', 'header_has_catastrophic_illness');
 setupToggle('id_is_substitute', 'content_is_substitute', 'header_is_substitute');
 
-// Cascadas DPA
-$('#id_country').on('change', function () {
-    handleLocationCascade(this, 'id_province', 2);
-});
-$('#id_province').on('change', function () {
-    handleLocationCascade(this, 'id_canton', 3);
-});
-$('#id_canton').on('change', function () {
-    handleLocationCascade(this, 'id_parish', 4);
+$(document).ready(function () {
+    $('#id_country').on('change', function () {
+        if ($(this).val()) {
+            handleLocationCascade(this, 'id_province');
+        }
+        $('#id_canton').empty().append('<option value="">-- Seleccione --</option>').trigger('change');
+        $('#id_parish').empty().append('<option value="">-- Seleccione --</option>').trigger('change');
+    });
+    $('#id_province').on('change', function () {
+        if ($(this).val()) {
+            handleLocationCascade(this, 'id_canton');
+        }
+        $('#id_parish').empty().append('<option value="">-- Seleccione --</option>').trigger('change');
+    });
+    $('#id_canton').on('change', function () {
+        if ($(this).val()) {
+            handleLocationCascade(this, 'id_parish');
+        }
+    });
 });

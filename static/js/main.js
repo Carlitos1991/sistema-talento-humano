@@ -821,15 +821,14 @@ class TableManager {
 
     initPagination() {
         const contentTable = this.table.closest('.content-table');
-        let pagContainer = contentTable?.nextElementSibling?.classList.contains('pagination-container')
-            ? contentTable.nextElementSibling
-            : null;
+        let pagContainer = contentTable?.querySelector(':scope > .pagination-container')
+            || (contentTable?.nextElementSibling?.classList.contains('pagination-container') ? contentTable.nextElementSibling : null);
 
         if (!pagContainer) {
             pagContainer = document.createElement('div');
             pagContainer.className = 'pagination-container';
-            if (contentTable && contentTable.parentNode) {
-                contentTable.parentNode.insertBefore(pagContainer, contentTable.nextSibling);
+            if (contentTable) {
+                contentTable.appendChild(pagContainer);
             } else {
                 this.table.parentNode.insertBefore(pagContainer, this.table.nextSibling);
             }
@@ -851,7 +850,7 @@ class TableManager {
 
         this.pagContainer.innerHTML = `
             <div class="pagination-info">
-                Mostrando ${start}-${end} de ${totalRows}
+                Mostrando ${start} a ${end} de ${totalRows}
             </div>
             <div class="pagination-controls" style="${!showControls ? 'visibility:hidden;' : ''}">
                 <button class="page-btn page-first" title="Primera" ${prevDisabled ? 'disabled' : ''}>
@@ -1144,7 +1143,7 @@ window.toggleAccordionSection = function (targetContentId) {
 };
 
 // 7.3 Cascadas dinámicas de ubicación geográfica (DPA)
-window.handleLocationCascade = function (selectElement, targetSelectId, targetLevel) {
+window.handleLocationCascade = function (selectElement, targetSelectId) {
     const parentId = selectElement.value;
     const targetSelect = $(`#${targetSelectId}`);
 
@@ -1155,18 +1154,28 @@ window.handleLocationCascade = function (selectElement, targetSelectId, targetLe
         return;
     }
 
-    fetch(`/core/locations/children/?parent_id=${parentId}`, {
+    fetch(`/api/locations/?parent_id=${parentId}`, {
         headers: {'X-Requested-With': 'XMLHttpRequest'}
     })
-        .then(res => res.json())
-        .then(data => {
+        .then(res => {
+            if (!res.ok) throw new Error('Error de red al consultar ubicación');
+            return res.json();
+        })
+        .then(response => {
             targetSelect.empty().append('<option value="">-- Seleccione --</option>');
-            data.forEach(item => {
-                targetSelect.append(new Option(item.name, item.id));
-            });
+
+            // Tu vista LocationJsonView responde con { success: true, data: [...] }
+            const items = response.data || response;
+
+            if (Array.isArray(items)) {
+                items.forEach(item => {
+                    targetSelect.append(new Option(item.name, item.id));
+                });
+            }
             targetSelect.trigger('change');
         })
-        .catch(() => {
+        .catch(err => {
+            console.error('Error cargando ubicaciones:', err);
             targetSelect.empty().append('<option value="">-- Error al cargar --</option>').trigger('change');
         });
 };

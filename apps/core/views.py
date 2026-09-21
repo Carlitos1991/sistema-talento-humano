@@ -787,7 +787,7 @@ class CatalogListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 class CatalogCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     model = Catalog
     form_class = CatalogForm
-    template_name = 'core/catalogs/modals/modal_catalog_form.html'  # Solo renderiza el form si es GET
+    template_name = 'core/catalogs/modals/modal_catalog_form.html'
     permission_required = 'core.add_catalog'
 
     def post(self, request, *args, **kwargs):

@@ -1,27 +1,28 @@
 <div id="modalPersonOverlay" class="modal-overlay hidden">
-    <div class="modal-container-medium animate-scale-in">
+    <!-- Usamos modal-container-large para que las 3 y 4 columnas respiren sin apretarse -->
+    <div class="modal-container-large">
         <form id="personFormHtml" action="{% url 'person:person_create' %}" method="POST"
               onsubmit="submitAjaxForm(event)" enctype="multipart/form-data">
             {% csrf_token %}
-            <!-- HEADER -->
-            <div class="modal-header-medium modal-header-gradient">
-                <h3 class="modal-title text-white">
+
+            <!-- 1. HEADER ESTANDARIZADO (Idéntico al de Unidades) -->
+            <div class="modal-header-medium">
+                <h3 class="header-title">
                     <i class="fa-solid fa-user-pen me-2"></i>
                     <span id="personModalTitle">Nueva Persona</span>
                 </h3>
                 <button type="button" class="btn-close-circle" onclick="closeModal('modalPersonOverlay')">
-                    <i class="fa-solid fa-xmark"></i>
+                    <i class="fas fa-times"></i>
                 </button>
             </div>
 
-            <!-- BODY -->
+            <!-- 2. BODY -->
             <div class="modal-body-content modal-body-custom">
 
-                <!-- 1. IDENTIDAD -->
+                <!-- IDENTIDAD -->
                 <div class="form-section-card">
                     <h5 class="section-title"><i class="fa-regular fa-id-card"></i> Identidad</h5>
-
-                    <div class="d-flex flex-wrap gap-3 align-items-center">
+                    <div class="d-flex gap-4 align-items-center">
                         <!-- FOTO -->
                         <div class="photo-uploader-wrapper">
                             <label for="id_photo" class="photo-upload-label" title="Clic para subir foto">
@@ -41,22 +42,23 @@
                             </div>
                         </div>
 
-                        <div class="flex-grow-1 w-100">
+                        <!-- CAMPOS PRINCIPALES (2x2) -->
+                        <div class="flex-grow-1">
                             <div class="grid-2-cols">
-                                <div class="form-group">
+                                <div class="form-group form-group-compact">
                                     <label class="form-label">Tipo Documento <span class="text-danger">*</span></label>
                                     {{ form.document_type }}
                                 </div>
-                                <div class="form-group">
+                                <div class="form-group form-group-compact">
                                     <label class="form-label">Número Documento <span
                                             class="text-danger">*</span></label>
                                     {{ form.document_number }}
                                 </div>
-                                <div class="form-group">
+                                <div class="form-group form-group-compact">
                                     <label class="form-label">Nombres <span class="text-danger">*</span></label>
                                     {{ form.first_name }}
                                 </div>
-                                <div class="form-group">
+                                <div class="form-group form-group-compact">
                                     <label class="form-label">Apellidos <span class="text-danger">*</span></label>
                                     {{ form.last_name }}
                                 </div>
@@ -65,113 +67,113 @@
                     </div>
                 </div>
 
-                <!-- 2. INFORMACIÓN PERSONAL -->
+                <!-- INFORMACIÓN PERSONAL (2 FILAS DE 3 COLUMNAS C/U) -->
                 <div class="form-section-card mt-3">
                     <h5 class="section-title"><i class="fa-regular fa-user"></i> Información Personal</h5>
                     <div class="grid-3-cols">
-                        <div class="form-group">
+                        <div class="form-group form-group-compact">
                             <label class="form-label">Fecha Nacimiento <span class="text-danger">*</span></label>
                             {{ form.birth_date }}
                         </div>
-                        <div class="form-group">
+                        <div class="form-group form-group-compact">
                             <label class="form-label">Género</label>
                             {{ form.gender }}
                         </div>
-                        <div class="form-group">
+                        <div class="form-group form-group-compact">
                             <label class="form-label">Estado Civil</label>
                             {{ form.marital_status }}
                         </div>
-                        <div class="form-group">
+                        <div class="form-group form-group-compact">
                             <label class="form-label">Email Personal</label>
                             {{ form.email }}
                         </div>
-                        <div class="form-group">
+                        <div class="form-group form-group-compact">
                             <label class="form-label">Teléfono / Celular</label>
                             {{ form.phone_number }}
                         </div>
-                        <div class="form-group">
+                        <div class="form-group form-group-compact">
                             <label class="form-label">Tipo Sangre</label>
                             {{ form.blood_type }}
                         </div>
                     </div>
                 </div>
 
-                <!-- 3. UBICACIÓN -->
+                <!-- DOMICILIO (4 COLUMNAS EN CASACADA) -->
                 <div class="form-section-card mt-3">
                     <h5 class="section-title"><i class="fa-solid fa-map-location-dot"></i> Domicilio</h5>
                     <div class="grid-4-cols">
-                        <div class="form-group">
+                        <div class="form-group form-group-compact">
                             <label class="form-label">País</label>
                             {{ form.country }}
                         </div>
-                        <div class="form-group">
+                        <div class="form-group form-group-compact">
                             <label class="form-label">Provincia</label>
                             {{ form.province }}
                         </div>
-                        <div class="form-group">
+                        <div class="form-group form-group-compact">
                             <label class="form-label">Cantón</label>
                             {{ form.canton }}
                         </div>
-                        <div class="form-group">
+                        <div class="form-group form-group-compact">
                             <label class="form-label">Parroquia</label>
                             {{ form.parish }}
                         </div>
                     </div>
-                    <div class="form-group mt-3">
+                    <div class="form-group form-group-compact mt-2">
                         <label class="form-label">Calle Principal / Referencia</label>
                         {{ form.address_reference }}
                     </div>
                 </div>
 
-                <!-- 4. CONTACTO DE EMERGENCIA -->
+                <!-- CONTACTO DE EMERGENCIA (1 FILA DE 3 COLUMNAS) -->
                 <div class="form-section-card mt-3">
                     <h5 class="section-title"><i class="fa-solid fa-truck-medical"></i> Contacto de Emergencia</h5>
                     <div class="grid-3-cols">
-                        <div class="form-group">
+                        <div class="form-group form-group-compact">
                             <label class="form-label">Nombre del Contacto</label>
                             {{ form.emergency_contact_name }}
                         </div>
-                        <div class="form-group">
+                        <div class="form-group form-group-compact">
                             <label class="form-label">Teléfono</label>
                             {{ form.emergency_contact_phone }}
                         </div>
-                        <div class="form-group">
+                        <div class="form-group form-group-compact">
                             <label class="form-label">Parentesco</label>
                             {{ form.emergency_contact_relationship }}
                         </div>
                     </div>
                 </div>
 
-                <!-- 5. SALUD E INCLUSIÓN -->
+                <!-- SALUD E INCLUSIÓN -->
                 <div class="form-section-card mt-3">
                     <h5 class="section-title"><i class="fa-solid fa-hands-holding-circle"></i> Salud e Inclusión</h5>
+                    <div style="display: flex; flex-direction: column; gap: 1rem;">
 
-                    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-
-                        <!-- FILA 1: DISCAPACIDAD -->
+                        <!-- DISCAPACIDAD -->
                         <div class="w-100">
-                            <div class="toggle-header" id="header_has_disability">
-                                <span class="d-flex align-items-center gap-2 font-bold text-secondary">
-                                    <div class="d-flex align-items-center justify-content-center bg-light rounded-circle"
-                                         style="width: 32px; height: 32px;">
-                                        <i class="fa-brands fa-accessible-icon text-primary"></i>
+                            <div class="toggle-header" id="header_has_disability"
+                                 onclick="toggleAccordionSection('content_has_disability')">
+                                <span class="d-flex align-items-center gap-2">
+                                    <div class="d-flex align-items-center justify-content-center bg-secondary-subtle"
+                                         style="width: 30px; height: 30px; border-radius: 50%;">
+                                        <i class="fa-brands fa-accessible-icon text-blue"></i>
                                     </div>
-                                    <span>¿Tiene Discapacidad?</span>
+                                    <span class="bold small">¿Tiene Discapacidad?</span>
                                 </span>
-                                <label class="toggle-switch">
+                                <label class="switch-wrapper" onclick="event.stopPropagation()">
                                     {{ form.has_disability }}
-                                    <span class="toggle-slider"></span>
+                                    <span class="switch-circle"></span>
+                                    <span class="switch-text">No</span>
                                 </label>
                             </div>
-
                             <div id="content_has_disability" class="toggle-content hidden">
                                 <div class="grid-2-cols">
-                                    <div class="form-group">
+                                    <div class="form-group form-group-compact">
                                         <label class="form-label small">Tipo de Discapacidad <span
                                                 class="text-danger">*</span></label>
                                         {{ form.disability_type }}
                                     </div>
-                                    <div class="form-group">
+                                    <div class="form-group form-group-compact">
                                         <label class="form-label small">Porcentaje (%) <span
                                                 class="text-danger">*</span></label>
                                         {{ form.disability_percentage }}
@@ -180,71 +182,73 @@
                             </div>
                         </div>
 
-                        <!-- FILA 2: ENFERMEDAD CATASTRÓFICA -->
+                        <!-- ENFERMEDAD CATASTRÓFICA -->
                         <div class="w-100">
-                            <div class="toggle-header" id="header_has_catastrophic_illness">
-                                <span class="d-flex align-items-center gap-2 font-bold text-secondary">
-                                    <div class="d-flex align-items-center justify-content-center bg-light rounded-circle"
-                                         style="width: 32px; height: 32px;">
-                                        <i class="fa-solid fa-heart-pulse text-danger"></i>
+                            <div class="toggle-header" id="header_has_catastrophic_illness"
+                                 onclick="toggleAccordionSection('content_catastrophic_illness')">
+                                <span class="d-flex align-items-center gap-2">
+                                    <div class="d-flex align-items-center justify-content-center bg-secondary-subtle"
+                                         style="width: 30px; height: 30px; border-radius: 50%;">
+                                        <i class="fa-solid fa-heart-pulse text-red"></i>
                                     </div>
-                                    <span>¿Tiene Enfermedad Catastrófica?</span>
+                                    <span class="bold small">¿Tiene Enfermedad Catastrófica?</span>
                                 </span>
-                                <label class="toggle-switch">
+                                <label class="switch-wrapper" onclick="event.stopPropagation()">
                                     {{ form.has_catastrophic_illness }}
-                                    <span class="toggle-slider"></span>
+                                    <span class="switch-circle"></span>
+                                    <span class="switch-text">No</span>
                                 </label>
                             </div>
-
-                            <div id="content_has_catastrophic_illness" class="toggle-content hidden">
-                                <div class="form-group">
+                            <div id="content_catastrophic_illness" class="toggle-content hidden">
+                                <div class="form-group form-group-compact">
                                     <label class="form-label small">Descripción / Diagnóstico <span class="text-danger">*</span></label>
                                     {{ form.catastrophic_illness_description }}
                                 </div>
                             </div>
                         </div>
 
-                        <!-- FILA 3: SUSTITUTO -->
+                        <!-- SUSTITUTO -->
                         <div class="w-100">
-                            <div class="toggle-header" id="header_is_substitute">
-                                <span class="d-flex align-items-center gap-2 font-bold text-secondary">
-                                    <div class="d-flex align-items-center justify-content-center bg-light rounded-circle"
-                                         style="width: 32px; height: 32px;">
-                                        <i class="fa-solid fa-people-arrows text-success"></i>
+                            <div class="toggle-header" id="header_is_substitute"
+                                 onclick="toggleAccordionSection('content_is_substitute')">
+                                <span class="d-flex align-items-center gap-2">
+                                    <div class="d-flex align-items-center justify-content-center bg-secondary-subtle"
+                                         style="width: 30px; height: 30px; border-radius: 50%;">
+                                        <i class="fa-solid fa-people-arrows text-green"></i>
                                     </div>
-                                    <span>¿Es Sustituto?</span>
+                                    <span class="bold small">¿Es Sustituto?</span>
                                 </span>
-                                <label class="toggle-switch">
+                                <label class="switch-wrapper" onclick="event.stopPropagation()">
                                     {{ form.is_substitute }}
-                                    <span class="toggle-slider"></span>
+                                    <span class="switch-circle"></span>
+                                    <span class="switch-text">No</span>
                                 </label>
                             </div>
-
                             <div id="content_is_substitute" class="toggle-content hidden">
-                                <div class="alert alert-info small mb-3 p-2 border rounded bg-light text-muted">
+                                <div class="alert alert-info small mb-2 p-2">
                                     <i class="fa-solid fa-info-circle me-1"></i> Ingrese los datos de la persona con
                                     discapacidad a quien sustituye.
                                 </div>
-                                <div class="grid-3-cols mb-3">
-                                    <div class="form-group">
+                                <div class="grid-3-cols mb-2">
+                                    <div class="form-group form-group-compact">
                                         <label class="form-label small">Cédula Familiar</label>
                                         {{ form.substitute_family_member_id }}
                                     </div>
-                                    <div class="form-group">
+                                    <div class="form-group form-group-compact">
                                         <label class="form-label small">Nombre Familiar</label>
                                         {{ form.substitute_family_member_name }}
                                     </div>
-                                    <div class="form-group">
+                                    <div class="form-group form-group-compact">
                                         <label class="form-label small">Parentesco</label>
                                         {{ form.substitute_family_member_relationship }}
                                     </div>
                                 </div>
                                 <div class="grid-2-cols">
-                                    <div class="form-group">
+                                    <div class="form-group form-group-compact">
                                         <label class="form-label small">Discapacidad Familiar</label>
                                         {{ form.substitute_family_member_disability_type }}
                                     </div>
-                                    <div class="form-group">
+                                    <div class="form-group form-group-compact">
                                         <label class="form-label small">Porcentaje Familiar (%)</label>
                                         {{ form.substitute_family_member_disability_percentage }}
                                     </div>
@@ -257,12 +261,12 @@
 
             </div>
 
-            <!-- FOOTER -->
+            <!-- 3. FOOTER ESTANDARIZADO (Idéntico a Unidad) -->
             <div class="modal-footer-medium modal-footer-spaced">
                 <button type="button" class="btn-default-outline" onclick="closeModal('modalPersonOverlay')">Cancelar
                 </button>
                 <button type="submit" class="btn-dark-blue-rectangle">
-                    <i class="fa-solid fa-floppy-disk"></i> Guardar
+                    <i class="fas fa-save me-1"></i> Guardar
                 </button>
             </div>
         </form>
