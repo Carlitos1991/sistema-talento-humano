@@ -1,12 +1,13 @@
 <div class="grid-general">
-    <!-- TARJETA: TÍTULOS ACADÉMICOS -->
+    <!-- TARJETA: TÍTULOS ACADÉMICOS (AHORA CENTRADO) -->
     <div class="card-large yellow-border">
         <h6 class="section-title"><i class="fa-solid fa-graduation-cap"></i> Títulos Académicos</h6>
         <div class="stat-inner-container">
             <div id="stat-titles" class="stat-number text-primary">{{ curriculum_titles_count|default:0 }}</div>
             <div class="stat-label">Registrados</div>
         </div>
-        <div class="right">
+        <!-- CORRECCIÓN: cambiado de class="right" a class="buttons-centered" -->
+        <div class="buttons-centered">
             <button type="button" class="btn-light"
                     onclick="openAjaxModal('{% url 'employee:academic_title_list' person.id %}')">
                 <i class="fa-solid fa-list"></i> Listado
@@ -45,11 +46,12 @@
             </button>
         </div>
     </div>
-    <!-- TARJETA: hoja de vida -->
+
+    <!-- TARJETA: HOJA DE VIDA -->
     <div class="card-large yellow-border">
         <h6 class="section-title"><i class="fa-regular fa-id-card"></i> Hoja de Vida</h6>
         <div class="stat-inner-container">
-            <div id="stat-courses" class="stat-number">
+            <div id="stat-cv-file" class="stat-number">
                 {% if curriculum_obj and curriculum_obj.pdf_file %}
                     <a href="{{ curriculum_obj.pdf_file.url }}" target="_blank"
                        class="btn-yellow-circle" title="Ver Hoja de Vida">
@@ -61,7 +63,7 @@
                     </span>
                 {% endif %}
             </div>
-            <div class="stat-label">
+            <div class="stat-label" id="stat-cv-label">
                 {% if curriculum_obj and curriculum_obj.pdf_file %}
                     Hoja de Vida
                 {% else %}
@@ -71,6 +73,10 @@
         </div>
         <div class="buttons-centered">
             {% if can_edit_person %}
+                <!-- INPUT OCULTO QUE FALTABA -->
+                <input type="file" id="pdfInput" accept=".pdf" style="display: none;"
+                       onchange="uploadCvPdf(this, '{{ person.id }}')">
+
                 <button type="button" class="btn-light"
                         onclick="document.getElementById('pdfInput').click()">
                     <i class="fa-solid fa-cloud-arrow-up"></i>

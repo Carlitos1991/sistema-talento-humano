@@ -1215,6 +1215,72 @@ document.addEventListener('change', function (e) {
         }
     }
 });
+/* ==========================================================================
+   7.6 SUBIDA DE HOJA DE VIDA (PDF)
+   ========================================================================== */
+window.uploadCvPdf = function (input, personId) {
+    if (!input.files || !input.files[0]) return;
+
+    const file = input.files[0];
+
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Formato no válido',
+            text: 'Por favor, seleccione un documento en formato PDF.'
+        });
+        input.value = '';
+        return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Archivo muy pesado',
+            text: 'El archivo no debe superar los 5 MB.'
+        });
+        input.value = '';
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('pdf_file', file);
+
+    showToast('Subiendo hoja de vida...', 'info');
+
+    fetch(`/employee/api/upload-cv/${personId}/`, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': typeof getCSRF === 'function' ? getCSRF() : ''
+        },
+        body: formData
+    })
+        .then(async res => {
+            const data = await res.json();
+            if (res.ok && data.success) {
+                showToast(data.message || 'Hoja de vida subida con éxito.', 'success');
+                setTimeout(() => location.reload(), 800);
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error al subir',
+                    text: data.message || 'No se pudo guardar la hoja de vida.'
+                });
+            }
+        })
+        .catch(err => {
+            console.error('Error subiendo PDF de CV:', err);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Ocurrió un problema de comunicación con el servidor.'
+            });
+        })
+        .finally(() => {
+            input.value = '';
+        });
+};
 
 
 /* ==========================================================================

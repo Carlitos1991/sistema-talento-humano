@@ -3,7 +3,7 @@
 window.currentStatFilter = null;
 
 // =========================================================================
-// 1. FILTROS Y RECARGA DE TABLA
+// 1. FILTROS Y RECARGA AJAX DE LA TABLA DE PERSONAS
 // =========================================================================
 window.applyPersonFilters = async function (page = 1) {
     const form = document.getElementById('personFiltersForm');
@@ -55,18 +55,15 @@ window.applyPersonFilters = async function (page = 1) {
             htmlToInject = await res.text();
         }
 
-        // Reemplazo atómico idéntico a institution.js
         if (tableContainer && htmlToInject) {
             tableContainer.innerHTML = htmlToInject;
         }
 
-        // Actualizar estadísticas si vienen en la respuesta
         if (statsToInject) {
             const statsRow = document.getElementById('statsRow');
             if (statsRow) statsRow.innerHTML = statsToInject;
         }
 
-        // Reinicializar TableManager y utilidades sobre la tabla recién inyectada
         setTimeout(() => {
             const newTable = document.querySelector('.managed-table');
             if (newTable) {
@@ -80,8 +77,6 @@ window.applyPersonFilters = async function (page = 1) {
                     }
                 }
             }
-            if (typeof addExportButtonsToTables === 'function') addExportButtonsToTables();
-            if (typeof window.initTableHorizontalScroll === 'function') window.initTableHorizontalScroll();
         }, 50);
 
     } catch (e) {
@@ -93,6 +88,7 @@ window.applyPersonFilters = async function (page = 1) {
         }
     }
 };
+
 window.quickFilterStatus = function (statusValue) {
     const statusSelect = document.querySelector('select[name="is_active"]');
     if (statusSelect) {
@@ -104,7 +100,7 @@ window.quickFilterStatus = function (statusValue) {
 };
 
 // =========================================================================
-// 2. UTILIDADES GLOBALES (Select2 y Scroll Horizontal)
+// 2. UTILIDADES DE FORMULARIO (Select2 de dependencias en filtro)
 // =========================================================================
 window.initializeSelect2 = () => {
     if (!window.$ || !$.fn.select2) return;
@@ -115,64 +111,31 @@ window.initializeSelect2 = () => {
     $areaSelect.removeClass('select2-hidden-accessible').removeAttr('data-select2-id tabindex aria-hidden');
 
     $areaSelect.select2({
-        width: '100%', allowClear: true,
+        width: '100%',
+        allowClear: true,
         placeholder: $areaSelect.data('placeholder') || 'Dependencia',
-        language: {noResults: () => 'Sin resultados', searching: () => 'Buscando...'},
+        language: {
+            noResults: () => 'Sin resultados',
+            searching: () => 'Buscando...'
+        },
         ajax: {
             url: $areaSelect.data('ajax-url'),
-            dataType: 'json', delay: 250,
+            dataType: 'json',
+            delay: 250,
             data: (params) => ({term: params.term}),
             processResults: (data) => {
-                if (Array.isArray(data.units)) return {
-                    results: data.units.map(u => ({
-                        id: String(u.id),
-                        text: u.name
-                    }))
-                };
+                if (Array.isArray(data.units)) {
+                    return {
+                        results: data.units.map(u => ({
+                            id: String(u.id),
+                            text: u.name
+                        }))
+                    };
+                }
                 return {results: []};
             }
         }
     });
-};
-
-window.initTableHorizontalScroll = () => {
-    const tc = document.querySelector('.table-container');
-    if (!tc) return;
-    tc.classList.add('table-container-has-scroll-helper');
-    let helperGroup = tc.querySelector('.table-scroll-helper-group');
-
-    if (!helperGroup) {
-        helperGroup = document.createElement('div');
-        helperGroup.className = 'table-scroll-helper-group';
-        helperGroup.innerHTML = `
-            <button class="table-scroll-nav-button table-scroll-nav-start"><i class="fas fa-angles-left"></i></button>
-            <button class="table-scroll-nav-button table-scroll-nav-end"><i class="fas fa-angles-right"></i></button>`;
-        tc.appendChild(helperGroup);
-    }
-
-    const updateScrollIndicator = () => {
-        const hasScroll = tc.scrollWidth > tc.clientWidth;
-        const atStart = tc.scrollLeft <= 4;
-        const atEnd = tc.scrollLeft + tc.clientWidth >= tc.scrollWidth - 4;
-
-        tc.classList.toggle('table-scroll-helper-force-visible', hasScroll);
-        tc.classList.toggle('table-scroll-helper-at-end', hasScroll && atEnd && !atStart);
-
-        const startBtn = tc.querySelector('.table-scroll-nav-start');
-        const endBtn = tc.querySelector('.table-scroll-nav-end');
-
-        if (startBtn) {
-            startBtn.style.display = hasScroll && atEnd ? 'inline-flex' : 'none';
-            startBtn.onclick = () => tc.scrollTo({left: 0, behavior: 'smooth'});
-        }
-        if (endBtn) {
-            endBtn.style.display = hasScroll && !atEnd ? 'inline-flex' : 'none';
-            endBtn.onclick = () => tc.scrollTo({left: tc.scrollWidth, behavior: 'smooth'});
-        }
-    };
-    updateScrollIndicator();
-    window.addEventListener('resize', updateScrollIndicator);
-    tc.addEventListener('scroll', updateScrollIndicator);
 };
 
 // =========================================================================
@@ -193,10 +156,17 @@ function loadUnitLevel(parentId) {
         data: parentId ? {parent_id: parentId} : {},
         success: function (data) {
             if (!data.units || data.units.length === 0) return;
-            const $select = $('<select>').addClass('form-control select2-relocate w-full border p-2 rounded').css('width', '100%').append('<option value="">-- Seleccione --</option>');
+            const $select = $('<select>')
+                .addClass('form-control select2-relocate w-full border p-2 rounded')
+                .css('width', '100%')
+                .append('<option value="">-- Seleccione --</option>');
+
             data.units.forEach(u => $select.append(`<option value="${u.id}" data-has-children="${u.has_children}">${u.name}</option>`));
 
-            const $wrapper = $('<div class="form-group mb-3"></div>').append('<label class="text-xs font-bold text-gray-600 mb-1 block">Seleccione Unidad:</label>').append($select);
+            const $wrapper = $('<div class="form-group mb-3"></div>')
+                .append('<label class="text-xs font-bold text-gray-600 mb-1 block">Seleccione Unidad:</label>')
+                .append($select);
+
             $('#relocate-combos-wrapper').append($wrapper);
 
             if ($.fn.select2) $select.select2({dropdownParent: $('#modal-relocate-employee'), width: '100%'});
@@ -211,12 +181,79 @@ function loadUnitLevel(parentId) {
 }
 
 // =========================================================================
-// 4. INICIALIZACIÓN DE EVENTOS DEL DOM
+// 4. SUBIDA DE HOJA DE VIDA (PDF)
+// =========================================================================
+window.uploadCvPdf = function (input, personId) {
+    if (!input.files || !input.files[0]) return;
+
+    const file = input.files[0];
+
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Formato no válido',
+            text: 'Por favor, seleccione un documento en formato PDF.'
+        });
+        input.value = '';
+        return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Archivo muy pesado',
+            text: 'El archivo no debe superar los 5 MB.'
+        });
+        input.value = '';
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('pdf_file', file);
+
+    showToast('Subiendo hoja de vida...', 'info');
+
+    fetch(`/employee/api/upload-cv/${personId}/`, {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': typeof getCSRF === 'function' ? getCSRF() : ''
+        },
+        body: formData
+    })
+        .then(async res => {
+            const data = await res.json();
+            if (res.ok && data.success) {
+                showToast(data.message || 'Hoja de vida subida con éxito.', 'success');
+                setTimeout(() => location.reload(), 800);
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error al subir',
+                    text: data.message || 'No se pudo guardar la hoja de vida.'
+                });
+            }
+        })
+        .catch(err => {
+            console.error('Error subiendo PDF de CV:', err);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Ocurrió un problema de comunicación con el servidor.'
+            });
+        })
+        .finally(() => {
+            input.value = '';
+        });
+};
+
+// =========================================================================
+// 5. INICIALIZACIÓN UNIFICADA DE EVENTOS DEL DOM
 // =========================================================================
 document.addEventListener('DOMContentLoaded', () => {
     window.initializeSelect2();
-    if (typeof window.initTableHorizontalScroll === 'function') window.initTableHorizontalScroll();
 
+    // Filtros de búsqueda
     document.getElementById('personFiltersForm')?.addEventListener('submit', (e) => {
         e.preventDefault();
         window.applyPersonFilters(1);
@@ -231,6 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
         window.applyPersonFilters(1);
     });
 
+    // Guardar reubicación de empleado
     $(document).on('submit', '#form-relocate-employee', function (e) {
         e.preventDefault();
         let finalUnitId = null;
@@ -285,347 +323,15 @@ document.addEventListener('DOMContentLoaded', () => {
             complete: () => btn.prop('disabled', false).html(originalText)
         });
     });
-});
-// =========================================================================
-// MODAL REUBICAR UNIDAD (VANILLA JAVASCRIPT)
-// =========================================================================
 
-let relocateState = {
-    unitId: null,
-    unitName: '',
-    currentParentId: null,
-    currentParentName: '',
-    sourceLevel: null
-};
-
-async function openRelocateUnit(unitId) {
-    relocateState.unitId = unitId;
-
-    try {
-        const res = await fetch(`/institution/units/detail/${unitId}/json/`);
-        const data = await res.json();
-
-        if (data.success) {
-            const d = data.data;
-            relocateState.unitName = d.name;
-            relocateState.currentParentId = d.parent;
-            relocateState.currentParentName = d.parent_name || '--- Unidad Raíz ---';
-            relocateState.sourceLevel = d.level;
-
-            // Actualizar UI
-            const unitNameFieldEl = document.getElementById('unitNameField');
-            if (unitNameFieldEl) unitNameFieldEl.value = d.name;
-            // Nota: `unitNameDisplay` fue removido del template, evitar referenciarlo.
-            document.getElementById('currentParentField').value = relocateState.currentParentName;
-
-            // Cargar padres disponibles
-            await loadAvailableParents(d.level);
-
-            // Mostrar modal
-            const container = document.getElementById('relocate-modal-container');
-            if (container) {
-                container.classList.remove('hidden');
-                container.classList.add('show');
-                container.style.display = 'flex';
-            }
-            document.body.classList.add('modal-open');
-        } else {
-            throw new Error(data.error || 'Error al cargar datos de la unidad');
+    // Previsualización de foto (usa la función universal de main.js)
+    document.getElementById('id_photo')?.addEventListener('change', function () {
+        if (typeof handleModalPhotoPreview === 'function') {
+            handleModalPhotoPreview(this);
         }
-    } catch (e) {
-        console.error('Error abriendo modal de reubicación:', e);
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Error al cargar la unidad: ' + e.message,
-            confirmButtonColor: '#c41c3b'
-        });
-    }
-}
+    });
 
-async function loadAvailableParents(levelId) {
-    const selectEl = document.getElementById('id_new_parent');
-    selectEl.innerHTML = '<option value="">--- Cargando ---</option>';
-
-    try {
-        // direct_parent_only=true para traer solo del nivel inmediatamente anterior
-        const res = await fetch(`/institution/api/parents/?level_id=${levelId}&direct_parent_only=true`);
-        const data = await res.json();
-
-        selectEl.innerHTML = '<option value="">--- Seleccione Unidad Padre ---</option>';
-
-        if (data.results && data.results.length > 0) {
-            data.results.forEach(item => {
-                const option = document.createElement('option');
-                option.value = item.id;
-                option.textContent = item.text;
-                selectEl.appendChild(option);
-            });
-
-            // Re-inicializar Select2 después de agregar opciones
-            if ($(selectEl).hasClass('select2-hidden-accessible')) {
-                $(selectEl).select2('destroy');
-            }
-            $(selectEl).select2({
-                width: '100%',
-                placeholder: '--- Seleccione Unidad Padre ---',
-                dropdownCssClass: 'relocate-dropdown'
-            });
-        } else {
-            const option = document.createElement('option');
-            option.value = '';
-            option.textContent = '--- Sin padres disponibles ---';
-            option.disabled = true;
-            selectEl.appendChild(option);
-        }
-    } catch (e) {
-        console.error('Error cargando padres:', e);
-        selectEl.innerHTML = '<option value="">--- Error cargando padres ---</option>';
-    }
-}
-
-// Exponer función de cierre en window y añadir logging para depuración
-window.closeRelocateModal = function closeRelocateModal() {
-    console.log('closeRelocateModal() called');
-    const container = document.getElementById('relocate-modal-container');
-    if (container) {
-        // Ocultar inline y limpiar clases que puedan forzar visibilidad
-        container.style.display = 'none';
-        container.classList.remove('show');
-        container.classList.add('hidden');
-    }
-    try {
-        document.body.classList.remove('modal-open');
-    } catch (err) {
-        console.warn('Error removing modal-open class:', err);
-    }
-
-    // Destruir Select2 si existe
-    const selectEl = document.getElementById('id_new_parent');
-    try {
-        if (selectEl && typeof $ !== 'undefined' && $(selectEl).hasClass('select2-hidden-accessible')) {
-            $(selectEl).select2('destroy');
-        }
-    } catch (err) {
-        console.warn('Error destruyendo Select2:', err);
-    }
-
-    // Limpiar errores
-    const errorParent = document.getElementById('errorParent');
-    if (errorParent) errorParent.textContent = '';
-
-    const errorContainer = document.getElementById('errorContainer');
-    if (errorContainer) errorContainer.style.display = 'none';
-
-    // Además ocultar cualquier overlay genérico del sistema por seguridad
-    try {
-        document.querySelectorAll('.modal-overlay, .custom-modal-overlay, .modal-backdrop').forEach(el => {
-            try {
-                el.style.display = 'none';
-                el.classList.remove('show');
-                el.classList.add('hidden');
-            } catch (e) {
-                // ignore per-element errors
-            }
-        });
-    } catch (err) {
-        console.warn('Error hiding generic overlays:', err);
-    }
-};
-
-// Capturar submit del formulario
-document.addEventListener('DOMContentLoaded', function () {
-    // Form submit
-    const form = document.getElementById('relocateForm');
-    if (form) {
-        form.addEventListener('submit', async function (e) {
-            e.preventDefault();
-            await submitRelocate();
-        });
-    }
-
-    // Cerrar modal al hacer clic en el overlay
-    const modalContainer = document.getElementById('relocate-modal-container');
-    if (modalContainer) {
-        modalContainer.addEventListener('click', function (e) {
-            if (e.target === this) {
-                closeRelocateModal();
-            }
-        });
-    }
-
-    // Añadir listeners explícitos a botones de cierre (más fiables que onclick inline)
-    const closeBtn = document.getElementById('closeModalBtn');
-    if (closeBtn) {
-        closeBtn.style.pointerEvents = 'auto';
-        closeBtn.style.zIndex = '10001';
-        closeBtn.addEventListener('click', function (e) {
-            e.preventDefault();
-            console.log('closeBtn clicked');
-            // Cerrar directamente (duplicar lógica de closeRelocateModal para evitar dependencia externa)
-            try {
-                const containerEl = document.getElementById('relocate-modal-container');
-                if (containerEl) {
-                    containerEl.style.display = 'none';
-                    containerEl.classList.remove('show');
-                    containerEl.classList.add('hidden');
-                }
-                document.body.classList.remove('modal-open');
-            } catch (err) {
-                console.warn('Error cerrando modal directamente:', err);
-            }
-            try {
-                const sel = document.getElementById('id_new_parent');
-                if (sel && typeof $ !== 'undefined' && $(sel).hasClass('select2-hidden-accessible')) {
-                    $(sel).select2('destroy');
-                }
-            } catch (err) {
-                console.warn('Error destruyendo Select2:', err);
-            }
-            try {
-                document.querySelectorAll('.modal-overlay, .custom-modal-overlay, .modal-backdrop').forEach(el => {
-                    el.style.display = 'none';
-                    el.classList.remove('show');
-                    el.classList.add('hidden');
-                });
-            } catch (err) {
-                // ignore
-            }
-        });
-    }
-
-    const cancelBtnEl = document.getElementById('cancelBtn');
-    if (cancelBtnEl) {
-        cancelBtnEl.style.pointerEvents = 'auto';
-        cancelBtnEl.style.zIndex = '10001';
-        cancelBtnEl.addEventListener('click', function (e) {
-            e.preventDefault();
-            console.log('cancelBtn clicked');
-            // Cerrar directamente
-            try {
-                const containerEl = document.getElementById('relocate-modal-container');
-                if (containerEl) {
-                    containerEl.style.display = 'none';
-                    containerEl.classList.remove('show');
-                    containerEl.classList.add('hidden');
-                }
-                document.body.classList.remove('modal-open');
-            } catch (err) {
-                console.warn('Error cerrando modal directamente:', err);
-            }
-            try {
-                const sel = document.getElementById('id_new_parent');
-                if (sel && typeof $ !== 'undefined' && $(sel).hasClass('select2-hidden-accessible')) {
-                    $(sel).select2('destroy');
-                }
-            } catch (err) {
-                console.warn('Error destruyendo Select2:', err);
-            }
-            try {
-                document.querySelectorAll('.modal-overlay, .custom-modal-overlay, .modal-backdrop').forEach(el => {
-                    el.style.display = 'none';
-                    el.classList.remove('show');
-                    el.classList.add('hidden');
-                });
-            } catch (err) {
-                // ignore
-            }
-        });
-    }
-});
-
-async function submitRelocate() {
-    const selectEl = document.getElementById('id_new_parent');
-    const selectedValue = selectEl.value;
-
-    // Validaciones
-    if (!selectedValue) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Validación',
-            text: 'Por favor selecciona una nueva unidad padre.',
-            confirmButtonColor: '#ffc107'
-        });
-        return;
-    }
-
-    const form = document.getElementById('relocateForm');
-    const formData = new FormData(form);
-    formData.set('parent', selectedValue);
-
-    console.log('[DEBUG] Reubicando unidad:', relocateState.unitId, 'a padre:', selectedValue);
-
-    try {
-        const res = await fetch(`/institution/units/change-parent/${relocateState.unitId}/`, {
-            method: 'POST',
-            body: formData,
-            headers: {'X-Requested-With': 'XMLHttpRequest'}
-        });
-        const data = await res.json();
-
-        if (data.success) {
-            closeRelocateModal();
-            Swal.fire({
-                icon: 'success',
-                title: 'Reubicación Exitosa',
-                text: data.message || 'Unidad reubicada correctamente.',
-                confirmButtonColor: '#2E7D32',
-                willClose: () => {
-                    location.reload();
-                }
-            });
-        } else {
-            // Mostrar errores
-            if (data.errors && data.errors.parent) {
-                document.getElementById('errorParent').textContent = data.errors.parent[0];
-            }
-            if (data.errors && data.errors.__all__) {
-                document.getElementById('errorContainer').style.display = 'block';
-                document.getElementById('errorContainer').innerHTML = data.errors.__all__.join('<br>');
-            }
-
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: data.message || 'Error al reubicar la unidad.',
-                confirmButtonColor: '#c41c3b'
-            });
-        }
-    } catch (e) {
-        console.error('Error:', e);
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Error de conexión: ' + e.message,
-            confirmButtonColor: '#c41c3b'
-        });
-    }
-}
-
-// Listener de previsualización de foto en el modal
-document.getElementById('id_photo')?.addEventListener('change', function () {
-    handleModalPhotoPreview(this);
-});
-
-// Control de toggles de salud e inclusión
-const setupToggle = (checkboxId, contentId, headerId) => {
-    const chk = document.getElementById(checkboxId);
-    if (!chk) return;
-    const update = () => {
-        const content = document.getElementById(contentId);
-        const header = document.getElementById(headerId);
-        if (content) content.classList.toggle('hidden', !chk.checked);
-        if (header) header.classList.toggle('active-header', chk.checked);
-    };
-    chk.addEventListener('change', update);
-    update();
-};
-
-setupToggle('id_has_disability', 'content_has_disability', 'header_has_disability');
-setupToggle('id_has_catastrophic_illness', 'content_has_catastrophic_illness', 'header_has_catastrophic_illness');
-setupToggle('id_is_substitute', 'content_is_substitute', 'header_is_substitute');
-
-$(document).ready(function () {
+    // Combos dependientes DPA (País -> Provincia -> Cantón -> Parroquia)
     $('#id_country').on('change', function () {
         if ($(this).val()) {
             handleLocationCascade(this, 'id_province');
@@ -633,12 +339,14 @@ $(document).ready(function () {
         $('#id_canton').empty().append('<option value="">-- Seleccione --</option>').trigger('change');
         $('#id_parish').empty().append('<option value="">-- Seleccione --</option>').trigger('change');
     });
+
     $('#id_province').on('change', function () {
         if ($(this).val()) {
             handleLocationCascade(this, 'id_canton');
         }
         $('#id_parish').empty().append('<option value="">-- Seleccione --</option>').trigger('change');
     });
+
     $('#id_canton').on('change', function () {
         if ($(this).val()) {
             handleLocationCascade(this, 'id_parish');
