@@ -601,3 +601,37 @@ async function submitRelocate() {
         });
     }
 }
+
+// Listener de previsualización de foto en el modal
+document.getElementById('id_photo')?.addEventListener('change', function () {
+    handleModalPhotoPreview(this);
+});
+
+// Control de toggles de salud e inclusión
+const setupToggle = (checkboxId, contentId, headerId) => {
+    const chk = document.getElementById(checkboxId);
+    if (!chk) return;
+    const update = () => {
+        const content = document.getElementById(contentId);
+        const header = document.getElementById(headerId);
+        if (content) content.classList.toggle('hidden', !chk.checked);
+        if (header) header.classList.toggle('active-header', chk.checked);
+    };
+    chk.addEventListener('change', update);
+    update();
+};
+
+setupToggle('id_has_disability', 'content_has_disability', 'header_has_disability');
+setupToggle('id_has_catastrophic_illness', 'content_has_catastrophic_illness', 'header_has_catastrophic_illness');
+setupToggle('id_is_substitute', 'content_is_substitute', 'header_is_substitute');
+
+// Cascadas DPA
+$('#id_country').on('change', function () {
+    handleLocationCascade(this, 'id_province', 2);
+});
+$('#id_province').on('change', function () {
+    handleLocationCascade(this, 'id_canton', 3);
+});
+$('#id_canton').on('change', function () {
+    handleLocationCascade(this, 'id_parish', 4);
+});

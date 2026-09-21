@@ -1,98 +1,85 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block title %}Directorio de Personas | SIGETH{% endblock %}
-
-{% block extra_css %}
-{% endblock %}
-
 {% block content %}
-    <div id="personApp">
-        <!-- 1. Header -->
-        <div class="header-card">
-            <div>
-                <h1>Gestión de Empleados</h1>
-                <p>Gestión de fichas personales y empleados </p>
-            </div>
-            {% if perms.person.add_person %}
-                <button type="button" class="btn-blue-rectangle" onclick="openModal('modalPersonOverlay')">
-                    <i class="fas fa-plus"></i> Nueva Persona
-                </button>
-            {% endif %}
+    <!-- 1. Header -->
+    <div class="header-card">
+        <div>
+            <h1>Gestión de Empleados</h1>
+            <p>Gestión de fichas personales y empleados </p>
         </div>
-
-        <!-- 2. Estadísticas -->
-        <div class="stats-row" id="statsRow">
-            {% include 'person/partials/partial_person_stats.html' %}
-        </div>
-        <!-- 3. Contenedor principal Tabla -->
-        <div id="table-app">
-            <div class="content-table">
-                <form id="personFiltersForm" onsubmit="return false;">
-                    <div class="search-panel">
-                        <div class="search-grid ">
-{#                            <div class="person-filter-field">#}
-{#                                <div class="search-box person-search-box">#}
-                                    <input type="text" id="searchInput" name="q" class="input-field"
-                                           placeholder="Buscar por nombre o cédula" autocomplete="off"
-                                           autocapitalize="off" autocorrect="off" spellcheck="false"
-                                           value="{{ current_filters.q|default:'' }}">
-{#                                </div>#}
-{#                            </div>#}
-
-                            <div class="person-filter-field">
-                                <select id="filter_area" name="area" class="input-field select2"
-                                        data-ajax-url="{% url 'institution:api_unit_children' %}"
-                                        data-placeholder="Dependencia"
-                                        data-minimum-input-length="1">
-                                    <option value="">Todas las dependencias</option>
-                                    {% for area in areas %}
-                                        <option value="{{ area.id }}"
-                                                {% if current_filters.area == area.id|stringformat:"s" %}selected{% endif %}>
-                                            {{ area.name }}
-                                        </option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-
-                            <div class="person-filter-field">
-                                <select id="filter_is_active" name="is_active" class="input-field">
-                                    <option value="">Todos los estados</option>
-                                    <option value="true"
-                                            {% if current_filters.is_active == 'true' %}selected{% endif %}>Activo
-                                    </option>
-                                    <option value="false"
-                                            {% if current_filters.is_active == 'false' %}selected{% endif %}>Inactivo
-                                    </option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                </form>
-                <div class="search-toolbar">
-                    <div class="table-controls person-filter-controls"></div>
-                    <div class="search-filter-actions">
-                        <button type="submit" form="personFiltersForm" class="btn-blue-rectangle">
-                            <i class="fas fa-search"></i> Buscar
-                        </button>
-                        <button type="button" id="personFiltersClear" class="btn-blue-rectangle-outline">
-                            <i class="fas fa-eraser"></i> Limpiar
-                        </button>
-                    </div>
-                </div>
-
-                <div id="tableContainer">
-                    {% include 'person/partials/partial_person_table.html' %}
-                </div>
-            </div>
-        </div>
-        {% include 'person/modals/modal_person_form.html' %}
-        {% include 'person/modals/modal_credentials.html' %}
-        {% include 'person/modals/modal_relocate_employee.html' %}
+        {% if perms.person.add_person %}
+            <button type="button" class="btn-blue-rectangle" onclick="openModal('modalPersonOverlay')">
+                <i class="fas fa-plus"></i> Nueva Persona
+            </button>
+        {% endif %}
     </div>
+
+    <!-- 2. Estadísticas -->
+    <div class="stats-row" id="statsRow">
+        {% include 'person/partials/partial_person_stats.html' %}
+    </div>
+    <!-- 3. Contenedor principal Tabla -->
+    <div class="content-table">
+        <form id="personFiltersForm" onsubmit="return false;">
+            <div class="search-panel">
+                <div class="search-grid ">
+                    <input type="text" id="searchInput" name="q" class="input-field"
+                           placeholder="Buscar por nombre o cédula" autocomplete="off"
+                           autocapitalize="off" autocorrect="off" spellcheck="false"
+                           value="{{ current_filters.q|default:'' }}">
+
+                    <div class="person-filter-field">
+                        <select id="filter_area" name="area" class="input-field select2"
+                                data-ajax-url="{% url 'institution:api_unit_children' %}"
+                                data-placeholder="Dependencia"
+                                data-minimum-input-length="1"> 
+                            <option value="">Todas las dependencias</option>
+                            {% for area in areas %}
+                                <option value="{{ area.id }}"
+                                        {% if current_filters.area == area.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ area.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="person-filter-field">
+                        <select id="filter_is_active" name="is_active" class="input-field">
+                            <option value="">Todos los estados</option>
+                            <option value="true"
+                                    {% if current_filters.is_active == 'true' %}selected{% endif %}>Activo
+                            </option>
+                            <option value="false"
+                                    {% if current_filters.is_active == 'false' %}selected{% endif %}>Inactivo
+                            </option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </form>
+        <div class="search-toolbar">
+            <div class="table-controls person-filter-controls"></div>
+            <div class="search-filter-actions">
+                <button type="submit" form="personFiltersForm" class="btn-blue-rectangle">
+                    <i class="fas fa-search"></i> Buscar
+                </button>
+                <button type="button" id="personFiltersClear" class="btn-blue-rectangle-outline">
+                    <i class="fas fa-eraser"></i> Limpiar
+                </button>
+            </div>
+        </div>
+
+        <div id="tableContainer">
+            {% include 'person/partials/partial_person_table.html' %}
+        </div>
+    </div>
+    {% include 'person/modals/modal_person_form.html' %}
+    {% include 'person/modals/modal_credentials.html' %}
+    {% include 'person/modals/modal_relocate_employee.html' %}
 
 {% endblock %}
 
 {% block extra_js %}
     <script src="{% static 'js/person.js' %}"></script>
-    <script src="{% static 'js/employee/employee.js' %}"></script>
 {% endblock %}

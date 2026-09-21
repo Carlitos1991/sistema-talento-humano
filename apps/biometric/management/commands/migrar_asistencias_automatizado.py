@@ -7,18 +7,21 @@ from biometric.models import BiometricDevice, BiometricLoad, AttendanceRegistry
 
 
 class Command(BaseCommand):
-    help = 'Migración automatizada de asistencias de sigeth1 a SIGETH2 (Por mes o año completo)'
+    help = 'Migración automatizada de asistencias de sigeth1 a SIGETH2 (Por mes, año o biométrico específico)'
 
     def add_arguments(self, parser):
         parser.add_argument('--anio', type=int, required=True, help='Año a migrar')
         parser.add_argument('--mes', type=int, required=False,
                             help='Mes a migrar (Opcional, si se omite migra todo el año)')
         parser.add_argument('--motivo', type=str, required=True, help='Motivo que aparecerá en la carga de SIGETH2')
+        parser.add_argument('--biometric_id', type=int, required=False,
+                            help='ID del biométrico en la BD origen a migrar (Opcional)')
 
     def handle(self, *args, **options):
         anio = options['anio']
         mes = options.get('mes')
         motivo_usuario = options['motivo']
+        bio_id_filtro = options.get('biometric_id')
 
         cedulas_faltantes = set()
         bios_no_mapeados = set()
@@ -28,6 +31,9 @@ class Command(BaseCommand):
         total_global_saltados = 0
 
         periodo_log = f"{mes}/{anio}" if mes else f"AÑO COMPLETO {anio}"
+        if bio_id_filtro:
+            periodo_log += f" | BIO ID: {bio_id_filtro}"
+
         db_config = settings.DATABASES['old_db']
 
         self.stdout.write(self.style.SUCCESS(f"🚀 Iniciando Escaneo: {periodo_log}"))
@@ -39,7 +45,7 @@ class Command(BaseCommand):
             )
 
             with conn.cursor() as cursor:
-                # 1. BUSCAR DISPOSITIVOS CON ACTIVIDAD (Consulta dinámica)
+                # 1. BUSCAR DISPOSITIVOS CON ACTIVIDAD
                 sql_bios = """
                            SELECT DISTINCT b.id, b.name
                            FROM biometric_biometric b
@@ -52,25 +58,38 @@ class Command(BaseCommand):
                     sql_bios += " AND EXTRACT(MONTH FROM r.registry_date) = %s"
                     params_bios.append(mes)
 
+                # Filtro por ID de biométrico si fue suministrado
+                if bio_id_filtro:
+                    sql_bios += " AND b.id = %s"
+                    params_bios.append(bio_id_filtro)
+
                 cursor.execute(sql_bios, tuple(params_bios))
                 biometricos_antiguos = cursor.fetchall()
 
                 if not biometricos_antiguos:
-                    self.stdout.write(self.style.WARNING(f"⚠️ No se encontró actividad en el periodo {periodo_log}."))
+                    self.stdout.write(self.style.WARNING(f"⚠️ No se encontró actividad para los filtros dados."))
                     return
 
                 self.stdout.write(f"📊 Se detectaron {len(biometricos_antiguos)} biométricos con registros.")
 
                 for id_old, nombre_old in biometricos_antiguos:
-                    self.stdout.write(f"🔍 Procesando: '{nombre_old}'...", ending=' ')
+                    self.stdout.write(f"🔍 Procesando: [ID {id_old}] '{nombre_old}'...", ending=' ')
 
-                    dispositivo_nuevo = BiometricDevice.objects.filter(name__iexact=nombre_old).first()
+                    # Opción A: Buscar por ID directo en destino (si conservan la misma PK)
+                    # dispositivo_nuevo = BiometricDevice.objects.filter(id=id_old).first()
+
+                    # Opción B: Buscar por nombre o crearlo si falta automáticamente
+                    dispositivo_nuevo = BiometricDevice.objects.filter(name__iexact=nombre_old.strip()).first()
+
                     if not dispositivo_nuevo:
-                        self.stdout.write(self.style.ERROR("❌ NO HALLADO EN DESTINO"))
-                        bios_no_mapeados.add(nombre_old)
-                        continue
+                        # Auto-registro si no existe en destino
+                        dispositivo_nuevo = BiometricDevice.objects.create(
+                            name=nombre_old.strip(),
+                            # Agrega campos requeridos de tu modelo si existen (ej. ip_address='0.0.0.0')
+                        )
+                        self.stdout.write(self.style.WARNING("[AUTO-CREADO EN DESTINO]"), ending=' ')
 
-                    # 2. TRAER MARCACIONES (Consulta dinámica respetando per.cedula)
+                    # 2. TRAER MARCACIONES
                     sql_regs = """
                                SELECT per.cedula, r.employee_id_bio, r.registry_date, bl.load_type
                                FROM biometric_registry r
@@ -100,7 +119,6 @@ class Command(BaseCommand):
                         )
 
                         for cedula, id_bio_emp, fecha_reg, tipo_carga_old in registros:
-                            # Buscar empleado en SIGETH2
                             empleado = Employee.objects.filter(person__document_number=cedula).first()
 
                             if not empleado:
@@ -108,7 +126,6 @@ class Command(BaseCommand):
                                 total_global_saltados += 1
                                 continue
 
-                            # Control de duplicados usando registry_date
                             registro_existe = AttendanceRegistry.objects.filter(
                                 employee=empleado,
                                 registry_date=fecha_reg
@@ -146,9 +163,6 @@ class Command(BaseCommand):
 
             if cedulas_faltantes:
                 self.stdout.write(self.style.ERROR(f"❌ CEDULAS NO ENCONTRADAS ({len(cedulas_faltantes)})"))
-
-            if bios_no_mapeados:
-                self.stdout.write(self.style.ERROR(f"🚫 BIOMÉTRICOS NO MAPEADOS: {list(bios_no_mapeados)}"))
 
         except Exception as e:
             self.stdout.write(self.style.ERROR(f"\n❌ Error General: {e}"))

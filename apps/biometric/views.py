@@ -16,6 +16,7 @@ from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string, get_template
 from django.utils import timezone
 from django.utils.decorators import method_decorator
+from django.utils.timezone import make_aware
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_http_methods
 from django.views.generic import View, ListView
@@ -72,36 +73,33 @@ def select_in_candidate(candidates, ev_dt, prev_ev_dt=None, next_ev_dt=None):
 
 
 def select_out_candidate(candidates, ev_dt, prev_ev_dt=None, next_ev_dt=None):
-    """Selecciona candidato para evento 'out'.
-    Preferir el candidato más cercano DESPUÉS de ev_dt. Si no existe, elegir el más cercano ANTES
-    sólo si está dentro de OUT_MAX_SECONDS.
-    """
     if not candidates:
         return None
+
+    # 1. Candidatos posteriores al horario de salida
     after = [p for p in candidates if _p_dt(p) >= ev_dt]
     if after:
-        # elegir el posterior más cercano (mínima dt)
         best_after = min(after, key=lambda p: (_p_dt(p) - ev_dt).total_seconds())
-        # evitar un punch que sea más cercano al siguiente evento
-        try:
-            res = resolve_cross_shift(best_after, prev_ev_dt=ev_dt, next_ev_dt=next_ev_dt)
-            if res == 'next':
+        # Si está más cerca del siguiente evento (ej. entrada tarde de la tarde), no tomarla como salida
+        if next_ev_dt:
+            diff_curr = abs((_p_dt(best_after) - ev_dt).total_seconds())
+            diff_next = abs((_p_dt(best_after) - next_ev_dt).total_seconds())
+            if diff_next < diff_curr:
                 return None
-        except Exception:
-            pass
         return best_after
+
+    # 2. Candidatos anteriores al horario de salida (salida anticipada)
     before = [p for p in candidates if _p_dt(p) < ev_dt]
-    if not before:
-        return None
-    best_before = max(before, key=lambda p: (_p_dt(p) - ev_dt).total_seconds())
-    diff = abs((_p_dt(best_before) - ev_dt).total_seconds())
-    if diff <= OUT_MAX_SECONDS:
-        # si este punch es muy cercano al evento anterior, y prev_ev_dt existe, evitar duplicarlo
+    if before:
+        best_before = max(before, key=lambda p: _p_dt(p))
+        # Validar que no esté más cerca del inicio de jornada
         if prev_ev_dt:
             diff_prev = abs((_p_dt(best_before) - prev_ev_dt).total_seconds())
-            if diff_prev <= CROSS_SHIFT_THRESHOLD and diff_prev < diff:
+            diff_curr = abs((ev_dt - _p_dt(best_before)).total_seconds())
+            if diff_prev < diff_curr:
                 return None
         return best_before
+
     return None
 
 
@@ -439,6 +437,7 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
 
 class OfflineAttendanceAccessView(View):
     """Simple redirector to the offline attendance page."""
+
     def get(self, request, *args, **kwargs):
         try:
             url = reverse('biometric:offline_attendance')
@@ -1179,13 +1178,15 @@ def generate_monthly_report_pdf(request):
                 for p in day_obj.get('punches', []):
                     if 'selected_slot' in p:
                         del p['selected_slot']
+
+                    p['filtered'] = False
+
                     if id(p) in visible_ids:
-                        p['filtered'] = False
                         ev_label = p.get('matched_event', '')
                         slot_map = {'J1_in': 'G1', 'J1_out': 'G2', 'J2_in': 'G3', 'J2_out': 'G4'}
                         p['selected_slot'] = slot_map.get(ev_label, '')
                     else:
-                        p['filtered'] = True
+                        p['selected_slot'] = ''
 
                 day_obj['punches'] = sorted(day_obj.get('punches', []), key=lambda x: x.get('dt') or x.get('dt_norm'))
             except Exception:

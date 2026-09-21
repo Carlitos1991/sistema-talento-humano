@@ -172,7 +172,15 @@ let currentScrollY = 0;
 window.openModal = function (id) {
     const modal = document.getElementById(id);
     if (modal) {
-        $(modal).find('select').select2({width: '100%'});
+        // Asignar el dropdown al propio modal para aislar el z-index
+        $(modal).find('select').each(function () {
+            if (!$(this).hasClass('select2-hidden-accessible')) {
+                $(this).select2({
+                    width: '100%',
+                    dropdownParent: $(modal)
+                });
+            }
+        });
         document.body.classList.add('no-scroll');
         modal.classList.remove('hidden');
     } else {

@@ -1921,14 +1921,10 @@ input.is-valid:focus, select.is-valid:focus, textarea.is-valid:focus, .input-fie
     margin-left: 0;
 }
 
-
-/* SELECT2 */
-.select2-container {
-    z-index: 99999;
-}
-
-.select2-dropdown {
-    z-index: 10000000 !important;
+.person-filter-field .select2-container,
+.search-panel .select2-container {
+    z-index: 10 !important;
+    position: relative;
 }
 
 .select2-container--default.select2-container--focus .select2-selection--single,

@@ -1,14 +1,17 @@
 <div id="modalPersonOverlay" class="modal-overlay hidden">
     <div class="modal-container-medium animate-scale-in">
-        <form id="personFormHtml" method="POST" @submit.prevent="submitPersonForm" enctype="multipart/form-data">
+        <form id="personFormHtml" action="{% url 'person:person_create' %}" method="POST"
+              onsubmit="submitAjaxForm(event)" enctype="multipart/form-data">
             {% csrf_token %}
             <!-- HEADER -->
             <div class="modal-header-medium modal-header-gradient">
                 <h3 class="modal-title text-white">
                     <i class="fa-solid fa-user-pen me-2"></i>
-                    <span v-text="isEditing ? ' Editar Datos' : ' Nueva Persona'"></span>
+                    <span id="personModalTitle">Nueva Persona</span>
                 </h3>
-                <button type="button" class="btn-close-circle" @click="closeModal"><i class="fa-solid fa-xmark"></i></button>
+                <button type="button" class="btn-close-circle" onclick="closeModal('modalPersonOverlay')">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
             </div>
 
             <!-- BODY -->
@@ -16,18 +19,15 @@
 
                 <!-- 1. IDENTIDAD -->
                 <div class="form-section-card">
-                    <!-- TÍTULO: Solo una vez, arriba del todo -->
                     <h5 class="section-title"><i class="fa-regular fa-id-card"></i> Identidad</h5>
 
-                    <!-- Contenedor Flex -->
                     <div class="d-flex flex-wrap gap-3 align-items-center">
-
                         <!-- FOTO -->
                         <div class="photo-uploader-wrapper">
                             <label for="id_photo" class="photo-upload-label" title="Clic para subir foto">
                                 <div class="photo-preview-box">
-                                    <img v-if="photoPreview" :src="photoPreview">
-                                    <div v-else class="placeholder-icon">
+                                    <img id="photo-preview-img" style="display: none;" alt="Previsualización">
+                                    <div id="photo-placeholder" class="placeholder-icon">
                                         <i class="fa-solid fa-camera mb-1" style="font-size: 1.5rem;"></i>
                                         <span style="font-size: 0.7rem;">Foto</span>
                                     </div>
@@ -36,10 +36,11 @@
                                     </div>
                                 </div>
                             </label>
-                            <div class="hidden">{{ form.photo }}</div>
+                            <div class="hidden">
+                                {{ form.photo }}
+                            </div>
                         </div>
 
-                        <!-- INPUTS: Agregamos w-100 para forzar ancho total -->
                         <div class="flex-grow-1 w-100">
                             <div class="grid-2-cols">
                                 <div class="form-group">
@@ -94,6 +95,7 @@
                         </div>
                     </div>
                 </div>
+
                 <!-- 3. UBICACIÓN -->
                 <div class="form-section-card mt-3">
                     <h5 class="section-title"><i class="fa-solid fa-map-location-dot"></i> Domicilio</h5>
@@ -121,7 +123,7 @@
                     </div>
                 </div>
 
-                <!-- 4. CONTACTO DE EMERGENCIA (NUEVO) -->
+                <!-- 4. CONTACTO DE EMERGENCIA -->
                 <div class="form-section-card mt-3">
                     <h5 class="section-title"><i class="fa-solid fa-truck-medical"></i> Contacto de Emergencia</h5>
                     <div class="grid-3-cols">
@@ -140,17 +142,15 @@
                     </div>
                 </div>
 
-                <!-- 5. SALUD E INCLUSIÓN (NUEVO - Discapacidad y Sustitutos) -->
+                <!-- 5. SALUD E INCLUSIÓN -->
                 <div class="form-section-card mt-3">
                     <h5 class="section-title"><i class="fa-solid fa-hands-holding-circle"></i> Salud e Inclusión</h5>
 
-                    <!-- Contenedor vertical estricto -->
                     <div style="display: flex; flex-direction: column; gap: 1.5rem;">
 
                         <!-- FILA 1: DISCAPACIDAD -->
                         <div class="w-100">
-                            <!-- Cabecera -->
-                            <div class="toggle-header" :class="{ 'active-header': form.has_disability }">
+                            <div class="toggle-header" id="header_has_disability">
                                 <span class="d-flex align-items-center gap-2 font-bold text-secondary">
                                     <div class="d-flex align-items-center justify-content-center bg-light rounded-circle"
                                          style="width: 32px; height: 32px;">
@@ -164,8 +164,7 @@
                                 </label>
                             </div>
 
-                            <!-- Contenido -->
-                            <div v-show="form.has_disability" class="toggle-content">
+                            <div id="content_has_disability" class="toggle-content hidden">
                                 <div class="grid-2-cols">
                                     <div class="form-group">
                                         <label class="form-label small">Tipo de Discapacidad <span
@@ -183,7 +182,7 @@
 
                         <!-- FILA 2: ENFERMEDAD CATASTRÓFICA -->
                         <div class="w-100">
-                            <div class="toggle-header" :class="{ 'active-header': form.has_catastrophic_illness }">
+                            <div class="toggle-header" id="header_has_catastrophic_illness">
                                 <span class="d-flex align-items-center gap-2 font-bold text-secondary">
                                     <div class="d-flex align-items-center justify-content-center bg-light rounded-circle"
                                          style="width: 32px; height: 32px;">
@@ -197,7 +196,7 @@
                                 </label>
                             </div>
 
-                            <div v-show="form.has_catastrophic_illness" class="toggle-content">
+                            <div id="content_has_catastrophic_illness" class="toggle-content hidden">
                                 <div class="form-group">
                                     <label class="form-label small">Descripción / Diagnóstico <span class="text-danger">*</span></label>
                                     {{ form.catastrophic_illness_description }}
@@ -207,7 +206,7 @@
 
                         <!-- FILA 3: SUSTITUTO -->
                         <div class="w-100">
-                            <div class="toggle-header" :class="{ 'active-header': form.is_substitute }">
+                            <div class="toggle-header" id="header_is_substitute">
                                 <span class="d-flex align-items-center gap-2 font-bold text-secondary">
                                     <div class="d-flex align-items-center justify-content-center bg-light rounded-circle"
                                          style="width: 32px; height: 32px;">
@@ -221,7 +220,7 @@
                                 </label>
                             </div>
 
-                            <div v-show="form.is_substitute" class="toggle-content">
+                            <div id="content_is_substitute" class="toggle-content hidden">
                                 <div class="alert alert-info small mb-3 p-2 border rounded bg-light text-muted">
                                     <i class="fa-solid fa-info-circle me-1"></i> Ingrese los datos de la persona con
                                     discapacidad a quien sustituye.
@@ -256,12 +255,12 @@
                     </div>
                 </div>
 
-
             </div>
 
             <!-- FOOTER -->
             <div class="modal-footer-medium modal-footer-spaced">
-                <button type="button" class="btn-default-outline" @click="closeModal">Cancelar</button>
+                <button type="button" class="btn-default-outline" onclick="closeModal('modalPersonOverlay')">Cancelar
+                </button>
                 <button type="submit" class="btn-dark-blue-rectangle">
                     <i class="fa-solid fa-floppy-disk"></i> Guardar
                 </button>
