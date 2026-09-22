@@ -29,7 +29,7 @@
                             <i class="fa-solid fa-edit"></i>
                         </button>
                         <!-- Botón Toggle Estado -->
-                        <button class="{% if type.is_active %}btn-sixth{% else %}btn-eleventh{% endif %}"
+                        <button class="{% if type.is_active %}btn-green-circle{% else %}btn-red-circle{% endif %}"
                                 onclick="toggleStatus({{ type.id }})">
                             <i class="fa-solid {% if type.is_active %}fa-power-off{% else %}fa-toggle-on{% endif %}"></i>
                         </button>

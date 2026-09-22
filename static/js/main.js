@@ -170,21 +170,18 @@ let currentScrollY = 0;
 
 // 4.1 Modales estáticos (renderizados en HTML)
 window.openModal = function (id) {
+    currentScrollY = window.scrollY;
+    document.documentElement.classList.add('no-scroll');
+    document.body.classList.add('no-scroll');
+
     const modal = document.getElementById(id);
     if (modal) {
-        // Asignar el dropdown al propio modal para aislar el z-index
         $(modal).find('select').each(function () {
             if (!$(this).hasClass('select2-hidden-accessible')) {
-                $(this).select2({
-                    width: '100%',
-                    dropdownParent: $(modal)
-                });
+                $(this).select2({width: '100%', dropdownParent: $(modal)});
             }
         });
-        document.body.classList.add('no-scroll');
         modal.classList.remove('hidden');
-    } else {
-        console.error("No se encontró el modal con ID: " + id);
     }
 };
 
@@ -247,7 +244,6 @@ window.closeModal = function (id = null) {
         const modal = document.getElementById(id);
         if (modal) modal.classList.add('hidden');
     }
-
     const root = document.getElementById('modal-root');
     if (root) root.innerHTML = '';
 

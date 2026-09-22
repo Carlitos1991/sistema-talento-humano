@@ -1,23 +1,27 @@
 <div class="grid-general">
-    <!-- TARJETA: TÍTULOS ACADÉMICOS (AHORA CENTRADO) -->
+    <!-- 1. TÍTULOS ACADÉMICOS -->
     <div class="card-large yellow-border">
-        <h6 class="section-title"><i class="fa-solid fa-graduation-cap"></i> Títulos Académicos</h6>
+        <h6 class="section-title">
+            <i class="fa-solid fa-graduation-cap"></i> Títulos Académicos
+        </h6>
         <div class="stat-inner-container">
             <div id="stat-titles" class="stat-number text-primary">{{ curriculum_titles_count|default:0 }}</div>
             <div class="stat-label">Registrados</div>
         </div>
-        <!-- CORRECCIÓN: cambiado de class="right" a class="buttons-centered" -->
         <div class="buttons-centered">
             <button type="button" class="btn-light"
+                    title="Ver títulos académicos registrados"
                     onclick="openAjaxModal('{% url 'employee:academic_title_list' person.id %}')">
-                <i class="fa-solid fa-list"></i> Listado
+                <i class="fa-solid fa-list-check me-1"></i> Listado
             </button>
         </div>
     </div>
 
-    <!-- TARJETA: EXPERIENCIA LABORAL -->
+    <!-- 2. EXPERIENCIA LABORAL -->
     <div class="card-large yellow-border">
-        <h6 class="section-title"><i class="fa-solid fa-briefcase"></i> Experiencia Laboral</h6>
+        <h6 class="section-title">
+            <i class="fa-solid fa-briefcase"></i> Experiencia Laboral
+        </h6>
         <div class="stat-inner-container">
             <div id="stat-experience" class="stat-number">
                 {{ experience_years|default:0 }} años {{ experience_months|default:0 }} meses
@@ -26,35 +30,41 @@
         </div>
         <div class="buttons-centered">
             <button type="button" class="btn-light"
+                    title="Ver experiencia laboral registrada"
                     onclick="openAjaxModal('{% url 'employee:work_experience_list' person.id %}')">
-                <i class="fa-solid fa-list"></i> Listado
+                <i class="fa-solid fa-list-check me-1"></i> Listado
             </button>
         </div>
     </div>
 
-    <!-- TARJETA: CURSOS -->
+    <!-- 3. CURSOS Y CAPACITACIONES -->
     <div class="card-large yellow-border">
-        <h6 class="section-title"><i class="fa-solid fa-book-atlas"></i> Cursos y Capacitaciones</h6>
+        <h6 class="section-title">
+            <i class="fa-solid fa-book-atlas"></i> Cursos y Capacitaciones
+        </h6>
         <div class="stat-inner-container">
             <div id="stat-courses" class="stat-number">{{ curriculum_courses_count|default:0 }}</div>
             <div class="stat-label">Capacitaciones</div>
         </div>
         <div class="buttons-centered">
             <button type="button" class="btn-light"
+                    title="Ver cursos y capacitaciones registradas"
                     onclick="openAjaxModal('{% url 'employee:courses_list' person.id %}')">
-                <i class="fa-solid fa-list"></i> Listado
+                <i class="fa-solid fa-list-check me-1"></i> Listado
             </button>
         </div>
     </div>
 
-    <!-- TARJETA: HOJA DE VIDA -->
+    <!-- 4. HOJA DE VIDA (PDF) -->
     <div class="card-large yellow-border">
-        <h6 class="section-title"><i class="fa-regular fa-id-card"></i> Hoja de Vida</h6>
+        <h6 class="section-title">
+            <i class="fa-regular fa-id-card"></i> Hoja de Vida
+        </h6>
         <div class="stat-inner-container">
             <div id="stat-cv-file" class="stat-number">
                 {% if curriculum_obj and curriculum_obj.pdf_file %}
                     <a href="{{ curriculum_obj.pdf_file.url }}" target="_blank"
-                       class="btn-yellow-circle" title="Ver Hoja de Vida">
+                       class="btn-yellow-circle" title="Ver Hoja de Vida actual">
                         <i class="fa-solid fa-file-pdf"></i>
                     </a>
                 {% else %}
@@ -73,14 +83,14 @@
         </div>
         <div class="buttons-centered">
             {% if can_edit_person %}
-                <!-- INPUT OCULTO QUE FALTABA -->
-                <input type="file" id="pdfInput" accept=".pdf" style="display: none;"
+                <!-- Input oculto para carga de archivo -->
+                <input type="file" id="cvPdfInput" accept=".pdf" style="display: none;"
                        onchange="uploadCvPdf(this, '{{ person.id }}')">
 
                 <button type="button" class="btn-light"
-                        onclick="document.getElementById('pdfInput').click()">
-                    <i class="fa-solid fa-cloud-arrow-up"></i>
-                    SUBIR
+                        title="Subir nuevo archivo de hoja de vida (PDF)"
+                        onclick="document.getElementById('cvPdfInput').click()">
+                    <i class="fa-solid fa-cloud-arrow-up me-1"></i> Subir
                 </button>
             {% endif %}
         </div>
