@@ -1,33 +1,43 @@
-<div class="modal-overlay hidden">
-    <div class="modal-container-small">
-        <form action="{{ request.path }}" method="POST" id="assignBossForm" onsubmit="submitAjaxForm(event)">
+<div class="modal-overlay hidden" id="modalAssignBoss">
+    <div class="modal-container-medium">
+        <!-- FORMULARIO CON CALLBACK DE RECARGA AUTOMÁTICA -->
+        <form action="{{ request.path }}" 
+              method="POST" 
+              id="assignBossForm" 
+              onsubmit="submitAjaxForm(event, () => location.reload())">
             {% csrf_token %}
+
+            <!-- HEADER -->
             <div class="modal-header-medium">
                 <h3 class="header-title">
-                    <i class="fa-solid fa-layer-group me-2"></i>
+                    <i class="fa-solid fa-user-tie me-2"></i>
                     <span>Asignar Jefe Inmediato</span>
                 </h3>
-                <button type="button" class="btn-close-circle" onclick="closeModal()">
+                <button type="button" class="btn-close-circle" onclick="closeModal()" aria-label="Cerrar">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-            <div class="modal-body">
+
+            <!-- BODY CON SELECT2 -->
+            <div class="modal-body-content modal-body-custom">
                 <div class="form-section-card">
-                    <div class="form-group">
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle"></i> Unidad: <b>{{ unit.name }}</b>
-                        </div>
-                        <label class="form-label bold">Funcionario</label>
+                    <div class="form-group form-group-compact">
+                        <label class="form-label" for="id_boss_assign">
+                            Funcionario Responsable <span class="text-danger">*</span>
+                        </label>
                         {{ form.boss }}
-                        <div class="form-text text-muted">Puede buscar por nombre o número de cédula. No se
-                            muestran ex-empleados.
-                        </div>
+                        {% if form.boss.errors %}
+                            <div class="text-error small mt-1">{{ form.boss.errors.0 }}</div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
 
-            <div class="modal-footer-fixed">
-                <button type="button" class="btn-default-outline" onclick="closeModal()">Cancelar</button>
+            <!-- FOOTER -->
+            <div class="modal-footer-medium modal-footer-spaced">
+                <button type="button" class="btn-default-outline" onclick="closeModal()">
+                    Cancelar
+                </button>
                 <button type="submit" class="btn-dark-blue-rectangle">
                     <i class="fas fa-save me-1"></i> Guardar Asignación
                 </button>
