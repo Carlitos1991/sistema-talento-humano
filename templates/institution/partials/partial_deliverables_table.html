@@ -1,5 +1,5 @@
-<div class="table-container deliverables-table-container">
-    <table class="managed-table">
+<div class="table-container">
+    <table class="managed-table exportable-table">
         <thead>
         <tr>
             <th><i class="fa-solid fa-box"></i> Nombre</th>
@@ -14,11 +14,11 @@
                 <td>{{ deliverable.description|default:'-' }}</td>
                 <td class="actions">
                     <div class="actions-wrapper">
-                        <button type="button" class="btn-views-action" title="Editar Entregable"
+                        <button type="button" class="btn-yellow-circle" title="Editar Entregable"
                                 onclick="openAjaxModal('{% url 'institution:api_deliverable_update' unit.id deliverable.id %}')">
                             <i class="fa-solid fa-pen"></i>
                         </button>
-                        <button type="button" class="btn-action-delete" title="Eliminar Entregable"
+                        <button type="button" class="btn-red-circle" title="Eliminar Entregable"
                                 onclick="deleteRecordAjax('{% url 'institution:api_deliverable_delete' deliverable.id %}', 'el entregable {{ deliverable.name|escapejs }}')">
                             <i class="fa-solid fa-trash-alt"></i>
                         </button>

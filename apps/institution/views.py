@@ -708,6 +708,19 @@ class DeliverableDeleteView(LoginRequiredMixin, View):
         return JsonResponse({'success': True, 'message': 'Entregable eliminado.'})
 
 
+def deliverables_partial_table(request, unit_id):
+    """Devuelve únicamente el HTML parcial de la tabla de entregables."""
+    unit = get_object_or_404(AdministrativeUnit, pk=unit_id)
+    deliverables = Deliverable.objects.filter(
+        unit=unit,
+        is_active=True
+    ).order_by('-created_at')
+    return render(request, 'institution/partials/partial_deliverables_table.html', {
+        'unit': unit,
+        'deliverables': deliverables
+    })
+
+
 @login_required
 def api_unit_deliverables(request, unit_id):
     """

@@ -175,11 +175,11 @@
                 <span><i class="fa-solid fa-box"></i> Entregables</span>
                 <i class="fa-solid fa-chevron-down accordion-indicator"></i>
                 <button type="button" class="btn btn-nuevo-entregable btn-cta-action"
-                        onclick="event.stopPropagation(); openAjaxModal('{% url 'institution:api_deliverable_create' unit.id %}')">
+                        onclick="event.stopPropagation(); openAjaxModal('{% url 'institution:api_deliverable_create' unit.id %}', () => bindDeliverableForm('{{ unit.id }}'))">
                     <i class="fa-solid fa-plus"></i> Nuevo Entregable
                 </button>
             </div>
-            <div id="table-content-wrapper" class="card-section-content" style="display: none;">
+            <div id="deliverables-table-wrapper" class="card-section-content" style="display: none;">
                 {% include 'institution/partials/partial_deliverables_table.html' %}
             </div>
         </div>
@@ -240,29 +240,29 @@
         </div>
 
         <!-- Subdependencias -->
-        <div class="subdependencias-section">
+        <div class="sub-units-section">
             <div class="institution-section-title section-title-row">
                 <span><i class="fa-solid fa-sitemap"></i> Sub-dependencias / Áreas</span>
 
                 {% if perms.institution.add_administrativeunit %}
                     <button type="button" class="btn-dark-blue-rectangle"
-                            onclick="openAjaxModal('{% url 'institution:unit_create' %}?parent_id={{ unit.id }}', window.initUnitModal)">
+                            onclick="openAjaxModal('{% url 'institution:unit_create' %}?parent_id={{ unit.id }}', window.bindUnitCreateModal)">
                         <i class="fas fa-plus"></i> Crear Dependencia
                     </button>
                 {% endif %}
             </div>
-            <div class="subdependencias-list">
+            <div id="subunits-list-wrapper" class="sub-units-list">
                 {% if children and children|length > 0 %}
                     {% for sub in children %}
-                        <div class="subdependencia-card-blue"
+                        <div class="sub-units-card-blue"
                              onclick="window.location.href='/institution/units/detail/{{ sub.id }}/view/'">
                             <i class="fa-solid fa-users"></i>
                             <span class="sub-name">{{ sub.name }}</span>
                         </div>
                     {% endfor %}
                 {% else %}
-                    <div class="subdependencia-card-blue subdependencia-card-empty">
-                        <span class="sub-name">Sin subdependencias.</span>
+                    <div class="sub-units-card-blue sub-units-card-empty">
+                        <span class="sub-name">Sin sub dependencias.</span>
                     </div>
                 {% endif %}
             </div>

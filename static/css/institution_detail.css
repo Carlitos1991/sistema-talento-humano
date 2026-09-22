@@ -1,5 +1,5 @@
-/* Tarjetas azules para subdependencias/áreas */
-.subdependencias-list {
+/* Tarjetas azules para sub dependencias/áreas */
+.sub-units-list {
     display: flex;
     flex-wrap: wrap;
     gap: 18px;
@@ -7,7 +7,7 @@
     align-items: stretch;
 }
 
-.subdependencia-card-blue {
+.sub-units-card-blue {
     background: #183a7a;
     border-radius: 10px;
     color: #fff;
@@ -31,17 +31,17 @@
     overflow: hidden;
 }
 
-.subdependencia-card-blue:hover {
+.sub-units-card-blue:hover {
     box-shadow: 0 4px 16px rgba(24, 58, 122, 0.18);
     background: #2050b3;
 }
 
-.subdependencia-card-blue i {
+.sub-units-card-blue i {
     font-size: 1.35rem;
     margin-bottom: 4px;
 }
 
-.subdependencia-card-blue .sub-name {
+.sub-units-card-blue .sub-name {
     width: 100%;
     white-space: normal;
     overflow-wrap: anywhere;
@@ -49,11 +49,11 @@
     line-height: 1.25;
 }
 
-.subdependencia-card-empty {
+.sub-units-card-empty {
     background: #f8fafc;
     color: #198754;
     font-weight: 600;
-    border: 1.5px dashed #e9f7ef;
+    border: 2px dashed #e9f7ef;
     box-shadow: none;
 }
 
@@ -491,7 +491,7 @@
 }
 
 .nomina-section,
-.subdependencias-section {
+.sub-units-section {
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 14px;
@@ -538,7 +538,7 @@
         max-width: 100%;
     }
 
-    .subdependencia-card-blue {
+    .sub-units-card-blue {
         flex-basis: calc((100% - 18px) / 2);
     }
 }
@@ -1063,18 +1063,18 @@
     text-transform: uppercase;
 }
 
-.subdependencias-section {
+.sub-units-section {
     margin-bottom: 24px;
 }
 
-.subdependencias-list {
+.sub-units-list {
     display: flex;
     flex-wrap: wrap;
     gap: 18px;
     align-items: stretch;
 }
 
-.subdependencia-card {
+.sub-units-card {
     background: #fff;
     border-radius: 12px;
     box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
@@ -1092,12 +1092,12 @@
     transition: box-shadow 0.2s;
 }
 
-.subdependencia-card:hover {
+.sub-units-card:hover {
     box-shadow: 0 4px 16px rgba(25, 135, 84, 0.13);
     background: #e9f7ef;
 }
 
-.subdependencia-card .sub-name {
+.sub-units-card .sub-name {
     font-weight: 600;
     color: #198754;
     text-align: center;
@@ -1107,7 +1107,7 @@
     line-height: 1.2;
 }
 
-.subdependencia-card .sub-code {
+.sub-units-card .sub-code {
     color: #6c757d;
     font-size: 0.95rem;
 }
@@ -1338,26 +1338,26 @@
     }
 
     .nomina-card,
-    .subdependencia-card-blue {
+    .sub-units-card-blue {
         min-width: 100%;
         max-width: 100%;
         flex-basis: 100%;
     }
 
-    .subdependencia-card-blue {
+    .sub-units-card-blue {
         flex-basis: 100%;
     }
 }
 
 @media (max-width: 1200px) {
     .nomina-card {
-        .subdependencia-card-blue {
+        .sub-units-card-blue {
         }
     }
 
     @media (max-width: 900px) {
         .nomina-card,
-        .subdependencia-card-blue {
+        .sub-units-card-blue {
             flex-basis: 100%;
         }
     }
