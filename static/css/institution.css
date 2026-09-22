@@ -31,6 +31,10 @@
     color: #4b5563;
 }
 
+.hidden {
+    display: none !important;
+}
+
 /* Botón sutil de reseteo */
 .btn-empty-reset {
     margin-top: 15px;

@@ -755,7 +755,7 @@ class OrganigramView(LoginRequiredMixin, PermissionRequiredMixin, View):
     template_name = 'institution/organigram.html'
 
     def get(self, request):
-        organigram = InstitutionOrganigram.objects.filter(image__isnull=False).exclude(image='').last()
+        organigram = InstitutionOrganigram.objects.filter(image__isnull=False).exclude(image='').first()
         form = OrganigramForm()
         return render(request, self.template_name, {
             'organigram': organigram,
@@ -769,7 +769,7 @@ class OrganigramView(LoginRequiredMixin, PermissionRequiredMixin, View):
         if 'image' not in request.FILES:
             return redirect('institution:organigram_view')
 
-        instance = InstitutionOrganigram.objects.last()
+        instance = InstitutionOrganigram.objects.first()
         form = OrganigramForm(request.POST, request.FILES, instance=instance)
 
         if form.is_valid():
