@@ -1,6 +1,10 @@
 /**
  * SIGETH - Módulo de Gestión Institucional y Estructura Organizacional
- * Archivo Unificado: Jerarquía, Entregables, Reubicación de Unidades y Empleados
+ * Archivo Maestro Unificado:
+ * 1. Jerarquía, Niveles y Búsqueda (Drill-down)
+ * 2. Entregables Atómicos
+ * 3. Reubicación de Unidades y Personal
+ * 4. Visor Interactivo de Organigrama (Zoom, Pan, Carga y Descarga)
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -31,6 +35,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // =========================================================================
+    // 2. NAVEGACIÓN JERÁRQUICA (DRILL-DOWN) Y BÚSQUEDA ASÍNCRONA
+    // =========================================================================
     let currentParentId = null;
     let currentLevelOrder = null;
     let unitSearchRequestId = 0;
@@ -68,9 +75,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const tableWrapper = document.getElementById('table-content-wrapper');
             if (tableWrapper) {
                 tableWrapper.innerHTML = htmlContent;
+
                 const newTable = tableWrapper.querySelector('.managed-table');
                 if (newTable && typeof TableManager !== 'undefined') {
-                    newTable.dataset.externalSearch = 'true';
                     new TableManager(newTable);
                 }
             }
@@ -95,11 +102,22 @@ document.addEventListener('DOMContentLoaded', () => {
         loadUnitsPartial({parentId: currentParentId, showInactive, query: searchQuery});
     };
 
+    // Switch de Unidades Inactivas (stopImmediatePropagation previene doble petición con main.js)
+    const toggleInactiveElement = document.getElementById('toggleInactiveUnits');
+    if (toggleInactiveElement) {
+        toggleInactiveElement.addEventListener('change', function (e) {
+            e.stopImmediatePropagation();
+            const showInactive = this.checked;
+            const searchQuery = getCurrentUnitSearchQuery();
+            loadUnitsPartial({parentId: currentParentId, showInactive, query: searchQuery});
+        });
+    }
+
+    // Buscador con retardo (debounce)
     const unitSearchInput = getUnitSearchInputElement();
     if (unitSearchInput) {
         unitSearchInput.addEventListener('input', function () {
             const searchQuery = this.value.trim();
-            const toggleInactiveElement = document.getElementById('toggleInactiveUnits');
             const showInactive = toggleInactiveElement ? toggleInactiveElement.checked : false;
 
             clearTimeout(unitSearchDebounceTimer);
@@ -119,10 +137,167 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnAddUnit) {
         btnAddUnit.onclick = () => openAjaxModal('/institution/units/create/', window.initUnitModal);
     }
+
+    // =========================================================================
+    // 3. VISOR DE ORGANIGRAMA (ZOOM, PAN, DESCARGA Y SUBIDA)
+    // =========================================================================
+    const imgElement = document.getElementById('main-image');
+    const uploadPlaceholder = document.getElementById('upload-placeholder');
+    const toolbar = document.getElementById('toolbar');
+    const btnSave = document.getElementById('btn-save-float');
+    const uploadForm = document.getElementById('uploadForm');
+    const viewerBox = document.getElementById('viewer-box');
+    const btnMunicipio = document.getElementById('btn-municipio-link');
+
+    // Solo se inicializa si la página actual tiene el visor de organigrama
+    if (viewerBox) {
+        if (btnMunicipio) {
+            btnMunicipio.addEventListener('click', function () {
+                const targetUrl = this.dataset.url;
+                if (targetUrl) window.location.href = targetUrl;
+            });
+        }
+
+        const fileInput = uploadForm ? uploadForm.querySelector('input[type="file"]') : null;
+
+        let currentScale = 1;
+        let isDragging = false;
+        let startX, startY, translateX = 0, translateY = 0;
+
+        function updateTransform() {
+            if (imgElement) {
+                imgElement.style.transform = `translate(${translateX}px, ${translateY}px) scale(${currentScale})`;
+            }
+        }
+
+        function zoomImage(amount) {
+            if (!imgElement || imgElement.classList.contains('hidden')) return;
+            currentScale += amount;
+            if (currentScale < 0.1) currentScale = 0.1;
+            if (currentScale > 5) currentScale = 5;
+            updateTransform();
+        }
+
+        function resetZoom() {
+            currentScale = 1;
+            translateX = 0;
+            translateY = 0;
+            updateTransform();
+        }
+
+        const btnZoomIn = document.getElementById('btn-zoom-in');
+        const btnZoomOut = document.getElementById('btn-zoom-out');
+        const btnReset = document.getElementById('btn-reset');
+        const btnDownload = document.getElementById('btn-download');
+        const btnTriggerUpload = document.getElementById('btn-trigger-upload');
+
+        if (btnZoomIn) btnZoomIn.addEventListener('click', () => zoomImage(0.1));
+        if (btnZoomOut) btnZoomOut.addEventListener('click', () => zoomImage(-0.1));
+        if (btnReset) btnReset.addEventListener('click', resetZoom);
+
+        if (btnDownload) {
+            btnDownload.addEventListener('click', () => {
+                if (!imgElement || !imgElement.src) return;
+                const link = document.createElement('a');
+                link.href = imgElement.src;
+                link.download = 'organigrama_institucional.jpg';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            });
+        }
+
+        function triggerUploadAction() {
+            if (fileInput) {
+                fileInput.click();
+            } else {
+                console.error("No se encontró el campo de archivo.");
+            }
+        }
+
+        if (btnTriggerUpload) {
+            btnTriggerUpload.addEventListener('click', triggerUploadAction);
+        }
+
+        if (uploadPlaceholder) {
+            uploadPlaceholder.addEventListener('click', (e) => {
+                if (e.target === fileInput) return;
+                triggerUploadAction();
+            });
+        }
+
+        if (fileInput) {
+            fileInput.addEventListener('click', (e) => e.stopPropagation());
+
+            fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function (evt) {
+                        if (imgElement) {
+                            imgElement.src = evt.target.result;
+                            imgElement.classList.remove('hidden');
+                        }
+                        if (uploadPlaceholder) uploadPlaceholder.classList.add('hidden');
+                        if (toolbar) toolbar.classList.remove('hidden');
+                        if (btnSave) btnSave.style.display = 'block';
+
+                        resetZoom();
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        if (btnSave && uploadForm) {
+            btnSave.addEventListener('click', () => {
+                // Verificar que el input realmente tenga un archivo antes de hacer submit
+                if (fileInput && fileInput.files.length > 0) {
+                    uploadForm.submit();
+                } else {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Sin archivo',
+                        text: 'Por favor seleccione una imagen antes de guardar.'
+                    });
+                }
+            });
+        }
+
+        viewerBox.addEventListener('mousedown', (e) => {
+            if (e.target.closest('.tool-btn') || e.target.closest('.btn-save-float')) return;
+
+            isDragging = true;
+            startX = e.clientX - translateX;
+            startY = e.clientY - translateY;
+            if (imgElement) imgElement.style.cursor = 'grabbing';
+        });
+
+        window.addEventListener('mouseup', () => {
+            isDragging = false;
+            if (imgElement) imgElement.style.cursor = 'grab';
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            e.preventDefault();
+            translateX = e.clientX - startX;
+            translateY = e.clientY - startY;
+            updateTransform();
+        });
+
+        viewerBox.addEventListener('wheel', (e) => {
+            if (!imgElement || imgElement.classList.contains('hidden')) return;
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? -0.1 : 0.1;
+            zoomImage(delta);
+        });
+    }
+
 });
 
 // =========================================================================
-// 2. MODAL FORM: CÓDIGO CORRELATIVO Y AUTO-COMPLETADO
+// 4. MODAL FORM: CÓDIGO CORRELATIVO Y AUTO-COMPLETADO
 // =========================================================================
 window.initUnitModal = function () {
     const codeInput = document.getElementById('id_code');
@@ -157,11 +332,10 @@ window.initUnitModal = function () {
                     }
                 }
             })
-            .catch(err => console.error("Error generando código correlativo:", err));
+            .catch(err => console.error("Error calculando código correlativo:", err));
     }
 };
 
-// Callback para creación de dependencia desde el detalle de la unidad
 window.bindUnitCreateModal = function () {
     window.initUnitModal();
     const form = document.getElementById('unitForm');
@@ -177,7 +351,7 @@ window.bindUnitCreateModal = function () {
 };
 
 // =========================================================================
-// 3. GESTIÓN AISLADA DE ENTREGABLES (ACORDEÓN Y AJAX)
+// 5. GESTIÓN AISLADA DE ENTREGABLES (ACORDEÓN Y AJAX)
 // =========================================================================
 window.refreshDeliverablesTable = function (unitId) {
     const wrapper = document.getElementById('deliverables-table-wrapper');
@@ -223,7 +397,7 @@ window.toggleDeliverablesAccordion = function (headerElement) {
 };
 
 // =========================================================================
-// 4. MODAL ESTÁTICO: REUBICAR UNIDAD ADMINISTRATIVA
+// 6. MODAL ESTÁTICO: REUBICAR UNIDAD ADMINISTRATIVA
 // =========================================================================
 window.initRelocateUnitModal = function (unitId) {
     const modalEl = document.getElementById('relocate-modal-container');
@@ -333,7 +507,7 @@ window.initRelocateUnitModal = function (unitId) {
 };
 
 // =========================================================================
-// 5. EXPORTACIONES & UTILIDADES
+// 7. EXPORTACIONES
 // =========================================================================
 window.exportUnitEmployees = function (unitId, statusCode) {
     window.location.href = `/institution/units/${unitId}/export-employees/?status=${statusCode}`;
