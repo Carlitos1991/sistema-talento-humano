@@ -96,6 +96,7 @@ function setupSearchEvents() {
 
 // 3. Delegación de clics en la tabla para poblar modales antes de abrirse
 function setupDelegations() {
+    // 1. Delegación de clics en la tabla para modales
     document.addEventListener('click', (e) => {
         const btnMonthly = e.target.closest('.btn-trigger-monthly');
         if (btnMonthly) {
@@ -120,10 +121,16 @@ function setupDelegations() {
         }
     });
 
-    // Cascada de Dependencias
-    document.getElementById('unit_root_select')?.addEventListener('change', function () {
-        loadUnitChildren(this.value);
-    });
+    // 2. Cascada de Dependencias (Soporte nativo y Select2 de main.js)
+    if (window.$ && $.fn.select2) {
+        $(document).on('change', '#unit_root_select', function () {
+            loadUnitChildren(this.value);
+        });
+    } else {
+        document.getElementById('unit_root_select')?.addEventListener('change', function () {
+            loadUnitChildren(this.value);
+        });
+    }
 }
 
 // Descarga Reporte Mensual con los 3 parámetros de los switches
@@ -215,14 +222,20 @@ async function loadUnitRoots() {
             headers: {'X-Requested-With': 'XMLHttpRequest'}
         });
         const json = await res.json();
-        const units = json.units || [];
+        // Soportar tanto formato { units: [...] } como { data: [...] }
+        const units = json.units || json.data || (Array.isArray(json) ? json : []);
 
         rootSelect.innerHTML = '<option value="">-- Seleccione una dependencia --</option>';
         units.forEach(u => {
             rootSelect.innerHTML += `<option value="${u.id}">${u.name}</option>`;
         });
+
+        // Notificar a Select2 en caso de que main.js lo haya inicializado
+        if (window.$ && $.fn.select2) {
+            $(rootSelect).trigger('change.select2');
+        }
     } catch (e) {
-        console.error('Error cargando dependencias:', e);
+        console.error('Error cargando dependencias raíz:', e);
     }
 }
 
@@ -234,6 +247,7 @@ async function loadUnitChildren(parentId) {
     if (!parentId) {
         childGroup.style.display = 'none';
         childSelect.innerHTML = '<option value="">-- Todas las dependencias hijas --</option>';
+        if (window.$ && $.fn.select2) $(childSelect).trigger('change.select2');
         return;
     }
 
@@ -242,9 +256,9 @@ async function loadUnitChildren(parentId) {
             headers: {'X-Requested-With': 'XMLHttpRequest'}
         });
         const json = await res.json();
-        const units = json.units || [];
+        const units = json.units || json.data || (Array.isArray(json) ? json : []);
 
-        if (units.length > 0) {
+        if (units && units.length > 0) {
             childSelect.innerHTML = '<option value="">-- Todas las dependencias hijas --</option>';
             units.forEach(u => {
                 childSelect.innerHTML += `<option value="${u.id}">${u.name}</option>`;
@@ -253,6 +267,11 @@ async function loadUnitChildren(parentId) {
         } else {
             childGroup.style.display = 'none';
             childSelect.innerHTML = '<option value="">-- Todas las dependencias hijas --</option>';
+        }
+
+        // Actualizar vista gráfica de Select2
+        if (window.$ && $.fn.select2) {
+            $(childSelect).trigger('change.select2');
         }
     } catch (e) {
         console.error('Error cargando subunidades:', e);

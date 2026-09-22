@@ -3,77 +3,157 @@
 <head>
     <meta charset="utf-8">
     <style>
+        @page {
+            size: A4 portrait;
+            margin: 0.8cm 0.7cm 0.8cm 0.7cm;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            font-size: 12px;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 9.5px;
+            line-height: 1.15;
+            color: #1e293b;
+            margin: 0;
+            padding: 0;
         }
 
         .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            width: 100%;
+            border-bottom: 1.5px solid #203c7d;
+            padding-bottom: 4px;
+            margin-bottom: 8px;
+        }
+
+        .header table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0;
+        }
+
+        .header td {
+            border: none;
+            padding: 0;
+            vertical-align: middle;
         }
 
         .title {
-            font-size: 16px;
+            font-size: 13px;
             font-weight: bold;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
-
-        th, td {
-            border: 1px solid #444;
-            padding: 6px;
-            text-align: left;
-        }
-
-        th {
-            background: #eee;
+            color: #203c7d;
+            text-transform: uppercase;
+            letter-spacing: -0.01em;
+            margin: 0 0 2px 0;
         }
 
         .muted {
-            color: #666;
-            font-size: 11px;
+            color: #64748b;
+            font-size: 8.5px;
+        }
+
+        .unit-title {
+            font-size: 10px;
+            font-weight: bold;
+            color: #0f172a;
+            background: #f1f5f9;
+            border-left: 3px solid #203c7d;
+            padding: 3px 6px;
+            margin-top: 8px;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+
+        table.data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 0;
+            margin-bottom: 6px;
+            page-break-inside: auto;
+        }
+
+        table.data-table tr {
+            page-break-inside: avoid;
+            page-break-after: auto;
+        }
+
+        table.data-table th,
+        table.data-table td {
+            border: 1px solid #cbd5e1;
+            padding: 3px 4px;
+            vertical-align: middle;
+        }
+
+        table.data-table th {
+            background-color: #203c7d;
+            color: #ffffff;
+            font-size: 8px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            text-align: center;
+        }
+
+        table.data-table tbody tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-left {
+            text-align: left;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .fw-bold {
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
+
 <div class="header">
-    <div>
-        <div class="title">Reporte de Asistencias por Dependencia</div>
-        <div class="muted">Unidad: {{ unit.name }} - Mes: {{ month }} / {{ year }}</div>
-    </div>
-    <div class="muted">Generado: {{ today|date:"d/m/Y H:i" }}</div>
+    <table>
+        <tr>
+            <td class="text-left">
+                <div class="title">Reporte de Asistencias por Dependencia</div>
+                <div class="muted"><strong>Dependencia:</strong> {{ unit.name }} &nbsp;|&nbsp; <strong>Período:</strong>
+                    Mes {{ month }} / {{ year }}</div>
+            </td>
+            <td class="text-right muted">
+                <strong>Fecha Impresión:</strong> {{ today|date:"d/m/Y H:i" }}
+            </td>
+        </tr>
+    </table>
 </div>
 
 {% for unit_name, emps in grouped_results %}
-    <h4 style="margin-top:14px; margin-bottom:6px;">{{ unit_name }}</h4>
-    <table>
+    <div class="unit-title">{{ unit_name }}</div>
+    <table class="data-table">
         <thead>
         <tr>
-            <th>Nro.</th>
-            <th>Empleado</th>
-            <th>Cédula</th>
-            <th>Régimen</th>
-            <th>Inconsistencias</th>
-            <th>Días sin marcar</th>
-            <th>Minutos atraso</th>
+            <th style="width: 4%;">N°</th>
+            <th style="width: 38%;" class="text-left">Empleado</th>
+            <th style="width: 13%;">Cédula</th>
+            <th style="width: 15%;">Régimen</th>
+            <th style="width: 10%;">Inconsist.</th>
+            <th style="width: 10%;">Sin Marcar</th>
+            <th style="width: 10%;">Atraso (min)</th>
         </tr>
         </thead>
         <tbody>
         {% for r in emps %}
             <tr>
-                <td>{{ forloop.counter }}</td>
-                <td>{{ r.employee.person.name_and_last_name }}</td>
-                <td>{{ r.employee.person.document_number }}</td>
-                <td>{{ r.regimen }}</td>
-                <td>{{ r.inconsistencias }}</td>
-                <td>{{ r.dias_sin_marcar }}</td>
-                <td>{{ r.minutos_atraso }}</td>
+                <td class="text-center">{{ forloop.counter }}</td>
+                <td class="text-left fw-bold">{{ r.employee.person.name_and_last_name }}</td>
+                <td class="text-center">{{ r.employee.person.document_number }}</td>
+                <td class="text-center">{{ r.regimen }}</td>
+                <td class="text-center">{{ r.inconsistencias }}</td>
+                <td class="text-center">{{ r.dias_sin_marcar }}</td>
+                <td class="text-center fw-bold">{{ r.minutos_atraso }}</td>
             </tr>
         {% endfor %}
         </tbody>
