@@ -414,6 +414,8 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
 
             remaining = [p for p in punches_sorted if not p.get('assigned')]
             for r in remaining:
+                if deduplicate:
+                    continue
                 r_new = r.copy()
                 r_new['row_class'] = r_new.get('row_class', '')
                 annotated.append(r_new)
@@ -436,9 +438,11 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
             else:
                 day_obj_local['no_marks_all_day'] = False
                 day_obj_local['has_inconsistency'] = False
-            final_punches = [p for p in annotated if not (deduplicate and p.get('is_duplicate'))]
-            day_obj_local['punches'] = sorted(final_punches, key=lambda x: x.get('dt') or x.get('dt_norm'))
-
+            if deduplicate:
+                day_obj_local['punches'] = [p for p in annotated if p.get('assigned')]
+            else:
+                day_obj_local['punches'] = annotated
+            day_obj_local['punches'] = sorted(day_obj_local['punches'], key=lambda x: x.get('dt') or x.get('dt_norm'))
     return calendar_data_local
 
 
@@ -1096,6 +1100,12 @@ def generate_monthly_report_pdf(request):
             cur_date = date(year, month, int(d))
             is_workday = cur_date.weekday() < 5
 
+            # Si deduplicate está activo, evaluamos jornadas solo con las picadas válidas
+            if deduplicate:
+                day_punches = [p for p in day_obj.get('punches', []) if p.get('assigned')]
+            else:
+                day_punches = day_obj.get('punches', [])
+
             g_regs = {'G1': None, 'G2': None, 'G3': None, 'G4': None}
             g_atr = {'G1': 0, 'G2': 0, 'G3': 0, 'G4': 0}
 
@@ -1106,23 +1116,9 @@ def generate_monthly_report_pdf(request):
             E2 = events_map.get('J2_in', {}).get('dt')
             S2 = events_map.get('J2_out', {}).get('dt')
 
-            # Si deduplicate está encendido, excluye duplicados; si está apagado, toma todas las marcaciones
-            if deduplicate:
-                day_punches = [p for p in day_obj.get('punches', []) if not p.get('is_duplicate')]
-            else:
-                day_punches = day_obj.get('punches', [])
-
             TEMP = 0
             ATR = 0
             is_4_jornadas = (E2 is not None and S2 is not None)
-            if not show_observations:
-                day_obj['g_atr'] = {'G1': 0, 'G2': 0, 'G3': 0, 'G4': 0}
-                day_obj['atr_dia'] = 0
-                day_obj['temp'] = 0
-                day_obj['has_inconsistency'] = False
-                day_obj['no_marks_all_day'] = False
-                for p in day_obj.get('punches', []):
-                    p['row_class'] = ''
 
             if is_workday and not day_obj.get('is_holiday', False):
                 for p in day_punches:
@@ -1192,9 +1188,19 @@ def generate_monthly_report_pdf(request):
                         continue
 
             day_obj['g_regs'] = g_regs
-            day_obj['g_atr'] = g_atr
-            day_obj['atr_dia'] = ATR
-            day_obj['temp'] = TEMP
+
+            if not show_observations:
+                day_obj['g_atr'] = {'G1': 0, 'G2': 0, 'G3': 0, 'G4': 0}
+                day_obj['atr_dia'] = 0
+                day_obj['temp'] = 0
+                day_obj['has_inconsistency'] = False
+                day_obj['no_marks_all_day'] = False
+                for p in day_obj.get('punches', []):
+                    p['row_class'] = ''
+            else:
+                day_obj['g_atr'] = g_atr
+                day_obj['atr_dia'] = ATR
+                day_obj['temp'] = TEMP
 
             try:
                 event_to_punch = {}
@@ -1219,7 +1225,14 @@ def generate_monthly_report_pdf(request):
                     else:
                         p['selected_slot'] = ''
 
-                day_obj['punches'] = sorted(day_obj.get('punches', []), key=lambda x: x.get('dt') or x.get('dt_norm'))
+                # AQUÍ ESTÁ EL CAMBIO CLAVE:
+                # Si deduplicate es True, filtramos para que SOLO viajen las picadas que tienen asignado su slot de jornada
+                if deduplicate:
+                    final_list = [p for p in day_obj.get('punches', []) if p.get('assigned') and p.get('selected_slot')]
+                else:
+                    final_list = day_obj.get('punches', [])
+
+                day_obj['punches'] = sorted(final_list, key=lambda x: x.get('dt') or x.get('dt_norm'))
             except Exception:
                 pass
 
@@ -1228,6 +1241,7 @@ def generate_monthly_report_pdf(request):
                                    "septiembre", "octubre", "noviembre", "diciembre"]
                 day_obj['day_label'] = f"{int(d):02d} de {months_es_local[month]}"
             except Exception:
+                day_obj['day_label'] = str(d)
                 day_obj['day_label'] = str(d)
 
     config = SystemConfiguration.get_current()

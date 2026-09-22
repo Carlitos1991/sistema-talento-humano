@@ -103,12 +103,6 @@ function setupDelegations() {
             document.getElementById('monthly_emp_id').value = btnMonthly.dataset.id || '';
             document.getElementById('monthly_emp_name').textContent = btnMonthly.dataset.name || 'N/A';
             document.getElementById('monthly_emp_dni').textContent = btnMonthly.dataset.dni || 'N/A';
-
-            // Restablecer switches en True por defecto
-            document.getElementById('sw_show_summary').checked = true;
-            document.getElementById('sw_show_observations').checked = true;
-            document.getElementById('sw_deduplicate').checked = true;
-
             openModal('modalReportMonthly');
             return;
         }
