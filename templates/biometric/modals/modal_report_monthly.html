@@ -1,40 +1,92 @@
-<div v-if="showMonthlyModal" class="modal-overlay" @click.self="showMonthlyModal = false">
-    <div class="modal-container-medium" style="max-width: 450px;">
-        <div class="modal-header-gradient">
+<div id="modalReportMonthly" class="modal-overlay hidden">
+    <div class="modal-container-small" style="max-width: 520px;">
+        <div class="modal-header">
             <div class="header-content-group">
                 <div class="header-icon-circle"><i class="fa-solid fa-calendar-days"></i></div>
-                <h3 class="header-title-main">Reporte Mensual</h3>
+                <h3 class="header-title">Reporte Mensual</h3>
             </div>
-            <button @click="showMonthlyModal = false" class="btn-close-modal-refined">&times;</button>
+            <button type="button" class="btn-close-circle" onclick="closeModal('modalReportMonthly')">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
         </div>
 
         <div class="modal-body-custom">
-            <div class="swal-connection-box" style="margin-top:0; border-left: 4px solid #3b82f6;">
-                <p class="mb-1"><strong>Empleado:</strong> [[ selectedEmp.name ]]</p>
-                <p class="mb-0"><strong>Cédula:</strong> [[ selectedEmp.dni ]]</p>
+            <input type="hidden" id="monthly_emp_id">
+
+            <!-- Caja con Datos del Empleado -->
+            <div class="alert alert-info mb-3">
+                <i class="fa-solid fa-user me-2"></i>
+                <div>
+                    <div><strong>Empleado:</strong> <span id="monthly_emp_name">Cargando...</span></div>
+                    <div class="small"><strong>Cédula:</strong> <span id="monthly_emp_dni">Cargando...</span></div>
+                </div>
             </div>
 
-            <div class="form-group mt-3">
-                <label class="form-label"><i class="fa-solid fa-calendar-day me-1"></i> Seleccione el Mes:</label>
-                <select v-model="monthlyForm.month" class="form-control">
-                    <option value="1">Enero</option><option value="2">Febrero</option>
-                    <option value="3">Marzo</option><option value="4">Abril</option>
-                    <option value="5">Mayo</option><option value="6">Junio</option>
-                    <option value="7">Julio</option><option value="8">Agosto</option>
-                    <option value="9">Septiembre</option><option value="10">Octubre</option>
-                    <option value="11">Noviembre</option><option value="12">Diciembre</option>
-                </select>
+            <!-- Selección de Mes y Año -->
+            <div class="grid-2-cols">
+                <div class="form-group">
+                    <label for="monthly_month" class="form-label">Mes</label>
+                    <select id="monthly_month" class="input-field">
+                        <option value="1">Enero</option>
+                        <option value="2">Febrero</option>
+                        <option value="3">Marzo</option>
+                        <option value="4">Abril</option>
+                        <option value="5">Mayo</option>
+                        <option value="6">Junio</option>
+                        <option value="7">Julio</option>
+                        <option value="8">Agosto</option>
+                        <option value="9">Septiembre</option>
+                        <option value="10">Octubre</option>
+                        <option value="11">Noviembre</option>
+                        <option value="12">Diciembre</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="monthly_year" class="form-label">Año</label>
+                    <input type="number" id="monthly_year" class="input-field" min="2000" max="2099">
+                </div>
             </div>
 
-            <div class="form-group mt-3">
-                <label class="form-label"><i class="fa-solid fa-check-double me-1"></i> Año:</label>
-                <input type="number" v-model="monthlyForm.year" class="form-control">
+            <!-- Fila con los 3 Switches solicitados -->
+            <div class="mt-3">
+                <label class="form-label mb-2">Opciones del Reporte</label>
+                <div class="grid-3-cols">
+                    <!-- Switch 1: Resumen -->
+                    <div class="form-group text-center">
+                        <input type="checkbox" id="sw_show_summary" class="switch-input switch-green" checked>
+                        <label for="sw_show_summary" class="switch-wrapper" style="min-width: 100%; width: 100%;">
+                            <span class="switch-circle"></span>
+                            <span class="switch-text">Resumen</span>
+                        </label>
+                    </div>
+
+                    <!-- Switch 2: Observaciones (Colores de fondo/atrasos/inconsistencias) -->
+                    <div class="form-group text-center">
+                        <input type="checkbox" id="sw_show_observations" class="switch-input switch-green" checked>
+                        <label for="sw_show_observations" class="switch-wrapper" style="min-width: 100%; width: 100%;">
+                            <span class="switch-circle"></span>
+                            <span class="switch-text">Observaciones</span>
+                        </label>
+                    </div>
+
+                    <!-- Switch 3: Sin Duplicados -->
+                    <div class="form-group text-center">
+                        <input type="checkbox" id="sw_deduplicate" class="switch-input switch-green" checked>
+                        <label for="sw_deduplicate" class="switch-wrapper" style="min-width: 100%; width: 100%;">
+                            <span class="switch-circle"></span>
+                            <span class="switch-text">Sin Duplicados</span>
+                        </label>
+                    </div>
+                </div>
             </div>
         </div>
 
         <div class="modal-footer-fixed">
-            <button @click="showMonthlyModal = false" class="btn-cancel">Cancelar</button>
-            <button @click="downloadMonthly" class="btn-save" style="background: #3b82f6;">
+            <button type="button" class="btn-white-rectangle" onclick="closeModal('modalReportMonthly')">
+                Cancelar
+            </button>
+            <button type="button" id="btnDownloadMonthly" class="btn-blue-rectangle">
                 <i class="fa-solid fa-file-pdf"></i> Generar
             </button>
         </div>

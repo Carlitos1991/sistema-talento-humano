@@ -1,52 +1,62 @@
-<div v-if="showUnitModal" class="modal-overlay" @click.self="showUnitModal = false">
-    <div class="modal-container-medium" style="max-width: 520px;">
-        <div class="modal-header-gradient">
+<div id="modalReportUnit" class="modal-overlay hidden">
+    <div class="modal-container-medium">
+        <div class="modal-header">
             <div class="header-content-group">
                 <div class="header-icon-circle"><i class="fa-solid fa-building"></i></div>
-                <h3 class="header-title-main">Reporte por Dependencia</h3>
+                <h3 class="header-title">Reporte por Dependencia</h3>
             </div>
-            <button @click="showUnitModal = false" class="btn-close-modal-refined">&times;</button>
+            <button type="button" class="btn-close-circle" onclick="closeModal('modalReportUnit')">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
         </div>
 
         <div class="modal-body-custom">
             <div class="form-group">
-                <label class="form-label">Unidad raíz</label>
-                <select v-model="unitRoot" @change="loadUnitChildren(unitRoot,1)" class="form-control">
-                    <option value="">-- Seleccionar --</option>
-                    <option v-for="u in unitRoots" :value="u.id">[[ u.name ]]</option>
+                <label for="unit_root_select" class="form-label">Dependencia Raíz</label>
+                <select id="unit_root_select" class="input-field">
+                    <option value="">-- Seleccione una dependencia --</option>
                 </select>
             </div>
 
-            <div class="form-group" v-if="unitLevel2.length">
-                <label class="form-label">Subunidad</label>
-                <select v-model="unitChild" @change="loadUnitChildren(unitChild,2)" class="form-control">
-                    <option value="">-- Seleccionar --</option>
-                    <option v-for="u in unitLevel2" :value="u.id">[[ u.name ]]</option>
+            <div class="form-group mt-3" id="subUnitGroup" style="display: none;">
+                <label for="unit_child_select" class="form-label">Subunidad</label>
+                <select id="unit_child_select" class="input-field">
+                    <option value="">-- Todas las dependencias hijas --</option>
                 </select>
             </div>
 
-            <div class="form-group mt-3">
-                <label class="form-label"><i class="fa-solid fa-calendar-day me-1"></i> Seleccione el Mes:</label>
-                <select v-model="unitForm.month" class="form-control">
-                    <option value="1">Enero</option><option value="2">Febrero</option>
-                    <option value="3">Marzo</option><option value="4">Abril</option>
-                    <option value="5">Mayo</option><option value="6">Junio</option>
-                    <option value="7">Julio</option><option value="8">Agosto</option>
-                    <option value="9">Septiembre</option><option value="10">Octubre</option>
-                    <option value="11">Noviembre</option><option value="12">Diciembre</option>
-                </select>
-            </div>
+            <div class="grid-2-cols mt-3">
+                <div class="form-group">
+                    <label for="unit_month" class="form-label">Mes</label>
+                    <select id="unit_month" class="input-field">
+                        <option value="1">Enero</option>
+                        <option value="2">Febrero</option>
+                        <option value="3">Marzo</option>
+                        <option value="4">Abril</option>
+                        <option value="5">Mayo</option>
+                        <option value="6">Junio</option>
+                        <option value="7">Julio</option>
+                        <option value="8">Agosto</option>
+                        <option value="9">Septiembre</option>
+                        <option value="10">Octubre</option>
+                        <option value="11">Noviembre</option>
+                        <option value="12">Diciembre</option>
+                    </select>
+                </div>
 
-            <div class="form-group mt-3">
-                <label class="form-label"><i class="fa-solid fa-check-double me-1"></i> Año:</label>
-                <input type="number" v-model="unitForm.year" class="form-control">
+                <div class="form-group">
+                    <label for="unit_year" class="form-label">Año</label>
+                    <input type="number" id="unit_year" class="input-field" min="2000" max="2099">
+                </div>
             </div>
         </div>
 
         <div class="modal-footer-fixed">
-            <button @click="showUnitModal = false" class="btn-cancel">Cancelar</button>
-            <button @click="downloadByUnit" class="btn-save" style="background: #3b82f6;">
-                <i class="fa-solid fa-file-pdf"></i> Generar
+            <button type="button" class="btn-white-rectangle" onclick="closeModal('modalReportUnit')">
+                Cancelar
+            </button>
+            <button type="button" id="btnDownloadUnit" class="btn-blue-rectangle">
+                <i class="fa-solid fa-file-pdf"></i> Generar Reporte
             </button>
         </div>
     </div>

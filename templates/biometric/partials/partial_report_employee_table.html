@@ -1,49 +1,62 @@
 <div class="table-container">
-    <table class="table table-hover">
+    <table class="managed-table" data-page-size="10">
         <thead>
         <tr>
-            <th style="width: 30%">Empleado</th>
-            <th style="width: 25%">Cédula</th>
-            <th style="width: 20%">ID Biométrico</th>
-            <th style="width: 25%" class="text-center">Acciones</th>
+            <th class="width-40">Empleado</th>
+            <th class="width-20">Cédula</th>
+            <th class="width-20 text-center">ID Biométrico</th>
+            <th class="width-20 actions no-sort text-center">Acciones</th>
         </tr>
         </thead>
         <tbody>
         {% for data in employees %}
             <tr>
-                <td>
+                <td data-sort="{{ data.employee.person.last_name }} {{ data.employee.person.first_name }}">
                     <div class="person-info">
                         {% if data.employee.person.photo %}
-                            <img src="{{ data.employee.person.photo.url }}" class="person-avatar" alt="avatar" onerror="this.onerror=null;this.src='/static/img/avatar-placeholder.png'">
+                            <img src="{{ data.employee.person.photo.url }}" class="person-avatar" alt="Foto"
+                                 onerror="this.onerror=null;this.src='/static/img/avatar-placeholder.png'">
                         {% else %}
-                            <div class="person-avatar-placeholder">{{ data.employee.person.first_name|slice:":1" }}</div>
+                            <div class="person-avatar-placeholder">
+                                {{ data.employee.person.first_name|slice:":1" }}
+                            </div>
                         {% endif %}
                         <div class="person-details">
-                            <h4>{{ data.employee.person.full_name }}</h4>
+                            <h4>{{ data.employee.person.name_and_last_name }}</h4>
                         </div>
                     </div>
                 </td>
-                <td>
-                    <span class="badge-code">{{ data.employee.person.document_number }}</span>
+                <td data-sort="{{ data.employee.person.document_number }}">
+                    <span class="badge badge-gray font-monospace">{{ data.employee.person.document_number }}</span>
                 </td>
-                <td>
-                    <span class="badge-status-active">{{ data.biometric_id }}</span>
+                <td class="text-center" data-sort="{{ data.biometric_id }}">
+                    <span class="badge badge-emerald">{{ data.biometric_id }}</span>
                 </td>
-                <td class="actions-cell">
+                <td class="actions">
                     <div class="actions-wrapper">
-                        <!-- Botón Reporte Mensual (Azul) -->
-                        <button onclick="window.reportVM.openMonthly('{{ data.employee.id }}', '{{ data.employee.person.full_name }}', '{{ data.employee.person.document_number }}')"
-                                class="btn-list-action" style="background: #3b82f6;" title="Reporte Mensual">
+                        <!-- Reporte Mensual -->
+                        <button type="button"
+                                class="btn-icon btn-blue-circle btn-trigger-monthly"
+                                title="Reporte Mensual"
+                                data-id="{{ data.employee.id }}"
+                                data-name="{{ data.employee.person.full_name }}"
+                                data-dni="{{ data.employee.person.document_number }}">
                             <i class="fa-solid fa-calendar-days"></i>
                         </button>
-                        <!-- Botón Reporte Específico (Púrpura) -->
-                        <button onclick="window.reportVM.openSpecific('{{ data.employee.id }}', '{{ data.employee.person.full_name }}', '{{ data.employee.person.document_number }}')"
-                                class="btn-list-action" style="background: #8b5cf6;" title="Rango Específico">
+
+                        <!-- Reporte Específico -->
+                        <button type="button"
+                                class="btn-icon btn-yellow-circle btn-trigger-specific"
+                                title="Rango Específico"
+                                data-id="{{ data.employee.id }}"
+                                data-name="{{ data.employee.person.full_name }}"
+                                data-dni="{{ data.employee.person.document_number }}">
                             <i class="fa-solid fa-calendar-check"></i>
                         </button>
                     </div>
                 </td>
             </tr>
+        {% empty %}
         {% endfor %}
         </tbody>
     </table>

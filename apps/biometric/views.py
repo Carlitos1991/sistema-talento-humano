@@ -203,14 +203,14 @@ def build_attendance_summary_for_employee(calendar_data_local, year_local, month
 
 
 def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, month_local, employee_obj,
-                                              debug_flag=False, schedule_lookup_fn=None):
+                                              debug_flag=False, schedule_lookup_fn=None, deduplicate=True,
+                                              show_observations=True):
     """Anota calendar_data con eventos esperados y empareja marcaciones usando la misma logica del reporte mensual."""
     try:
         from schedule.models import get_employee_schedule_for_date
     except Exception:
         get_employee_schedule_for_date = None
 
-    # Usar función de lookup inyectada (caché bulk) o la original por defecto
     _lookup = schedule_lookup_fn or get_employee_schedule_for_date
 
     for week_local in calendar_data_local:
@@ -269,7 +269,7 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
                     ps = perm.get('start_time')
                     pe = perm.get('end_time')
 
-                    if not ps and not pe:  # Permiso de día completo
+                    if not ps and not pe:
                         is_covered = True
                         break
 
@@ -326,16 +326,19 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
                 key=lambda x: x.get('dt_norm') or x.get('dt')
             )]
 
+            # Control dinámico según el switch 'deduplicate'
             last_p_dt = datetime.min
             for p in punches_sorted:
-                try:
-                    p_dt = p.get('dt_norm') or p.get('dt')
-                    if (p_dt - last_p_dt).total_seconds() <= DEDUPE_WINDOW_MINUTES * 60:
-                        p['is_duplicate'] = True
-                    else:
-                        last_p_dt = p_dt
-                except Exception:
-                    pass
+                p['is_duplicate'] = False
+                if deduplicate:
+                    try:
+                        p_dt = p.get('dt_norm') or p.get('dt')
+                        if (p_dt - last_p_dt).total_seconds() <= DEDUPE_WINDOW_MINUTES * 60:
+                            p['is_duplicate'] = True
+                        else:
+                            last_p_dt = p_dt
+                    except Exception:
+                        pass
 
             def get_dt(p):
                 return p.get('dt_norm') or p.get('dt')
@@ -389,7 +392,7 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
                 best['assigned'] = True
 
                 row_class = ''
-                if is_workday and not is_holiday:
+                if show_observations and is_workday and not is_holiday:
                     try:
                         best_dt = best.get('dt_norm') or best.get('dt')
                         if ev['type'] == 'in' and best_dt:
@@ -406,7 +409,7 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
                         row_class = ''
 
                 newp = best.copy()
-                newp['row_class'] = row_class
+                newp['row_class'] = row_class if show_observations else ''
                 annotated.append(newp)
 
             remaining = [p for p in punches_sorted if not p.get('assigned')]
@@ -426,11 +429,15 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
             day_obj_local['expected_cnt'] = expected_slots
             day_obj_local['matched_cnt'] = assigned_slots
             day_obj_local['extra_cnt'] = max(0, raw_cnt - expected_slots)
-            day_obj_local['no_marks_all_day'] = no_marks
-            day_obj_local[
-                'has_inconsistency'] = missing_slots and cur_date.weekday() < 5 and not is_holiday and not no_marks
-
-            day_obj_local['punches'] = sorted(annotated, key=lambda x: x.get('dt') or x.get('dt_norm'))
+            if show_observations:
+                day_obj_local['no_marks_all_day'] = no_marks
+                day_obj_local[
+                    'has_inconsistency'] = missing_slots and cur_date.weekday() < 5 and not is_holiday and not no_marks
+            else:
+                day_obj_local['no_marks_all_day'] = False
+                day_obj_local['has_inconsistency'] = False
+            final_punches = [p for p in annotated if not (deduplicate and p.get('is_duplicate'))]
+            day_obj_local['punches'] = sorted(final_punches, key=lambda x: x.get('dt') or x.get('dt_norm'))
 
     return calendar_data_local
 
@@ -935,6 +942,10 @@ def generate_monthly_report_pdf(request):
     emp_id = request.GET.get('emp_id')
     month = int(request.GET.get('month', 1))
     year = int(request.GET.get('year', 2026))
+
+    show_summary = request.GET.get('show_summary', '1') == '1'
+    show_observations = request.GET.get('show_observations', '1') == '1'
+    deduplicate = request.GET.get('deduplicate', '1') == '1'
     inst_data = get_object_or_404(InstitutionalData, employee_id=emp_id)
     debug_punches = request.GET.get('debug_punches') == '1'
 
@@ -956,9 +967,12 @@ def generate_monthly_report_pdf(request):
         if day not in punches_map:
             punches_map[day] = []
 
+        raw_bio_name = p.biometric_load.biometric.name.strip() if p.biometric_load and p.biometric_load.biometric else ''
+        short_bio = raw_bio_name.replace("BIOMETRICO", "").replace("BIO", "").strip()[:10].upper()
+
         punches_map[day].append({
             'time': dt_norm.strftime('%H:%M'),
-            'device': p.biometric_load.biometric.name[:10],
+            'device': short_bio,
             'dt': p.registry_date,
             'dt_norm': dt_norm,
         })
@@ -1068,7 +1082,11 @@ def generate_monthly_report_pdf(request):
                 day_obj['holi_name'] = holidays_map.get(d, '')
                 day_obj['permits'] = permits_map.get(d, [])
 
-    annotate_attendance_calendar_for_employee(calendar_data, year, month, inst_data.employee, debug_punches)
+    annotate_attendance_calendar_for_employee(
+        calendar_data, year, month, inst_data.employee, debug_punches,
+        deduplicate=deduplicate, show_observations=show_observations
+    )
+
     for week in calendar_data:
         for day_obj in week:
             d = day_obj.get('day')
@@ -1088,10 +1106,23 @@ def generate_monthly_report_pdf(request):
             E2 = events_map.get('J2_in', {}).get('dt')
             S2 = events_map.get('J2_out', {}).get('dt')
 
-            day_punches = [p for p in day_obj.get('punches', []) if not p.get('is_duplicate')]
+            # Si deduplicate está encendido, excluye duplicados; si está apagado, toma todas las marcaciones
+            if deduplicate:
+                day_punches = [p for p in day_obj.get('punches', []) if not p.get('is_duplicate')]
+            else:
+                day_punches = day_obj.get('punches', [])
+
             TEMP = 0
             ATR = 0
             is_4_jornadas = (E2 is not None and S2 is not None)
+            if not show_observations:
+                day_obj['g_atr'] = {'G1': 0, 'G2': 0, 'G3': 0, 'G4': 0}
+                day_obj['atr_dia'] = 0
+                day_obj['temp'] = 0
+                day_obj['has_inconsistency'] = False
+                day_obj['no_marks_all_day'] = False
+                for p in day_obj.get('punches', []):
+                    p['row_class'] = ''
 
             if is_workday and not day_obj.get('is_holiday', False):
                 for p in day_punches:
@@ -1202,20 +1233,28 @@ def generate_monthly_report_pdf(request):
     config = SystemConfiguration.get_current()
     letterhead_data = None
     no_letterhead = request.GET.get('no_letterhead') == '1'
+
     if not no_letterhead and config and getattr(config, 'letterhead', None):
         try:
-            try:
+            # 1. Intentar leer directo desde el path del sistema de archivos
+            file_path = getattr(config.letterhead, 'path', None)
+
+            # Si no tiene .path o no existe, armar la ruta con MEDIA_ROOT
+            if not file_path or not os.path.exists(file_path):
+                from django.conf import settings
+                file_path = os.path.join(settings.MEDIA_ROOT, str(config.letterhead))
+
+            if file_path and os.path.exists(file_path):
+                mime, _ = mimetypes.guess_type(file_path)
+                mime = mime or 'image/png'
+                with open(file_path, 'rb') as f:
+                    encoded = base64.b64encode(f.read()).decode('ascii')
+                    letterhead_data = f"data:{mime};base64,{encoded}"
+            else:
+                # Fallback: intentar por URL absoluta si el archivo físico no fue hallado
                 letterhead_data = request.build_absolute_uri(config.letterhead.url)
-            except Exception:
-                letterhead_data = config.letterhead.url
-            if not letterhead_data:
-                file_path = getattr(config.letterhead, 'path', None)
-                if file_path and os.path.exists(file_path):
-                    mime, _ = mimetypes.guess_type(file_path)
-                    with open(file_path, 'rb') as f:
-                        encoded = base64.b64encode(f.read()).decode('ascii')
-                        letterhead_data = f"data:{mime};base64,{encoded}"
-        except Exception:
+        except Exception as e:
+            logger.error(f"Error cargando membrete: {e}")
             letterhead_data = None
 
     template = get_template('biometric/reports/pdf_attendance_calendar.html')
@@ -1223,6 +1262,8 @@ def generate_monthly_report_pdf(request):
 
     html = template.render({
         'emp': inst_data.employee,
+        'show_summary': show_summary,
+        'show_observations': show_observations,
         'month_name': months_es[month],
         'year': year,
         'calendar': calendar_data,
@@ -1268,24 +1309,34 @@ class EmployeeReportListView(ListView):
     paginate_by = 10
 
     def get_queryset(self):
-        # Solo empleados con ID biométrico y que sean empleados activos
-        qs = InstitutionalData.objects.select_related('employee__person').filter(
+        # Base de empleados activos con identificador biométrico
+        qs = InstitutionalData.objects.select_related(
+            'employee__person'
+        ).filter(
             biometric_id__isnull=False,
             employee__is_active=True
-        )
-        # Capturamos los parámetros del nuevo buscador
-        name_query = self.request.GET.get('name', '').strip()
-        dni_query = self.request.GET.get('dni', '').strip()
-        if name_query or dni_query:
-            if name_query:
-                qs = qs.filter(
-                    models.Q(employee__person__first_name__icontains=name_query) |
-                    models.Q(employee__person__last_name__icontains=name_query)
+        ).order_by('employee__person__last_name', 'employee__person__first_name')
+
+        # Parámetro unificado 'q', con fallback a 'name' y 'dni'
+        raw_query = self.request.GET.get('q') or self.request.GET.get('name') or self.request.GET.get('dni') or ''
+        raw_query = raw_query.strip()
+
+        if raw_query:
+            # Separar el término por palabras para búsquedas combinadas (ej: "Juan Perez")
+            words = raw_query.split()
+            combined_q = Q()
+
+            for word in words:
+                # Cada palabra debe coincidir en nombres, apellidos o en el número de documento
+                word_q = (
+                        Q(employee__person__first_name__icontains=word) |
+                        Q(employee__person__last_name__icontains=word) |
+                        Q(employee__person__document_number__icontains=word) |
+                        Q(biometric_id__icontains=word)
                 )
-            if dni_query:
-                qs = qs.filter(employee__person__document_number__icontains=dni_query)
-        else:
-            qs = qs.order_by('-id')[:100]
+                combined_q &= word_q
+
+            qs = qs.filter(combined_q)
 
         return qs
 
@@ -1295,8 +1346,7 @@ class EmployeeReportListView(ListView):
             html = render_to_string('biometric/partials/partial_report_employee_table.html', {
                 'employees': self.object_list
             }, request=request)
-            # Retornamos también el conteo para validación visual
-            return JsonResponse({'html': html, 'count': len(self.object_list)})
+            return JsonResponse({'html': html, 'count': self.object_list.count()})
         return super().get(request, *args, **kwargs)
 
 
