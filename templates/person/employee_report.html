@@ -4,9 +4,9 @@
 {% block title %}Reporte Empleados | SIGETH{% endblock %}
 
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/person_modal.css' %}">
+    <link rel="stylesheet" href="{% static 'css/person.css' %}">
     <link rel="stylesheet" href="{% static 'css/report.css' %}">
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
 {% endblock %}
 
 {% block content %}
@@ -59,8 +59,12 @@
 
                     <hr class="report-divider">
                     <div class="report-actions">
-                        <button type="button" id="exportBtn" class="btn btn-success"><i class="fa-solid fa-file-excel"></i> Exportar Excel</button>
-                        <button type="button" id="clearBtn" class="btn btn-white-rectangle"><i class="fa-solid fa-filter-circle-xmark"></i> Limpiar</button>
+                        <button type="button" id="exportBtn" class="btn btn-success"><i
+                                class="fa-solid fa-file-excel"></i> Exportar Excel
+                        </button>
+                        <button type="button" id="clearBtn" class="btn btn-white-rectangle"><i
+                                class="fa-solid fa-filter-circle-xmark"></i> Limpiar
+                        </button>
                     </div>
                 </form>
             </div>
@@ -94,23 +98,26 @@
 {% block extra_js %}
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
-        (function(){
+        (function () {
             const unitsApi = '{{ units_api_url }}';
             const exportUrl = '{{ export_url }}';
             const selectsContainer = document.getElementById('unit-selects');
             let selectedUnitId = null;
 
-            function createSelect(level){
+            function createSelect(level) {
                 const sel = document.createElement('select');
                 sel.className = 'form-control';
                 sel.dataset.level = level;
-                const opt = document.createElement('option'); opt.value=''; opt.text='Seleccione una opción...'; sel.appendChild(opt);
+                const opt = document.createElement('option');
+                opt.value = '';
+                opt.text = 'Seleccione una opción...';
+                sel.appendChild(opt);
                 sel.addEventListener('change', onSelectChange);
                 return sel;
             }
 
-            function initSelect2(element){
-                if(window.$ && $.fn.select2){
+            function initSelect2(element) {
+                if (window.$ && $.fn.select2) {
                     $(element).select2({
                         placeholder: 'Seleccione una opción...',
                         allowClear: true,
@@ -119,29 +126,32 @@
                 }
             }
 
-            function onSelectChange(e){
+            function onSelectChange(e) {
                 const sel = e.target;
                 const parentId = sel.value;
                 // Remove selects that are deeper than current level
-                const level = parseInt(sel.dataset.level,10);
-                const toRemove = Array.from(selectsContainer.querySelectorAll('select')).filter(s=>parseInt(s.dataset.level,10)>level);
-                toRemove.forEach(n=>{
+                const level = parseInt(sel.dataset.level, 10);
+                const toRemove = Array.from(selectsContainer.querySelectorAll('select')).filter(s => parseInt(s.dataset.level, 10) > level);
+                toRemove.forEach(n => {
                     // Destroy Select2 if it exists
-                    if(window.$ && $.fn.select2 && $(n).data('select2')){
+                    if (window.$ && $.fn.select2 && $(n).data('select2')) {
                         $(n).select2('destroy');
                     }
                     n.remove();
                 });
 
-                if(parentId){
+                if (parentId) {
                     selectedUnitId = parentId;
                     fetch(unitsApi + '?parent_id=' + parentId)
-                        .then(r=>r.json())
-                        .then(data=>{
-                            if(data.success && data.units && data.units.length){
-                                const next = createSelect(level+1);
-                                data.units.forEach(u=>{
-                                    const o = document.createElement('option'); o.value = u.id; o.text = u.name; next.appendChild(o);
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.success && data.units && data.units.length) {
+                                const next = createSelect(level + 1);
+                                data.units.forEach(u => {
+                                    const o = document.createElement('option');
+                                    o.value = u.id;
+                                    o.text = u.name;
+                                    next.appendChild(o);
                                 });
                                 selectsContainer.appendChild(next);
                                 initSelect2(next);
@@ -149,27 +159,30 @@
                         });
                 } else {
                     // if cleared selection, reset selectedUnitId to parent of this select if any
-                    const prev = Array.from(selectsContainer.querySelectorAll('select')).filter(s=>parseInt(s.dataset.level,10)<level).pop();
+                    const prev = Array.from(selectsContainer.querySelectorAll('select')).filter(s => parseInt(s.dataset.level, 10) < level).pop();
                     selectedUnitId = prev ? prev.value : null;
                 }
             }
 
             // cargar selects iniciales (raíz)
-            function loadRoot(){
+            function loadRoot() {
                 // Destroy any existing Select2 instances
-                Array.from(selectsContainer.querySelectorAll('select')).forEach(sel=>{
-                    if(window.$ && $.fn.select2 && $(sel).data('select2')){
+                Array.from(selectsContainer.querySelectorAll('select')).forEach(sel => {
+                    if (window.$ && $.fn.select2 && $(sel).data('select2')) {
                         $(sel).select2('destroy');
                     }
                 });
                 selectsContainer.innerHTML = '';
                 fetch(unitsApi)
-                    .then(r=>r.json())
-                    .then(data=>{
+                    .then(r => r.json())
+                    .then(data => {
                         const first = createSelect(0);
-                        if(data.success && data.units){
-                            data.units.forEach(u=>{
-                                const o = document.createElement('option'); o.value = u.id; o.text = u.name; first.appendChild(o);
+                        if (data.success && data.units) {
+                            data.units.forEach(u => {
+                                const o = document.createElement('option');
+                                o.value = u.id;
+                                o.text = u.name;
+                                first.appendChild(o);
                             });
                         }
                         selectsContainer.appendChild(first);
@@ -188,31 +201,35 @@
             let fastInterval = null;
             let slowInterval = null;
 
-            function updateUI(realPct){
+            function updateUI(realPct) {
                 const displayPct = Math.max(typeof realPct === 'number' ? realPct : 0, fakeProgress);
                 progressBar.style.width = displayPct + '%';
                 progressPercent.textContent = displayPct + '%';
             }
 
-            function startFakeProgress(){
-                if(fastInterval || slowInterval) return;
+            function startFakeProgress() {
+                if (fastInterval || slowInterval) return;
                 fakeProgress = Math.max(1, fakeProgress);
                 updateUI();
-                fastInterval = setInterval(()=>{
-                    if(fakeProgress < 95){
+                fastInterval = setInterval(() => {
+                    if (fakeProgress < 95) {
                         fakeProgress = Math.min(95, fakeProgress + 1);
                         updateUI();
                     }
-                    if(fakeProgress >= 95){
-                        if(fastInterval){ clearInterval(fastInterval); fastInterval = null; }
-                        if(!slowInterval){
-                            slowInterval = setInterval(()=>{
-                                if(fakeProgress < 99){
+                    if (fakeProgress >= 95) {
+                        if (fastInterval) {
+                            clearInterval(fastInterval);
+                            fastInterval = null;
+                        }
+                        if (!slowInterval) {
+                            slowInterval = setInterval(() => {
+                                if (fakeProgress < 99) {
                                     fakeProgress = Math.min(99, fakeProgress + 1);
                                     updateUI();
                                 }
-                                if(fakeProgress >= 99){
-                                    clearInterval(slowInterval); slowInterval = null;
+                                if (fakeProgress >= 99) {
+                                    clearInterval(slowInterval);
+                                    slowInterval = null;
                                 }
                             }, 30000);
                         }
@@ -220,18 +237,24 @@
                 }, 1000);
             }
 
-            function stopFakeProgress(){
-                if(fastInterval){ clearInterval(fastInterval); fastInterval = null; }
-                if(slowInterval){ clearInterval(slowInterval); slowInterval = null; }
+            function stopFakeProgress() {
+                if (fastInterval) {
+                    clearInterval(fastInterval);
+                    fastInterval = null;
+                }
+                if (slowInterval) {
+                    clearInterval(slowInterval);
+                    slowInterval = null;
+                }
             }
 
-            document.getElementById('exportBtn').addEventListener('click', async function(){
-                const checked = Array.from(document.querySelectorAll('input[name=fields]:checked')).map(i=>i.value);
+            document.getElementById('exportBtn').addEventListener('click', async function () {
+                const checked = Array.from(document.querySelectorAll('input[name=fields]:checked')).map(i => i.value);
                 const params = new URLSearchParams();
-                if(selectedUnitId){
+                if (selectedUnitId) {
                     params.set('unit_id', selectedUnitId);
                 }
-                if(checked.length) params.set('fields', checked.join(','));
+                if (checked.length) params.set('fields', checked.join(','));
 
                 const url = exportUrl + '?' + params.toString();
 
@@ -242,9 +265,9 @@
                 progressText.textContent = 'Enviando solicitud...';
 
                 abortController = new AbortController();
-                try{
-                    const resp = await fetch(url, { signal: abortController.signal });
-                    if(!resp.ok){
+                try {
+                    const resp = await fetch(url, {signal: abortController.signal});
+                    if (!resp.ok) {
                         throw new Error('Error en el servidor al generar el reporte');
                     }
 
@@ -252,7 +275,7 @@
                     const contentLength = resp.headers.get('content-length');
                     const total = contentLength ? parseInt(contentLength, 10) : null;
 
-                    if(!resp.body){
+                    if (!resp.body) {
                         // navegador no soporta streaming, simplemente descargar
                         const blob = await resp.blob();
                         const filename = (resp.headers.get('content-disposition') || '').match(/filename="?([^\"]+)"?/)?.[1] || 'reporte.xlsx';
@@ -271,17 +294,20 @@
                     let received = 0;
                     progressText.textContent = 'Descargando archivo...';
 
-                    
-                    while(true){
-                        const { done, value } = await reader.read();
-                        if(done) break;
+
+                    while (true) {
+                        const {done, value} = await reader.read();
+                        if (done) break;
                         chunks.push(value);
                         received += value.length;
                         // Al recibir el primer chunk, acelerar visibilidad: al menos 5%
-                        if(chunks.length === 1){
-                            if(fakeProgress < 5){ fakeProgress = 5; updateUI(); }
+                        if (chunks.length === 1) {
+                            if (fakeProgress < 5) {
+                                fakeProgress = 5;
+                                updateUI();
+                            }
                         }
-                        if(total){
+                        if (total) {
                             const pct = Math.round((received / total) * 100);
                             updateUI(pct);
                         } else {
@@ -297,7 +323,7 @@
                     progressText.textContent = 'Generado, preparando descarga...';
 
                     // Combinar chunks
-                    const blob = new Blob(chunks, { type: resp.headers.get('content-type') || 'application/octet-stream' });
+                    const blob = new Blob(chunks, {type: resp.headers.get('content-type') || 'application/octet-stream'});
                     const filename = (resp.headers.get('content-disposition') || '').match(/filename="?([^\"]+)"?/)?.[1] || 'reporte.xlsx';
                     const link = document.createElement('a');
                     link.href = URL.createObjectURL(blob);
@@ -309,42 +335,47 @@
                     progressBar.style.width = '100%';
                     progressPercent.textContent = '100%';
                     progressText.textContent = 'Descarga completa';
-                    setTimeout(()=> overlay.classList.remove('show'), 700);
+                    setTimeout(() => overlay.classList.remove('show'), 700);
 
-                } catch(err){
-                    if(err.name === 'AbortError'){
+                } catch (err) {
+                    if (err.name === 'AbortError') {
                         progressText.textContent = 'Descarga cancelada';
                     } else {
                         console.error(err);
                         progressText.textContent = 'Error: ' + (err.message || 'Falló la descarga');
                     }
                     stopFakeProgress();
-                    setTimeout(()=> overlay.classList.remove('show'), 1200);
+                    setTimeout(() => overlay.classList.remove('show'), 1200);
                 } finally {
                     stopFakeProgress();
                     abortController = null;
                 }
             });
 
-            cancelBtn.addEventListener('click', function(){
-                if(abortController){ abortController.abort(); }
+            cancelBtn.addEventListener('click', function () {
+                if (abortController) {
+                    abortController.abort();
+                }
                 stopFakeProgress();
             });
 
-            document.getElementById('clearBtn').addEventListener('click', function(){
+            document.getElementById('clearBtn').addEventListener('click', function () {
                 // reset selects / unit
                 loadRoot();
                 selectedUnitId = null;
                 // Uncheck all fields and ensure labels lose 'active'
-                Array.from(document.querySelectorAll('input[name=fields]')).forEach(i=>{
-                    if(i.checked){ i.checked = false; }
+                Array.from(document.querySelectorAll('input[name=fields]')).forEach(i => {
+                    if (i.checked) {
+                        i.checked = false;
+                    }
                     // dispatch change so syncLabels removes the active class
-                    i.dispatchEvent(new Event('change', { bubbles: true }));
+                    i.dispatchEvent(new Event('change', {bubbles: true}));
                     // fallback: remove class directly
-                    const lbl = i.closest('label.radio-target'); if(lbl) lbl.classList.remove('active');
+                    const lbl = i.closest('label.radio-target');
+                    if (lbl) lbl.classList.remove('active');
                 });
                 // reset any overlay/progress UI if visible
-                if(overlay.classList.contains('show')){
+                if (overlay.classList.contains('show')) {
                     stopFakeProgress();
                     overlay.classList.remove('show');
                     progressBar.style.width = '0%';
@@ -359,15 +390,18 @@
     </script>
     <script>
         // Small helper to toggle 'active' class on labels when checkboxes change
-        (function(){
-            function syncLabels(){
-                Array.from(document.querySelectorAll('input[name="fields"]')).forEach(function(inp){
+        (function () {
+            function syncLabels() {
+                Array.from(document.querySelectorAll('input[name="fields"]')).forEach(function (inp) {
                     const lbl = inp.closest('label.radio-target');
-                    if(!lbl) return;
-                    if(inp.checked) lbl.classList.add('active'); else lbl.classList.remove('active');
-                    inp.addEventListener('change', function(){ if(inp.checked) lbl.classList.add('active'); else lbl.classList.remove('active'); });
+                    if (!lbl) return;
+                    if (inp.checked) lbl.classList.add('active'); else lbl.classList.remove('active');
+                    inp.addEventListener('change', function () {
+                        if (inp.checked) lbl.classList.add('active'); else lbl.classList.remove('active');
+                    });
                 });
             }
+
             // Run on DOMContentLoaded and also when content might be re-rendered
             document.addEventListener('DOMContentLoaded', syncLabels);
             // If inputs are present immediately, run once

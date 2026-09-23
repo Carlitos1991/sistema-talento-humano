@@ -14,107 +14,110 @@
         </div>
 
         <!-- BODY -->
-        <div class="modal-body" style="background-color: #f8fafc; padding: 1.5rem;">
+        <div class="modal-body modal-body-custom">
 
             <!-- Banner Superior Compacto -->
-            <div class="d-flex align-items-center mb-3"
-                 style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1rem 1.5rem; gap: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-                <div class="flex-shrink-0">
+            <div class="quick-view-banner-compact">
+                <div class="quick-view-avatar-col">
                     {% if person.photo %}
-                        <img src="{{ person.photo.url }}" alt="Foto"
-                             style="width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 3px solid #e2e8f0;">
+                        <img src="{{ person.photo.url }}" alt="{{ person.full_name }}" class="avatar-md">
                     {% else %}
-                        <div class="avatar-placeholder-sm" style="width: 70px; height: 70px; font-size: 1.5rem;">
+                        <div class="avatar-placeholder-md">
                             {{ person.first_name|first }}{{ person.last_name|first }}
                         </div>
                     {% endif %}
                 </div>
-                <div class="flex-grow-1">
-                    <h2 style="margin: 0 0 5px 0; font-size: 1.3rem; color: #0f172a; font-weight: 800;">{{ person.last_name }} {{ person.first_name }}</h2>
-                    <div style="display: flex; gap: 1rem; align-items: center;">
-                        <span class="text-muted fw-bold" style="font-size: 0.9rem;"><i
-                                class="fa-regular fa-id-card me-1"></i> {{ person.document_number }}</span>
+                <div class="quick-view-header-col">
+                    <h2 class="quick-view-name">{{ person.last_name }} {{ person.first_name }}</h2>
+                    <div class="quick-view-subrow">
+                        <span class="text-muted bold small">
+                            <i class="fa-regular fa-id-card me-1"></i>{{ person.document_number }}
+                        </span>
                         {% if person.employee_profile and person.employee_profile.employment_status %}
-                            <span class="badge badge-indigo"
-                                  style="font-size: 0.75rem;">{{ person.employee_profile.employment_status.name }}</span>
+                            <span class="badge badge-indigo">
+                                {{ person.employee_profile.employment_status.name }}
+                            </span>
                         {% endif %}
                     </div>
                 </div>
             </div>
 
             <!-- Grid de Información -->
-            <div class="grid-2-cols" style="gap: 1.25rem;">
+            <div class="grid-2-cols quick-view-grid">
 
                 <!-- Columna 1: Personal -->
-                <div class="section-card-standard m-0" style="padding: 1.25rem; border-top: 4px solid #3b82f6;">
-                    <div class="section-title mb-3" style="font-size: 0.75rem;"><i
-                            class="fa-solid fa-user text-blue"></i> Datos Personales
+                <div class="section-card-standard quick-view-card border-top-blue">
+                    <div class="section-title">
+                        <i class="fa-solid fa-user text-blue"></i> Datos Personales
                     </div>
 
-                    <div class="info-data-row border-bottom pb-1">
-                        <label class="text-muted mb-0">Fecha de nacimiento</label>
-                        <span class="fw-bold text-primary">{{ person.birth_date|date:"Y-m-d" }}
-                            <span>({{ person.age|default:"--" }} años)</span>
+                    <div class="info-data-row">
+                        <label>Fecha de nacimiento</label>
+                        <span class="bold">{{ person.birth_date|date:"Y-m-d" }} <small
+                                class="text-muted">({{ person.age|default:"--" }} años)</small></span>
                     </div>
-                    <div class="info-data-row border-bottom pb-1">
-                        <label class="text-muted mb-0">Estado Civil</label>
+                    <div class="info-data-row">
+                        <label>Estado Civil</label>
                         <span>{{ person.marital_status.name|default:"--" }}</span>
                     </div>
-                    <div class="info-data-row border-bottom pb-1">
-                        <label class="text-muted mb-0">Tipo de Sangre</label>
+                    <div class="info-data-row">
+                        <label>Tipo de Sangre</label>
                         <span>{{ person.blood_type.name|default:"--" }}</span>
                     </div>
-                    <div class="info-data-row border-bottom pb-1">
-                        <label class="text-muted mb-0">Teléfono</label>
+                    <div class="info-data-row">
+                        <label>Teléfono</label>
                         <span>{{ person.phone_number|default:"--" }}</span>
                     </div>
                     <div class="info-data-row">
-                        <label class="text-muted mb-0">Correo</label>
-                        <span style="font-size: 0.85rem;">{{ person.email|default:"--" }}</span>
+                        <label>Correo</label>
+                        <span class="quick-view-email">{{ person.email|default:"--" }}</span>
                     </div>
                 </div>
 
                 <!-- Columna 2: Institucional -->
-                <div class="section-card-standard m-0" style="padding: 1.25rem; border-top: 4px solid #10b981;">
-                    <div class="section-title mb-3" style="font-size: 0.75rem;"><i
-                            class="fa-solid fa-building text-green"></i> Datos Institucionales
+                <div class="section-card-standard quick-view-card border-top-green">
+                    <div class="section-title">
+                        <i class="fa-solid fa-building text-green"></i> Datos Institucionales
                     </div>
 
                     {% if person.employee_profile %}
-                        <div class="info-data-row border-bottom pb-1">
-                            <label class="text-muted mb-0">Expediente</label>
+                        <div class="info-data-row">
+                            <label>Expediente</label>
                             <span>{{ institutional_data.file_number|default:"--" }}</span>
                         </div>
-                        <div class="info-data-row border-bottom pb-1">
-                            <label class="text-muted mb-0">Código Bio.</label>
-                            <span class="fw-bold">{{ institutional_data.biometric_id|default:"--" }}</span>
+                        <div class="info-data-row">
+                            <label>Código Bio.</label>
+                            <span class="bold">{{ institutional_data.biometric_id|default:"--" }}</span>
                         </div>
-                        <div class="info-data-row border-bottom pb-1">
-                            <label class="text-muted mb-0">Dependencia</label>
-                            <span class="text-primary fw-bold text-right"
-                                  style="max-width: 65%;">{{ person.employee_profile.area.name|default:"--" }}</span>
+                        <div class="info-data-row">
+                            <label>Dependencia</label>
+                            <span class="bold right quick-view-truncated-value">
+                                {{ person.employee_profile.area.name|default:"--" }}
+                            </span>
                         </div>
 
                         {% if budget %}
-                            <div class="info-data-row border-bottom pb-1">
-                                <label class="text-muted mb-0">Cargo</label>
-                                <span class="text-right"
-                                      style="max-width: 65%;">{{ budget.position_item.name|default:"--" }}</span>
+                            <div class="info-data-row">
+                                <label>Cargo</label>
+                                <span class="right quick-view-truncated-value">
+                                    {{ budget.position_item.name|default:"--" }}
+                                </span>
                             </div>
                             <div class="info-data-row">
-                                <label class="text-muted mb-0">R.M.U.</label>
-                                <span class="text-green fw-bold">${{ budget.remuneration|default:"0.00" }}</span>
+                                <label>R.M.U.</label>
+                                <span class="text-green bold">${{ budget.remuneration|default:"0.00" }}</span>
                             </div>
                         {% else %}
-                            <div class="alert-info p-2 mt-2 m-0 text-center">
+                            <div class="alert alert-info justify-content-center mt-3">
                                 <i class="fa-solid fa-circle-exclamation text-warning"></i> Sin partida asignada
                             </div>
                         {% endif %}
 
                     {% else %}
-                        <div class="text-center text-muted mt-4">
-                            <i class="fa-solid fa-user-xmark fa-2x mb-2" style="color: #cbd5e1;"></i>
-                            <p style="font-size: 0.85rem;">Esta persona no cuenta con un perfil de empleado activo.</p>
+                        <div class="empty-state-container p-0 mt-3">
+                            <i class="fa-solid fa-user-xmark empty-state-icon small"></i>
+                            <p class="empty-state-text small">Esta persona no cuenta con un perfil de empleado
+                                activo.</p>
                         </div>
                     {% endif %}
                 </div>
@@ -122,7 +125,7 @@
         </div>
 
         <!-- FOOTER -->
-        <div class="modal-footer-fixed" style="padding: 1rem 1.5rem; background: white; border-top: 1px solid #e2e8f0;">
+        <div class="modal-footer-fixed">
             <button type="button" class="btn-default-outline" onclick="closeModal()">Cerrar</button>
             <a href="{% url 'employee:employee_detail' person.id %}" class="btn-dark-blue-rectangle">
                 <i class="fa-solid fa-user-gear"></i> Gestionar Perfil Completo

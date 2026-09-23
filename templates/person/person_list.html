@@ -1,6 +1,9 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block title %}Directorio de Personas | SIGETH{% endblock %}
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/person.css' %}">
+{% endblock %}
 {% block content %}
     <!-- 1. Header -->
     <div class="header-card">

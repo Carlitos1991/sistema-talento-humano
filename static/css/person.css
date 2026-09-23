@@ -1,0 +1,284 @@
+/* ==========================================================================
+   MÓDULO DE PERSONAS & EMPLEADOS - ESTILOS ESPECÍFICOS (UNIFICADO)
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. MODAL VISTA RÁPIDA (QUICK VIEW)
+   -------------------------------------------------------------------------- */
+
+/* Cabecera / Banner del empleado */
+.quick-view-banner-compact {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 1rem 1.25rem;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: var(--border-radius, 10px);
+    box-shadow: var(--shadow-soft, 0 1px 4px rgba(15, 23, 42, 0.07));
+    margin-bottom: 1.25rem;
+}
+
+.quick-view-avatar-col {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+}
+
+.quick-view-avatar-col .avatar-md,
+.quick-view-avatar-col .avatar-placeholder-md {
+    margin-bottom: 0 !important; /* Desactiva el margen inferior global */
+}
+
+.quick-view-header-col {
+    flex: 1;
+    min-width: 0;
+}
+
+.quick-view-name {
+    margin: 0 0 0.35rem 0;
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--primary-dark, #122248);
+    letter-spacing: var(--tracking-lexend, -0.075em);
+    line-height: 1.2;
+}
+
+.quick-view-subrow {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+/* Grilla y tarjetas interiores */
+.quick-view-grid {
+    gap: 1.25rem !important;
+}
+
+.quick-view-card {
+    margin-bottom: 0 !important;
+    height: 100%;
+    background: #ffffff;
+}
+
+.quick-view-card.border-top-blue {
+    border-top: 4px solid #3b82f6;
+}
+
+.quick-view-card.border-top-green {
+    border-top: 4px solid var(--accent-color, #059669);
+}
+
+.quick-view-email {
+    font-size: 0.85rem;
+    word-break: break-word;
+}
+
+.quick-view-truncated-value {
+    max-width: 65%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+
+/* --------------------------------------------------------------------------
+   2. TABLA / LISTADO: ENLACES Y AVATAR
+   -------------------------------------------------------------------------- */
+.person-avatar-link {
+    display: inline-flex;
+    text-decoration: none;
+    border-radius: 50%;
+    transition: transform 0.2s ease;
+}
+
+.person-avatar-link:hover {
+    transform: scale(1.05);
+}
+
+.person-address-badge {
+    display: inline-flex;
+    align-items: flex-start;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    text-align: left;
+    line-height: 1.35;
+    max-width: 100%;
+}
+
+
+/* --------------------------------------------------------------------------
+   3. MODAL DE BÚSQUEDA AVANZADA (ESPECÍFICO)
+   -------------------------------------------------------------------------- */
+.modal-container-search {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    width: 90%;
+    max-width: 800px;
+    max-height: 90vh;
+    overflow: hidden;
+    animation: scaleIn 0.3s ease-out;
+}
+
+.modal-header-search {
+    background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+    color: #ffffff;
+    padding: 20px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 3px solid #1e40af;
+}
+
+.modal-header-search .header-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.modal-header-search .header-content i {
+    font-size: 24px;
+}
+
+.modal-header-search h3 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.close-modal-btn-search {
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    color: #ffffff;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    transition: all 0.3s ease;
+}
+
+.close-modal-btn-search:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: rotate(90deg) scale(1.1);
+    border-color: rgba(255, 255, 255, 0.6);
+}
+
+.modal-body-search {
+    padding: 30px;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.form-grid-search {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 25px;
+}
+
+.form-column {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.form-label-search {
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 8px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.form-label-search i {
+    color: #1e40af;
+    font-size: 14px;
+}
+
+.input-field-search {
+    padding: 10px 14px;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    background: #ffffff;
+}
+
+.input-field-search:focus {
+    outline: none;
+    border-color: #1e40af;
+    box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
+}
+
+.input-field-search:hover {
+    border-color: #9ca3af;
+}
+
+.modal-footer-search {
+    background: #f9fafb;
+    padding: 20px 30px;
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    border-top: 1px solid #e5e7eb;
+}
+
+@media (max-width: 768px) {
+    .form-grid-search {
+        grid-template-columns: 1fr;
+    }
+
+    .modal-container-search {
+        width: 95%;
+        max-height: 95vh;
+    }
+
+    .modal-body-search {
+        padding: 20px;
+    }
+}
+
+
+/* --------------------------------------------------------------------------
+   4. VALIDACIONES Y FEEDBACK (#modalPersonOverlay)
+   -------------------------------------------------------------------------- */
+#modalPersonOverlay .form-group {
+    position: relative;
+}
+
+#modalPersonOverlay .form-group .field-error-msg {
+    min-height: 18px;
+    margin-top: 4px;
+    color: #dc2626;
+    font-size: 0.78rem;
+    font-weight: 500;
+    line-height: 1.25;
+}
+
+#modalPersonOverlay .form-group .field-error-msg:not(.has-message) {
+    color: transparent;
+}
+
+#modalPersonOverlay input.is-invalid,
+#modalPersonOverlay select.is-invalid,
+#modalPersonOverlay textarea.is-invalid,
+#modalPersonOverlay .input-field.is-invalid {
+    border-color: #dc2626 !important;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12) !important;
+    background-color: #fffafa;
+}
+
+#modalPersonOverlay .select2-container .select2-selection.is-invalid {
+    border-color: #dc2626 !important;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12) !important;
+    background-color: #fffafa !important;
+}

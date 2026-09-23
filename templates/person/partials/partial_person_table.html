@@ -58,9 +58,8 @@
                             </div>
                         </td>
                         <td>{{ person.document_number|default:"--" }}</td>
-                        <td>
-                            <div class="person-doc"><b>{{ person.email|default:"sin correo" }}</b></div>
-                            <div class="person-doc"><b>{{ person.phone_number|default:"sin teléfono" }}</b></div>
+                        <td class="text-center">
+                            <div><b>{{ person.phone_number|default:"sin teléfono" }}</b></div>
                         </td>
                         <td class="text-center">
                             {% if person.employee_profile.area %}
@@ -68,8 +67,7 @@
                                     {{ person.employee_profile.area.name }}
                                 </div>
                                 {% if person.employee_profile.is_boss %}
-                                    <span class="status-badge"
-                                          style="background: #fef3c7; color: #92400e; font-size: 0.6rem;">JEFE/A</span>
+                                    <span class="status-badge">JEFE/A</span>
                                 {% endif %}
                             {% else %}
                                 <span class="text-muted small italic">Sin unidad asignada</span>

@@ -7,7 +7,6 @@
    ======================================== */
 
 
-
 /*.person-filter-form {*/
 /*    width: 100%;*/
 /*}*/
@@ -22,6 +21,7 @@
     min-height: 52px;
     margin: 10px 0 8px;
 }
+
 .person-filter-panel {
     display: flex;
     flex-direction: column;
@@ -33,7 +33,6 @@
     border: 1px solid rgba(148, 163, 184, 0.18);
     box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
 }
-
 
 
 .person-filter-field {
@@ -216,6 +215,7 @@
         justify-content: center;
     }
 }
+
 /* Modal Container */
 .modal-container-search {
     background: white;
@@ -482,14 +482,6 @@
     font-weight: 600;
     font-size: 0.875rem;
     color: #1e293b;
-}
-
-.person-doc {
-    font-size: 0.75rem;
-    color: #64748b;
-    display: flex;
-    align-items: center;
-    gap: 4px;
 }
 
 .quick-view-info-grid .info-group,
