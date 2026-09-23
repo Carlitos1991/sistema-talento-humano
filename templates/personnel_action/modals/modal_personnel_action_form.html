@@ -1,175 +1,195 @@
-<div class="modal-overlay hidden">
-    <div class="modal-container-medium">
-        <form method="post" action="{{ request.path }}" id="form-create-action"
-              data-form-mode="{% if is_edit %}edit{% else %}create{% endif %}"
-              onsubmit="PersonnelActionModal.onFormSubmit(this); submitAjaxForm(event);" novalidate>
-            {% csrf_token %}
+{% with action=object|default:personnelaction|default:form.instance %}
+    <div class="modal-overlay hidden">
+        <div class="modal-container-medium">
+            <form method="post" action="{{ request.path }}" id="form-create-action"
+                  data-form-mode="{% if is_edit or action.pk %}edit{% else %}create{% endif %}"
+                  onsubmit="submitAjaxForm(event);" novalidate>
+                {% csrf_token %}
+                <!-- Preservar firmas configuradas en el formulario -->
+                <input type="hidden" name="authority_1"
+                       value="{{ action.authority_1.pk|default:action.action_type.default_authority_1.pk|default:'' }}">
+                <input type="hidden" name="authority_2"
+                       value="{{ action.authority_2.pk|default:action.action_type.default_authority_2.pk|default:'' }}">
+                <input type="hidden" name="reviewer"
+                       value="{{ action.reviewer.pk|default:action.action_type.default_reviewer.pk|default:'' }}">
+                <input type="hidden" name="register"
+                       value="{{ action.register.pk|default:action.action_type.default_register.pk|default:'' }}">
+                <!-- HEADER  -->
+                <div class="modal-header-medium">
+                    <h3 class="header-title">
+                        <i class="fa-solid fa-file-signature me-2"></i>
+                        <span>{% if is_edit or action.pk %}Editar Acción de Personal{% else %}Nueva Acción de
+                            Personal{% endif %}</span>
+                    </h3>
+                    <button type="button" class="btn-close-circle" onclick="closeModal()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body-content modal-body-custom">
 
-            <!-- HEADER -->
-            <div class="modal-header-medium">
-                <h3 class="header-title">
-                    <i class="fa-solid fa-file-signature me-2"></i>
-                    <span>{% if is_edit %}Editar Acción de Personal{% else %}Nueva Acción de Personal{% endif %}</span>
-                </h3>
-                <button type="button" class="btn-close-circle" onclick="closeModal()">&times;</button>
-            </div>
+                    <!-- BODY -->
+                    <!-- Errores Globales -->
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger mb-3">
+                            {% for error in form.non_field_errors %}
+                                <span>{{ error }}</span><br>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
 
-            <!-- BODY -->
-            <div class="modal-body-custom">
-                <!-- Errores Globales -->
-                {% if form.non_field_errors %}
-                    <div class="alert alert-danger mb-3">
-                        {% for error in form.non_field_errors %}
-                            <span>{{ error }}</span><br>
-                        {% endfor %}
-                    </div>
-                {% endif %}
-
-                <!-- 1. INFORMACIÓN DEL EMPLEADO -->
-                {% if employee_id %}
-                    <div class="form-section-card">
-                        <h5 class="section-title">
-                            <i class="fa-regular fa-id-badge"></i> INFORMACIÓN DEL EMPLEADO
-                        </h5>
-                        <div class="employee-card-badge">
-                            <div class="employee-avatar-wrapper">
-                                {% if employee.person.photo %}
-                                    <img src="{{ employee.person.photo.url }}" alt="{{ employee.person.full_name }}"
-                                         class="employee-avatar-img">
-                                {% else %}
-                                    <div class="employee-avatar-placeholder">
-                                        <i class="fas fa-user"></i>
+                    <!-- 1. INFORMACIÓN DEL EMPLEADO -->
+                    {% if employee_id or action.employee %}
+                        {% with emp=employee|default:action.employee %}
+                            <div class="form-section-card">
+                                <h5 class="section-title">
+                                    <i class="fa-regular fa-id-badge"></i> INFORMACIÓN DEL EMPLEADO
+                                </h5>
+                                <div class="employee-card-badge">
+                                    <div class="employee-avatar-wrapper">
+                                        {% if emp.person.photo %}
+                                            <img src="{{ emp.person.photo.url }}"
+                                                 alt="{{ emp.person.full_name }}"
+                                                 class="avatar-md employee-avatar-img"
+                                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                            <div class="avatar-placeholder-md employee-avatar-placeholder"
+                                                 style="display: none;">
+                                                {{ emp.person.first_name|first }}{{ emp.person.last_name|first }}
+                                            </div>
+                                        {% else %}
+                                            <div class="avatar-placeholder-md employee-avatar-placeholder">
+                                                {{ emp.person.first_name|first }}{{ emp.person.last_name|first }}
+                                            </div>
+                                        {% endif %}
                                     </div>
-                                {% endif %}
+                                    <div class="employee-card-details">
+                                        <span class="employee-card-name">{{ emp.person.full_name }}</span>
+                                        <span class="employee-card-doc">
+                                    <i class="fa-solid fa-id-card me-1"></i>CI: {{ emp.person.document_number|default:"--" }}
+                                </span>
+                                    </div>
+                                </div>
+                                <input type="hidden" name="employee" value="{{ emp.id }}">
                             </div>
-                            <div class="employee-card-details">
-                                <span class="employee-card-name">{{ employee.person.full_name }}</span>
-                                <span class="employee-card-doc"><i
-                                        class="fa-solid fa-id-card me-1"></i>CI: {{ employee.person.document_number }}</span>
-                            </div>
-                        </div>
-                        <input type="hidden" name="employee" value="{{ employee_id }}">
-                    </div>
-                {% else %}
-                    <div class="form-section-card">
-                        <h5 class="section-title">
-                            <i class="fa-regular fa-id-badge"></i> INFORMACIÓN DEL EMPLEADO
-                        </h5>
-                        <div class="form-group">
-                            <label class="form-label">Empleado <span class="text-danger">*</span></label>
-                            {{ form.employee }}
-                            <div class="invalid-feedback"></div>
-                        </div>
-                    </div>
-                {% endif %}
-
-                <!-- 2. DATOS DE LA ACCIÓN -->
-                <div class="form-section-card mt-3">
-                    <h5 class="section-title">
-                        <i class="fa-solid fa-file-alt"></i> DATOS DE LA ACCIÓN
-                    </h5>
-
-                    <div class="form-group">
-                        <label class="form-label">Tipo de Acción <span class="text-danger">*</span></label>
-                        {{ form.action_type }}
-                        <div class="invalid-feedback"></div>
-                    </div>
-
-                    <!-- Campo número oculto, se genera automáticamente -->
-                    <input type="hidden" name="number" value="{{ action.number|default:'' }}">
-                    <div class="grid-2-cols">
-                        <div class="form-group">
-                            <label class="form-label">Fecha de Emisión <span class="text-danger">*</span></label>
-                            {{ form.date_issue }}
-                            <div class="invalid-feedback"></div>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Fecha de Vigencia <span class="text-danger">*</span></label>
-                            {{ form.date_effective }}
-                            <div class="invalid-feedback"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 3. MOTIVACIÓN Y EXPLICACIÓN -->
-                <div class="form-section-card mt-3">
-                    <h5 class="section-title">
-                        <i class="fa-solid fa-comment-dots"></i> MOTIVACIÓN Y EXPLICACIÓN
-                    </h5>
-
-                    <div class="form-group">
-                        <label class="form-label">Motivación</label>
-                        {{ form.motivation }}
-                        <p class="form-hint">Breve motivo de la acción de personal.</p>
-                        <div class="invalid-feedback"></div>
-                    </div>
-
-                    <div class="form-group mt-3">
-                        <label class="form-label">Explicación</label>
-                        {{ form.explanation }}
-                        <p class="form-hint">Descripción detallada de la acción.</p>
-                        <div class="invalid-feedback"></div>
-                    </div>
-                </div>
-
-                <!-- 4. ACORDEÓN: OPCIONES DE MOVIMIENTO -->
-                <div class="form-section-card mt-3">
-                    <h5 class="section-title">
-                        <i class="fa-solid fa-arrows-alt"></i> OPCIONES DE MOVIMIENTO
-                    </h5>
-
-                    <!-- ACORDEÓN REUBICAR -->
-                    <div class="accordion-item" data-accordion="reubicar">
-                        <button type="button" class="accordion-header" onclick="toggleAccordion('reubicar', this)">
-                            <i class="fa-solid fa-sitemap"></i> Reubicar - Unidad Administrativa
-                            <span class="accordion-arrow"><i class="fa-solid fa-chevron-down"></i></span>
-                        </button>
-                        <div class="accordion-content">
-                            <div id="reubicar-combos-wrapper">
-                                <p style="color: #666; font-size: 0.9rem; margin-bottom: 1rem;">
-                                    <i class="fa-solid fa-info-circle me-2" style="color: #0284c7;"></i>Seleccione la
-                                    nueva unidad administrativa del empleado en cascada.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- ACORDEÓN CAMBIAR PARTIDA -->
-                    <div class="accordion-item" data-accordion="partida">
-                        <button type="button" class="accordion-header" onclick="toggleAccordion('partida', this)">
-                            <i class="fa-solid fa-file-invoice-dollar"></i> Cambiar Partida - Presupuestaria
-                            <span class="accordion-arrow"><i class="fa-solid fa-chevron-down"></i></span>
-                        </button>
-                        <div class="accordion-content">
-                            <p style="color: #666; font-size: 0.9rem; margin-bottom: 1.25rem;">
-                                <i class="fa-solid fa-info-circle me-2" style="color: #0284c7;"></i>Busque y seleccione
-                                una partida presupuestaria disponible (estado LIBRE).
-                            </p>
+                        {% endwith %}
+                    {% else %}
+                        <div class="form-section-card">
+                            <h5 class="section-title">
+                                <i class="fa-regular fa-id-badge"></i> INFORMACIÓN DEL EMPLEADO
+                            </h5>
                             <div class="form-group">
-                                <label class="form-label">Partida Presupuestaria</label>
-                                <select name="movement_new_budget_line" id="id_new_budget_line"
-                                        class="input-field form-control" style="width: 100%;">
-                                    <option value=""></option>
-                                </select>
-                                <div id="budget-info" class="budget-info-box">
-                                    <div><strong>Código:</strong> <span id="budget-code">-</span></div>
-                                    <div><strong>Cargo:</strong> <span id="budget-position">-</span></div>
-                                    <div><strong>RMU:</strong> <span id="budget-remuneration">-</span></div>
-                                    <div><strong>Programa:</strong> <span id="budget-program">-</span></div>
+                                <label class="form-label">Empleado <span class="text-danger">*</span></label>
+                                {% if form %}{{ form.employee }}{% endif %}
+                                <div class="invalid-feedback"></div>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- 2. DATOS DE LA ACCIÓN -->
+                    <div class="form-section-card mt-3">
+                        <h5 class="section-title">
+                            <i class="fa-solid fa-file-alt"></i> DATOS DE LA ACCIÓN
+                        </h5>
+
+                        <div class="form-group">
+                            <label class="form-label">Tipo de Acción <span class="text-danger">*</span></label>
+                            {{ form.action_type }}
+                            <div class="invalid-feedback"></div>
+                        </div>
+
+                        <input type="hidden" name="number" value="{{ action.number|default:'' }}">
+                        <div class="grid-2-cols">
+                            <div class="form-group">
+                                <label class="form-label">Fecha de Emisión <span class="text-danger">*</span></label>
+                                {{ form.date_issue }}
+                                <div class="invalid-feedback"></div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Fecha de Vigencia <span class="text-danger">*</span></label>
+                                {{ form.date_effective }}
+                                <div class="invalid-feedback"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. MOTIVACIÓN Y EXPLICACIÓN -->
+                    <div class="form-section-card mt-3">
+                        <h5 class="section-title">
+                            <i class="fa-solid fa-comment-dots"></i> MOTIVACIÓN Y EXPLICACIÓN
+                        </h5>
+
+                        <div class="form-group">
+                            <label class="form-label">Motivación</label>
+                            {{ form.motivation }}
+                            <p class="form-hint">Breve motivo de la acción de personal.</p>
+                            <div class="invalid-feedback"></div>
+                        </div>
+
+                        <div class="form-group mt-3">
+                            <label class="form-label">Explicación</label>
+                            {{ form.explanation }}
+                            <p class="form-hint">Descripción detallada de la acción.</p>
+                            <div class="invalid-feedback"></div>
+                        </div>
+                    </div>
+
+                    <!-- 4. ACORDEÓN: OPCIONES DE MOVIMIENTO -->
+                    <div class="form-section-card mt-3">
+                        <h5 class="section-title">
+                            <i class="fa-solid fa-arrows-alt"></i> OPCIONES DE MOVIMIENTO
+                        </h5>
+
+                        <div class="accordion-item" data-accordion="reubicar">
+                            <button type="button" class="accordion-header" onclick="toggleAccordion('reubicar', this)">
+                                <i class="fa-solid fa-sitemap"></i> Reubicar - Unidad Administrativa
+                                <span class="accordion-arrow"><i class="fa-solid fa-chevron-down"></i></span>
+                            </button>
+                            <div class="accordion-content">
+                                <div id="reubicar-combos-wrapper">
+                                    <p class="small text-muted mb-3">
+                                        <i class="fa-solid fa-info-circle me-1 text-blue"></i> Seleccione la nueva
+                                        unidad administrativa del empleado en cascada.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="accordion-item" data-accordion="partida">
+                            <button type="button" class="accordion-header" onclick="toggleAccordion('partida', this)">
+                                <i class="fa-solid fa-file-invoice-dollar"></i> Cambiar Partida - Presupuestaria
+                                <span class="accordion-arrow"><i class="fa-solid fa-chevron-down"></i></span>
+                            </button>
+                            <div class="accordion-content">
+                                <p class="small text-muted mb-3">
+                                    <i class="fa-solid fa-info-circle me-1 text-blue"></i> Busque y seleccione una
+                                    partida presupuestaria disponible (estado LIBRE).
+                                </p>
+                                <div class="form-group">
+                                    <label class="form-label">Partida Presupuestaria</label>
+                                    <select name="movement_new_budget_line" id="id_new_budget_line"
+                                            class="input-field form-control" style="width: 100%;">
+                                        <option value=""></option>
+                                    </select>
+                                    <div id="budget-info" class="budget-info-box">
+                                        <div><strong>Código:</strong> <span id="budget-code">-</span></div>
+                                        <div><strong>Cargo:</strong> <span id="budget-position">-</span></div>
+                                        <div><strong>RMU:</strong> <span id="budget-remuneration">-</span></div>
+                                        <div><strong>Programa:</strong> <span id="budget-program">-</span></div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- FOOTER ESTANDARIZADO -->
-            <div class="modal-footer-medium modal-footer-spaced">
-                <button type="button" class="btn-default-outline" onclick="closeModal()">Cancelar</button>
-                <button type="submit" class="btn-dark-blue-rectangle">
-                    <i class="fa-solid fa-save me-1"></i> {% if is_edit %}Actualizar{% else %}Guardar{% endif %}
-                </button>
-            </div>
-        </form>
+                <!-- FOOTER -->
+                <div class="modal-footer-medium modal-footer-spaced">
+                    <button type="button" class="btn-default-outline" onclick="closeModal()">Cancelar</button>
+                    <button type="submit" class="btn-dark-blue-rectangle">
+                        <i class="fas fa-save me-1"></i> {% if is_edit or action.pk %}Actualizar{% else %}
+                        Guardar{% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
-</div>
+{% endwith %}

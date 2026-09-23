@@ -1841,7 +1841,7 @@ $(document).on('submit', '#bitacora-history-container form, #bitacora-list-app f
 // Vue-managed controls (like pagination). Buttons are now handled
 // by their respective components/handlers.
 
-/* Global helper used by server-side paginator in modal_bitacora_history.html */
+/* Global helper used by server-side paginator in modal_binnacle_history.html */
 function bitacoraHistoryChangePage(page) {
     try {
         if (window._bitacoraHistoryApp && typeof window._bitacoraHistoryApp.goTo === 'function') {

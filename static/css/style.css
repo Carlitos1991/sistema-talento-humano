@@ -5405,6 +5405,80 @@ body.employee-dashboard-page .grid-general > :last-child:nth-child(odd) {
     border-radius: 4px;
 }
 
+/* =====================================================================
+   TARJETA INFORMATIVA DE EMPLEADO (REUTILIZABLE EN MODALES Y VISTAS)
+   ===================================================================== */
+.employee-card-badge {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 0.85rem 1.25rem;
+    background: #f8faff;
+    border: 1px solid #bfdbfe;
+    border-left: 4px solid var(--primary-color);
+    border-radius: 10px;
+}
+
+.employee-avatar-wrapper {
+    width: 65px;
+    height: 65px;
+    flex-shrink: 0;
+    position: relative;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #e2e8f0;
+}
+
+.employee-avatar-wrapper .employee-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    margin-bottom: 0 !important;
+}
+
+.employee-avatar-wrapper .employee-avatar-placeholder {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: #ffffff;
+    background-color: var(--primary-color);
+    margin-bottom: 0 !important;
+    user-select: none;
+}
+
+.employee-card-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+}
+
+.employee-card-name {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.2;
+    letter-spacing: var(--tracking-lexend, -0.075em);
+    text-transform: uppercase;
+}
+
+.employee-card-doc {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #64748b;
+    display: inline-flex;
+    align-items: center;
+}
+
 
 /* =====================================================================
    18. CURRICULUM VITAE

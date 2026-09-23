@@ -18,6 +18,8 @@
     <div id="table-app">
         <div class="content-table">
             <div class="table-controls toolbar-row">
+                <div class="toolbar-center">
+                </div>
                 <div class="toolbar-right">
                     <input type="text" class="table-search-input table-search-input--large" id="table-search"
                            placeholder="Buscar por nombres, apellidos o cédula" value="{{ request.GET.q|default:'' }}">
@@ -28,10 +30,6 @@
             </div>
         </div>
     </div>
-{% endblock %}
-
-{% block modals %}
-    {% include 'personnel_action/modals/modal_personnel_action_form.html' %}
 {% endblock %}
 
 {% block extra_js %}

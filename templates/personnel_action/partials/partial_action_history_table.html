@@ -1,19 +1,19 @@
 {% load static %}
 <div class="table-container">
     <div class="table-scroll-top">
-        <table class="managed-table exportable-table"
+        <table class="managed-table exportable-table table-action-history"
                data-title="Reporte Historial de Acciones de personal"
                data-filename="Reporte_Acciones"
                data-page-size="10"
                data-external-search="true">
             <thead>
             <tr>
-                <th class="width-15">Número</th>
-                <th class="width-20">Tipo</th>
-                <th class="width-15">Fecha Emisión</th>
-                <th class="width-15">Fecha Vigencia</th>
-                <th class="width-15 text-center">Registro</th>
-                <th class="width-20 no-sort actions text-center"><i class="fas fa-cogs"></i> Acciones</th>
+                <th class="col-action-number">Número</th>
+                <th class="col-action-type">Tipo</th>
+                <th class="col-action-date">Emisión</th>
+                <th class="col-action-date">Vigencia</th>
+                <th class="col-action-status text-center">Registro</th>
+                <th class="col-action-btns no-sort actions text-center"><i class="fas fa-cogs"></i> Acciones</th>
             </tr>
             </thead>
             <tbody>
@@ -21,7 +21,7 @@
                 <tr>
                     <td><strong>{{ action.number }}</strong></td>
                     <td>
-                        <span class="badge badge-blue">
+                        <span class="badge badge-blue badge-action-type" title="{{ action.action_type.name }}">
                             {{ action.action_type.name }}
                         </span>
                     </td>
@@ -75,9 +75,11 @@
                 </tr>
             {% empty %}
                 <tr>
-                    <td colspan="6" class="text-center py-4">
-                        <i class="fa-solid fa-inbox text-muted" style="font-size: 2rem; margin-bottom: 8px;"></i>
-                        <p class="text-muted mb-0">No hay acciones registradas para este empleado</p>
+                    <td colspan="6">
+                        <div class="empty-state-container">
+                            <i class="fa-solid fa-inbox empty-state-icon"></i>
+                            <p class="empty-state-text">No hay acciones registradas para este empleado</p>
+                        </div>
                     </td>
                 </tr>
             {% endfor %}

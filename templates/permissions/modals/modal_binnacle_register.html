@@ -1,43 +1,40 @@
 {% load static %}
 
-<div class="modal-container-medium shadow-card">
-    <!-- Botón de Cerrar -->
-    <button type="button" class="btn-close-modal js-close-bitacora-modal" title="Cerrar">
-        <i class="fas fa-times"></i>
-    </button>
-
-    <!-- Cabecera Compacta -->
-    <div class="modal-header-refined">
-        <div class="header-content-group">
-            <div class="header-icon-circle">
-                <i class="fas fa-clipboard-list"></i>
-            </div>
-            <h2 class="header-title-main">
-                Registro de Bitácora
-            </h2>
-        </div>
-        <p class="header-subtitle" id="employee-name-bitacora" style="margin-top: 8px; font-size: 14px;">
-            <i class="fas fa-user text-primary"></i> {{ employee_name }}
-        </p>
-    </div>
-
-    <!-- Formulario -->
+<div class="modal-container-medium">
     <form id="bitacoraRegisterForm" method="POST">
         {% csrf_token %}
         <input type="hidden" name="employee_id" id="employee_id" value="{{ employee_id }}">
 
-        <!-- Cuerpo con Scroll -->
-        <div class="modal-body-scrolled">
+        <!-- HEADER ESTANDARIZADO -->
+        <div class="modal-header-medium">
+            <div class="header-content-group">
+                <div class="header-icon-circle">
+                    <i class="fas fa-clipboard-list"></i>
+                </div>
+                <div>
+                    <h3 class="header-title">Registro de Bitácora</h3>
+                    <span class="small text-muted" id="employee-name-bitacora">
+                        <i class="fas fa-user text-blue me-1"></i>{{ employee_name }}
+                    </span>
+                </div>
+            </div>
+            <button type="button" class="btn-close-circle js-close-bitacora-modal" onclick="closeModal()"
+                    title="Cerrar ventana">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <!-- CUERPO CON SCROLL -->
+        <div class="modal-body-content modal-body-custom">
 
             <!-- Sección 1: Periodo y Duración -->
             <div class="section-card-standard border-left-primary">
                 <h4 class="section-title">
-                    <i class="fas fa-calendar-alt text-primary"></i> PERIODO Y DURACIÓN
+                    <i class="fas fa-calendar-alt text-blue"></i> PERIODO Y DURACIÓN
                 </h4>
                 <div class="grid-2-cols">
                     <div class="form-group">
-                        <label class="form-label font-weight-700">Fecha Inicio <span
-                                class="text-danger">*</span></label>
+                        <label class="form-label">Fecha Inicio <span class="text-red">*</span></label>
                         <div class="input-icon-wrapper">
                             <i class="fas fa-calendar input-icon-left"></i>
                             <input type="date"
@@ -48,8 +45,7 @@
                         </div>
                     </div>
                     <div class="form-group">
-                        <label class="form-label font-weight-700">Número de Días <span
-                                class="text-danger">*</span></label>
+                        <label class="form-label">Número de Días <span class="text-red">*</span></label>
                         <div class="input-icon-wrapper">
                             <i class="fas fa-hashtag input-icon-left"></i>
                             <input type="number"
@@ -65,9 +61,9 @@
             </div>
 
             <!-- Sección 2: Jornadas -->
-            <div class="section-card-standard">
+            <div class="section-card-standard mt-3">
                 <h4 class="section-title">
-                    <i class="fas fa-business-time text-primary"></i> ESTRUCTURA DE JORNADAS
+                    <i class="fas fa-business-time text-blue"></i> ESTRUCTURA DE JORNADAS
                 </h4>
 
                 <div class="grid-2-cols">
@@ -75,9 +71,9 @@
                     <div class="shift-card morning">
                         <div class="shift-header"><i class="fas fa-sun"></i> PRIMERA JORNADA</div>
                         <div class="shift-body">
-                            <div class="grid-2-cols gap-2">
+                            <div class="grid-2-cols grid-compact">
                                 <div class="form-group">
-                                    <label class="small font-weight-700 text-muted">ENTRADA</label>
+                                    <label class="small bold text-muted">ENTRADA</label>
                                     <input type="text"
                                            name="first_start"
                                            id="first_start"
@@ -90,7 +86,7 @@
                                            lang="es-ES">
                                 </div>
                                 <div class="form-group">
-                                    <label class="small font-weight-700 text-muted">SALIDA</label>
+                                    <label class="small bold text-muted">SALIDA</label>
                                     <input type="text"
                                            name="first_end"
                                            id="first_end"
@@ -103,13 +99,13 @@
                                            lang="es-ES">
                                 </div>
                             </div>
-                            <div class="mt-3 p-2 bg-light rounded text-center">
-                                <label class="d-inline-flex align-items-center gap-2 cursor-pointer mb-0">
+                            <div class="mt-3 text-center">
+                                <label class="d-flex align-items-center justify-content-center gap-2 cursor-pointer mb-0">
                                     <input type="checkbox"
                                            name="first_crosses_midnight"
                                            id="first_crosses_midnight"
                                            class="custom-checkbox">
-                                    <span class="small font-weight-600">Cruza medianoche</span>
+                                    <span class="small bold">Cruza medianoche</span>
                                 </label>
                             </div>
                         </div>
@@ -119,9 +115,9 @@
                     <div class="shift-card afternoon">
                         <div class="shift-header"><i class="fas fa-moon"></i> SEGUNDA JORNADA</div>
                         <div class="shift-body">
-                            <div class="grid-2-cols gap-2">
+                            <div class="grid-2-cols grid-compact">
                                 <div class="form-group">
-                                    <label class="small font-weight-700 text-muted">ENTRADA</label>
+                                    <label class="small bold text-muted">ENTRADA</label>
                                     <input type="text"
                                            name="second_start"
                                            id="second_start"
@@ -133,7 +129,7 @@
                                            lang="es-ES">
                                 </div>
                                 <div class="form-group">
-                                    <label class="small font-weight-700 text-muted">SALIDA</label>
+                                    <label class="small bold text-muted">SALIDA</label>
                                     <input type="text"
                                            name="second_end"
                                            id="second_end"
@@ -145,13 +141,13 @@
                                            lang="es-ES">
                                 </div>
                             </div>
-                            <div class="mt-3 p-2 bg-light rounded text-center">
-                                <label class="d-inline-flex align-items-center gap-2 cursor-pointer mb-0">
+                            <div class="mt-3 text-center">
+                                <label class="d-flex align-items-center justify-content-center gap-2 cursor-pointer mb-0">
                                     <input type="checkbox"
                                            name="second_crosses_midnight"
                                            id="second_crosses_midnight"
                                            class="custom-checkbox">
-                                    <span class="small font-weight-600">Cruza medianoche</span>
+                                    <span class="small bold">Cruza medianoche</span>
                                 </label>
                             </div>
                         </div>
@@ -160,85 +156,68 @@
             </div>
 
             <!-- Sección 3: Justificación y Documento -->
-            <div class="section-card-standard border-left-primary">
+            <div class="section-card-standard border-left-primary mt-3">
                 <h4 class="section-title">
-                    <i class="fas fa-file-alt text-primary"></i> JUSTIFICACIÓN Y DOCUMENTACIÓN
+                    <i class="fas fa-file-alt text-blue"></i> JUSTIFICACIÓN Y DOCUMENTACIÓN
                 </h4>
 
-                <div class="grid-cols-custom"
-                     style="display: grid; grid-template-columns: 80% 20%; gap: 1rem; align-items: stretch;">
-                    <!-- Justificación (75%) -->
-                    <div class="form-group" style="margin-bottom: 0;">
-                        <label class="form-label font-weight-700">Motivo / Justificación <span
-                                class="text-danger">*</span></label>
+                <div class="row g-3">
+                    <div class="col-md-8 form-group">
+                        <label class="form-label">Motivo / Justificación <span class="text-red">*</span></label>
                         <textarea name="justification"
                                   id="justification"
                                   class="form-control"
-                                  rows="5"
+                                  rows="4"
                                   placeholder="Describa el motivo de la bitácora..."
-                                  required
-                                  style="resize: vertical; min-height: 120px;"></textarea>
-                        <small class="form-text text-muted" style="margin-top: 0.25rem;">
-                            <i class="fas fa-info-circle"></i> Especifique la razón por la cual se registra esta
-                            bitácora y adjunte el PDF, de la disposición.
-                        </small>
+                                  required></textarea>
+                        <span class="form-hint">
+                            <i class="fas fa-info-circle me-1"></i> Especifique la razón de esta bitácora y adjunte la disposición.
+                        </span>
                     </div>
 
-                    <!-- Archivo PDF (25%) -->
-                    <div class="form-group file-column" style="margin-bottom: 0;">
-                        <label class="form-label font-weight-700">Documento PDF</label>
+                    <div class="col-md-4 form-group file-column">
+                        <label class="form-label">Documento PDF</label>
                         <div class="file-upload-box">
                             <input type="file"
                                    name="attachment"
                                    id="attachment"
                                    class="file-input-hidden"
-                                   accept=".pdf"
-                                   style="position:absolute;left:-9999px;">
+                                   accept=".pdf">
                             <label for="attachment" id="attachment-label" class="file-upload-label"
                                    title="Adjuntar PDF">
                                 <div class="file-upload-icon" aria-hidden="true">
                                     <i class="fas fa-file-pdf"></i>
                                 </div>
                             </label>
-                            <div style="margin-left: 0.75rem; display:none;">
-                                <span class="file-upload-subtext"
-                                      id="file-name-display">Ningún archivo seleccionado</span>
-                            </div>
+                            <span class="file-upload-subtext" id="file-name-display">Ningún archivo seleccionado</span>
                         </div>
-                        <small class="form-text text-muted" style="margin-top: 0.5rem;">
-                            <i class="fas fa-paperclip"></i> Max: 500 KB
-                        </small>
+                        <span class="form-hint text-center">
+                            <i class="fas fa-paperclip me-1"></i> Max: 500 KB
+                        </span>
                     </div>
                 </div>
             </div>
 
             <!-- Mensaje Informativo -->
-            <div class="section-card-standard" style="border-left: 4px solid #0ea5e9;">
-                <div style="display: flex; align-items: start; gap: 12px;">
-                    <i class="fas fa-info-circle" style="color: #0284c7; font-size: 24px; margin-top: 2px;"></i>
-                    <div style="flex: 1;">
-                        <h5 style="margin: 0 0 8px 0; color: #0c4a6e; font-weight: 600; font-size: 14px;">
-                            ¿Qué son las bitácoras?
-                        </h5>
-                        <p style="margin: 0; font-size: 13px; color: #0c4a6e; line-height: 1.6;">
-                            Se crearán <strong>permisos de tipo Bitácora</strong> para cada día del período
-                            especificado,
-                            con los horarios configurados. Todos quedarán en estado <strong>PENDIENTE</strong>
-                            hasta su aprobación.
-                        </p>
+            <div class="alert alert-info mt-3">
+                <i class="fas fa-info-circle fa-lg"></i>
+                <div>
+                    <div class="bold">¿Qué son las bitácoras?</div>
+                    <div class="small">
+                        Se crearán <strong>permisos de tipo Bitácora</strong> para cada día del período con los horarios
+                        configurados. Quedarán en estado <strong>PENDIENTE</strong> hasta su aprobación.
                     </div>
                 </div>
             </div>
 
         </div>
 
-        <!-- Footer Fijo con Botones -->
-        <div class="modal-footer-fixed">
-            <button type="button" class="btn-cancel js-close-bitacora-modal">
-                <i class="fas fa-times-circle"></i> CANCELAR
+        <!-- FOOTER -->
+        <div class="modal-footer-medium modal-footer-spaced">
+            <button type="button" class="btn-default-outline js-close-bitacora-modal" onclick="closeModal()">Cancelar
             </button>
-            <button type="submit" class="btn-save">
-                <i class="fas fa-check-circle"></i> REGISTRAR BITÁCORAS
+            <button type="submit" class="btn-dark-blue-rectangle">
+                <i class="fas fa-save me-1"></i> Registrar Bitácoras
             </button>
         </div>
     </form>
@@ -247,15 +226,11 @@
 <script>
     function format24HourTimeValue(rawValue) {
         const digits = (rawValue || '').replace(/\D/g, '').slice(0, 4);
-
-        if (!digits) {
-            return '';
-        }
+        if (!digits) return '';
 
         if (digits.length <= 2) {
             const hours = parseInt(digits, 10);
-            const safeHours = Number.isNaN(hours) ? '' : String(Math.min(Math.max(hours, 0), 23)).padStart(2, '0');
-            return safeHours;
+            return Number.isNaN(hours) ? '' : String(Math.min(Math.max(hours, 0), 23)).padStart(2, '0');
         }
 
         const hours = parseInt(digits.slice(0, 2), 10);
@@ -270,71 +245,61 @@
         if (!input) return;
 
         input.addEventListener('input', function () {
-            const value = this.value;
-            if (!value) {
-                return;
-            }
-
-            const digits = value.replace(/\D/g, '');
-            if (digits.length <= 2) {
-                this.value = format24HourTimeValue(digits);
-                return;
-            }
-
-            this.value = format24HourTimeValue(digits);
+            this.value = format24HourTimeValue(this.value);
         });
 
         input.addEventListener('blur', function () {
-            const value = this.value.trim();
-            if (!value) {
-                return;
-            }
-
+            const val = this.value.trim();
+            if (!val) return;
             const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
-            if (!timePattern.test(value)) {
+            if (!timePattern.test(val)) {
                 this.value = '';
                 this.setAttribute('placeholder', 'HH:MM');
             }
         });
     }
 
-    // Mostrar nombre del archivo seleccionado y marcar icono
-    document.addEventListener('DOMContentLoaded', function () {
+    (function () {
         const fileInput = document.getElementById('attachment');
         const fileNameDisplay = document.getElementById('file-name-display');
         const attachmentLabel = document.getElementById('attachment-label');
 
-        document.querySelectorAll('.time-24h-input').forEach(function (input) {
-            bind24HourTimeInput(input);
-        });
+        document.querySelectorAll('.time-24h-input').forEach(bind24HourTimeInput);
 
         if (fileInput) {
             fileInput.addEventListener('change', function () {
                 if (this.files && this.files.length > 0) {
                     const file = this.files[0];
                     const fileName = file.name;
-                    const fileSize = (file.size / 1024 / 1024).toFixed(2); // MB
+                    const fileSize = (file.size / 1024 / 1024).toFixed(2);
 
-                    // Validar tamaño (500 KB)
                     if (file.size > 500 * 1024) {
                         if (fileNameDisplay) {
-                            fileNameDisplay.textContent = 'Archivo muy grande';
-                            fileNameDisplay.style.color = '#ef4444';
+                            fileNameDisplay.textContent = 'Archivo muy grande (Max 500 KB)';
+                            fileNameDisplay.classList.add('text-red');
                         }
-                        this.value = ''; // Limpiar selección
-                        alert('El archivo no debe superar los 500 KB');
+                        this.value = '';
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Archivo muy grande',
+                                text: 'El archivo no debe superar los 500 KB'
+                            });
+                        } else {
+                            alert('El archivo no debe superar los 500 KB');
+                        }
                         return;
                     }
 
-                    // marcar label como seleccionado y poner tooltip con nombre
                     if (attachmentLabel) {
                         attachmentLabel.classList.add('file-selected');
-                        attachmentLabel.setAttribute('title', fileName + ' (' + fileSize + 'MB)');
+                        attachmentLabel.setAttribute('title', `${fileName} (${fileSize} MB)`);
                     }
 
                     if (fileNameDisplay) {
-                        fileNameDisplay.textContent = `${fileName} (${fileSize}MB)`;
-                        fileNameDisplay.style.color = '#10b981';
+                        fileNameDisplay.textContent = `${fileName} (${fileSize} MB)`;
+                        fileNameDisplay.classList.remove('text-red');
+                        fileNameDisplay.classList.add('text-green');
                     }
                 } else {
                     if (attachmentLabel) {
@@ -343,10 +308,10 @@
                     }
                     if (fileNameDisplay) {
                         fileNameDisplay.textContent = 'Ningún archivo seleccionado';
-                        fileNameDisplay.style.color = '#6b7280';
+                        fileNameDisplay.classList.remove('text-green', 'text-red');
                     }
                 }
             });
         }
-    });
+    })();
 </script>

@@ -1092,7 +1092,7 @@ class BitacoraRegisterView(LoginRequiredMixin, PermissionRequiredMixin, View):
         employee = get_object_or_404(Employee, pk=employee_id)
 
         html = render_to_string(
-            'permissions/modals/modal_bitacora_register.html',
+            'permissions/modals/modal_binnacle_register.html',
             {
                 'employee_id': employee.id,
                 'employee_name': employee.person.full_name
@@ -1549,7 +1549,7 @@ class BitacoraHistoryView(LoginRequiredMixin, PermissionRequiredMixin, View):
                                         status=500)
 
             # render HTML solo si no se pidió JSON
-            html = render_to_string('permissions/modals/modal_bitacora_history.html', context, request=request)
+            html = render_to_string('permissions/modals/modal_binnacle_history.html', context, request=request)
             return HttpResponse(html)
         except Exception:
             logger.exception('Unhandled error in BitacoraHistoryView.get')
