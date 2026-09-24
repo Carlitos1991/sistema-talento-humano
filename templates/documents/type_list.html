@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 {% block title %}Tipos de Documento | SIGETH{% endblock %}
+
 {% block content %}
     <div class="container-fluid">
         <!-- Header Card -->
@@ -10,7 +11,7 @@
                 <p>Configuración de categorías para la gestión documental</p>
             </div>
             {% if perms.documents.add_documenttype %}
-                <button type="button" class="btn-blue-rectangle"
+                <button type="button" class="btn-white-rectangle"
                         onclick="openAjaxModal('{% url 'documents:doc_type_create' %}')">
                     <i class="fa-solid fa-plus me-1"></i> Nuevo Tipo
                 </button>
@@ -19,26 +20,23 @@
 
         <div id="table-app">
             <div class="content-table">
-                <!-- Controles -->
+                <!-- Toolbar Global -->
                 <div class="table-controls toolbar-row">
-                    <div class="toolbar-left"></div>
+                    <div class="toolbar-left rubric-export-controls"></div>
                     <div class="toolbar-right">
-                        <input type="text" id="searchInput" class="table-search-input table-search-input--large"
-                               placeholder="Buscar tipo de documento">
+                            <input type="text" id="table-search" class="table-search-input table-search-input--large"
+                                   placeholder="Buscar tipo de documento">
                     </div>
                 </div>
+
+                <!-- Contenedor donde se inyecta la tabla -->
                 <div id="table-content-wrapper">
                     {% include 'documents/partials/partial_type_table.html' %}
                 </div>
             </div>
         </div>
     </div>
-{% endblock %}
 
-{% block modals %}
-    {% include 'documents/modals/modal_type_form.html' %}
-{% endblock %}
-
-{% block extra_js %}
-    <script src="{% static 'js/documents/document_types.js' %}"></script>
+    <!-- Contenedor obligatorio para modales AJAX de main.js -->
+    <div id="modal-root"></div>
 {% endblock %}

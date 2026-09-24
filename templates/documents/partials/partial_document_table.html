@@ -1,74 +1,89 @@
 <div class="table-container">
-    <table class="managed-table exportable-table"
-           data-title="Reporte Documentos"
-           data-filename="Reporte_documentos"
-           data-external-pagination="true"
-           data-external-search="true"
-           data-list-url="{% url 'documents:document_list' %}">
-        <thead class="table-light">
-        <tr>
-            <th class="width-3 no-sort">#</th>
-            <th class="width-13" data-sortable="filing_code">Número <span class="sort-arrow">⇅</span></th>
-            <th class="width-10 no-sort">Tipo</th>
-            <th class="width-30" data-sortable="subject">Asunto <span class="sort-arrow">⇅</span></th>
-            <th class="width-17" data-sortable="recipient_name">Dirigido A <span class="sort-arrow">⇅</span></th>
-            <th class="width-13" data-sortable="sender_name">Responsable <span class="sort-arrow">⇅</span></th>
-            <th class="width-10" data-sortable="registration_date">Fecha <span class="sort-arrow">⇅</span></th>
-            <th class="width-5 no-sort">PDF</th>
-            <th class="width-10">Acciones</th>
-        </tr>
-        </thead>
-        <tbody>
-        {% for doc in documents %}
+    <div class="table-scroll-top">
+        <table class="managed-table exportable-table table-documents"
+               data-title="Reporte Documentos"
+               data-filename="Reporte_documentos"
+               data-external-pagination="true"
+               data-external-search="true"
+               data-list-url="{% url 'documents:document_list' %}">
+            <thead>
             <tr>
-                <td>{{ doc.global_index|default:'-' }}</td>
-                <td><span class="badge bg-secondary">{{ doc.filing_code }}</span></td>
-                <td>{{ doc.category.name }}</td>
-                <td style="white-space:pre-line; word-break:break-word;">{{ doc.subject|linebreaksbr|safe }}</td>
-                <td style="white-space:pre-line; word-break:break-word;">{{ doc.recipient_name|linebreaksbr|safe }}</td>
-                <td>
-                    {% if doc.updated_by %}
-                        {{ doc.updated_by.get_full_name }}
-                    {% elif doc.created_by %}
-                        {{ doc.created_by.get_full_name }}
-                    {% else %}
-                        {{ doc.sender_name }}
-                    {% endif %}
-                </td>
-                <td>{{ doc.registration_date|date:"d/m/Y H:i" }}</td>
-                <td>
-                    {% if doc.file_attachment %}
-                        <a href="{{ doc.file_attachment.url }}" target="_blank" class="text-danger">
-                            <i class="fa-solid fa-file-pdf fa-lg"></i>
-                        </a>
-                    {% else %}
-                        <span class="text-muted">-</span>
-                    {% endif %}
-                </td>
-                <td>
-                    <button type="button" class="btn-yellow-circle" data-action="edit" data-id="{{ doc.id }}"
-                            onclick="editDocument({{ doc.id }})" title="Actualizar">
-                        <i class="fa-solid fa-pen-to-square"></i>
-                    </button>
-                    <button type="button" class="btn-ninth" data-action="upload" data-id="{{ doc.id }}"
-                            onclick="uploadDocumentFile({{ doc.id }})" title="Subir archivo PDF">
-                        <i class="fa-solid fa-file-arrow-up"></i>
-                    </button>
-                </td>
+                <th class="width-3 no-sort text-center">#</th>
+                <th class="width-13" data-field="filing_code">Número</th>
+                <th class="width-10 no-sort">Tipo</th>
+                <th class="width-25" data-field="subject">Asunto</th>
+                <th class="width-16" data-field="recipient_name">Dirigido A</th>
+                <th class="width-13" data-field="sender_name">Responsable</th>
+                <th class="width-10" data-field="registration_date">Fecha</th>
+                <th class="width-5 no-sort text-center">PDF</th>
+                <th class="width-10 no-sort actions text-center"><i class="fas fa-cogs"></i> Acciones</th>
             </tr>
-        {% empty %}
-            <tr>
-                <td colspan="9" class="text-center py-4">No se encontraron documentos.</td>
-            </tr>
-        {% endfor %}
-        <!-- Fila para mostrar cuando la búsqueda no retorna resultados (solo si hubo resultados iniciales) -->
-        {% if documents %}
-            <tr id="frontend-no-results" class="hidden">
-                <td colspan="9" class="text-center py-4">
-                    <i class="fa-solid fa-search"></i> No se encontraron registros
-                </td>
-            </tr>
-        {% endif %}
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+            {% for doc in documents %}
+                <tr>
+                    <td class="text-center">{{ doc.global_index|default:'-' }}</td>
+                    <td><span class="badge badge-gray">{{ doc.filing_code }}</span></td>
+                    <td><span class="badge badge-blue">{{ doc.category.name }}</span></td>
+                    <td class="cell-wrap">{{ doc.subject|linebreaksbr }}</td>
+                    <td class="cell-wrap">{{ doc.recipient_name|linebreaksbr }}</td>
+                    <td class="cell-wrap">
+                        {% if doc.updated_by %}
+                            {{ doc.updated_by.get_full_name }}
+                        {% elif doc.created_by %}
+                            {{ doc.created_by.get_full_name }}
+                        {% else %}
+                            {{ doc.sender_name }}
+                        {% endif %}
+                    </td>
+                    <td>{{ doc.registration_date|date:"d/m/Y H:i" }}</td>
+                    <td class="text-center">
+                        {% if doc.file_attachment %}
+                            <a href="{{ doc.file_attachment.url }}" target="_blank" class="text-red"
+                               title="Ver documento PDF">
+                                <i class="fa-solid fa-file-pdf fa-lg"></i>
+                            </a>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="actions text-center">
+                        <div class="actions-wrapper">
+                            <!-- Edición directa mediante openAjaxModal de main.js -->
+                            <button type="button" class="btn-yellow-circle"
+                                    onclick="openAjaxModal('{% url 'documents:document_update' doc.id %}')"
+                                    title="Actualizar Documento">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
+                            <button type="button" class="btn-ninth"
+                                    onclick="uploadDocumentFile({{ doc.id }})"
+                                    title="Subir archivo PDF">
+                                <i class="fa-solid fa-file-arrow-up"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="9">
+                        <div class="empty-state-container">
+                            <i class="fa-solid fa-inbox empty-state-icon"></i>
+                            <p class="empty-state-text">No se encontraron documentos.</p>
+                        </div>
+                    </td>
+                </tr>
+            {% endfor %}
+            {% if documents %}
+                <tr id="frontend-no-results" class="hidden">
+                    <td colspan="9">
+                        <div class="empty-state-container">
+                            <i class="fa-solid fa-search empty-state-icon"></i>
+                            <p class="empty-state-text">No se encontraron registros</p>
+                        </div>
+                    </td>
+                </tr>
+            {% endif %}
+            </tbody>
+        </table>
+    </div>
 </div>

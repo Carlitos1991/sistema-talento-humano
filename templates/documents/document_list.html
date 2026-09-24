@@ -2,110 +2,112 @@
 {% load static %}
 {% block title %}Gestión Documental | SIGETH{% endblock %}
 
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/documents.css' %}">
+{% endblock %}
+
 {% block content %}
-    <!-- 1. Header -->
+    <!-- 1. Encabezado Oficial -->
     <div class="header-card">
         <div>
             <h1>Gestión Documental</h1>
             <p>Gestión de documentos, como memorandos, oficios, informes técnicos</p>
         </div>
         {% if perms.documents.add_document %}
-            <button id="btn-add-document" type="button" class="btn-white-rectangle" onclick="openDocumentModal()">
+            <button id="btn-add-document" type="button" class="btn-white-rectangle" onclick="openCreateDocumentModal()">
                 <i class="fas fa-plus-circle"></i> Nuevo Documento
             </button>
         {% endif %}
     </div>
-    <!-- 2. Estadísticas (Filtros Rápidos) -->
-    <div id="documents-app" v-cloak data-current-user="{{ user.get_full_name }}"
-         data-can-delete="{% if user.is_superuser or perms.documents.delete_document %}1{% else %}0{% endif %}">
-    {% if stats %}
-        {{ stats|json_script:"initial-doc-stats" }}
-    {% endif %}
-    <div class="stats-row" v-if="stats.regimes">
-        <div class="stat-card color-one"
-             @click="clearSearch"
-             :class="{'opacity-low': isAdvancedSearch}">
+
+    <!-- 2. Estadísticas (Stat Cards) -->
+    <div class="stats-row" id="document-stats-row">
+        <!-- Tarjeta Total: Limpia el filtro y deshabilita el botón nuevo -->
+        <div class="stat-card color-one" id="stat-card-total" onclick="filterByRegime('', '')">
             <div class="stat-left">
                 <h3>TOTAL ACTIVOS</h3>
-                <div class="number">[[ stats.display_total ]]</div>
+                <div class="number" id="stat-display-total">{{ stats.total|default:0 }}</div>
             </div>
             <i class="fas fa-users-check stat-icon"></i>
         </div>
-        <div v-for="(regime, index) in stats.regimes"
-             :key="regime.code"
-             class="stat-card"
-             :data-code="regime.code"
-             :class="['color-' + (index + 2), {'opacity-low': isAdvancedSearch && advancedFilters.documents !== regime.code}]"
-             @click="filterByRegime(regime.code)">
-            <div class="stat-left">
-                <h3>[[ regime.name ]]</h3>
-                <div class="number">[[ regime.display_count ]]</div>
+
+        <!-- Tarjetas por tipo -->
+        {% for regime in stats.regimes %}
+            <div class="stat-card color-{{ forloop.counter|add:1 }}"
+                 data-code="{{ regime.code }}"
+                 data-name="{{ regime.name }}"
+                 onclick="filterByRegime('{{ regime.code }}', '{{ regime.name|escapejs }}')">
+                <div class="stat-left">
+                    <h3>{{ regime.name }}</h3>
+                    <div class="number stat-regime-count">{{ regime.count|default:0 }}</div>
+                </div>
+                <i class="fa-solid fa-file-lines stat-icon"></i>
             </div>
-            <i class="fa-solid fa-file-lines stat-icon"></i>
-        </div>
+        {% endfor %}
     </div>
+
     <div id="table-app">
         <div class="content-table">
-            <div class="table-controls"
-                 style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding-top:6px;">
-                <div class="table-controls-left" style="flex:1; display:flex; align-items:center;">
-                </div>
-                <div class="table-controls-center"
-                     style="width:40%; display:flex; align-items:center; justify-content:center; gap:12px; margin-top:-10px; transform:translateX(-90px);">
+            <div class="table-controls toolbar-row">
+                <div class="toolbar-center">
                     {% now "Y" as current_year %}
-                    <div style="display:flex; flex-direction:column; font-size:0.88rem; margin-bottom:0; align-items:center;">
-                        <label for="stats-date-from"
-                               style="font-weight:600; color:#334155; margin-bottom:4px;">Desde</label>
-                        <input type="date" id="stats-date-from" class="input-field small"
-                               value="{{ current_year }}-01-01" title="Fecha desde" style="height:36px; width:150px;">
+                    <div class="d-flex align-items-center gap-1">
+                        <label for="stats-date-from" class="label-muted m-0 bold"></label>
+                        <input type="date" id="stats-date-from" class="table-search-input table-search-input--small"
+                               value="{{ current_year }}-01-01" title="Fecha desde">
                     </div>
-                    <div style="display:flex; flex-direction:column; font-size:0.88rem; margin-bottom:0; align-items:center;">
-                        <label for="stats-date-to"
-                               style="font-weight:600; color:#334155; margin-bottom:4px;">Hasta</label>
-                        <input type="date" id="stats-date-to" class="input-field small" value="{{ current_year }}-12-31"
-                               title="Fecha hasta" style="height:36px; width:150px;">
+                    <div class="d-flex align-items-center gap-1">
+                        <label for="stats-date-to" class="label-muted m-0 bold"></label>
+                        <input type="date" id="stats-date-to" class="table-search-input table-search-input--small"
+                               value="{{ current_year }}-12-31" title="Fecha hasta">
                     </div>
                 </div>
 
-                <div style="flex:1; display:flex; justify-content:flex-end; align-items:center;">
-                    <div class="search-box" style="display:flex; align-items:center; width:120%; max-width:720px;">
-                        <input type="text" id="table-search-document" class="input-field"
-                               placeholder="Buscar por número, responsable">
-                    </div>
+                <div class="toolbar-right">
+                    <input type="text" id="table-search-document"
+                           class="table-search-input table-search-input--large"
+                           placeholder="Buscar por número, responsable">
                 </div>
             </div>
 
-            <!-- Contenedor donde se inyecta el HTML parcial -->
+            <!-- Contenedor donde se inyecta la tabla parcial -->
             <div id="table-content-wrapper">
                 {% include 'documents/partials/partial_document_table.html' %}
             </div>
-            <div class="pagination-container">
+
+            <!-- Paginación Global -->
+            <div class="pagination-container" id="documents-pagination">
                 <span class="pagination-info">
                     Mostrando {{ page_obj.start_index|default:"0" }}-{{ page_obj.end_index|default:"0" }} de {{ paginator.count|default:"0" }}
                 </span>
-                <div class="pagination-controls" style="{% if paginator.num_pages <= 1 %}visibility:hidden;{% endif %}">
-                    <button class="page-btn" title="Primera" {% if not page_obj.has_previous %}disabled{% endif %}
+                <div class="pagination-controls" {% if paginator.num_pages <= 1 %}style="visibility:hidden;"{% endif %}>
+                    <button type="button" class="page-btn page-first" title="Primera"
+                            {% if not page_obj.has_previous %}disabled{% endif %}
                             onclick="changeDocumentPage(1)">
                         <i class="fas fa-angle-double-left"></i>
                     </button>
-                    <button class="page-btn" title="Anterior" {% if not page_obj.has_previous %}disabled{% endif %}
+                    <button type="button" class="page-btn page-prev" title="Anterior"
+                            {% if not page_obj.has_previous %}disabled{% endif %}
                             onclick="changeDocumentPage(
                                     {% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% else %}1{% endif %})">
                         <i class="fas fa-angle-left"></i>
                     </button>
                     <div class="page-input-wrapper">
-                        <input type="number" class="page-input" value="{{ page_obj.number }}" min="1"
-                               max="{{ paginator.num_pages }}" onchange="changeDocumentPage(parseInt(this.value)||1)"
+                        <input type="number" class="page-input" value="{{ page_obj.number|default:1 }}" min="1"
+                               max="{{ paginator.num_pages|default:1 }}"
+                               onchange="changeDocumentPage(parseInt(this.value)||1)"
                                onkeypress="if(event.key==='Enter') changeDocumentPage(parseInt(this.value)||1)">
-                        <span class="total-pages-badge">de {{ paginator.num_pages }}</span>
+                        <span class="total-pages-badge">de {{ paginator.num_pages|default:1 }}</span>
                     </div>
-                    <button class="page-btn" title="Siguiente" {% if not page_obj.has_next %}disabled{% endif %}
+                    <button type="button" class="page-btn page-next" title="Siguiente"
+                            {% if not page_obj.has_next %}disabled{% endif %}
                             onclick="changeDocumentPage(
-                                    {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages }}{% endif %})">
+                                    {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages|default:1 }}{% endif %})">
                         <i class="fas fa-angle-right"></i>
                     </button>
-                    <button class="page-btn" title="Última" {% if not page_obj.has_next %}disabled{% endif %}
-                            onclick="changeDocumentPage({{ paginator.num_pages }})">
+                    <button type="button" class="page-btn page-last" title="Última"
+                            {% if not page_obj.has_next %}disabled{% endif %}
+                            onclick="changeDocumentPage({{ paginator.num_pages|default:1 }})">
                         <i class="fas fa-angle-double-right"></i>
                     </button>
                 </div>
@@ -113,12 +115,10 @@
         </div>
     </div>
 
-    <!-- Modal: FUERA del árbol Vue para evitar conflicto en compilación de templates -->
-    {% include 'documents/modals/modal_document_form.html' %}
-
+    <!-- Contenedor dinámico obligatorio de main.js para todos los modales AJAX -->
+    <div id="modal-root"></div>
 {% endblock %}
 
 {% block extra_js %}
-    <script src="{% static 'js/documents/modal-document-form.js' %}"></script>
     <script src="{% static 'js/documents/documents.js' %}"></script>
 {% endblock %}

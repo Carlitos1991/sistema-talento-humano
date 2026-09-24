@@ -1,21 +1,25 @@
 {% load static %}
 <div class="table-container">
     <div class="table-scroll-top">
-        <table class="managed-table exportable-table" data-title="Reporte Tipo de acciones"
-               data-filename="Reporte_Estructura" data-page-size="10" data-external-search="true">
+        <table class="managed-table exportable-table"
+               data-title="Reporte Tipos de Documento"
+               data-filename="Reporte_Tipos_Documento"
+               data-page-size="10"
+               data-external-search="false"
+               data-external-pagination="false">
             <thead>
             <tr>
-                <th class="width-5">#</th>
-                <th class="width-50">Nombre</th>
-                <th class="width-20 no-sort">Estado</th>
-                <th class="text-end  width-25">Acciones</th>
+                <th class="width-5 text-center">#</th>
+                <th class="width-60" data-field="name">Nombre</th>
+                <th class="width-15 no-sort text-center">Estado</th>
+                <th class="width-20 no-sort actions text-center"><i class="fas fa-cogs"></i> Acciones</th>
             </tr>
             </thead>
             <tbody>
             {% for type in types %}
-                <tr>
-                    <td>{{ type.id }}</td>
-                    <td class="fw-medium">{{ type.name }}</td>
+                <tr data-status="{{ type.is_active|yesno:'true,false' }}">
+                    <td class="text-center">{{ forloop.counter }}</td>
+                    <td class="fw-bold">{{ type.name }}</td>
                     <td class="text-center">
                         {% if type.is_active %}
                             <span class="badge badge-green">Activo</span>
@@ -23,22 +27,33 @@
                             <span class="badge badge-red">Inactivo</span>
                         {% endif %}
                     </td>
-                    <td class="text-end">
-                        <button type="button" class="btn-yellow-circle"
-                                onclick="openAjaxModal('{% url 'documents:doc_type_update' type.pk %}')" title="Editar">
-                            <i class="fa-solid fa-edit"></i>
-                        </button>
-                        <!-- Botón Toggle Estado -->
-                        <button class="{% if type.is_active %}btn-green-circle{% else %}btn-red-circle{% endif %}"
-                                onclick="toggleStatus({{ type.id }})">
-                            <i class="fa-solid {% if type.is_active %}fa-power-off{% else %}fa-toggle-on{% endif %}"></i>
-                        </button>
+                    <td class="actions text-center">
+                        <div class="actions-wrapper">
+                            <!-- Editar Tipo -->
+                            {% if perms.documents.change_documenttype %}
+                                <button type="button" class="btn-yellow-circle"
+                                        onclick="openAjaxModal('{% url 'documents:doc_type_update' type.pk %}')"
+                                        title="Editar Tipo de Documento">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </button>
+                                <!-- Toggle Activo / Inactivo con SweetAlert2 de main.js -->
+                                <button type="button"
+                                        class="{% if type.is_active %}btn-green-circle{% else %}btn-red-circle{% endif %}"
+                                        onclick="toggleStatusAjax('{% url 'documents:doc_type_status' type.pk %}', '{{ type.name|escapejs }}', {{ type.is_active|yesno:'true,false' }})"
+                                        title="{% if type.is_active %}Desactivar{% else %}Activar{% endif %}">
+                                    <i class="fa-solid {% if type.is_active %}fa-power-off{% else %}fa-toggle-on{% endif %}"></i>
+                                </button>
+                            {% endif %}
+                        </div>
                     </td>
                 </tr>
             {% empty %}
                 <tr>
-                    <td colspan="4" class="text-center py-4 text-muted">
-                        No se encontraron registros.
+                    <td colspan="4">
+                        <div class="empty-state-container">
+                            <i class="fa-solid fa-inbox empty-state-icon"></i>
+                            <p class="empty-state-text">No se encontraron tipos de documento registrados.</p>
+                        </div>
                     </td>
                 </tr>
             {% endfor %}

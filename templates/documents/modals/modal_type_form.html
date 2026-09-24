@@ -1,67 +1,65 @@
 {% load static %}
-
-<div class="modal-overlay hidden" id="modal-document-type">
-    <div class="modal-container-small animate-scale-in">
-
-        <!-- HEADER -->
-        <div class="modal-header">
-            <div class="header-content-group">
-                <div class="header-icon-circle">
-                    <i class="fa-solid fa-tags"></i>
-                </div>
-                <div>
-                    <h2 class="header-title">
-                        {% if form.instance.pk %}Editar Tipo de Documento{% else %}Nuevo Tipo de Documento{% endif %}
-                    </h2>
-                </div>
-            </div>
-            <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-        </div>
-
+<div class="modal-overlay hidden">
+    <div class="modal-container-small">
         <form method="POST"
               action="
-                      {% if form.instance.pk %}{% url 'documents:doc_type_update' form.instance.pk %}{% else %}{% url 'documents:doc_type_create' %}{% endif %}"
+                      {% if object.pk or form.instance.pk %}{% url 'documents:doc_type_update' object.pk|default:form.instance.pk %}{% else %}{% url 'documents:doc_type_create' %}{% endif %}"
               onsubmit="submitAjaxForm(event)">
             {% csrf_token %}
 
-            <!-- BODY -->
-            <div class="modal-body-custom">
-                <!-- Campo Nombre -->
-                <div class="form-group mb-3">
-                    <label class="form-label" for="{{ form.name.id_for_label }}">
-                        Nombre del Tipo <span class="text-red">*</span>
-                    </label>
-                    <input type="text"
-                           name="{{ form.name.name }}"
-                           id="{{ form.name.id_for_label }}"
-                           value="{{ form.name.value|default:'' }}"
-                           required
-                           class="form-control"
-                           placeholder="Ej: Memorando, Oficio, Informe Técnico">
-                    <div class="invalid-feedback"></div>
-                </div>
+            <!-- HEADER -->
+            <div class="modal-header-medium">
+                <h3 class="header-title">
+                    <i class="fa-solid fa-tags me-2"></i>
+                    <span>{% if object.pk or form.instance.pk %}Editar Tipo de Documento{% else %}Nuevo Tipo de
+                        Documento{% endif %}</span>
+                </h3>
+                <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
 
-                <!-- Campo Activo -->
-                <div class="form-check form-switch mt-3">
-                    <input class="form-check-input"
-                           type="checkbox"
-                           name="{{ form.is_active.name }}"
-                           id="{{ form.is_active.id_for_label }}"
-                           {% if form.is_active.value or not form.instance.pk %}checked{% endif %}>
-                    <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
-                        Registro Activo
-                    </label>
+            <!-- BODY -->
+            <div class="modal-body-content modal-body-custom">
+                <div class="form-section-card">
+                    <!-- Campo Nombre -->
+                    <div class="form-group">
+                        <label class="form-label" for="id_name">
+                            Nombre del Tipo <span class="text-red">*</span>
+                        </label>
+                        <input type="text"
+                               name="name"
+                               id="id_name"
+                               value="{{ form.name.value|default:'' }}"
+                               required
+                               class="input-field"
+                               placeholder="Ej: Memorando, Oficio, Informe Técnico">
+                        <div class="invalid-feedback"></div>
+                    </div>
+
+                    <!-- Switch de Estado Oficial -->
+                    <div class="form-group mt-3 d-flex flex-column align-items-center">
+                        <label class="form-label mb-2">Estado del Registro</label>
+                        <input type="checkbox"
+                               name="is_active"
+                               id="id_is_active"
+                               class="switch-input switch-green"
+                               {% if form.is_active.value or not form.instance.pk %}checked{% endif %}>
+                        <label for="id_is_active" class="switch-wrapper">
+                            <span class="switch-circle"></span>
+                            <span class="switch-text">{% if form.is_active.value or not form.instance.pk %}
+                                Activo{% else %}Inactivo{% endif %}</span>
+                        </label>
+                    </div>
                 </div>
             </div>
 
             <!-- FOOTER -->
-            <div class="modal-footer-medium">
-                <button type="button" class="btn btn-white-rectangle" onclick="closeModal()">Cancelar</button>
-                <button type="submit" class="btn btn-blue-rectangle">
+            <div class="modal-footer-medium modal-footer-spaced">
+                <button type="button" class="btn-default-outline" onclick="closeModal()">Cancelar</button>
+                <button type="submit" class="btn-dark-blue-rectangle">
                     <i class="fas fa-save me-1"></i>
-                    {% if form.instance.pk %}Actualizar{% else %}Guardar{% endif %}
+                    {% if object.pk or form.instance.pk %}Actualizar{% else %}Guardar{% endif %}
                 </button>
             </div>
         </form>

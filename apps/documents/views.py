@@ -264,17 +264,37 @@ class DocumentListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 class DocumentCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     model = Document
     form_class = DocumentForm
-    template_name = 'documents/modals/modal_document_form.html'  # Usado para obtener el HTML del modal si fuera server-side, o referencial
+    template_name = 'documents/modals/modal_document_form.html'
     permission_required = 'documents.add_document'
-    success_url = reverse_lazy('documents:document_list')
 
-    def form_valid(self, form):
-        # Asignar creador antes de guardar
-        form.instance.created_by = self.request.user
-        self.object = form.save()
-        return JsonResponse({'status': 'success', 'message': 'Documento registrado correctamente.'})
+    def get(self, request, *args, **kwargs):
+        category_id = request.GET.get('category_id')
+        category = get_object_or_404(DocumentType, pk=category_id)
 
-    def form_invalid(self, form):
+        # Calcular siguiente código
+        year = timezone.now().year
+        prefix = f'ML-DTH-{year}-'
+        initials = ''.join([w[0].upper() for w in re.findall(r"[A-Za-zÀ-ÿ]+", category.name)])
+        total_count = Document.objects.filter(category=category, registration_date__year=year, is_active=True).count()
+        next_code = f"{prefix}{total_count + 1:03d}{('-' + initials) if initials else ''}"
+
+        return render(request, self.template_name, {
+            'form': self.get_form(),
+            'category': category,
+            'next_code': next_code
+        })
+
+    def post(self, request, *args, **kwargs):
+        # Reutilizamos la lógica de creación múltiple si envían quantity
+        quantity = int(request.POST.get('quantity') or 1)
+        if quantity > 1:
+            return create_multiple_documents(request)
+
+        form = self.get_form()
+        if form.is_valid():
+            form.instance.created_by = request.user
+            form.save()
+            return JsonResponse({'status': 'success', 'message': 'Documento creado correctamente.'})
         return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
 
 
@@ -282,26 +302,24 @@ class DocumentTypeListView(LoginRequiredMixin, PermissionRequiredMixin, ListView
     model = DocumentType
     template_name = 'documents/type_list.html'
     context_object_name = 'types'
-    paginate_by = 10
     permission_required = 'documents.view_documenttype'
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        q = self.request.GET.get('q')
+        q = self.request.GET.get('q', '').strip()
         if q:
             queryset = queryset.filter(name__icontains=q)
-        return queryset
+        return queryset.order_by('name')
 
-    def get(self, request, *args, **kwargs):
-        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            self.object_list = self.get_queryset()
+    def render_to_response(self, context, **response_kwargs):
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
             html = render_to_string(
                 'documents/partials/partial_type_table.html',
-                {'types': self.object_list},
-                request=request
+                context,
+                request=self.request
             )
-            return JsonResponse({'html': html})
-        return super().get(request, *args, **kwargs)
+            return HttpResponse(html)
+        return super().render_to_response(context, **response_kwargs)
 
 
 # --- CREAR (Responde JSON para Vue) ---
@@ -379,24 +397,27 @@ class DocumentTypeUpdateView(LoginRequiredMixin, PermissionRequiredMixin, Update
 class DocumentUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
     model = Document
     form_class = DocumentForm
+    template_name = 'documents/modals/modal_document_form.html'
     permission_required = 'documents.change_document'
 
+    def get(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        return render(request, self.template_name, {
+            'form': self.get_form(),
+            'object': self.object
+        })
+
     def form_valid(self, form):
-        # Registrar quién hizo la última edición y actualizar el campo 'sender_name'
+        form.instance.updated_by = self.request.user
         try:
-            form.instance.updated_by = self.request.user
-            # Actualizar 'sender_name' con el nombre completo del último editor
-            try:
-                form.instance.sender_name = self.request.user.get_full_name() or str(self.request.user)
-            except Exception:
-                form.instance.sender_name = str(self.request.user)
+            form.instance.sender_name = self.request.user.get_full_name() or str(self.request.user)
         except Exception:
             pass
         self.object = form.save()
-        return JsonResponse({'success': True, 'message': 'Documento actualizado correctamente.'})
+        return JsonResponse({'status': 'success', 'message': 'Documento actualizado correctamente.'})
 
     def form_invalid(self, form):
-        return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+        return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
 
 
 def document_detail(request, pk):
@@ -473,16 +494,17 @@ def document_type_detail(request, pk):
 # --- BAJA/ALTA (Toggle rápido) ---
 @require_POST
 def change_type_status(request, pk):
-    # Verificación de permisos manual o decorator
     if not request.user.has_perm('documents.change_documenttype'):
-        return JsonResponse({'success': False, 'message': 'Sin permisos'}, status=403)
+        return JsonResponse({'success': False, 'message': 'Sin permisos suficientes.'}, status=403)
 
     doc_type = get_object_or_404(DocumentType, pk=pk)
     doc_type.is_active = not doc_type.is_active
     doc_type.save()
+
     return JsonResponse({
+        'status': 'success',
         'success': True,
-        'message': f'Estado cambiado a {"Activo" if doc_type.is_active else "Inactivo"}'
+        'message': f'Estado de "{doc_type.name}" cambiado a {"Activo" if doc_type.is_active else "Inactivo"}.'
     })
 
 

@@ -1,0 +1,23 @@
+/* ==========================================================================
+   MÓDULO GESTIÓN DOCUMENTAL - AJUSTES ESPECÍFICOS
+   ========================================================================== */
+
+/* Ancho suficiente en tabla para soportar 9 columnas sin colapsar textos */
+.table-documents {
+    min-width: 1000px !important;
+}
+
+/* Evita que textos extensos sin espacios o con saltos de línea desborden a otras columnas */
+.table-documents td.cell-wrap {
+    white-space: normal !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+    line-height: 1.35;
+}
+
+/* Permitir que la fila adapte su altura según las líneas del Asunto o Destinatario */
+.table-container table.table-documents tr,
+.table-container table.table-documents td {
+    height: auto !important;
+    min-height: 40px;
+}
