@@ -1,32 +1,43 @@
+{% load static %}
 <div class="modal-overlay hidden">
-    <div class="modal-container">
-        <div class="modal-header-medium modal-header-gradient">
-            <h3 class="modal-title text-white">
-                <i class="fa-solid fa-sitemap me-2"></i> {{ title }}
-            </h3>
-            <button type="button" class="btn-close-modal text-white-opacity" onclick="closeBudgetModal()">&times;
-            </button>
-        </div>
-
-        <form onsubmit="submitStructureForm(event, '{{ model_type }}',
-                {% if is_editing %}{{ pk }}{% else %}{{ parent_id }}{% endif %}, {{ is_editing|yesno:'true,false' }})">
+    <div class="modal-container-small">
+        <form method="POST" action="{{ request.path }}" onsubmit="submitAjaxForm(event)">
             {% csrf_token %}
+
+            <!-- HEADER -->
+            <div class="modal-header-medium">
+                <h3 class="header-title">
+                    <i class="fa-solid fa-sitemap me-2"></i> {{ title }}
+                </h3>
+                <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <!-- BODY -->
             <div class="modal-body-content modal-body-custom">
                 <div class="form-section-card">
                     <div class="row g-3">
                         {% for field in form %}
                             <div class="col-md-12 form-group">
-                                <label class="form-label">{{ field.label }}</label>
+                                <label class="form-label" for="{{ field.id_for_label }}">
+                                    {{ field.label }} {% if field.field.required %}
+                                    <span class="text-red">*</span>{% endif %}
+                                </label>
                                 {{ field }}
-                                <div class="text-error" id="err-{{ field.name }}"></div>
+                                <div class="invalid-feedback"></div>
                             </div>
                         {% endfor %}
                     </div>
                 </div>
             </div>
+
+            <!-- FOOTER -->
             <div class="modal-footer-medium modal-footer-spaced">
-                <button type="button" class="btn-cancel" onclick="closeBudgetModal()">Cancelar</button>
-                <button type="submit" class="btn-save shadow-md"><i class="fas fa-save"></i> Guardar</button>
+                <button type="button" class="btn-default-outline" onclick="closeModal()">Cancelar</button>
+                <button type="submit" class="btn-dark-blue-rectangle">
+                    <i class="fas fa-save me-1"></i> Guardar
+                </button>
             </div>
         </form>
     </div>

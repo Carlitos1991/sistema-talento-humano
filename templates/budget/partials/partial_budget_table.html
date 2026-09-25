@@ -1,175 +1,167 @@
 {% load static %}
 <div class="table-container">
-    <table class="managed-table exportable-table"
-           data-title="Reporte Partidas"
-           data-filename="Reporte_partidas"
-           data-external-pagination="true"
-           data-external-search="true"
-           data-list-url="{% url 'budget:budget_list' %}">
-        <thead>
-        <tr>
-            <th onclick="sortBudgetTable('number_individual')" class="sortable-header">
-                <i class="fa-solid fa-hashtag"></i> Ind.
-                <span class="sort-arrow">⇅</span>
-            </th>
-            <th onclick="sortBudgetTable('code')" class="sortable-header">
-                <i class="fa-solid fa-hashtag"></i> Partida
-                <span class="sort-arrow">⇅</span>
-            </th>
-            <th onclick="sortBudgetTable('position_item')" class="sortable-header">
-                <i class="fa-solid fa-briefcase"></i> Cargo:
-                <span class="sort-arrow">⇅</span>
-            </th>
-            <th onclick="sortBudgetTable('remuneration')" class="sortable-header">
-                <i class="fa-solid fa-money-bill-wave"></i> RMU
-                <span class="sort-arrow">⇅</span>
-            </th>
-            <th onclick="sortBudgetTable('current_employee')" class="sortable-header">
-                <i class="fa-solid fa-user"></i> Empleado
-                <span class="sort-arrow">⇅</span>
-            </th>
-            <th class="">
-                <i class="fa-solid fa-id-card"></i> Cédula
-            </th>
-            <th onclick="sortBudgetTable('status_item')" class="sortable-header">
-                <i class="fa-solid fa-toggle-on"></i> Estado
-                <span class="sort-arrow">⇅</span>
-            </th>
-            <th class="text-center"><i class="fas fa-cogs"></i> Acciones</th>
-            <th class="text-center"><i class="fa-solid fa-timeline"></i> Historial</th>
-        </tr>
-        </thead>
-        <tbody id="table-body">
-        {% for line in lines %}
+    <div class="table-scroll-top">
+        <table class="managed-table exportable-table"
+               style="min-width: 1450px;"
+               data-title="Reporte Partidas"
+               data-filename="Reporte_partidas"
+               data-external-pagination="true"
+               data-external-search="true"
+               data-list-url="{% url 'budget:budget_list' %}">
+            <thead>
             <tr>
-                <!-- Columna 1: Partida Individual -->
-                <td>
-                    <span class="fw-bold text-primary">{{ line.number_individual|default:"S/N" }}</span>
-                </td>
-                <!-- Columna 1.2: Partida Completa -->
-                <td>
-                    <span class="fw-bold text-primary">{{ line.code|default:"S/N" }}</span>
-                </td>
-
-                <!-- Columna 3: Cargo -->
-                <td>
-                    <div class="d-flex flex-column">
-                        <span class="status-badge active">{{ line.position_item.name|default:"POR DEFINIR" }}</span>
-                    </div>
-                </td>
-
-                <!-- Columna 4: RMU -->
-                <td>
-                    <div class="d-flex flex-column">
-                        <span class="fw-bold text-success mt-1">$ {{ line.remuneration }}</span>
-                    </div>
-                </td>
-
-                <!-- Columna 5: Custodio -->
-                <td>
-                    {% if line.current_employee %}
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="text-xs fw-bold">{{ line.current_employee.person.full_name }}</span>
-                        </div>
-                    {% else %}
-                        <span class="badge badge-blue">SIN ASIGNAR</span>
-                    {% endif %}
-                </td>
-
-                <!-- Columna 5.1: Cédula del custodio -->
-                <td>
-                    {% if line.current_employee and line.current_employee.person and line.current_employee.person.document_number %}
-                        <span class="text-xs">{{ line.current_employee.person.document_number }}</span>
-                    {% else %}
-                        <span class="text-xs text-muted">-</span>
-                    {% endif %}
-                </td>
-
-                <!-- Columna 6: Estado -->
-                <td>
-                    {% with code=line.status_item.code %}
-                        <span class="badge {{ code|lower }}">
-                        {% if code == 'LIBRE' %}
-                            <i class="fa-solid fa-lock-open"></i>
-                        {% elif code == 'OCUPADA' %}
-                            <i class="fa-solid fa-user-check"></i>
-                        {% elif code == 'CONCURSO' %}
-                            <i class="fa-solid fa-file-signature"></i>
-                        {% elif code == 'LITIGIO' %}
-                            <i class="fa-solid fa-gavel"></i>
-                        {% elif code == 'INACTIVA' %}
-                            <i class="fa-solid fa-ban"></i>
-                        {% else %}
-                            <i class="fa-solid fa-circle-info"></i>
-                        {% endif %}
-                            {{ line.status_item.name }}
-                    </span>
-                    {% endwith %}
-                </td>
-
-                <!-- Columna 7: Acciones -->
-                <td class="actions">
-                    <div class="actions-wrapper">
-                        {% if not line.number_individual %}
-                            <button class="btn-red-circle"
-                                    onclick="openAssignNumberModal({{ line.id }})"
-                                    title="Asignar Número Individual">
-                                <i class="fa-solid fa-hashtag"></i>
-                            </button>
-                        {% endif %}
-                        {% if line.current_employee %}
-                            <button class="btn-red-circle" onclick="openReleaseModal({{ line.id }})"
-                                    title="Liberar Partida">
-                                <i class="fa-solid fa-user-minus"></i>
-                            </button>
-                        {% else %}
-                            <button class="btn-blue-circle"
-                                    onclick="openAssignEmployeeModal({{ line.id }})" title="Asignar Persona">
-                                <i class="fa-solid fa-user-plus"></i>
-                            </button>
-                        {% endif %}
-                        {% if not line.current_employee %}
-                            <button class="btn-third"
-                                    onclick="openChangeStatusModal({{ line.id }})"
-                                    title="Pasar a Concurso/Litigio/Inactiva">
-                                <i class="fa-solid fa-arrows-rotate"></i>
-                            </button>
-                        {% endif %}
-                        <a href="{% url 'budget:budget_detail' line.id %}"
-                           class="btn-fifth"
-                           title="Ver Detalle Completo">
-                            <i class="fa-solid fa-folder-closed"></i>
-                        </a>
-                    </div>
-                </td>
-                <td>
-                    <button onclick="window.openChangesHistory({{ line.pk }})" class="btn-dark-blue-circle"
-                            title="Historial de personas">
-                        <i class="fas fa-timeline"></i>
-                    </button>
-                    <button onclick="window.openOccupantsHistory({{ line.pk }})" class="btn-yellow-circle"
-                            title="Historial de partida">
-                        <i class="fa-solid fa-people-arrows"></i>
-                    </button>
-                </td>
+                <th onclick="sortBudgetTable('number_individual')" class="sortable-header width-5 text-center">
+                    # Ind. <span class="sort-arrow">⇅</span>
+                </th>
+                <th onclick="sortBudgetTable('code')" class="sortable-header width-13">
+                    Partida <span class="sort-arrow">⇅</span>
+                </th>
+                <th onclick="sortBudgetTable('position_item')" class="sortable-header width-17">
+                    Cargo <span class="sort-arrow">⇅</span>
+                </th>
+                <th onclick="sortBudgetTable('remuneration')" class="sortable-header width-8 text-center">
+                    RMU <span class="sort-arrow">⇅</span>
+                </th>
+                <th onclick="sortBudgetTable('current_employee')" class="sortable-header width-17">
+                    Empleado <span class="sort-arrow">⇅</span>
+                </th>
+                <th class="width-10 text-center">Cédula</th>
+                <th onclick="sortBudgetTable('status_item')" class="sortable-header width-10 text-center">
+                    Estado <span class="sort-arrow">⇅</span>
+                </th>
+                <th class="width-20 text-center no-sort actions"><i class="fas fa-cogs"></i> Acciones</th>
             </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+            </thead>
+            <tbody id="table-body">
+            {% for line in lines %}
+                <tr>
+                    <td class="text-center">
+                        <span class="badge badge-gray font-monospace">{{ line.number_individual|default:"S/N" }}</span>
+                    </td>
+                    <td>
+                        <strong class="text-blue">{{ line.code|default:"S/N" }}</strong>
+                    </td>
+                    <td>{{ line.position_item.name|default:"POR DEFINIR" }}</td>
+                    <td class="text-center font-monospace bold text-green">$ {{ line.remuneration }}</td>
+                    <td>
+                        {% if line.current_employee %}
+                            <strong>{{ line.current_employee.person.full_name }}</strong>
+                        {% else %}
+                            <span class="badge badge-blue">SIN ASIGNAR</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if line.current_employee and line.current_employee.person and line.current_employee.person.document_number %}
+                            <span class="font-monospace text-muted">{{ line.current_employee.person.document_number }}</span>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% with code=line.status_item.code %}
+                            {% if code == 'LIBRE' %}
+                                <span class="badge badge-green"><i
+                                        class="fa-solid fa-lock-open me-1"></i> {{ line.status_item.name }}</span>
+                            {% elif code == 'OCUPADA' %}
+                                <span class="badge badge-blue"><i
+                                        class="fa-solid fa-user-check me-1"></i> {{ line.status_item.name }}</span>
+                            {% elif code == 'CONCURSO' %}
+                                <span class="badge badge-purple"><i
+                                        class="fa-solid fa-file-signature me-1"></i> {{ line.status_item.name }}</span>
+                            {% elif code == 'LITIGIO' %}
+                                <span class="badge badge-amber"><i
+                                        class="fa-solid fa-gavel me-1"></i> {{ line.status_item.name }}</span>
+                            {% elif code == 'INACTIVA' %}
+                                <span class="badge badge-red"><i
+                                        class="fa-solid fa-ban me-1"></i> {{ line.status_item.name }}</span>
+                            {% else %}
+                                <span class="badge badge-gray">{{ line.status_item.name }}</span>
+                            {% endif %}
+                        {% endwith %}
+                    </td>
+                    <td class="actions text-center" style="min-width: 250px;">
+                        <div class="actions-wrapper" style="gap: 5px; justify-content: center; flex-wrap: nowrap;">
+                            <!-- Asignar Número Individual -->
+                            {% if not line.number_individual %}
+                                <button type="button" class="btn-yellow-circle"
+                                        onclick="openAjaxModal('{% url 'budget:assign_individual_number' line.id %}')"
+                                        title="Asignar Número Individual">
+                                    <i class="fa-solid fa-hashtag"></i>
+                                </button>
+                            {% endif %}
 
-    <!-- PAGINACIÓN — server-side, navegación via fetchBudgets() -->
+                            <!-- Liberar o Asignar Empleado -->
+                            {% if line.current_employee %}
+                                <button type="button" class="btn-red-circle"
+                                        onclick="openAjaxModal('{% url 'budget:budget_release' line.id %}')"
+                                        title="Liberar Partida">
+                                    <i class="fa-solid fa-user-minus"></i>
+                                </button>
+                            {% else %}
+                                <button type="button" class="btn-blue-circle"
+                                        onclick="openAjaxModal('{% url 'budget:budget_assign_employee' line.id %}')"
+                                        title="Asignar Persona">
+                                    <i class="fa-solid fa-user-plus"></i>
+                                </button>
+                            {% endif %}
+
+                            <!-- Cambiar Estado -->
+                            {% if not line.current_employee %}
+                                <button type="button" class="btn-third"
+                                        onclick="openAjaxModal('{% url 'budget:budget_change_status' line.id %}')"
+                                        title="Cambiar Estado">
+                                    <i class="fa-solid fa-arrows-rotate"></i>
+                                </button>
+                            {% endif %}
+
+                            <!-- Historial de Modificaciones -->
+                            <button type="button" class="btn-dark-blue-circle"
+                                    onclick="openAjaxModal('{% url 'budget:history_changes' line.id %}')"
+                                    title="Historial de Modificaciones">
+                                <i class="fas fa-clock-rotate-left"></i>
+                            </button>
+
+                            <!-- Historial de Ocupantes -->
+                            <button type="button" class="btn-yellow-circle"
+                                    onclick="openAjaxModal('{% url 'budget:history_occupants' line.id %}')"
+                                    title="Historial de Ocupantes">
+                                <i class="fa-solid fa-people-arrows"></i>
+                            </button>
+
+                            <!-- Ver Detalle -->
+                            <a href="{% url 'budget:budget_detail' line.id %}" class="btn-fifth" title="Ver Detalle">
+                                <i class="fa-solid fa-folder-closed"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="8">
+                        <div class="empty-state-container">
+                            <i class="fa-solid fa-inbox empty-state-icon"></i>
+                            <p class="empty-state-text">No se encontraron partidas presupuestarias.</p>
+                        </div>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Paginación Global -->
     <div class="pagination-container">
         <span class="pagination-info">
             Mostrando {{ page_obj.start_index|default:"0" }}-{{ page_obj.end_index|default:"0" }} de {{ page_obj.paginator.count|default:"0" }}
         </span>
         <div class="pagination-controls"
-             style="{% if page_obj.paginator.num_pages <= 1 %}visibility:hidden;{% endif %}">
-            <button class="page-btn" title="Primera"
+             {% if page_obj.paginator.num_pages <= 1 %}style="visibility:hidden;"{% endif %}>
+            <button type="button" class="page-btn page-first" title="Primera"
                     {% if not page_obj.has_previous %}disabled{% endif %}
                     onclick="changeBudgetPage(1)">
                 <i class="fas fa-angle-double-left"></i>
             </button>
-            <button class="page-btn" title="Anterior"
+            <button type="button" class="page-btn page-prev" title="Anterior"
                     {% if not page_obj.has_previous %}disabled{% endif %}
                     onclick="changeBudgetPage(
                             {% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% else %}1{% endif %})">
@@ -177,31 +169,23 @@
             </button>
             <div class="page-input-wrapper">
                 <input type="number" class="page-input"
-                       value="{{ page_obj.number }}"
-                       min="1" max="{{ page_obj.paginator.num_pages }}"
+                       value="{{ page_obj.number|default:1 }}"
+                       min="1" max="{{ page_obj.paginator.num_pages|default:1 }}"
                        onchange="changeBudgetPage(parseInt(this.value)||1)"
                        onkeypress="if(event.key==='Enter') changeBudgetPage(parseInt(this.value)||1)">
-                <span class="total-pages-badge">de {{ page_obj.paginator.num_pages }}</span>
+                <span class="total-pages-badge">de {{ page_obj.paginator.num_pages|default:1 }}</span>
             </div>
-            <button class="page-btn" title="Siguiente"
+            <button type="button" class="page-btn page-next" title="Siguiente"
                     {% if not page_obj.has_next %}disabled{% endif %}
                     onclick="changeBudgetPage(
-                            {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ page_obj.paginator.num_pages }}{% endif %})">
+                            {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ page_obj.paginator.num_pages|default:1 }}{% endif %})">
                 <i class="fas fa-angle-right"></i>
             </button>
-            <button class="page-btn" title="Última"
+            <button type="button" class="page-btn page-last" title="Última"
                     {% if not page_obj.has_next %}disabled{% endif %}
-                    onclick="changeBudgetPage({{ page_obj.paginator.num_pages }})">
+                    onclick="changeBudgetPage({{ page_obj.paginator.num_pages|default:1 }})">
                 <i class="fas fa-angle-double-right"></i>
             </button>
-        </div>
-    </div>
-
-    <!-- Empty State -->
-    <div class="no-results-overlay {% if lines %}hidden{% endif %}">
-        <div class="no-results-content">
-            <i class="fas fa-search no-results-icon"></i>
-            <p class="no-results-text">No se encontraron partidas presupuestarias.</p>
         </div>
     </div>
 </div>

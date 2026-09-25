@@ -1,45 +1,58 @@
-<div class="modal-overlay">
-    <div class="modal-container" style="width: 550px; margin: auto;">
-        <div class="modal-header-medium modal-header-gradient" style="background: linear-gradient(to right, #6366f1, #818cf8);">
-            <h3 class="modal-title text-white">
-                <i class="fa-solid fa-arrows-rotate me-2"></i> Cambiar Estado de Partida
-            </h3>
-            <button type="button" class="btn-close-modal text-white-opacity" onclick="closeBudgetModal()">&times;</button>
-        </div>
-
-        <form onsubmit="submitChangeStatusForm(event, {{ line.pk }})">
+{% load static %}
+<div class="modal-overlay hidden">
+    <div class="modal-container-small">
+        <form method="POST" action="{% url 'budget:budget_change_status' line.pk %}" onsubmit="submitAjaxForm(event)">
             {% csrf_token %}
-            <div class="modal-body-content modal-body-custom">
 
-                <!-- Info de la Partida -->
-                <div class="form-section-card" style="background: #f8fafc; border-color: #e2e8f0;">
-                    <div class="grid-2-cols">
-                        <div class="small"><strong>Código:</strong><br>{{ line.code }}</div>
-                        <div class="small"><strong># Individual:</strong><br>{{ line.number_individual|default:"S/N" }}</div>
-                        <div class="small mt-2"><strong>Cargo:</strong><br>{{ line.position_item.name|truncatechars:30 }}</div>
-                        <div class="small mt-2"><strong>Estado Actual:</strong><br>
-                            <span class="status-badge general">{{ line.status_item.name }}</span>
+            <!-- HEADER -->
+            <div class="modal-header-medium">
+                <h3 class="header-title">
+                    <i class="fa-solid fa-arrows-rotate me-2"></i> Cambiar Estado de Partida
+                </h3>
+                <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <!-- BODY -->
+            <div class="modal-body-content modal-body-custom">
+                <!-- Info Resumen -->
+                <div class="form-section-card mb-3">
+                    <div class="row g-2 small">
+                        <div class="col-md-6"><strong>Código:</strong><br><span class="text-blue">{{ line.code }}</span>
+                        </div>
+                        <div class="col-md-6"><strong># Individual:</strong><br><span
+                                class="font-monospace bold">{{ line.number_individual|default:"S/N" }}</span></div>
+                        <div class="col-md-6 mt-2">
+                            <strong>Cargo:</strong><br>{{ line.position_item.name|default:"POR DEFINIR" }}</div>
+                        <div class="col-md-6 mt-2"><strong>Estado Actual:</strong><br>
+                            <span class="badge badge-gray">{{ line.status_item.name }}</span>
                         </div>
                     </div>
                 </div>
 
-                <div class="form-group mt-3">
-                    <label class="form-label font-weight-bold">Nuevo Estado *</label>
-                    {{ form.new_status }}
-                    <div class="text-error" id="err-new_status"></div>
-                </div>
+                <div class="form-section-card">
+                    <div class="form-group mb-3">
+                        <label class="form-label" for="{{ form.new_status.id_for_label }}">
+                            Nuevo Estado <span class="text-red">*</span>
+                        </label>
+                        {{ form.new_status }}
+                        <div class="invalid-feedback"></div>
+                    </div>
 
-                <div class="form-group mt-3">
-                    <label class="form-label">Observaciones</label>
-                    {{ form.observation }}
-                    <small class="form-hint"><i class="fas fa-info-circle"></i> Explique brevemente el motivo del cambio.</small>
+                    <div class="form-group mb-0">
+                        <label class="form-label" for="{{ form.observation.id_for_label }}">Observaciones</label>
+                        {{ form.observation }}
+                        <small class="form-hint">Explique brevemente el motivo del cambio.</small>
+                    </div>
                 </div>
             </div>
 
+            <!-- FOOTER -->
             <div class="modal-footer-medium modal-footer-spaced">
-                <button type="button" class="btn-cancel" onclick="closeBudgetModal()">Cancelar</button>
-                <button type="submit" class="btn-save" style="background: #4f46e5;">
-                    <i class="fas fa-check me-2"></i> Cambiar Estado
+                <button type="button" class="btn-default-outline" onclick="closeModal()">Cancelar</button>
+                <button type="submit" class="btn-dark-blue-rectangle">
+                    <i class="fas fa-check me-1"></i> Cambiar Estado
                 </button>
             </div>
         </form>

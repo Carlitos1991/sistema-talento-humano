@@ -1,87 +1,97 @@
-{% if is_dynamic %}
-    <div class="modal-overlay">{% endif %}
-<div id="budget-modal-content">
-    <div class="modal-container-xl">
-        <div class="modal-header-medium modal-header-gradient">
-            <h3 class="modal-title text-white">
-                <i class="fa-solid fa-file-invoice-dollar me-2"></i>
-                {% if is_editing %}Editar Partida{% else %}Nueva Partida Presupuestaria{% endif %}
-            </h3>
-            <button type="button" class="btn-close-modal text-white-opacity" onclick="closeBudgetModal()">&times;
-            </button>
-        </div>
-
-        <form id="budgetForm" method="POST" onsubmit="submitBudgetForm(event, '{% if is_editing %}{% url 'budget:budget_update' form.instance.pk %}{% else %}{% url 'budget:budget_create' %}{% endif %}')">
+{% load static %}
+<div class="modal-overlay hidden">
+    <div class="modal-container-large">
+        <form method="POST" action="{{ request.path }}" onsubmit="submitAjaxForm(event)">
             {% csrf_token %}
 
-            <!-- Campo oculto para enviar el código a Django -->
-            <input type="hidden" name="code" id="id_code" value="{{ form.code.value|default:'' }}">
+            <div class="modal-header-medium">
+                <h3 class="header-title">
+                    <i class="fa-solid fa-coins me-2"></i>
+                    <span>{% if is_editing %}Editar Partida Presupuestaria{% else %}Nueva Partida
+                        Presupuestaria{% endif %}</span>
+                </h3>
+                <button type="button" class="btn-close-circle" onclick="closeModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
 
             <div class="modal-body-content modal-body-custom">
-                <!-- SECCIÓN 1: JERARQUÍA -->
+                <!-- Visualizador del Código Generado -->
+                <div class="card-large mb-3 text-center py-2 bg-readonly">
+                    <span class="label-muted">Código Generado:</span>
+                    <strong class="text-highlight-large m-0" id="display-budget-code">
+                        {{ form.instance.code|default:"00.00.00.00.00.00" }}
+                    </strong>
+                    <input type="hidden" name="code" id="id_code" value="{{ form.instance.code|default:'' }}">
+                </div>
+
                 <div class="form-section-card">
-                    <h6 class="section-title">
-                        <i class="fas fa-sitemap"></i> Estructura Programática:
-                        <!-- DISEÑO DE BADGE PARA EL CÓDIGO -->
-                        <span id="display-budget-code" class="budget-code-badge">
-                            {{ form.instance.code|default:"0.00.00.00..." }}
-                        </span>
-                    </h6>
-                    <div class="grid-2-cols">
-                        <div class="form-group"><label>Programa</label>{{ form.program }}</div>
-                        <div class="form-group"><label>Subprograma</label>{{ form.subprogram }}</div>
-                        <div class="form-group"><label>Proyecto</label>{{ form.project }}</div>
-                        <div class="form-group">
-                            <label>Actividad <span class="text-danger">*</span></label>
-                            {{ form.activity }}
-                            <div class="text-error" id="err-activity"></div>
+                    <h4 class="section-title"><i class="fa-solid fa-sitemap"></i> Estructura Programática</h4>
+                    <div class="row g-3">
+                        <div class="col-md-6 form-group">
+                            <label class="form-label">Área / Programa</label>
+                            {{ form.program }}
                         </div>
-                        <div class="form-group"><label>Tipo de Gasto</label>{{ form.spending_type_item }}</div>
-                        <div class="form-group"><label>Régimen <span
-                                class="text-danger">*</span></label>{{ form.regime_item }}</div>
+                        <div class="col-md-6 form-group">
+                            <label class="form-label">Subprograma</label>
+                            {{ form.subprogram }}
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label class="form-label">Proyecto</label>
+                            {{ form.project }}
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label class="form-label">Actividad</label>
+                            {{ form.activity }}
+                        </div>
                     </div>
                 </div>
 
-                <!-- SECCIÓN 2: DATOS ECONÓMICOS -->
-                <div class="form-section-card">
-                    <h6 class="section-title"><i class="fas fa-coins"></i> Datos Económicos</h6>
+                <div class="form-section-card mt-3">
+                    <h4 class="section-title"><i class="fa-solid fa-layer-group"></i> Clasificación y Remuneración</h4>
                     <div class="row g-3">
-                        <div class="col-md-4 form-group">
-                            <label>Cargo <span class="text-danger">*</span></label>
+                        <div class="col-md-6 form-group">
+                            <label class="form-label">Tipo de Gasto</label>
+                            {{ form.spending_type_item }}
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label class="form-label">Régimen Laboral</label>
+                            {{ form.regime_item }}
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label class="form-label">Cargo Estructural</label>
                             {{ form.position_item }}
                         </div>
-                        <div class="col-md-4 form-group">
-                            <label>RMU (Sueldo) <span class="text-danger">*</span></label>
+                        <div class="col-md-6 form-group">
+                            <label class="form-label">RMU <span class="text-red">*</span></label>
                             {{ form.remuneration }}
-                            <div class="text-error" id="err-remuneration"></div>
                         </div>
                         <div class="col-md-4 form-group">
-                            <label>Categoría <span class="text-danger">*</span></label>
+                            <label class="form-label">Grupo Ocupacional</label>
+                            {{ form.group_item }}
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label class="form-label">Grado</label>
+                            {{ form.grade_item }}
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label class="form-label">Categoría</label>
                             {{ form.category_item }}
                         </div>
+                        <div class="col-md-12 form-group">
+                            <label class="form-label">Observaciones</label>
+                            {{ form.observation }}
+                        </div>
                     </div>
-                </div>
-
-                <!-- SECCIÓN 3: CLASIFICACIÓN -->
-                <div class="form-section-card">
-                    <h6 class="section-title"><i class="fas fa-tags"></i> Clasificación y Régimen</h6>
-                    <div class="grid-2-cols">
-                        <div class="form-group"><label>Grupo Ocupacional</label>{{ form.group_item }}</div>
-                        <div class="form-group"><label>Grado Ocupacional</label>{{ form.grade_item }}</div>
-                    </div>
-                </div>
-
-                <div class="form-section-card">
-                    <h6 class="section-title"><i class="fa-solid fa-comment"></i> Observaciones</h6>
-                    <div class="form-group">{{ form.observation }}</div>
                 </div>
             </div>
 
             <div class="modal-footer-medium modal-footer-spaced">
-                <button type="button" class="btn-cancel" onclick="closeBudgetModal()">Cancelar</button>
-                <button type="submit" class="btn-save shadow-md"><i class="fas fa-save"></i> Guardar</button>
+                <button type="button" class="btn-default-outline" onclick="closeModal()">Cancelar</button>
+                <button type="submit" class="btn-dark-blue-rectangle">
+                    <i class="fas fa-save me-1"></i> {% if is_editing %}Actualizar{% else %}Guardar{% endif %}
+                </button>
             </div>
         </form>
     </div>
 </div>
-{% if is_dynamic %}</div>{% endif %}

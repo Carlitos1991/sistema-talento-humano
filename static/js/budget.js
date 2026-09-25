@@ -1,740 +1,301 @@
-/**
- * budget.js - Gestión Integral de Presupuesto (SIGETH)
- * Arquitectura: Vanilla JS + Select2 + SweetAlert2
- * Estándar: Senior Software Architecture (Zero redundancy)
- */
+/* static/js/budget.js
+   Gestión de Partidas Presupuestarias - Integrado a main.js
+*/
 
-// --- 1. CONFIGURACIÓN GLOBAL Y UTILIDADES ---
+(function () {
+    'use strict';
 
-const Toast = Swal.mixin({
-    toast: true,
-    position: 'top-end',
-    showConfirmButton: false,
-    timer: 3000,
-    timerProgressBar: true,
-});
-
-document.addEventListener('DOMContentLoaded', () => {
-    
-    
-    // NO hacer fetchBudgets en la carga inicial, solo actualizar paginación del HTML ya renderizado
-    // if (window.fetchBudgets) window.fetchBudgets();
-    
-    // Actualizar paginación inicial con el HTML ya cargado por Django
-    if (typeof updatePaginationUI === 'function') {
-        setTimeout(() => updatePaginationUI(), 100); // Pequeño delay para asegurar que el DOM esté listo
-    }
-    
-    const searchInput = document.getElementById('table-search-budget');
-    if (searchInput) {
-        let timeout;
-        searchInput.addEventListener('input', (e) => {
-            clearTimeout(timeout);
-            timeout = setTimeout(() => window.fetchBudgets({q: e.target.value, page: 1}), 500);
-        });
-    }
-});
-
-// --- 2. GESTIÓN DE TABLA Y FILTROS ---
-
-let currentFilters = {q: '', status: 'all', page: 1, sort: ''};
-
-window.changeBudgetPage = function(page) {
-    if (page && page > 0) {
-        window.fetchBudgets({page: page});
-    }
-};
-
-window.sortBudgetTable = function(field) {
-    // Si ya estamos ordenando por este campo, invertir dirección
-    const currentSort = currentFilters.sort || '';
-    if (currentSort === field) {
-        // Cambiar a descendente
-        currentFilters.sort = '-' + field;
-    } else if (currentSort === '-' + field) {
-        // Remover sort
-        currentFilters.sort = '';
-    } else {
-        // Nuevo sort ascendente
-        currentFilters.sort = field;
-    }
-    // Volver a página 1 al cambiar sort
-    window.fetchBudgets({sort: currentFilters.sort, page: 1});
-};
-
-window.fetchBudgets = function (params = {}) {
-    Object.assign(currentFilters, params);
-    const url = new URL(window.location.href);
-    
-    // Búsqueda rápida
-    if (currentFilters.q) url.searchParams.set('q', currentFilters.q);
-    if (currentFilters.status) url.searchParams.set('status', currentFilters.status);
-    if (currentFilters.page) url.searchParams.set('page', currentFilters.page);
-    if (currentFilters.sort) url.searchParams.set('sort', currentFilters.sort);
-
-    fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
-        .then(res => res.text())
-        .then(html => {
-            const wrapper = document.getElementById('table-content-wrapper');
-            if (wrapper) {
-                wrapper.innerHTML = html;
-                // Actualizar estilos de sort en headers
-                updateSortHeaders();
-                // Actualizar UI de paginación después de cargar
-                if (typeof updatePaginationUI === 'function') {
-                    updatePaginationUI();
-                }
-            }
-        });
-};
-
-function updateSortHeaders() {
-    // Remover todas las clases de sort
-    document.querySelectorAll('th.sorted-asc, th.sorted-desc').forEach(th => {
-        th.classList.remove('sorted-asc', 'sorted-desc');
-    });
-    
-    // Si hay un sort activo, aplicar la clase correspondiente
-    if (currentFilters.sort) {
-        const field = currentFilters.sort.replace('-', '');
-        const isDesc = currentFilters.sort.startsWith('-');
-        
-        // Buscar el header correspondiente
-        const headers = document.querySelectorAll('thead th.sortable-header');
-        headers.forEach(th => {
-            if (th.onclick && th.onclick.toString().includes(`'${field}'`)) {
-                if (isDesc) {
-                    th.classList.add('sorted-desc');
-                } else {
-                    th.classList.add('sorted-asc');
-                }
-            }
-        });
-    }
-};
-
-function updatePaginationUI() {
-    const meta = document.getElementById('pagination-metadata');
-    if (!meta) {
-        console.warn('No se encontró pagination-metadata');
-        return;
-    }
-    
-    // Parsear valores como números
-    const total = parseInt(meta.dataset.total) || 0;
-    const start = parseInt(meta.dataset.start) || 0;
-    const end = parseInt(meta.dataset.end) || 0;
-    const page = parseInt(meta.dataset.page) || 1;
-    const hasNext = meta.dataset.hasNext === 'true';
-    const hasPrev = meta.dataset.hasPrev === 'true';
-    
-    // Sincronizar estado local
-    currentFilters.page = page;
-    
-    // Actualizar texto de información
-    const pageInfo = document.getElementById('page-info');
-    if (pageInfo) {
-        pageInfo.textContent = total === 0 ? "Sin resultados" : `Mostrando ${start}-${end} de ${total}`;
-    }
-    
-    // Actualizar botones de paginación
-    const btnPrev = document.getElementById('btn-prev');
-    const btnNext = document.getElementById('btn-next');
-    if (btnPrev) btnPrev.disabled = !hasPrev;
-    if (btnNext) btnNext.disabled = !hasNext;
-    
-    // Actualizar número de página actual
-    const display = document.getElementById('current-page-display');
-    if (display) display.textContent = page;
-}
-
-// --- 3. ACTUALIZACIÓN DE ESTADÍSTICAS (STATS) ---
-
-window.refreshStatsUI = function (stats) {
-    if (!stats) return;
-    const keys = ['total', 'libre', 'ocupada', 'concurso', 'litigio', 'inactiva'];
-    keys.forEach(key => {
-        const element = document.getElementById(`stat-${key}`);
-        if (element) {
-            if (element.textContent !== stats[key]) {
-                element.textContent = stats[key];
-                // Efecto visual de pulso
-                element.style.transform = 'scale(1.2)';
-                element.style.color = '#2563eb';
-                element.style.transition = 'all 0.3s ease';
-                setTimeout(() => {
-                    element.style.transform = 'scale(1)';
-                    element.style.color = '';
-                }, 300);
-            }
-        }
-    });
-};
-
-/**
- * Manejador universal de éxito para todas las acciones de presupuesto
- */
-window.handleActionSuccess = function (data) {
-    if (data.success) {
-        window.closeBudgetModal();
-        Toast.fire({icon: 'success', title: data.message});
-
-        // Si estoy en la página de detalle, debo recargar para ver el historial y cambios
-        if (window.location.pathname.includes('/detail/')) {
-            setTimeout(() => location.reload(), 1000);
-        } else {
-            // Si estoy en la lista, solo refresco la tabla asíncrona
-            if (window.fetchBudgets) window.fetchBudgets();
-            if (data.new_stats) window.refreshStatsUI(data.new_stats);
-        }
-    }
-};
-
-// --- 4. CASCADA DINÁMICA Y GENERACIÓN DE CÓDIGO (6 NIVELES) ---
-
-function initBudgetFormCascades() {
-    const $modal = $('#budget-modal-content');
-    const $program = $('#id_program'), $subprogram = $('#id_subprogram'), $project = $('#id_project'),
-        $activity = $('#id_activity'), $spending = $('#id_spending_type_item'), $regime = $('#id_regime_item');
-    const $displayCode = $('#display-budget-code'), $hiddenCode = $('#id_code');
-
-    // Inicializar Select2
-    $modal.find('select').select2({width: '100%', dropdownParent: $modal.parent()});
-
-    const getCodePart = ($el) => {
-        const selected = $el.find('option:selected')[0];
-        if (!selected || !selected.value || selected.text.includes('---------')) return '';
-        return selected.dataset.code || selected.text.split(' - ')[0].trim();
+    const budgetState = {
+        status: 'all',
+        sort: '',
+        page: 1
     };
 
-    const updateFullCode = () => {
-        const parts = [getCodePart($program), getCodePart($subprogram), getCodePart($project),
-            getCodePart($activity), getCodePart($spending), getCodePart($regime)].filter(p => p !== '');
-        const finalCode = parts.join('.');
-        $displayCode.text(finalCode || "00.00.00.00.00.00");
-        $hiddenCode.val(finalCode);
-    };
-
-    const fetchChildren = async (parentId, type, $targetSelect) => {
-        if (!parentId) {
-            $targetSelect.empty().append('<option value="">---------</option>').prop('disabled', true).trigger('change.select2');
-            return;
-        }
-        try {
-            const res = await fetch(`/budget/api/hierarchy/?parent_id=${parentId}&target_type=${type}`);
-            const data = await res.json();
-            $targetSelect.empty().append('<option value="">---------</option>');
-            data.results.forEach(item => {
-                const opt = new Option(item.text, item.id);
-                opt.setAttribute('data-code', item.code);
-                $targetSelect.append(opt);
+    document.addEventListener('DOMContentLoaded', () => {
+        // Inicializar Select2 en los combos de filtro
+        if (window.$ && $.fn.select2) {
+            $('#budget-filter-form select.select2').select2({
+                width: '100%'
             });
-            $targetSelect.prop('disabled', false).trigger('change.select2');
-        } catch (e) {
-            console.error(e);
-        }
-    };
-
-    // LISTENERS DE CASCADA (Corregidos para no vaciar catálogos independientes)
-    $program.on('change', () => {
-        fetchChildren($program.val(), 'subprogram', $subprogram);
-        [$project, $activity].forEach(s => s.empty().prop('disabled', true).trigger('change.select2'));
-        updateFullCode();
-    });
-
-    $subprogram.on('change', () => {
-        fetchChildren($subprogram.val(), 'project', $project);
-        $activity.empty().prop('disabled', true).trigger('change.select2');
-        updateFullCode();
-    });
-
-    $project.on('change', () => {
-        fetchChildren($project.val(), 'activity', $activity);
-        updateFullCode();
-    });
-
-    $activity.on('change', () => {
-        const hasVal = !!$activity.val();
-        $spending.prop('disabled', !hasVal).trigger('change.select2');
-        updateFullCode();
-    });
-
-    $spending.on('change', () => {
-        const hasVal = !!$spending.val();
-        $regime.prop('disabled', !hasVal).trigger('change.select2');
-        updateFullCode();
-    });
-
-    $regime.on('change', updateFullCode);
-    updateFullCode();
-}
-
-window.openCreateBudget = () => {
-    const m = document.getElementById('budget-modal-app');
-    if (m) {
-        m.classList.remove('hidden');
-        document.body.classList.add('no-scroll');
-        initBudgetFormCascades();
-    }
-};
-window.openEditBudget = async function (pk) {
-    const container = document.getElementById('modal-inject-container');
-    if (!container) return console.error("Falta el contenedor modal-inject-container");
-
-    try {
-        const res = await fetch(`/budget/update/${pk}/`);
-        if (!res.ok) throw new Error("Error al cargar el servidor");
-
-        const html = await res.text();
-        container.innerHTML = html;
-
-        // Quitamos el 'hidden' de cualquier overlay inyectado
-        const modalOverlay = container.querySelector('.modal-overlay');
-        if (modalOverlay) {
-            modalOverlay.classList.remove('hidden');
-            // IMPORTANTE: Aseguramos que se vea (algunos navegadores necesitan flex)
-            modalOverlay.style.display = 'flex';
         }
 
-        document.body.classList.add('no-scroll');
-
-        // RE-INICIALIZAR CASCADAS (Vital para que el modal de edición funcione)
-        if (typeof initBudgetFormCascades === 'function') {
-            initBudgetFormCascades();
-        }
-
-    } catch (e) {
-        console.error(e);
-        Toast.fire({icon: 'error', title: 'No se pudo abrir el editor'});
-    }
-};
-
-// --- 5. MODALES Y ACCIONES (DISTRIBUTIVO) ---
-
-window.openCreateBudget = function () {
-    const modal = document.getElementById('budget-modal-app');
-    if (modal) {
-        modal.classList.remove('hidden');
-        document.body.classList.add('no-scroll');
-        initBudgetFormCascades();
-    }
-};
-
-window.submitBudgetForm = async function (e, url) {
-    e.preventDefault(); // CRUCIAL: Detiene el envío tradicional y el error 405
-
-    const form = e.target;
-    const formData = new FormData(form);
-
-    // Limpiar mensajes de error previos
-    form.querySelectorAll('.text-error').forEach(el => el.textContent = '');
-
-    try {
-        const res = await fetch(url, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRFToken': getCookie('csrftoken')
-            }
-        });
-
-        if (!res.ok) {
-            const errorData = await res.json();
-            Object.keys(errorData.errors).forEach(key => {
-                const errDiv = document.getElementById(`err-${key}`);
-                if (errDiv) errDiv.textContent = errorData.errors[key][0];
+        // Búsqueda en tiempo real sobre el input de empleado/cédula/código
+        const searchInput = document.getElementById('table-search-budget');
+        if (searchInput) {
+            let debounceTimer = null;
+            searchInput.addEventListener('input', () => {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    applyBudgetFilters(1);
+                }, 400);
             });
-            return Toast.fire({icon: 'error', title: 'Verifique los errores en el formulario'});
         }
-
-        const data = await res.json();
-        // Llamamos al manejador universal de éxito que ya definimos
-        if (window.handleActionSuccess) {
-            window.handleActionSuccess(data);
-        }
-
-    } catch (err) {
-        console.error("Error en submit:", err);
-        Toast.fire({icon: 'error', title: 'Error crítico de conexión'});
-    }
-};
-
-// --- 6. ACCIONES ESPECÍFICAS (NÚMERO, EMPLEADO, LIBERACIÓN) ---
-
-window.openAssignNumberModal = (pk) => {
-    fetch(`/budget/assign-number/${pk}/`).then(res => res.text()).then(html => {
-        const container = document.getElementById('modal-inject-container');
-        container.innerHTML = html;
-        container.querySelector('.modal-overlay').classList.remove('hidden');
-        document.body.classList.add('no-scroll');
     });
-};
 
-window.submitAssignNumberForm = async (e, pk) => {
-    e.preventDefault();
+    // Control del acordeón colapsable
+    window.toggleBudgetAdvancedSearch = function () {
+        const container = document.getElementById('advanced-search-container');
+        const icon = document.getElementById('icon-toggle-advanced');
+        if (!container) return;
 
-    try {
-        const res = await fetch(`/budget/assign-number/${pk}/`, {
-            method: 'POST',
-            body: new FormData(e.target),
-            headers: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken')}
-        });
-
-        const data = await res.json();
-
-        if (!res.ok) {
-            // Manejar error 400 o cualquier otro error
-            if (data.errors) {
-                // Mostrar errores de validación del formulario
-                let errorMsg = 'Errores en el formulario:\n';
-                Object.keys(data.errors).forEach(key => {
-                    if (Array.isArray(data.errors[key])) {
-                        errorMsg += `${data.errors[key].join(', ')}\n`;
-                    } else {
-                        errorMsg += `${data.errors[key]}\n`;
-                    }
+        const isHidden = container.classList.contains('hidden');
+        if (isHidden) {
+            container.classList.remove('hidden');
+            if (icon) {
+                icon.classList.remove('fa-chevron-down');
+                icon.classList.add('fa-chevron-up');
+            }
+            // Reajustar anchos de Select2 al desplegar
+            if (window.$ && $.fn.select2) {
+                $('#advanced-search-container select.select2').each(function () {
+                    $(this).select2({width: '100%'});
                 });
-                Toast.fire({icon: 'error', title: errorMsg});
-            } else if (data.message) {
-                // Mostrar mensaje de error personalizado
-                Toast.fire({icon: 'error', title: data.message});
-            } else {
-                Toast.fire({icon: 'error', title: 'Error al asignar el número individual'});
             }
-            return;
+        } else {
+            container.classList.add('hidden');
+            if (icon) {
+                icon.classList.remove('fa-chevron-up');
+                icon.classList.add('fa-chevron-down');
+            }
+        }
+    };
+
+    // Helper para capturar todos los datos del formulario de búsqueda y refrescar la tabla
+    function getFilterParams() {
+        const form = document.getElementById('budget-filter-form');
+        const formData = new FormData(form);
+        const params = {};
+
+        for (let [key, val] of formData.entries()) {
+            if (val && val.trim() !== '') {
+                params[key] = val.trim();
+            }
         }
 
-        // Si todo está bien, manejar el éxito
-        window.handleActionSuccess(data);
+        if (budgetState.status && budgetState.status !== 'all') {
+            params.status = budgetState.status;
+        }
 
-    } catch (error) {
-        console.error('Error en submitAssignNumberForm:', error);
-        Toast.fire({icon: 'error', title: 'Error de conexión con el servidor'});
+        if (budgetState.sort) {
+            params.sort = budgetState.sort;
+        }
+
+        params.page = budgetState.page;
+        return params;
     }
-};
 
-window.openAssignEmployeeModal = (pk) => {
-    fetch(`/budget/assign-employee/${pk}/`).then(res => res.text()).then(html => {
-        const container = document.getElementById('modal-inject-container');
-        container.innerHTML = html;
-        container.querySelector('.modal-overlay').classList.remove('hidden');
-        document.body.classList.add('no-scroll');
-    });
-};
+    function applyBudgetFilters(page = 1) {
+        budgetState.page = page;
+        const params = getFilterParams();
+
+        if (typeof window.refreshCurrentTable === 'function') {
+            window.refreshCurrentTable(params, updateSortHeaderStyles);
+        }
+    }
+
+    // 1. Filtrar por Stat Card (Estado)
+    window.filterBudgetByStatus = function (status) {
+        budgetState.status = status;
+        document.querySelectorAll('#budget-stats-row .stat-card').forEach(c => c.classList.add('opacity-low'));
+
+        const activeId = status === 'all' ? 'card-filter-all' : `card-filter-${status.toLowerCase()}`;
+        const activeCard = document.getElementById(activeId);
+        if (activeCard) activeCard.classList.remove('opacity-low');
+
+        applyBudgetFilters(1);
+    };
+
+    // 2. Envío del Formulario de Búsqueda Avanzada
+    window.handleBudgetSearchSubmit = function (e) {
+        e.preventDefault();
+        applyBudgetFilters(1);
+    };
+
+    // 3. Limpiar Filtros
+    window.clearBudgetFilters = function () {
+        const form = document.getElementById('budget-filter-form');
+        if (form) {
+            form.reset();
+            if (window.$ && $.fn.select2) {
+                $(form).find('select.select2').val('').trigger('change');
+            }
+        }
+        window.filterBudgetByStatus('all');
+    };
+
+    // 4. Paginación
+    window.changeBudgetPage = function (page) {
+        applyBudgetFilters(page);
+    };
+
+    // 5. Ordenamiento de Columnas
+    window.sortBudgetTable = function (field) {
+        if (budgetState.sort === field) {
+            budgetState.sort = '-' + field;
+        } else if (budgetState.sort === '-' + field) {
+            budgetState.sort = '';
+        } else {
+            budgetState.sort = field;
+        }
+        applyBudgetFilters(1);
+    };
+
+    function updateSortHeaderStyles() {
+        document.querySelectorAll('thead th.sortable-header').forEach(th => {
+            th.classList.remove('sorted-asc', 'sorted-desc');
+            const arrow = th.querySelector('.sort-arrow');
+            if (arrow) arrow.innerText = '⇅';
+        });
+
+        if (!budgetState.sort) return;
+
+        const field = budgetState.sort.replace('-', '');
+        const isDesc = budgetState.sort.startsWith('-');
+
+        document.querySelectorAll('thead th.sortable-header').forEach(th => {
+            if (th.getAttribute('onclick') && th.getAttribute('onclick').includes(`'${field}'`)) {
+                th.classList.add(isDesc ? 'sorted-desc' : 'sorted-asc');
+                const arrow = th.querySelector('.sort-arrow');
+                if (arrow) arrow.innerText = isDesc ? '↓' : '↑';
+            }
+        });
+    }
+
+    // =========================================================================
+    // MODAL DE CREACIÓN / EDICIÓN CON CASCADA
+    // =========================================================================
+
+    window.initBudgetFormCascades = function () {
+        const $modal = $('#modal-root');
+        const $program = $modal.find('#id_program'),
+            $subprogram = $modal.find('#id_subprogram'),
+            $project = $modal.find('#id_project'),
+            $activity = $modal.find('#id_activity'),
+            $spending = $modal.find('#id_spending_type_item'),
+            $regime = $modal.find('#id_regime_item'),
+            $displayCode = $modal.find('#display-budget-code'),
+            $hiddenCode = $modal.find('#id_code');
+
+        if (!$program.length) return;
+
+        $modal.find('select').select2({
+            width: '100%',
+            dropdownParent: $modal.find('.modal-body-custom')
+        });
+
+        const getCodePart = ($el) => {
+            const selected = $el.find('option:selected')[0];
+            if (!selected || !selected.value || selected.text.includes('---------')) return '';
+            return selected.dataset.code || selected.text.split(' - ')[0].trim();
+        };
+
+        const updateFullCode = () => {
+            const parts = [
+                getCodePart($program), getCodePart($subprogram), getCodePart($project),
+                getCodePart($activity), getCodePart($spending), getCodePart($regime)
+            ].filter(p => p !== '');
+            const finalCode = parts.join('.');
+            if ($displayCode.length) $displayCode.text(finalCode || '00.00.00.00.00.00');
+            if ($hiddenCode.length) $hiddenCode.val(finalCode);
+        };
+
+        const fetchChildren = async (parentId, type, $targetSelect) => {
+            if (!parentId) {
+                $targetSelect.empty().append('<option value="">---------</option>').prop('disabled', true).trigger('change.select2');
+                return;
+            }
+            try {
+                const res = await fetch(`/budget/api/hierarchy/?parent_id=${parentId}&target_type=${type}`);
+                const data = await res.json();
+                $targetSelect.empty().append('<option value="">---------</option>');
+                data.results.forEach(item => {
+                    const opt = new Option(item.text, item.id);
+                    opt.setAttribute('data-code', item.code);
+                    $targetSelect.append(opt);
+                });
+                $targetSelect.prop('disabled', false).trigger('change.select2');
+            } catch (e) {
+                console.error(e);
+            }
+        };
+
+        $program.on('change', () => {
+            fetchChildren($program.val(), 'subprogram', $subprogram);
+            [$project, $activity].forEach(s => s.empty().prop('disabled', true).trigger('change.select2'));
+            updateFullCode();
+        });
+
+        $subprogram.on('change', () => {
+            fetchChildren($subprogram.val(), 'project', $project);
+            $activity.empty().prop('disabled', true).trigger('change.select2');
+            updateFullCode();
+        });
+
+        $project.on('change', () => {
+            fetchChildren($project.val(), 'activity', $activity);
+            updateFullCode();
+        });
+
+        $activity.on('change', () => {
+            const hasVal = !!$activity.val();
+            $spending.prop('disabled', !hasVal).trigger('change.select2');
+            updateFullCode();
+        });
+
+        $spending.on('change', () => {
+            const hasVal = !!$spending.val();
+            $regime.prop('disabled', !hasVal).trigger('change.select2');
+            updateFullCode();
+        });
+
+        $regime.on('change', updateFullCode);
+        updateFullCode();
+    };
+
+    window.openCreateBudgetModal = function () {
+        window.openAjaxModal('/budget/create/', () => {
+            window.initBudgetFormCascades();
+        });
+    };
+
+})();
 
 window.searchEmployee = async function () {
-    const cedula = document.getElementById('search-cedula').value;
-    const resultCard = document.getElementById('search-result-card'),
-        btnSubmit = document.getElementById('btn-submit-assign'),
-        resName = document.getElementById('res-name'), resEmail = document.getElementById('res-email'),
-        resPhoto = document.getElementById('res-photo'), hiddenId = document.getElementById('selected-employee-id');
+    const cedulaInput = document.getElementById('search-cedula');
+    const cedula = cedulaInput ? cedulaInput.value.trim() : '';
+    const resultCard = document.getElementById('search-result-card');
+    const btnSubmit = document.getElementById('btn-submit-assign');
+    const resName = document.getElementById('res-name');
+    const resEmail = document.getElementById('res-email');
+    const resPhoto = document.getElementById('res-photo');
+    const hiddenId = document.getElementById('selected-employee-id');
 
-    if (!cedula || cedula.length < 10) return Toast.fire({icon: 'warning', title: 'Cédula no válida'});
+    if (!cedula || cedula.length < 10) {
+        Swal.fire({icon: 'warning', title: 'Cédula inválida', text: 'Ingrese una cédula de 10 dígitos.'});
+        return;
+    }
 
     try {
         const res = await fetch(`/employee/api/search/?q=${cedula}`);
         const data = await res.json();
         if (data.success) {
             resName.textContent = data.full_name;
-            resEmail.textContent = data.email;
+            resEmail.textContent = data.email || 'Sin correo registrado';
             hiddenId.value = data.id;
-            resPhoto.innerHTML = data.photo_url ? `<img src="${data.photo_url}" class="person-avatar" style="width:50px; height:50px; border-radius:50%; object-fit:cover;">` :
-                `<div class="person-avatar-placeholder" style="width:50px; height:50px; border-radius:50%; background:#3b82f6; color:white; display:flex; align-items:center; justify-content:center; font-weight:bold;">${data.full_name.charAt(0)}</div>`;
+
+            resPhoto.innerHTML = data.photo_url
+                ? `<img src="${data.photo_url}" class="employee-avatar-img">`
+                : `<div class="employee-avatar-placeholder">${data.full_name.charAt(0)}</div>`;
+
             resultCard.classList.remove('hidden');
             btnSubmit.disabled = false;
         } else {
             resultCard.classList.add('hidden');
             btnSubmit.disabled = true;
-            Swal.fire({title: 'No disponible', text: data.message, icon: 'warning', confirmButtonText: 'Entendido'});
+            Swal.fire({icon: 'warning', title: 'No disponible', text: data.message});
         }
     } catch (e) {
-        Toast.fire({icon: 'error', title: 'Error de servidor'});
+        console.error(e);
+        Swal.fire({icon: 'error', title: 'Error', text: 'Problema al consultar la cédula.'});
     }
-};
-
-window.submitAssignEmployee = async (e, pk) => {
-    e.preventDefault();
-    const form = e.target;
-    const btn = document.getElementById('btn-submit-assign');
-
-    // Limpiar errores previos y estilos
-    form.querySelectorAll('.text-error').forEach(el => el.textContent = '');
-    form.querySelectorAll('.input-error').forEach(el => el.classList.remove('input-error'));
-
-    // Validación cliente: fecha_ingreso obligatoria
-    const fechaInput = form.querySelector('[name="fecha_ingreso"]');
-    const fechaVal = fechaInput ? fechaInput.value : '';
-    if (!fechaVal) {
-        const errDiv = document.getElementById('err-fecha_ingreso');
-        if (errDiv) errDiv.textContent = 'Campo obligatorio';
-        if (fechaInput) {
-            fechaInput.classList.add('input-error');
-            fechaInput.focus();
-        }
-        return;
-    }
-
-    // Bloqueo visual preventivo
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Procesando...';
-
-    try {
-        const res = await fetch(`/budget/assign-employee/${pk}/`, {
-            method: 'POST',
-            body: new FormData(form),
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRFToken': getCookie('csrftoken')
-            }
-        });
-
-        const data = await res.json();
-
-        if (res.ok && data.success) {
-            window.handleActionSuccess(data);
-            return;
-        }
-
-        // Si hay errores de validación, mostrarlos en los campos correspondientes
-        if (data && data.errors) {
-            Object.keys(data.errors).forEach(key => {
-                const errDiv = document.getElementById(`err-${key}`);
-                if (errDiv) {
-                    errDiv.textContent = Array.isArray(data.errors[key]) ? data.errors[key][0] : data.errors[key];
-                }
-                // Marcar campo con borde rojo si existe un input con ese nombre
-                const inputEl = form.querySelector(`[name="${key}"]`);
-                if (inputEl) inputEl.classList.add('input-error');
-            });
-        } else {
-            // Manejo general de mensajes
-            Swal.fire({
-                icon: 'warning',
-                title: 'Atención',
-                text: data.message || 'No se pudo completar la asignación.',
-                confirmButtonColor: '#1e40af'
-            });
-        }
-
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-user-check me-2"></i> Asignar Persona';
-    } catch (error) {
-        console.error("Error:", error);
-        Swal.fire('Error', 'Fallo de conexión con el servidor.', 'error');
-        btn.disabled = false;
-    }
-};
-
-window.openReleaseModal = (pk) => {
-    fetch(`/budget/release/${pk}/`).then(res => res.text()).then(html => {
-        const container = document.getElementById('modal-inject-container');
-        container.innerHTML = html;
-        container.querySelector('.modal-overlay').classList.remove('hidden');
-        document.body.classList.add('no-scroll');
-    });
-};
-
-window.submitReleaseForm = async (e, pk) => {
-    e.preventDefault();
-    const form = e.target;
-
-    // Limpiar errores previos y estilos
-    form.querySelectorAll('.text-error').forEach(el => el.textContent = '');
-    form.querySelectorAll('.input-error').forEach(el => el.classList.remove('input-error'));
-
-    // Validación cliente: fecha_fin obligatoria
-    const fechaInput = form.querySelector('[name="fecha_fin"]');
-    const fechaVal = fechaInput ? fechaInput.value : '';
-    if (!fechaVal) {
-        const errDiv = document.getElementById('err-fecha_fin');
-        if (errDiv) errDiv.textContent = 'Campo obligatorio';
-        if (fechaInput) {
-            fechaInput.classList.add('input-error');
-            fechaInput.focus();
-        }
-        return;
-    }
-
-    try {
-        const res = await fetch(`/budget/release/${pk}/`, {
-            method: 'POST',
-            body: new FormData(form),
-            headers: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken')}
-        });
-
-        const data = await res.json();
-
-        if (res.ok && data.success) {
-            window.handleActionSuccess(data);
-            return;
-        }
-
-        if (data && data.errors) {
-            Object.keys(data.errors).forEach(key => {
-                const errDiv = document.getElementById(`err-${key}`);
-                if (errDiv) errDiv.textContent = Array.isArray(data.errors[key]) ? data.errors[key][0] : data.errors[key];
-                const inputEl = form.querySelector(`[name="${key}"]`);
-                if (inputEl) inputEl.classList.add('input-error');
-            });
-            return;
-        }
-
-        // Mensaje general
-        if (data && data.message) Toast.fire({icon: 'warning', title: data.message});
-
-    } catch (err) {
-        console.error('Error en submitReleaseForm:', err);
-        Toast.fire({icon: 'error', title: 'Error de conexión con el servidor'});
-    }
-};
-
-window.openChangeStatusModal = (pk) => {
-    fetch(`/budget/change-status/${pk}/`).then(res => res.text()).then(html => {
-        const container = document.getElementById('modal-inject-container');
-        container.innerHTML = html;
-        $(container).find('select').select2({width: '100%', dropdownParent: $(container).find('.modal-overlay')});
-        container.querySelector('.modal-overlay').classList.remove('hidden');
-        document.body.classList.add('no-scroll');
-    });
-};
-
-window.submitChangeStatusForm = async (e, pk) => {
-    e.preventDefault();
-    const res = await fetch(`/budget/change-status/${pk}/`, {
-        method: 'POST',
-        body: new FormData(e.target),
-        headers: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken')}
-    });
-    window.handleActionSuccess(await res.json());
-};
-
-// --- 7. CIERRE DE MODALES Y FILTROS ---
-
-window.closeBudgetModal = () => {
-    const m = document.getElementById('budget-modal-app');
-    if (m) m.classList.add('hidden');
-    document.getElementById('modal-inject-container').innerHTML = '';
-    document.body.classList.remove('no-scroll');
-};
-
-window.filterBudgetByStatus = function (status) {
-    document.querySelectorAll('.stat-card').forEach(c => c.classList.add('opacity-low'));
-    const activeId = status === 'all' ? 'card-filter-all' : `card-filter-${status.toLowerCase()}`;
-    const el = document.getElementById(activeId);
-    if (el) el.classList.remove('opacity-low');
-    window.fetchBudgets({status: status, page: 1});
-};
-
-window.filterStructureByStatus = function (status) {
-    document.querySelectorAll('.stat-card').forEach(c => c.classList.add('opacity-low'));
-    const activeId = status === 'all' ? 'card-struct-all' : `card-struct-${status}`;
-    const el = document.getElementById(activeId);
-    if (el) el.classList.remove('opacity-low');
-    window.fetchBudgets({status: status, page: 1});
-};
-
-// --- 8. ESTRUCTURA PROGRAMÁTICA (MODALES Y TOGGLE) ---
-
-window.openCreateStructure = (modelType, parentId) => {
-    fetch(`/budget/structure/create/${modelType}/${parentId}/`).then(res => res.text()).then(html => {
-        const container = document.getElementById('modal-inject-container');
-        container.innerHTML = html;
-        container.querySelector('.modal-overlay').classList.remove('hidden');
-        document.body.classList.add('no-scroll');
-    });
-};
-
-window.openEditStructure = (modelType, pk) => {
-    fetch(`/budget/structure/edit/${modelType}/${pk}/`).then(res => res.text()).then(html => {
-        const container = document.getElementById('modal-inject-container');
-        container.innerHTML = html;
-        container.querySelector('.modal-overlay').classList.remove('hidden');
-        document.body.classList.add('no-scroll');
-    });
-};
-
-window.submitStructureForm = async (e, modelType, id, isEditing) => {
-    e.preventDefault();
-    const url = isEditing ? `/budget/structure/edit/${modelType}/${id}/` : `/budget/structure/create/${modelType}/${id}/`;
-    const res = await fetch(url, {
-        method: 'POST',
-        body: new FormData(e.target),
-        headers: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': getCookie('csrftoken')}
-    });
-    const data = await res.json();
-    if (data.success) {
-        Toast.fire({icon: 'success', title: data.message});
-        setTimeout(() => location.reload(), 800);
-    }
-};
-
-window.toggleStructureActive = function (modelType, pk, isActive) {
-    const actionText = isActive ? 'desactivar' : 'activar';
-    Swal.fire({
-        title: `¿Confirmar ${actionText}?`, icon: 'warning', showCancelButton: true, confirmButtonText: 'Aceptar',
-        customClass: {
-            confirmButton: isActive ? 'btn-swal-danger' : 'btn-swal-success',
-            cancelButton: 'btn-swal-cancel'
-        },
-        buttonsStyling: false
-    }).then((result) => {
-        if (result.isConfirmed) {
-            fetch(`/budget/structure/toggle/${modelType}/${pk}/`, {
-                method: 'POST',
-                headers: {'X-CSRFToken': getCookie('csrftoken'), 'X-Requested-With': 'XMLHttpRequest'}
-            }).then(res => res.json()).then(data => {
-                if (data.success) {
-                    Toast.fire({icon: 'success', title: data.message});
-                    setTimeout(() => location.reload(), 800);
-                }
-            });
-        }
-    });
-};
-
-// Listeners de paginación finales
-document.addEventListener('click', (e) => {
-    if (e.target.id === 'btn-prev' || e.target.closest('#btn-prev')) {
-        const btn = document.getElementById('btn-prev');
-        if (!btn.disabled && currentFilters.page > 1) {
-            window.fetchBudgets({page: currentFilters.page - 1});
-        }
-    }
-    if (e.target.id === 'btn-next' || e.target.closest('#btn-next')) {
-        const btn = document.getElementById('btn-next');
-        if (!btn.disabled) {
-            window.fetchBudgets({page: currentFilters.page + 1});
-        }
-    }
-});
-
-// Inicialización de cascadas si es necesario (para modales inyectados se llama al abrir)
-window.setupHierarchyListeners = function () {
-    initBudgetFormCascades();
-};
-window.openChangesHistory = function (pk) {
-    // Sanear el id por si viene con separadores de miles (p.ej. 1.071)
-    const id = String(pk).replace(/[^0-9]/g, '');
-    if (!id) return console.warn('openChangesHistory: id inválido', pk);
-    fetch(`/budget/history/changes/${id}/`)
-        .then(res => res.text())
-        .then(html => {
-            document.getElementById('modal-inject-container').innerHTML = html;
-            document.querySelector('#modal-inject-container .modal-overlay').classList.remove('hidden');
-            document.body.classList.add('no-scroll');
-        });
-};
-
-window.openOccupantsHistory = function (pk) {
-    // Sanear el id por si viene con separadores de miles (p.ej. 1.071)
-    const id = String(pk).replace(/[^0-9]/g, '');
-    if (!id) return console.warn('openOccupantsHistory: id inválido', pk);
-    fetch(`/budget/history/occupants/${id}/`)
-        .then(res => res.text())
-        .then(html => {
-            document.getElementById('modal-inject-container').innerHTML = html;
-            document.querySelector('#modal-inject-container .modal-overlay').classList.remove('hidden');
-            document.body.classList.add('no-scroll');
-        });
 };

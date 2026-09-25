@@ -1,63 +1,107 @@
-<div class="modal-overlay">
+{% load static %}
+<div class="modal-overlay hidden">
     <div class="modal-container-xl">
-        <div class="modal-header-medium modal-header-gradient" style="background: #0515c1;">
-            <h3 class="modal-title text-white">
-                <i class="fa-solid fa-users-viewfinder me-2"></i> Historial de Ocupantes
+        <!-- HEADER -->
+        <div class="modal-header-medium">
+            <h3 class="header-title">
+                <i class="fa-solid fa-users-viewfinder me-2"></i> Historial de Ocupantes -
+                Partida {{ line.number_individual|default:line.code }}
             </h3>
-            <button type="button" class="btn-close-modal text-white-opacity" onclick="closeBudgetModal()">&times;</button>
+            <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
 
+        <!-- BODY -->
         <div class="modal-body-content modal-body-custom">
+            <!-- Resumen superior de la Partida -->
+            <div class="alert alert-info mb-4">
+                <div class="row g-2 w-100">
+                    <div class="col-md-4"><strong>Código:</strong> {{ line.code }}</div>
+                    <div class="col-md-4"><strong>Cargo:</strong> {{ line.position_item.name|default:"POR DEFINIR" }}
+                    </div>
+                    <div class="col-md-4"><strong>Estado Actual:</strong> {{ line.status_item.name }}</div>
+                </div>
+            </div>
+
+            <!-- Línea de tiempo de ocupantes -->
             <div class="timeline-container">
                 {% for entry in history %}
                     <div class="timeline-item">
                         <div class="timeline-marker {% if entry.is_current %}status-actual{% else %}status-finalizado{% endif %}"></div>
                         <div class="history-card">
-                            <div class="person-info">
-                                {% if entry.employee.person.photo %}
-                                    <img src="{{ entry.employee.person.photo.url }}" class="person-avatar" style="width:60px; height:60px;">
-                                {% else %}
-                                    <div class="person-avatar-placeholder" style="width:60px; height:60px;">{{ entry.employee.person.first_name|first }}</div>
-                                {% endif %}
-                                <div class="person-details">
-                                    <span class="small text-muted"><i class="fas fa-id-card me-1"></i>{{ entry.employee.person.document_number }}</span>
-                                    <h4 class="mb-0 text-primary">{{ entry.employee.person.name_and_last_name }}</h4>
+                            <div class="employee-card-badge bg-white border-0 p-0">
+                                <div class="employee-avatar-wrapper" style="width: 52px; height: 52px;">
+                                    {% if entry.employee.person.photo %}
+                                        <img src="{{ entry.employee.person.photo.url }}" class="employee-avatar-img"
+                                             alt="Foto">
+                                    {% else %}
+                                        <div class="employee-avatar-placeholder">{{ entry.employee.person.first_name|first }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="employee-card-details">
+                                    <span class="employee-card-doc">
+                                        <i class="fas fa-id-card me-1"></i>{{ entry.employee.person.document_number|default:'-' }}
+                                    </span>
+                                    <span class="employee-card-name text-primary">
+                                        {{ entry.employee.person.name_and_last_name }}
+                                    </span>
                                 </div>
                             </div>
 
                             <div class="grid-2-cols mt-3 border-top pt-3">
                                 <div>
                                     <label class="label-muted">Fecha Inicio</label>
-                                    <span class="value-bold text-success"><i class="fas fa-calendar-check me-1"></i>{{ entry.start_date|date:"d/m/Y" }}</span>
+                                    <span class="value-bold text-green">
+                                        <i class="fas fa-calendar-check me-1"></i>{{ entry.start_date|date:"d/m/Y" }}
+                                    </span>
                                 </div>
                                 <div>
                                     <label class="label-muted">Fecha Fin</label>
-                                    <span class="value-bold {% if entry.is_current %}text-primary{% else %}text-danger{% endif %}">
-                                        {% if entry.is_current %}<i class="fas fa-infinity me-1"></i>En curso{% else %}<i class="fas fa-calendar-times me-1"></i>{{ entry.end_date|date:"d/m/Y" }}{% endif %}
+                                    <span class="value-bold {% if entry.is_current %}text-blue{% else %}text-red{% endif %}">
+                                        {% if entry.is_current %}
+                                            <i class="fas fa-infinity me-1"></i>En curso
+                                        {% else %}
+                                            <i class="fas fa-calendar-times me-1"></i>{{ entry.end_date|date:"d/m/Y" }}
+                                        {% endif %}
                                     </span>
                                 </div>
                             </div>
 
                             {% if entry.observation %}
-                                <div class="mt-2 p-2 rounded" style="background:#fffbeb; border: 1px solid #fef3c7; font-size:0.8rem;">
-                                    <strong><i class="fas fa-comment"></i> Observación:</strong> {{ entry.observation }}
+                                <div class="alert alert-warning m-0 mt-3 p-2 small">
+                                    <strong><i
+                                            class="fas fa-comment me-1"></i>Observación:</strong> {{ entry.observation }}
                                 </div>
                             {% endif %}
                         </div>
                     </div>
+                {% empty %}
+                    <div class="empty-state-container">
+                        <i class="fa-solid fa-user-slash empty-state-icon"></i>
+                        <p class="empty-state-text">No existen registros de ocupantes previos en esta partida.</p>
+                    </div>
                 {% endfor %}
             </div>
+
+            <!-- Métricas inferiores del historial -->
+            {% if history %}
+                <div class="history-footer-stats mt-4">
+                    <div>
+                        <div class="number text-white">{{ total_assignments|default:0 }}</div>
+                        <div class="small opacity-80 uppercase">Total de Asignaciones</div>
+                    </div>
+                    <div style="border-left: 1px solid rgba(255, 255, 255, 0.2);">
+                        <div class="number text-white">{{ line.created_at|timesince }}</div>
+                        <div class="small opacity-80 uppercase">Antigüedad de Partida</div>
+                    </div>
+                </div>
+            {% endif %}
         </div>
 
-        <div class="history-footer-stats mx-4 mb-4">
-            <div>
-                <div class="h3 mb-0">{{ total_assignments }}</div>
-                <div class="small opacity-80 uppercase">Total de Asignaciones</div>
-            </div>
-            <div style="border-left: 1px solid rgba(255,255,255,0.2);">
-                <div class="h3 mb-0">{{ line.created_at|timesince }}</div>
-                <div class="small opacity-80 uppercase">Antigüedad Partida</div>
-            </div>
+        <!-- FOOTER -->
+        <div class="modal-footer-medium">
+            <button type="button" class="btn-default-outline" onclick="closeModal()">Cerrar</button>
         </div>
     </div>
 </div>

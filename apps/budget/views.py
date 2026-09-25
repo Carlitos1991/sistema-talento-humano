@@ -68,21 +68,16 @@ class BudgetListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     permission_required = 'budget.view_budgetline'
 
     def get_queryset(self):
+        # Quitamos .only(...) para evitar el conflicto con select_related
         qs = BudgetLine.objects.select_related(
-            'activity__project__subprogram__program',  # Para mostrar programa
-            'position_item',  # Para cargo
-            'current_employee__person',  # Para empleado
-            'status_item'  # Para estado
-        ).only(
-            'id', 'number_individual', 'remuneration',
-            'activity__project__subprogram__program__name',
-            'position_item__name',
-            'current_employee__person__first_name',
-            'current_employee__person__last_name',
-            'status_item__name', 'status_item__code'
+            'activity__project__subprogram__program',
+            'position_item',
+            'current_employee__person',
+            'status_item'
         )
 
-        q = self.request.GET.get('q')
+        # Buscador general
+        q = self.request.GET.get('q', '').strip()
         if q:
             qs = qs.filter(
                 Q(number_individual__icontains=q) |
@@ -93,24 +88,65 @@ class BudgetListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
                 Q(current_employee__person__document_number__icontains=q)
             )
 
+        # Filtro de Estado (Stat Cards)
         status = self.request.GET.get('status')
         if status and status != 'all':
             qs = qs.filter(status_item__code=status)
 
-        # Ordenamiento (sort)
-        sort_param = self.request.GET.get('sort', 'number_individual')
-        if sort_param:
-            qs = qs.order_by(sort_param)
-        else:
-            qs = qs.order_by('number_individual')
+        # Filtros avanzados del panel
+        spending_type = self.request.GET.get('spending_type')
+        if spending_type:
+            qs = qs.filter(spending_type_item_id=spending_type)
 
-        return qs
+        regime = self.request.GET.get('regime')
+        if regime:
+            qs = qs.filter(regime_item_id=regime)
+
+        remuneration = self.request.GET.get('remuneration')
+        if remuneration:
+            try:
+                qs = qs.filter(remuneration=float(remuneration))
+            except ValueError:
+                pass
+
+        number_ind = self.request.GET.get('number_individual', '').strip()
+        if number_ind:
+            qs = qs.filter(number_individual__icontains=number_ind)
+
+        position = self.request.GET.get('position')
+        if position:
+            qs = qs.filter(position_item_id=position)
+
+        group = self.request.GET.get('group')
+        if group:
+            qs = qs.filter(group_item_id=group)
+
+        grade = self.request.GET.get('grade')
+        if grade:
+            qs = qs.filter(grade_item_id=grade)
+
+        category = self.request.GET.get('category')
+        if category:
+            qs = qs.filter(category_item_id=category)
+
+        # Ordenamiento
+        sort_param = self.request.GET.get('sort', 'number_individual')
+        return qs.order_by(sort_param if sort_param else 'number_individual')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['form'] = BudgetLineForm()
 
-        # Solo actualizar estadísticas si NO es petición AJAX (paginación)
+        # Catálogos para los combos del panel de filtros
+        context['spending_types'] = CatalogItem.objects.filter(catalog__code='BUDGET_SPENDING_TYPE',
+                                                               is_active=True).order_by('code')
+        context['regimes'] = CatalogItem.objects.filter(catalog__code='LABOR_REGIMES', is_active=True).order_by('name')
+        context['positions'] = CatalogItem.objects.filter(catalog__code='JOB_POSITIONS', is_active=True).order_by(
+            'name')
+        context['groups'] = CatalogItem.objects.filter(catalog__code='BUDGET_GROUP', is_active=True).order_by('name')
+        context['grades'] = CatalogItem.objects.filter(catalog__code='BUDGET_GRADE', is_active=True).order_by('name')
+        context['categories'] = CatalogItem.objects.filter(catalog__code='BUDGET_CATEGORY', is_active=True).order_by(
+            'name')
+
         if not self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
             context.update(get_budget_stats())
 
@@ -120,7 +156,6 @@ class BudgetListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             queryset = self.get_queryset()
 
-            # Si se solicita exportación, devolver TODOS los datos sin paginación
             if request.GET.get('export') == 'true':
                 context = {
                     self.context_object_name: queryset,
@@ -131,11 +166,7 @@ class BudgetListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
             else:
                 paginator = self.get_paginator(queryset, self.paginate_by)
                 page_number = request.GET.get(self.page_kwarg, 1)
-
-                try:
-                    page_obj = paginator.get_page(page_number)
-                except:
-                    page_obj = paginator.get_page(1)
+                page_obj = paginator.get_page(page_number)
 
                 context = {
                     self.context_object_name: page_obj.object_list,
@@ -154,6 +185,10 @@ class BudgetCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
     template_name = 'budget/modals/modal_budget_form.html'
     permission_required = 'budget.add_budgetline'
 
+    def get(self, request, *args, **kwargs):
+        form = self.get_form()
+        return render(request, self.template_name, {'form': form, 'is_editing': False})
+
     def post(self, request, *args, **kwargs):
         form = self.get_form()
         if form.is_valid():
@@ -163,20 +198,20 @@ class BudgetCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
                 obj.status_item = status_libre
             except CatalogItem.DoesNotExist:
                 return JsonResponse({
-                    'success': False,
+                    'status': 'error',
                     'errors': {'status_item': ['El estado "LIBRE" no está configurado en el sistema.']}
                 }, status=400)
             try:
                 obj.full_clean()
             except ValidationError as e:
-                return JsonResponse({'success': False, 'errors': e.message_dict}, status=400)
+                return JsonResponse({'status': 'error', 'errors': e.message_dict}, status=400)
             obj.save()
             return JsonResponse({
+                'status': 'success',
                 'success': True,
-                'message': 'Partida presupuestaria creada.',
-                'new_stats': get_budget_stats()
+                'message': 'Partida presupuestaria creada exitosamente.'
             })
-        return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+        return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
 
 
 # --- 5. EDITAR (Carga HTML del Modal) ---
@@ -485,7 +520,8 @@ class BudgetAssignEmployeeView(LoginRequiredMixin, View):
         try:
             start_date = datetime.strptime(fecha_ingreso, '%Y-%m-%d').date()
         except Exception:
-            return JsonResponse({'success': False, 'errors': {'fecha_ingreso': ['Formato de fecha inválido']}}, status=400)
+            return JsonResponse({'success': False, 'errors': {'fecha_ingreso': ['Formato de fecha inválido']}},
+                                status=400)
 
         try:
             with transaction.atomic():
@@ -523,7 +559,8 @@ class BudgetAssignEmployeeView(LoginRequiredMixin, View):
                             emp.person.is_active = True
                             emp.person.save(update_fields=['is_active'])
                 except Exception as e:
-                    print(f"No se pudo asegurar Person.is_active=True para Person id={getattr(emp.person,'id',None)}: {e}")
+                    print(
+                        f"No se pudo asegurar Person.is_active=True para Person id={getattr(emp.person, 'id', None)}: {e}")
 
             return JsonResponse({'success': True, 'message': 'Asignación procesada correctamente.'})
         except Exception as e:
@@ -560,7 +597,8 @@ class BudgetReleaseView(LoginRequiredMixin, View):
                 if history:
                     # Validar que la fecha de fin no sea anterior a la fecha de inicio registrada
                     if history.start_date and end_date < history.start_date:
-                        return JsonResponse({'success': False, 'errors': {'fecha_fin': ['La fecha de fin no puede ser anterior a la fecha de inicio']}}, status=400)
+                        return JsonResponse({'success': False, 'errors': {
+                            'fecha_fin': ['La fecha de fin no puede ser anterior a la fecha de inicio']}}, status=400)
 
                     history.end_date = end_date
                     history.is_current = False

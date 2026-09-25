@@ -3,22 +3,22 @@
 {% block title %}Partidas Presupuestarias | SIGETH{% endblock %}
 
 {% block content %}
-    <!-- 1. Header -->
+    <!-- 1. Encabezado Oficial -->
     <div class="header-card">
         <div>
             <h1>Distributivo Presupuestario</h1>
             <p>Gestión de partidas, escalas salariales y ocupación de cargos.</p>
         </div>
         {% if perms.budget.add_budgetline %}
-            <button id="btn-add-budget" type="button" class="btn-white-rectangle" onclick="openCreateBudget()">
+            <button id="btn-add-budget" type="button" class="btn-white-rectangle"
+                    onclick="openCreateBudgetModal()">
                 <i class="fas fa-plus-circle"></i> Nueva Partida
             </button>
         {% endif %}
     </div>
 
     <!-- 2. Estadísticas (Filtros Rápidos) -->
-    <div class="stats-row">
-        <!-- TODOS -->
+    <div class="stats-row" id="budget-stats-row">
         <div class="stat-card color-one" onclick="filterBudgetByStatus('all')" id="card-filter-all">
             <div class="stat-left">
                 <h3>Total Partidas</h3>
@@ -35,7 +35,6 @@
             <i class="fas fa-lock-open stat-icon"></i>
         </div>
 
-        <!-- OCUPADA -->
         <div class="stat-card color-three opacity-low" onclick="filterBudgetByStatus('OCUPADA')"
              id="card-filter-ocupada">
             <div class="stat-left">
@@ -45,7 +44,6 @@
             <i class="fas fa-user-check stat-icon"></i>
         </div>
 
-        <!-- CONCURSO -->
         <div class="stat-card color-four opacity-low" onclick="filterBudgetByStatus('CONCURSO')"
              id="card-filter-concurso">
             <div class="stat-left">
@@ -55,7 +53,6 @@
             <i class="fas fa-file-signature stat-icon"></i>
         </div>
 
-        <!-- LITIGIO -->
         <div class="stat-card color-five opacity-low" onclick="filterBudgetByStatus('LITIGIO')"
              id="card-filter-litigio">
             <div class="stat-left">
@@ -65,7 +62,6 @@
             <i class="fas fa-gavel stat-icon"></i>
         </div>
 
-        <!-- INACTIVA -->
         <div class="stat-card color-six opacity-low" onclick="filterBudgetByStatus('INACTIVA')"
              id="card-filter-inactiva">
             <div class="stat-left">
@@ -76,36 +72,130 @@
         </div>
     </div>
 
-    <!-- 3. Tabla AJAX -->
+    <!-- 3. Contenedor Único que Envuelve Filtros, Acciones y Tabla (Estilo Person List) -->
     <div id="table-app">
         <div class="content-table">
-            <div class="table-controls">
-                <div class="search-box">
-                    <input type="text" id="table-search-budget" class="table-search-input"
-                           placeholder="Buscar por partida, cargo, empleado o cédula">
-                    <button type="submit" class="search-btn">
-                        <i class="fas fa-search"></i>
-                    </button>
-                </div>
-            </div>
 
-            <!-- Contenedor donde se inyecta el HTML parcial (incluye paginación en partial) -->
+            <form id="budget-filter-form" onsubmit="handleBudgetSearchSubmit(event)" class="mb-3">
+                <!-- Panel Superior Blanco de Búsqueda -->
+                <div class="search-panel">
+                    <!-- Fila Principal Centrada: Input de Búsqueda + Botón de Filtros -->
+                    <div class="d-flex align-items-center justify-content-center w-100"
+                         style="max-width: 820px; margin: 0 auto; gap: 12px;">
+                        <div class="flex-grow-1">
+                            <input type="text" name="q" id="table-search-budget"
+                                   class="form-control"
+                                   style="height: 42px; font-size: 0.95rem; width: 100%; border-radius: 8px;"
+                                   placeholder="Buscar por empleado, cédula, cargo o código de partida...">
+                        </div>
+                        <button type="button" class="btn-white-rectangle flex-shrink-0" id="btn-toggle-advanced"
+                                style="height: 42px; padding: 0 1.25rem;"
+                                onclick="toggleBudgetAdvancedSearch()" title="Filtros avanzados">
+                            <i class="fa-solid fa-sliders me-1"></i> Filtros
+                            <i class="fa-solid fa-chevron-down ms-1" id="icon-toggle-advanced"></i>
+                        </button>
+                    </div>
+
+                    <!-- Acordeón Desplegable con Selects (Oculto inicialmente) -->
+                    <div id="advanced-search-container" class="w-100 hidden mt-3 pt-3 border-top">
+                        <div class="row g-2 justify-content-center">
+                            <div class="col-md-3">
+                                <label class="form-label small m-0 mb-1">Tipos de Gasto:</label>
+                                <select name="spending_type" id="filter_spending_type" class="input-field select2">
+                                    <option value="">Todos los gastos</option>
+                                    {% for st in spending_types %}
+                                        <option value="{{ st.id }}">{{ st.code }} - {{ st.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small m-0 mb-1">Tipos de Régimen:</label>
+                                <select name="regime" id="filter_regime" class="input-field select2">
+                                    <option value="">Todos los regímenes</option>
+                                    {% for reg in regimes %}
+                                        <option value="{{ reg.id }}">{{ reg.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small m-0 mb-1">Remuneración (RMU):</label>
+                                <input type="number" step="0.01" name="remuneration" id="filter_remuneration"
+                                       class="input-field"
+                                       placeholder="Ingrese remuneración">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small m-0 mb-1">Partida Individual:</label>
+                                <input type="text" name="number_individual" id="filter_number_individual"
+                                       class="input-field"
+                                       placeholder="Partida individual (0000)">
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label small m-0 mb-1">Cargos:</label>
+                                <select name="position" id="filter_position" class="input-field select2">
+                                    <option value="">Seleccionar un cargo</option>
+                                    {% for pos in positions %}
+                                        <option value="{{ pos.id }}">{{ pos.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small m-0 mb-1">Grupos:</label>
+                                <select name="group" id="filter_group" class="input-field select2">
+                                    <option value="">Todos los grupos</option>
+                                    {% for grp in groups %}
+                                        <option value="{{ grp.id }}">{{ grp.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small m-0 mb-1">Grados:</label>
+                                <select name="grade" id="filter_grade" class="input-field select2">
+                                    <option value="">Todos los grados</option>
+                                    {% for grd in grades %}
+                                        <option value="{{ grd.id }}">{{ grd.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small m-0 mb-1">Categorías:</label>
+                                <select name="category" id="filter_category" class="input-field select2">
+                                    <option value="">Todas las categorías</option>
+                                    {% for cat in categories %}
+                                        <option value="{{ cat.id }}">{{ cat.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Barra de Acciones: Excel/PDF a la izquierda y BUSCAR/LIMPIAR centrados -->
+                <div class="search-toolbar">
+                    <div class="table-controls person-filter-controls rubric-export-controls"></div>
+
+                    <div class="search-filter-actions">
+                        <button type="submit" class="btn-blue-rectangle">
+                            <i class="fas fa-search me-1"></i> BUSCAR
+                        </button>
+                        <button type="button" class="btn-blue-rectangle-outline" onclick="clearBudgetFilters()">
+                            <i class="fas fa-eraser me-1"></i> LIMPIAR
+                        </button>
+                    </div>
+                    <div></div>
+                </div>
+            </form>
+
+            <!-- Contenedor donde se inyecta la tabla parcial -->
             <div id="table-content-wrapper">
                 {% include 'budget/partials/partial_budget_table.html' %}
             </div>
+
         </div>
     </div>
-{% endblock %}
 
-<!-- Bloque para Inyección de Modales -->
-{% block modals %}
-    <!-- Contenedor para inyectar el HTML del modal al editar -->
-    <div id="modal-inject-container"></div>
-
-    <!-- Modal de Creación -->
-    <div id="budget-modal-app" class="modal-overlay hidden">
-        {% include 'budget/modals/modal_budget_form.html' with is_editing=False %}
-    </div>
+    <!-- Contenedor Universal para Modales de main.js -->
+    <div id="modal-root"></div>
 {% endblock %}
 
 {% block extra_js %}

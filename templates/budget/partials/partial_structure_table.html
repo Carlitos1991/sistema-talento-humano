@@ -1,73 +1,68 @@
 {% load static %}
 <div class="table-container">
-    <table>
-        <thead>
-        <tr>
-            <th><i class="fa-solid fa-hashtag"></i> Código</th>
-            <th><i class="fa-solid fa-briefcase"></i> Nombre</th>
-            <th><i class="fa-regular fa-circle-check"></i> Estado</th>
-            <th><i class="fa-solid fa-gears"></i> Acciones</th>
-        </tr>
-        </thead>
-        <tbody>
-        {% for item in items %}
+    <div class="table-scroll-top">
+        <table class="managed-table exportable-table"
+               data-title="Reporte Estructura Presupuestaria"
+               data-filename="Estructura_Presupuestaria"
+               data-page-size="10">
+            <thead>
             <tr>
-                <td><span class="badge-neutral"
-                          style="background:#e2e8f0; color:#1e293b; padding:2px 8px; border-radius:4px; font-weight:bold;">{{ item.code }}</span>
-                </td>
-                <td>{{ item.name }}</td>
-                <td>
-                    <span class="status-badge {% if item.is_active %}active{% else %}inactive{% endif %}">
-                        {{ item.is_active|yesno:"Activo,Inactivo" }}
-                    </span>
-                </td>
-                <td>
-                    <div class="actions-wrapper">
-                        <!-- NAVEGACIÓN DINÁMICA: Usa nav_url_name de la vista -->
-                        {% if nav_url_name %}
-                            <a href="{% url nav_url_name item.id %}" class="btn-blue-circle"
-                               title="Ver Siguiente Nivel">
-                                <i class="fas {% if model_type == 'program' %}fa-sitemap{% elif model_type == 'subprogram' %}fa-folder-tree{% else %}fa-tasks{% endif %}"></i>
-                            </a>
+                <th class="width-20" data-field="code"><i class="fa-solid fa-hashtag me-1"></i> Código</th>
+                <th class="width-50" data-field="name"><i class="fa-solid fa-briefcase me-1"></i> Nombre</th>
+                <th class="width-15 text-center no-sort"><i class="fa-regular fa-circle-check me-1"></i> Estado</th>
+                <th class="width-15 text-center no-sort actions"><i class="fa-solid fa-gears me-1"></i> Acciones</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for item in items %}
+                <tr>
+                    <td><span class="badge badge-gray font-monospace">{{ item.code }}</span></td>
+                    <td><strong>{{ item.name }}</strong></td>
+                    <td class="text-center">
+                        {% if item.is_active %}
+                            <span class="badge badge-green">Activo</span>
+                        {% else %}
+                            <span class="badge badge-red">Inactivo</span>
                         {% endif %}
+                    </td>
+                    <td class="actions text-center">
+                        <div class="actions-wrapper">
+                            <!-- Navegación al siguiente nivel jerárquico -->
+                            {% if nav_url_name %}
+                                <a href="{% url nav_url_name item.id %}" class="btn-blue-circle"
+                                   title="Ver Siguiente Nivel">
+                                    <i class="fas {% if model_type == 'program' %}fa-sitemap{% elif model_type == 'subprogram' %}fa-folder-tree{% else %}fa-tasks{% endif %}"></i>
+                                </a>
+                            {% endif %}
 
-                        <button class="btn-yellow-circle"
-                                onclick="openEditStructure('{{ model_type }}', {{ item.id }})" title="Editar">
-                            <i class="fas fa-pencil"></i>
-                        </button>
+                            <!-- Editar Nivel -->
+                            <button type="button" class="btn-yellow-circle"
+                                    onclick="openAjaxModal('{% url 'budget:structure_edit' model_type item.id %}')"
+                                    title="Editar">
+                                <i class="fas fa-pencil"></i>
+                            </button>
 
-                        <button id="btn-toggle-{{ item.id }}"
-                                type="button"
-                                class="{% if item.is_active %}btn-red-circle{% else %}btn-green-circle{% endif %}"
-                                onclick="toggleStructureActive('{{ model_type }}', {{ item.id }}, {{ item.is_active|yesno:'true,false' }})"
-                                title="{% if item.is_active %}Desactivar{% else %}Activar{% endif %}">
-                            <i class="fas {% if item.is_active %}fa-power-off{% else %}fa-toggle-on{% endif %}"></i>
-                        </button>
-                    </div>
-                </td>
-            </tr>
-        {% empty %}
-            <tr>
-                <td colspan="4">
-                    <div class="no-results-content">
-                        <i class="fas fa-search no-results-icon"></i>
-                        <p class="no-results-text">No se encontraron registros.</p>
-                    </div>
-                </td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
-
-    <!-- Metadatos Paginación -->
-    {% if page_obj %}
-    <div id="pagination-metadata" class="hidden"
-         data-total="{{ page_obj.paginator.count }}"
-         data-page="{{ page_obj.number }}"
-         data-start="{{ page_obj.start_index }}"
-         data-end="{{ page_obj.end_index }}"
-         data-has-next="{{ page_obj.has_next|yesno:'true,false' }}"
-         data-has-prev="{{ page_obj.has_previous|yesno:'true,false' }}">
+                            <!-- Toggle de Estado con SweetAlert2 de main.js -->
+                            <button type="button"
+                                    class="{% if item.is_active %}btn-green-circle{% else %}btn-red-circle{% endif %}"
+                                    onclick="toggleStatusAjax('{% url 'budget:structure_toggle' model_type item.id %}', '{{ item.name|escapejs }}', {{ item.is_active|yesno:'true,false' }})"
+                                    title="{% if item.is_active %}Desactivar{% else %}Activar{% endif %}">
+                                <i class="fas {% if item.is_active %}fa-power-off{% else %}fa-toggle-on{% endif %}"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="4">
+                        <div class="empty-state-container">
+                            <i class="fa-solid fa-inbox empty-state-icon"></i>
+                            <p class="empty-state-text">No se encontraron registros en este nivel.</p>
+                        </div>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
     </div>
-    {% endif %}
 </div>

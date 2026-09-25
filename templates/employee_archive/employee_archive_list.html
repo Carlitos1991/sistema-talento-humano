@@ -1,641 +1,227 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Archivo Digital de Empleados{% endblock %}
-
-{% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/employee_archive.css' %}">
-{% endblock %}
+{% block title %}Archivo Digital de Empleados | SIGETH{% endblock %}
 
 {% block content %}
-    <div class="header-card archive-header-card archive-employee-list-width">
+    <!-- 1. Encabezado Oficial -->
+    <div class="header-card">
         <div>
             <h1>Archivo Digital de Empleados</h1>
-            <p>Seleccione un empleado para administrar su archivo digital.</p>
+            <p>Seleccione un empleado para administrar su archivo digital o gestionar préstamos.</p>
         </div>
     </div>
 
-    <div class="content-table archive-content-table archive-employee-list-width">
-        <div class="table-controls archive-controls archive-controls-row" data-manual-export="true">
-
-            <div class="archive-export-actions">
-                <button type="button" class="btn-export-excel"
-                        onclick="exportTableToExcel(document.querySelector('.archive-employee-list-table'))">
-                    <i class="fas fa-file-excel"></i> Excel
-                </button>
-                <button type="button" class="btn-export-pdf"
-                        onclick="exportTableToPDF(document.querySelector('.archive-employee-list-table'))">
-                    <i class="fas fa-file-pdf"></i> PDF
-                </button>
-            </div>
-
-            <div class="archive-toggle-notify">
-                <input class="toggle-status-red-input" type="checkbox" id="toggleLoanedExpedients"
-                       {% if request.GET.show_loaned == 'true' %}checked{% endif %}
-                       onchange="toggleLoanedExpedients(this.checked)">
-
-                <label class="toggle-status-red-wrapper" for="toggleLoanedExpedients">
-                    <div class="toggle-status-red-circle"></div>
-                    <span class="toggle-status-red-text">Mostrar Expedientes Prestados</span>
-                </label>
-
-                {% if total_loaned_count > 0 %}
-                    <span class="archive-loaned-badge archive-loaned-badge--attached">{{ total_loaned_count }}</span>
-                {% endif %}
-            </div>
-
-            <form method="get" class="search-box archive-search-box archive-search-right"
-                  id="archiveEmployeeSearchForm">
-
-                <input type="text" name="q" class="table-search-input"
-                       placeholder="Busca por nombre, apellido, cédula o expediente"
-                       value="{{ request.GET.q }}">
-                <input type="hidden" name="sort_field" value="{{ request.GET.sort_field|default:'employee' }}">
-                <input type="hidden" name="sort_dir" value="{{ request.GET.sort_dir|default:'asc' }}">
-                <input type="hidden" name="show_loaned" value="{{ request.GET.show_loaned|default:'false' }}"
-                       id="archiveShowLoanedInput">
-            </form>
-        </div>
-
-        <div class="table-container archive-employee-list-table-container">
-            <table class="table exportable-table table-hover archive-employee-list-table"
-                   data-title="Archivo Digital por Empleado">
-                <thead>
-                <tr>
-                    <th class="sortable-header archive-col-employee" style="cursor: pointer;"
-                        onclick="archiveSortBy('employee')">
-                        Empleado
-                        <span class="sort-arrow">
-                            {% if request.GET.sort_field|default:'employee' == 'employee' and request.GET.sort_dir|default:'asc' == 'asc' %}
-                                ↑{% elif request.GET.sort_field|default:'employee' == 'employee' and request.GET.sort_dir == 'desc' %}
-                                ↓{% else %}⇅{% endif %}
-                        </span>
-                    </th>
-                    <th class="sortable-header archive-col-document" style="cursor: pointer;"
-                        onclick="archiveSortBy('document')">
-                        Cédula
-                        <span class="sort-arrow">
-                            {% if request.GET.sort_field == 'document' and request.GET.sort_dir|default:'asc' == 'asc' %}
-                                ↑{% elif request.GET.sort_field == 'document' and request.GET.sort_dir == 'desc' %}
-                                ↓{% else %}⇅{% endif %}
-                        </span>
-                    </th>
-                    <th class="text-center sortable-header archive-col-expediente" style="cursor: pointer;"
-                        onclick="archiveSortBy('expediente')">
-                        Nro. Expediente
-                        <span class="sort-arrow">
-                            {% if request.GET.sort_field == 'expediente' and request.GET.sort_dir|default:'asc' == 'asc' %}
-                                ↑{% elif request.GET.sort_field == 'expediente' and request.GET.sort_dir == 'desc' %}
-                                ↓{% else %}⇅{% endif %}
-                        </span>
-                    </th>
-                    <th class="text-center archive-col-holder">Expediente Físico</th>
-                    <th class="text-center archive-actions-col">Acciones</th>
-                </tr>
-                </thead>
-                <tbody>
-                {% for employee in employees %}
-                    <tr class="{% if employee.is_active %}archive-employee-row--active{% else %}archive-employee-row--inactive{% endif %}"
-                        data-search-text="{{ employee.person.name_and_last_name|default:''|lower }} {{ employee.person.document_number|default:''|lower }} {{ employee.institutional_data.file_number|default:''|lower }} {{ employee.physical_holder_full_name|default:''|lower }}">
-                        <td class="archive-col-employee">{{ employee.person.name_and_last_name }}</td>
-                        <td class="archive-col-document">{{ employee.person.document_number|default:'-' }}</td>
-                        <td class="text-center archive-col-expediente">
-                            <span class="payroll-code archive-expediente-badge">
-                                {{ employee.institutional_data.file_number|default:employee.person.document_number|default:employee.id }}
+    <!-- 2. Tabla y Controles Estandarizados -->
+    <div id="table-app">
+        <div class="content-table">
+            <!-- Toolbar Universal de style.css -->
+            <div class="table-controls toolbar-row">
+                <!-- Centro: Filtro Switch de Expedientes Prestados -->
+                <div class="toolbar-center">
+                    <div class="d-flex align-items-center position-relative">
+                        <input type="checkbox" id="toggleLoanedExpedients"
+                               class="switch-input switch-red"
+                               {% if request.GET.show_loaned == 'true' %}checked{% endif %}
+                               onchange="toggleLoanedExpedients(this.checked)">
+                        <label for="toggleLoanedExpedients" class="switch-wrapper">
+                            <span class="switch-circle"></span>
+                            <span class="switch-text">Mostrar Expedientes Prestados</span>
+                        </label>
+                        {% if total_loaned_count > 0 %}
+                            <span class="badge badge-notification" title="Expedientes prestados actualmente">
+                                {{ total_loaned_count }}
                             </span>
-                        </td>
-                        <td class="text-center archive-col-holder">
-                            <span class="archive-physical-holder-badge {% if employee.physical_holder_full_name %}archive-physical-holder-badge--loaned{% else %}archive-physical-holder-badge--archive{% endif %}">
-                                {{ employee.physical_holder_full_name|default:'Archivo' }}
-                            </span>
-                        </td>
-                        <td class="text-center actions archive-actions-col">
-                            <div class="actions-wrapper">
-                                {% if perms.employee_archive.view_employeearchivedocument and employee.request_status_label == 'Sin solicitar' and not perms.employee_archive.add_employeearchivedocument and not perms.employee_archive.change_employeearchivedocument %}
-                                    <button type="button"
-                                            class="btn-icon btn-create-action"
-                                            title="Solicitar archivo"
-                                            data-employee-id="{{ employee.id }}"
-                                            data-employee-name="{{ employee.person.name_and_last_name }}"
-                                            data-request-url="{% url 'employee_archive:loan_request' employee.id %}"
-                                            onclick="openArchiveLoanRequestModal(this)">
-                                        <i class="fa-solid fa-hand-holding-medical"></i>
-                                    </button>
-                                {% endif %}
-                                {% if perms.employee_archive.can_create_archive_manual_loan and employee.request_status_label == 'Sin solicitar' or perms.employee_archive.change_employeearchivedocument and employee.request_status_label == 'Sin solicitar' %}
-                                    <button type="button"
-                                            class="btn-green-circle"
-                                            title="Prestar expediente"
-                                            data-employee-name="{{ employee.person.name_and_last_name }}"
-                                            data-manual-loan-url="{% url 'employee_archive:loan_manual_create' employee.id %}"
-                                            onclick="openArchiveManualLoanModal(this)">
-                                        <i class="fa-solid fa-person-chalkboard"></i>
-                                    </button>
-                                {% endif %}
-                                {% if perms.employee_archive.can_manage_archive_loans and employee.deliver_loan_id %}
-                                    <button type="button"
-                                            class="btn-icon btn-restore-action"
-                                            title="Entregar expediente"
-                                            data-employee-name="{{ employee.person.name_and_last_name }}"
-                                            data-deliver-url="{% url 'employee_archive:loan_deliver' employee.deliver_loan_id %}"
-                                            onclick="openArchiveLoanDeliverModal(this)">
-                                        <i class="fa-solid fa-box-open"></i>
-                                    </button>
-                                {% endif %}
-                                {% if employee.validate_loan_id and employee.physical_holder_full_name or perms.employee_archive.change_employeearchivedocument and employee.physical_holder_full_name %}
-                                    <button type="button"
-                                            class="btn-red-circle"
-                                            title="Validar devolución"
-                                            data-employee-name="{{ employee.person.name_and_last_name }}"
-                                            data-validate-url="{% url 'employee_archive:loan_return_validate' employee.validate_loan_id %}"
-                                            onclick="openArchiveLoanValidateModal(this)">
-                                        <i class="fa-solid fa-clipboard-check"></i>
-                                    </button>
-                                {% endif %}
-                                {% if perms.employee_archive.add_employeearchivedocument or perms.employee_archive.change_employeearchivedocument %}
-                                    <a class="btn-gray-circle"
-                                       href="{% url 'employee_archive:employee_detail' employee.id %}"
-                                       title="Administrar archivo">
-                                        <i class="fas fa-folder-open"></i>
-                                    </a>
-                                {% endif %}
-                            </div>
-                        </td>
-                    </tr>
-                {% empty %}
-                    <tr>
-                        <td colspan="5" class="text-center py-5 text-muted">
-                            <i class="fas fa-inbox fa-3x mb-3"></i><br>
-                            No se encontraron empleados.
-                        </td>
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
-        </div>
-
-        <div class="pagination-container archive-pagination-nav">
-            <span class="pagination-info">
-                Mostrando {{ page_obj.start_index|default:"0" }}-{{ page_obj.end_index|default:"0" }} de {{ paginator.count|default:"0" }}
-            </span>
-            <div class="pagination-controls">
-                <button class="page-btn" title="Primera"
-                        {% if not page_obj.has_previous %}disabled{% endif %}
-                        onclick="archiveGoToPage(1)">
-                    <i class="fas fa-angle-double-left"></i>
-                </button>
-                <button class="page-btn" title="Anterior"
-                        {% if not page_obj.has_previous %}disabled{% endif %}
-                        onclick="archiveGoToPage(
-                                {% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% else %}1{% endif %})">
-                    <i class="fas fa-angle-left"></i>
-                </button>
-                <div class="page-input-wrapper">
-                    <input type="number" class="page-input"
-                           value="{{ page_obj.number|default:1 }}"
-                           min="1" max="{{ paginator.num_pages|default:1 }}"
-                           onchange="archiveGoToPage(parseInt(this.value) || 1)"
-                           onkeypress="if(event.key==='Enter') archiveGoToPage(parseInt(this.value) || 1)">
-                    <span class="total-pages-badge">de {{ paginator.num_pages|default:1 }}</span>
+                        {% endif %}
+                    </div>
                 </div>
-                <button class="page-btn" title="Siguiente"
-                        {% if not page_obj.has_next %}disabled{% endif %}
-                        onclick="archiveGoToPage(
-                                {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages|default:1 }}{% endif %})">
-                    <i class="fas fa-angle-right"></i>
-                </button>
-                <button class="page-btn" title="Última"
-                        {% if not page_obj.has_next %}disabled{% endif %}
-                        onclick="archiveGoToPage({{ paginator.num_pages|default:1 }})">
-                    <i class="fas fa-angle-double-right"></i>
-                </button>
+
+                <!-- Derecha: Buscador Global -->
+                <div class="toolbar-right">
+                    <input type="text" id="table-search" name="q"
+                           class="table-search-input table-search-input--large"
+                           placeholder="Buscar por nombre, cédula o expediente"
+                           value="{{ request.GET.q|default:'' }}">
+                </div>
+            </div>
+
+            <!-- Contenedor de la Tabla -->
+            <div id="table-content-wrapper">
+                <div class="table-container">
+                    <div class="table-scroll-top">
+                        <table class="managed-table exportable-table"
+                               data-title="Archivo Digital por Empleado"
+                               data-filename="Archivo_Digital_Empleados"
+                               data-page-size="10">
+                            <thead>
+                            <tr>
+                                <th class="width-30" data-field="employee">Empleado</th>
+                                <th class="width-15" data-field="document">Cédula</th>
+                                <th class="width-20 text-center" data-field="expediente">Nro. Expediente</th>
+                                <th class="width-20 text-center no-sort">Expediente Físico</th>
+                                <th class="width-15 text-center no-sort actions"><i class="fas fa-cogs"></i> Acciones
+                                </th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for employee in employees %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ employee.person.name_and_last_name }}</strong>
+                                    </td>
+                                    <td>{{ employee.person.document_number|default:'-' }}</td>
+                                    <td class="text-center">
+                                        <span class="badge badge-gray font-monospace">
+                                            {{ employee.institutional_data.file_number|default:employee.person.document_number|default:employee.id }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if employee.physical_holder_full_name %}
+                                            <span class="badge badge-amber"
+                                                  title="Prestado a: {{ employee.physical_holder_full_name }}">
+                                                <i class="fa-solid fa-hand-holding-hand me-1"></i> {{ employee.physical_holder_full_name }}
+                                            </span>
+                                        {% else %}
+                                            <span class="badge badge-green">
+                                                <i class="fa-solid fa-box-archive me-1"></i> Archivo
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="actions text-center">
+                                        <div class="actions-wrapper">
+                                            <!-- Solicitar archivo -->
+                                            {% if perms.employee_archive.view_employeearchivedocument and employee.request_status_label == 'Sin solicitar' and not perms.employee_archive.add_employeearchivedocument and not perms.employee_archive.change_employeearchivedocument %}
+                                                <button type="button" class="btn-blue-circle"
+                                                        title="Solicitar archivo"
+                                                        onclick="openAjaxModal('{% url 'employee_archive:loan_request' employee.id %}')">
+                                                    <i class="fa-solid fa-hand-holding-medical"></i>
+                                                </button>
+                                            {% endif %}
+
+                                            <!-- Prestar expediente -->
+                                            {% if perms.employee_archive.can_create_archive_manual_loan and employee.request_status_label == 'Sin solicitar' or perms.employee_archive.change_employeearchivedocument and employee.request_status_label == 'Sin solicitar' %}
+                                                <button type="button" class="btn-green-circle"
+                                                        title="Prestar expediente"
+                                                        onclick="openAjaxModal('{% url 'employee_archive:loan_manual_create' employee.id %}')">
+                                                    <i class="fa-solid fa-person-chalkboard"></i>
+                                                </button>
+                                            {% endif %}
+
+                                            <!-- Entregar expediente -->
+                                            {% if perms.employee_archive.can_manage_archive_loans and employee.deliver_loan_id %}
+                                                <button type="button" class="btn-yellow-circle"
+                                                        title="Entregar expediente"
+                                                        onclick="openAjaxModal('{% url 'employee_archive:loan_deliver' employee.deliver_loan_id %}')">
+                                                    <i class="fa-solid fa-box-open"></i>
+                                                </button>
+                                            {% endif %}
+
+                                            <!-- Validar devolución -->
+                                            {% if employee.validate_loan_id and employee.physical_holder_full_name or perms.employee_archive.change_employeearchivedocument and employee.physical_holder_full_name %}
+                                                <button type="button" class="btn-red-circle"
+                                                        title="Validar devolución"
+                                                        onclick="openAjaxModal('{% url 'employee_archive:loan_return_validate' employee.validate_loan_id %}')">
+                                                    <i class="fa-solid fa-clipboard-check"></i>
+                                                </button>
+                                            {% endif %}
+
+                                            <!-- Administrar archivo general -->
+                                            {% if perms.employee_archive.add_employeearchivedocument or perms.employee_archive.change_employeearchivedocument %}
+                                                <a class="btn-gray-circle"
+                                                   href="{% url 'employee_archive:employee_detail' employee.id %}"
+                                                   title="Administrar archivo digital">
+                                                    <i class="fas fa-folder-open"></i>
+                                                </a>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="5">
+                                        <div class="empty-state-container">
+                                            <i class="fa-solid fa-inbox empty-state-icon"></i>
+                                            <p class="empty-state-text">No se encontraron empleados registrados en el
+                                                archivo.</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Paginación Global -->
+            <div class="pagination-container">
+                <span class="pagination-info">
+                    Mostrando {{ page_obj.start_index|default:"0" }}-{{ page_obj.end_index|default:"0" }} de {{ paginator.count|default:"0" }}
+                </span>
+                <div class="pagination-controls" {% if paginator.num_pages <= 1 %}style="visibility:hidden;"{% endif %}>
+                    <button type="button" class="page-btn page-first" title="Primera"
+                            {% if not page_obj.has_previous %}disabled{% endif %}
+                            onclick="goToArchivePage(1)">
+                        <i class="fas fa-angle-double-left"></i>
+                    </button>
+                    <button type="button" class="page-btn page-prev" title="Anterior"
+                            {% if not page_obj.has_previous %}disabled{% endif %}
+                            onclick="goToArchivePage(
+                                    {% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% else %}1{% endif %})">
+                        <i class="fas fa-angle-left"></i>
+                    </button>
+                    <div class="page-input-wrapper">
+                        <input type="number" class="page-input" value="{{ page_obj.number|default:1 }}" min="1"
+                               max="{{ paginator.num_pages|default:1 }}"
+                               onchange="goToArchivePage(parseInt(this.value)||1)"
+                               onkeypress="if(event.key==='Enter') goToArchivePage(parseInt(this.value)||1)">
+                        <span class="total-pages-badge">de {{ paginator.num_pages|default:1 }}</span>
+                    </div>
+                    <button type="button" class="page-btn page-next" title="Siguiente"
+                            {% if not page_obj.has_next %}disabled{% endif %}
+                            onclick="goToArchivePage(
+                                    {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages|default:1 }}{% endif %})">
+                        <i class="fas fa-angle-right"></i>
+                    </button>
+                    <button type="button" class="page-btn page-last" title="Última"
+                            {% if not page_obj.has_next %}disabled{% endif %}
+                            onclick="goToArchivePage({{ paginator.num_pages|default:1 }})">
+                        <i class="fas fa-angle-double-right"></i>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
-    <div id="archiveLoanRequestModal" class="modal-overlay hidden">
-        <div class="modal-container-medium shadow-card"
-             style="max-width: 560px; width: min(560px, calc(100vw - 2rem));">
-            <form id="archiveLoanRequestForm" method="post" action="" class="archive-loan-request-form">
-                {% csrf_token %}
-                <div class="modal-header-medium modal-header-gradient">
-                    <h3 class="modal-title text-white">
-                        <i class="fas fa-file-circle-plus me-2"></i>
-                        Solicitar archivo
-                    </h3>
-                    <button type="button" class="btn-close-modal text-white-opacity"
-                            onclick="closeArchiveLoanRequestModal()">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="archive-loan-request-body">
-                    <p class="archive-loan-request-employee"><strong>Empleado:</strong> <span
-                            id="archiveLoanEmployeeName"></span></p>
-                    <label class="archive-form-label archive-loan-request-label" for="archiveLoanRequestObservation">Observación</label>
-                    <textarea id="archiveLoanRequestObservation" name="request_observation" class="form-control"
-                              rows="4"
-                              placeholder="Puedes dejar una observación o enviar la solicitud sin comentario"></textarea>
-                </div>
-                <div class="modal-footer-medium d-flex justify-content-end gap-2 archive-loan-request-footer">
-                    <button type="button" class="btn btn-outline-secondary" onclick="closeArchiveLoanRequestModal()">
-                        Cancelar
-                    </button>
-                    <button type="submit" class="btn btn-create">Solicitar</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div id="archiveLoanDeliverModal" class="modal-overlay hidden">
-        <div class="modal-container-medium shadow-card"
-             style="max-width: 560px; width: min(560px, calc(100vw - 2rem));">
-            <form id="archiveLoanDeliverForm" method="post" action="" class="archive-loan-request-form">
-                {% csrf_token %}
-                <div class="modal-header-medium modal-header-gradient">
-                    <h3 class="modal-title text-white">
-                        <i class="fas fa-box-open me-2"></i>
-                        Entregar expediente
-                    </h3>
-                    <button type="button" class="btn-close-modal text-white-opacity"
-                            onclick="closeArchiveLoanDeliverModal()">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="archive-loan-request-body">
-                    <p class="archive-loan-request-employee"><strong>Empleado:</strong> <span
-                            id="archiveLoanDeliverEmployeeName"></span></p>
-                    <label class="archive-form-label archive-loan-request-label" for="archiveLoanDeliveryObservation">Observación
-                        de entrega</label>
-                    <textarea id="archiveLoanDeliveryObservation" name="delivery_observation" class="form-control"
-                              rows="4" placeholder="Puedes registrar una observación de entrega"></textarea>
-                </div>
-                <div class="modal-footer-medium d-flex justify-content-end gap-2 archive-loan-request-footer">
-                    <button type="button" class="btn btn-outline-secondary" onclick="closeArchiveLoanDeliverModal()">
-                        Cancelar
-                    </button>
-                    <button type="submit" class="btn btn-create">Entregar</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div id="archiveManualLoanModal" class="modal-overlay hidden">
-        <div class="modal-container-medium shadow-card"
-             style="max-width: 560px; width: min(560px, calc(100vw - 2rem));">
-            <form id="archiveManualLoanForm" method="post" action="" class="archive-loan-request-form">
-                {% csrf_token %}
-                <input type="hidden" name="next" value="{% url 'employee_archive:employee_list' %}">
-                <div class="modal-header-medium modal-header-gradient">
-                    <h3 class="modal-title text-white">
-                        <i class="fas fa-handshake me-2"></i>
-                        Prestar expediente
-                    </h3>
-                    <button type="button" class="btn-close-modal text-white-opacity"
-                            onclick="closeArchiveManualLoanModal()">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="archive-loan-request-body">
-                    <p class="archive-loan-request-employee"><strong>Empleado:</strong> <span
-                            id="archiveManualLoanEmployeeName"></span></p>
-                    <label class="archive-form-label archive-loan-request-label" for="archiveManualLoanBorrower">Usuario
-                        a quien presta</label>
-                    <select id="archiveManualLoanBorrower"
-                            name="borrower_user"
-                            class="form-control"
-                            data-ajax-url="{% url 'employee_archive:api_user_search' %}"
-                            style="width: 100%"
-                            required>
-                    </select>
-                    <label class="archive-form-label archive-loan-request-label" for="id_delivery_observation">Observación</label>
-                    {{ manual_loan_form.delivery_observation }}
-                </div>
-                <div class="modal-footer-medium d-flex justify-content-end gap-2 archive-loan-request-footer">
-                    <button type="button" class="btn btn-outline-secondary" onclick="closeArchiveManualLoanModal()">
-                        Cancelar
-                    </button>
-                    <button type="submit" class="btn btn-create">Prestar</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div id="archiveLoanValidateModal" class="modal-overlay hidden">
-        <div class="modal-container-medium shadow-card"
-             style="max-width: 560px; width: min(560px, calc(100vw - 2rem));">
-            <form id="archiveLoanValidateForm" method="post" action="" class="archive-loan-request-form">
-                {% csrf_token %}
-                <input type="hidden" name="next" value="{% url 'employee_archive:employee_list' %}">
-                <div class="modal-header-medium modal-header-gradient">
-                    <h3 class="modal-title text-white">
-                        <i class="fas fa-clipboard-check me-2"></i>
-                        Validar devolución
-                    </h3>
-                    <button type="button" class="btn-close-modal text-white-opacity"
-                            onclick="closeArchiveLoanValidateModal()">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <div class="archive-loan-request-body">
-                    <p class="archive-loan-request-employee"><strong>Empleado:</strong> <span
-                            id="archiveLoanValidateEmployeeName"></span></p>
-                    <label class="archive-form-label archive-loan-request-label" for="archiveLoanValidationObservation">Observación
-                        de validación</label>
-                    <textarea id="archiveLoanValidationObservation" name="validation_observation" class="form-control"
-                              rows="4" placeholder="Puedes registrar una observación de validación"></textarea>
-                </div>
-                <div class="modal-footer-medium d-flex justify-content-end gap-2 archive-loan-request-footer">
-                    <button type="button" class="btn btn-outline-secondary" onclick="closeArchiveLoanValidateModal()">
-                        Cancelar
-                    </button>
-                    <button type="submit" class="btn btn-create">Validar devolución</button>
-                </div>
-            </form>
-        </div>
-    </div>
+    <!-- Contenedor dinámico universal para modales AJAX de main.js -->
+    <div id="modal-root"></div>
 {% endblock %}
 
 {% block extra_js %}
     <script>
-        function openArchiveLoanRequestModal(buttonElement) {
-            const modal = document.getElementById('archiveLoanRequestModal');
-            const form = document.getElementById('archiveLoanRequestForm');
-            const nameLabel = document.getElementById('archiveLoanEmployeeName');
-            const observation = document.getElementById('archiveLoanRequestObservation');
-
-            if (!modal || !form || !nameLabel || !observation) {
-                return;
-            }
-
-            form.action = buttonElement.dataset.requestUrl;
-            nameLabel.textContent = buttonElement.dataset.employeeName || '';
-            observation.value = '';
-            modal.classList.remove('hidden');
-            observation.focus();
-        }
-
-        function closeArchiveLoanRequestModal() {
-            const modal = document.getElementById('archiveLoanRequestModal');
-            if (modal) {
-                modal.classList.add('hidden');
-            }
-        }
-
-        function openArchiveLoanDeliverModal(buttonElement) {
-            const modal = document.getElementById('archiveLoanDeliverModal');
-            const form = document.getElementById('archiveLoanDeliverForm');
-            const nameLabel = document.getElementById('archiveLoanDeliverEmployeeName');
-            const observation = document.getElementById('archiveLoanDeliveryObservation');
-
-            if (!modal || !form || !nameLabel || !observation) {
-                return;
-            }
-
-            form.action = buttonElement.dataset.deliverUrl;
-            nameLabel.textContent = buttonElement.dataset.employeeName || '';
-            observation.value = '';
-            modal.classList.remove('hidden');
-            observation.focus();
-        }
-
-        function closeArchiveLoanDeliverModal() {
-            const modal = document.getElementById('archiveLoanDeliverModal');
-            if (modal) {
-                modal.classList.add('hidden');
-            }
-        }
-
-        function openArchiveManualLoanModal(buttonElement) {
-            const modal = document.getElementById('archiveManualLoanModal');
-            const form = document.getElementById('archiveManualLoanForm');
-            const nameLabel = document.getElementById('archiveManualLoanEmployeeName');
-            const borrowerSelect = document.getElementById('archiveManualLoanBorrower');
-            const observation = form ? form.querySelector('textarea[name="delivery_observation"]') : null;
-
-            if (!modal || !form || !nameLabel || !borrowerSelect || !observation) {
-                return;
-            }
-
-            form.action = buttonElement.dataset.manualLoanUrl;
-            nameLabel.textContent = buttonElement.dataset.employeeName || '';
-            initArchiveManualLoanSelect2();
-            if (window.$ && $.fn.select2 && $(borrowerSelect).data('select2')) {
-                $(borrowerSelect).val(null).trigger('change');
-            } else {
-                borrowerSelect.innerHTML = '';
-            }
-            observation.value = '';
-            modal.classList.remove('hidden');
-            borrowerSelect.focus();
-        }
-
-        function closeArchiveManualLoanModal() {
-            const modal = document.getElementById('archiveManualLoanModal');
-            if (modal) {
-                modal.classList.add('hidden');
-            }
-        }
-
-        function initArchiveManualLoanSelect2() {
-            const select = document.getElementById('archiveManualLoanBorrower');
-            const modal = document.getElementById('archiveManualLoanModal');
-
-            if (!select || !modal || !window.$ || !$.fn.select2) {
-                return;
-            }
-
-            const ajaxUrl = select.dataset.ajaxUrl;
-
-            if ($(select).hasClass('select2-hidden-accessible')) {
-                $(select).select2('destroy');
-            }
-
-            $(select).select2({
-                dropdownParent: $(modal),
-                width: '100%',
-                placeholder: 'Buscar usuario por nombre, usuario o correo',
-                allowClear: true,
-                minimumInputLength: 1,
-                ajax: {
-                    url: ajaxUrl,
-                    type: 'GET',
-                    dataType: 'json',
-                    delay: 300,
-                    data: function (params) {
-                        return {term: params.term};
-                    },
-                    processResults: function (data) {
-                        return {results: data.results || []};
-                    },
-                    error: function (xhr, status, error) {
-                        console.error('Select2 error:', status, error);
-                    },
-                    cache: true
-                }
-            });
-        }
-
-        function openArchiveLoanValidateModal(buttonElement) {
-            const modal = document.getElementById('archiveLoanValidateModal');
-            const form = document.getElementById('archiveLoanValidateForm');
-            const nameLabel = document.getElementById('archiveLoanValidateEmployeeName');
-            const observation = document.getElementById('archiveLoanValidationObservation');
-
-            if (!modal || !form || !nameLabel || !observation) {
-                return;
-            }
-
-            form.action = buttonElement.dataset.validateUrl;
-            nameLabel.textContent = buttonElement.dataset.employeeName || '';
-            observation.value = '';
-            modal.classList.remove('hidden');
-            observation.focus();
-        }
-
-        function closeArchiveLoanValidateModal() {
-            const modal = document.getElementById('archiveLoanValidateModal');
-            if (modal) {
-                modal.classList.add('hidden');
-            }
-        }
-
-        document.addEventListener('keydown', function (event) {
-            if (event.key === 'Escape') {
-                closeArchiveLoanRequestModal();
-                closeArchiveLoanDeliverModal();
-                closeArchiveManualLoanModal();
-                closeArchiveLoanValidateModal();
-            }
-        });
-
-        document.getElementById('archiveLoanRequestModal')?.addEventListener('click', function (event) {
-            if (event.target === this) {
-                closeArchiveLoanRequestModal();
-            }
-        });
-
-        document.getElementById('archiveLoanDeliverModal')?.addEventListener('click', function (event) {
-            if (event.target === this) {
-                closeArchiveLoanDeliverModal();
-            }
-        });
-
-        document.getElementById('archiveManualLoanModal')?.addEventListener('click', function (event) {
-            if (event.target === this) {
-                closeArchiveManualLoanModal();
-            }
-        });
-
-        const archiveSearchForm = document.getElementById('archiveEmployeeSearchForm');
-        const archiveSearchInput = archiveSearchForm ? archiveSearchForm.querySelector('input[name="q"]') : null;
-        const archiveRows = Array.from(document.querySelectorAll('.archive-employee-list-table tbody tr'));
-
-        function normalizeArchiveSearchText(value) {
-            return (value || '')
-                .toString()
-                .toLowerCase()
-                .normalize('NFD')
-                .replace(/[\u0300-\u036f]/g, '')
-                .trim();
-        }
-
-        function filterArchiveRows() {
-            if (!archiveSearchInput) {
-                return;
-            }
-
-            const terms = normalizeArchiveSearchText(archiveSearchInput.value)
-                .split(/\s+/)
-                .filter(Boolean);
-
-            archiveRows.forEach(function (row) {
-                const rowText = normalizeArchiveSearchText(row.dataset.searchText || row.textContent || '');
-                const matches = terms.length === 0 || terms.every(function (term) {
-                    return rowText.includes(term);
-                });
-                row.style.display = matches ? '' : 'none';
-            });
-        }
-
-        if (archiveSearchForm && archiveSearchInput) {
-            archiveSearchInput.addEventListener('input', function () {
-                filterArchiveRows();
-            });
-
-            archiveSearchInput.addEventListener('keydown', function (event) {
-                if (event.key === 'Enter') {
-                    archiveSearchForm.querySelector('input[name="page"]')?.remove();
-                }
-            });
-
-            filterArchiveRows();
-        }
-
-        function archiveGoToPage(page) {
-            const totalPages = {{ paginator.num_pages|default:1 }};
-            const safePage = Math.min(Math.max(page || 1, 1), totalPages);
-            const q = '{{ request.GET.q|default:""|escapejs }}';
-            const sortField = '{{ request.GET.sort_field|default:"employee"|escapejs }}';
-            const sortDir = '{{ request.GET.sort_dir|default:"asc"|escapejs }}';
-            const params = new URLSearchParams();
-            if (q) {
-                params.set('q', q);
-            }
-            if (sortField) {
-                params.set('sort_field', sortField);
-            }
-            if (sortDir) {
-                params.set('sort_dir', sortDir);
-            }
-            params.set('page', safePage);
-            window.location.search = params.toString();
-        }
-
-        function archiveSortBy(field) {
-            const currentField = '{{ request.GET.sort_field|default:"employee"|escapejs }}';
-            const currentDir = '{{ request.GET.sort_dir|default:"asc"|escapejs }}';
-            const q = '{{ request.GET.q|default:""|escapejs }}';
-            const showLoaned = '{{ request.GET.show_loaned|default:"false"|escapejs }}';
-
-            let nextDir = 'asc';
-            if (currentField === field) {
-                nextDir = currentDir === 'asc' ? 'desc' : 'asc';
-            }
-
-            const params = new URLSearchParams();
-            if (q) {
-                params.set('q', q);
-            }
-            params.set('sort_field', field);
-            params.set('sort_dir', nextDir);
-            params.set('page', '1');
-            if (showLoaned === 'true') {
-                params.set('show_loaned', 'true');
-            }
-            window.location.search = params.toString();
-        }
-
         function toggleLoanedExpedients(isChecked) {
-            const q = '{{ request.GET.q|default:""|escapejs }}';
-            const sortField = '{{ request.GET.sort_field|default:"employee"|escapejs }}';
-            const sortDir = '{{ request.GET.sort_dir|default:"asc"|escapejs }}';
+            if (typeof window.refreshCurrentTable === 'function') {
+                window.refreshCurrentTable({show_loaned: isChecked ? 'true' : 'false', page: 1});
+            } else {
+                const params = new URLSearchParams(window.location.search);
+                if (isChecked) {
+                    params.set('show_loaned', 'true');
+                } else {
+                    params.delete('show_loaned');
+                }
+                params.set('page', '1');
+                window.location.search = params.toString();
+            }
+        }
 
-            const params = new URLSearchParams();
-            if (q) {
-                params.set('q', q);
+        function goToArchivePage(page) {
+            if (typeof window.refreshCurrentTable === 'function') {
+                window.refreshCurrentTable({page: page});
+            } else {
+                const params = new URLSearchParams(window.location.search);
+                params.set('page', page);
+                window.location.search = params.toString();
             }
-            if (sortField) {
-                params.set('sort_field', sortField);
-            }
-            if (sortDir) {
-                params.set('sort_dir', sortDir);
-            }
-            if (isChecked) {
-                params.set('show_loaned', 'true');
-            }
-            params.set('page', '1');
-            window.location.search = params.toString();
         }
     </script>
-    <script src="{% static 'js/employee_archive/employee_archive.js' %}"></script>
 {% endblock %}

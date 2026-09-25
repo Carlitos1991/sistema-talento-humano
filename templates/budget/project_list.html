@@ -1,7 +1,6 @@
 {% extends 'budget/program_list.html' %}
-
 {% block back_button %}
-    <a href="{% url 'budget:subprogram_list' parent.program.id %}" class="btn btn-search">
-        <i class="fas fa-chevron-left"></i> Volver a subprogramas
+    <a href="{% url 'budget:subprogram_list' parent.program.id %}" class="btn-default-outline">
+        <i class="fas fa-arrow-left me-1"></i> Volver a Subprogramas
     </a>
 {% endblock %}

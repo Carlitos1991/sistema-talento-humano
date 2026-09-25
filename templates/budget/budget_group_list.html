@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% block title %}Agrupaciones Presupuestarias | SIGETH{% endblock %}
 
 {% block content %}
     <div class="header-card">
@@ -9,61 +10,74 @@
         </div>
     </div>
 
-    <div class="content-table mt-4">
-        <div class="table-controls table-controls-grid">
-            <div></div>
-
-            <div class="search-box table-controls-right">
-                <input type="text" class="table-search-input" placeholder="Buscar por código o nombre...">
-                <button type="submit" class="search-btn">
-                    <i class="fas fa-search"></i>
-                </button>
+    <div id="table-app">
+        <div class="content-table">
+            <div class="table-controls toolbar-row">
+                <div class="toolbar-left rubric-export-controls"></div>
+                <div class="toolbar-right">
+                    <div class="search-box">
+                        <input type="text" id="table-search" class="table-search-input table-search-input--large"
+                               placeholder="Buscar por código o nombre...">
+                    </div>
+                </div>
             </div>
-        </div>
 
-        <div class="table-container">
-            <table class="table managed-table exportable-table" data-page-size="15"
-                   data-title="Agrupaciones Presupuestarias">
-                <thead>
-                <tr>
-                    <th style="width: 15%">Código Corto</th>
-                    <th style="width: 25%">Código Base</th>
-                    <th style="width: 45%">Nombre de Agrupación</th>
-                    <th style="width: 10%" class="text-center">Cant. Partidas</th>
-                    <th class="actions no-sort text-center">Acciones</th>
-                </tr>
-                </thead>
-                <tbody>
-                {% for g in groups %}
-                    <tr>
-                        <td><span class="badge-code" style="font-size: 0.9rem;">{{ g.short_code }}</span></td>
-                        <td style="font-family: monospace; color: #475569;">{{ g.base_code }}</td>
-                        <td><strong>{{ g.name }}</strong></td>
-                        <td class="text-center">
-                            <span class="status-badge active">{{ g.total_lines }}</span>
-                        </td>
-                        <td class="actions text-center">
-                            <div class="actions-wrapper">
-                                <button type="button" class="btn-blue-circle" title="Ver Partidas"
-                                        onclick="openPayrollModal('{% url 'budget:budget_group_lines' g.pk %}')">
-                                    <i class="fas fa-list"></i>
-                                </button>
-                                <button type="button" class="btn-yellow-circle" title="Editar Nombre"
-                                        onclick="openPayrollModal('{% url 'budget:budget_group_update' g.pk %}')">
-                                    <i class="fas fa-pen"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
+            <div id="table-content-wrapper">
+                <div class="table-container">
+                    <div class="table-scroll-top">
+                        <table class="managed-table exportable-table"
+                               data-page-size="15"
+                               data-title="Agrupaciones Presupuestarias"
+                               data-filename="Agrupaciones_Presupuestarias">
+                            <thead>
+                            <tr>
+                                <th class="width-15" data-field="short_code">Código Corto</th>
+                                <th class="width-25" data-field="base_code">Código Base</th>
+                                <th class="width-40" data-field="name">Nombre de Agrupación</th>
+                                <th class="width-10 text-center" data-field="total_lines">Cant. Partidas</th>
+                                <th class="width-10 no-sort actions text-center"><i class="fas fa-cogs"></i> Acciones
+                                </th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for g in groups %}
+                                <tr>
+                                    <td><span class="badge badge-gray font-monospace">{{ g.short_code }}</span></td>
+                                    <td class="font-monospace text-muted">{{ g.base_code }}</td>
+                                    <td><strong>{{ g.name|default:"Agrupación Automática" }}</strong></td>
+                                    <td class="text-center">
+                                        <span class="badge badge-blue">{{ g.total_lines }}</span>
+                                    </td>
+                                    <td class="actions text-center">
+                                        <div class="actions-wrapper">
+                                            <button type="button" class="btn-blue-circle" title="Ver Partidas"
+                                                    onclick="openAjaxModal('{% url 'budget:budget_group_lines' g.pk %}')">
+                                                <i class="fas fa-list"></i>
+                                            </button>
+                                            <button type="button" class="btn-yellow-circle" title="Editar Nombre"
+                                                    onclick="openAjaxModal('{% url 'budget:budget_group_update' g.pk %}')">
+                                                <i class="fas fa-pen"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="5">
+                                        <div class="empty-state-container">
+                                            <i class="fa-solid fa-inbox empty-state-icon"></i>
+                                            <p class="empty-state-text">No se encontraron agrupaciones registradas.</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
     <div id="modal-root"></div>
-{% endblock %}
-
-{% block extra_js %}
-    <script src="{% static 'js/payroll/payroll.js' %}"></script>
 {% endblock %}
