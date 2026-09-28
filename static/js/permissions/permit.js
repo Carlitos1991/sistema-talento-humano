@@ -385,7 +385,7 @@
             cancelButtonText: 'Cancelar',
             customClass: {
                 confirmButton: 'btn-blue-rectangle px-4 py-2',
-                cancelButton: 'btn-default-outline px-4 py-2'
+                cancelButton: 'btn-dark-blue-rectangle-outline px-4 py-2'
             },
             preConfirm: () => {
                 const start = document.getElementById('swal-start').value;
@@ -513,7 +513,7 @@ window.toggleStatusAjax = function (url, name, isActive) {
         cancelButtonText: 'Cancelar',
         customClass: {
             confirmButton: 'btn-blue-rectangle px-3 py-2',
-            cancelButton: 'btn-default-outline px-3 py-2'
+            cancelButton: 'btn-dark-blue-rectangle-outline px-3 py-2'
         }
     }).then(res => {
         if (res.isConfirmed) {

@@ -23,7 +23,7 @@
                     <tr class="location-row" id="row-employee-{{ item.employee.id }}">
                         <td>{{ page_obj.start_index|add:forloop.counter0 }}</td>
 
-                        <!-- Estructura exacta a person_list -->
+                        <!-- Estructura idéntica a person_list -->
                         <td>
                             <div class="person-info">
                                 <div class="person-avatar-link">
@@ -66,12 +66,11 @@
                         <td class="actions text-center">
                             <div class="actions-wrapper">
                                 {% if item.has_vacation %}
-                                    <button type="button"
-                                            class="btn-blue-circle btn-vacation-action"
-                                            data-url="{% url 'vacation:employee_vacation_detail' item.employee.id %}"
-                                            title="Ver Vacaciones">
+                                    <a href="{% url 'vacation:employee_vacation_detail' item.employee.id %}"
+                                       class="btn-blue-circle"
+                                       title="Ver Vacaciones">
                                         <i class="fas fa-plane"></i>
-                                    </button>
+                                    </a>
                                 {% else %}
                                     <button type="button"
                                             class="btn-green-circle btn-vacation-action"
@@ -129,7 +128,6 @@
             <button type="button" class="page-btn page-next {% if not page_obj.has_next %}disabled{% endif %}"
                     title="Siguiente"
                     data-page="
-
                             {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages }}{% endif %}"
                     {% if not page_obj.has_next %}disabled{% endif %}>
                 <i class="fas fa-angle-right"></i>

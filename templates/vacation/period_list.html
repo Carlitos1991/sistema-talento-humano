@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+
 {% block title %}Periodos de Vacaciones | SIGETH{% endblock %}
 
 {% block extra_css %}
@@ -7,41 +8,35 @@
 {% endblock %}
 
 {% block content %}
-    <div id="popupPeriod" class="modal fade" role="dialog"></div>
-    <div id="periodApp">
-        <!-- 1. Header -->
-        <div class="header-card">
-            <div>
-                <h1>Gestión de Periodos</h1>
-                <p>Gestión de periodos anuales de vacaciones</p>
-            </div>
-            {#            {% if perms.person.add_person %}#}
-            <button type="button" class="btn btn-create" onclick="open_modal('{% url 'vacation:period_create' %}')">
-                <i class="fas fa-plus"></i> Nuevo Periodo
-            </button>
-            {#            {% endif %}#}
+    <div class="header-card">
+        <div>
+            <h1><i class="fa-solid fa-calendar-days me-2"></i> Gestión de Periodos</h1>
+            <p>Administración y configuración de periodos vacacionales institucionales.</p>
         </div>
-
-        <!-- 2. Contenedor principal Tabla -->
-        <div id="table-app">
-            <div class="content-table">
-                <div class="table-controls">
-                    <div class="search-box">
-                        <input type="text" id="searchInput" class="input-field"
-                               placeholder="Buscar por periodo" value="{{ search_query }}">
-                    </div>
-                </div>
-
-                <div id="tableContainer">
-                    {% include 'vacation/partials/partial_period_vacation_table.html' %}
-                </div>
-            </div>
-        </div>
-        {% include 'vacation/modals/modal_vacation_form.html' %}
+        <button type="button" class="btn-blue-rectangle btn-vacation-modal"
+                data-url="{% url 'vacation:period_create' %}">
+            <i class="fas fa-plus"></i> Nuevo Periodo
+        </button>
     </div>
 
+    <div class="content-table">
+        <div class="table-controls toolbar-row">
+            <div class="toolbar-center"></div>
+            <div class="toolbar-right">
+                <input type="text" id="table-search" class="table-search-input table-search-input--large"
+                       placeholder="Buscar por periodo..." value="{{ search_query|default:'' }}">
+            </div>
+        </div>
+
+        <div id="table-content-wrapper">
+            {% include 'vacation/partials/partial_period_vacation_table.html' %}
+        </div>
+    </div>
+
+    <!-- Contenedor único para modales AJAX de main.js -->
+    <div id="modal-root"></div>
 {% endblock %}
 
 {% block extra_js %}
-    <script src="{% static 'js/vacation/vacation.js' %}"></script>
+    <script src="{% static 'js/vacation.js' %}"></script>
 {% endblock %}

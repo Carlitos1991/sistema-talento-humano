@@ -1,8 +1,8 @@
 {% load static %}
 <div class="modal-overlay">
-    <div class="modal-container-large">
+    <div class="modal-container-medium">
 
-        <!-- HEADER ESTÁNDAR SIGETH -->
+        <!-- HEADER -->
         <div class="modal-header-medium">
             <div class="header-content-group">
                 <div class="header-icon-circle">
@@ -16,40 +16,11 @@
         </div>
 
         <div class="modal-body modal-body-custom">
-            <!-- Información del Empleado (Banner estilo person_quick_view) -->
-            <div class="quick-view-banner-compact">
-                <div class="quick-view-avatar-col">
-                    {% if employee.person.photo %}
-                        <img src="{{ employee.person.photo.url }}" alt="{{ employee.person.full_name }}"
-                             class="avatar-md">
-                    {% else %}
-                        <div class="avatar-placeholder-md">
-                            {{ employee.person.first_name|first }}{{ employee.person.last_name|first }}
-                        </div>
-                    {% endif %}
-                </div>
-                <div class="quick-view-header-col">
-                    <h2 class="quick-view-name">{{ employee.person.last_name }} {{ employee.person.first_name }}</h2>
-                    <div class="quick-view-subrow">
-                        <span class="text-muted bold small">
-                            <i class="fa-regular fa-id-card me-1"></i>{{ employee.person.document_number|default:"--" }}
-                        </span>
-                        <span class="badge badge-blue">
-                            {% if employee.current_budget_line.first.position_item %}
-                                {{ employee.current_budget_line.first.position_item.name }}
-                            {% else %}
-                                Sin cargo asignado
-                            {% endif %}
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Alerta Informativa Institucional -->
+            <!-- Alerta Informativa -->
             <div class="alert alert-info">
                 <i class="fas fa-circle-info"></i>
                 <div>
-                    <strong>Límites normativos:</strong> Trabajador: máx. 45 días (3 períodos). Empleados: máx. 60 días.
+                    <strong>Límites normativos:</strong> Trabajador: máx.3 períodos. Empleados: máx. 60 días.
                 </div>
             </div>
 
@@ -94,12 +65,12 @@
                     </div>
                 </div>
 
-                <!-- FOOTER FIJO ESTÁNDAR SIGETH -->
+                <!-- FOOTER -->
                 <div class="modal-footer-fixed">
-                    <button type="button" class="btn-default-outline" onclick="closeModal()">
+                    <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">
                         <i class="fas fa-times me-1"></i> Cancelar
                     </button>
-                    <button type="submit" class="btn-success">
+                    <button type="submit" class="btn-dark-blue-rectangle">
                         <i class="fas fa-save me-1"></i> Guardar Saldo Inicial
                     </button>
                 </div>

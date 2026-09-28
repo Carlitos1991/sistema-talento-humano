@@ -69,3 +69,383 @@
     background-color: #f1f5f9;
     color: #475569;
 }
+
+/* =====================================================================
+   DETALLE DE VACACIONES (ESTILO IMAGEN DE REFERENCIA CON PALETA CORPORATIVA)
+   ===================================================================== */
+
+/* 1. Banner Superior */
+.vac-banner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+    color: #ffffff;
+    border-radius: 12px;
+    padding: 1.25rem 2rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 12px rgba(14, 165, 233, 0.2);
+}
+
+.vac-banner-left {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+}
+
+.vac-banner-icon {
+    font-size: 2.2rem;
+    display: flex;
+    align-items: center;
+}
+
+.vac-banner-title h1 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    margin: 0;
+    letter-spacing: 0.04em;
+    color: #ffffff;
+}
+
+.vac-banner-avatar-wrapper {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    border: 3px solid rgba(255, 255, 255, 0.8);
+    overflow: hidden;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.vac-banner-avatar {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.vac-banner-avatar-placeholder {
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: #ffffff;
+}
+
+.vac-banner-employee-info h2 {
+    font-size: 1.1rem;
+    font-weight: 800;
+    margin: 0;
+    text-transform: uppercase;
+    color: #ffffff;
+    letter-spacing: -0.01em;
+}
+
+.vac-banner-employee-info span {
+    font-size: 0.85rem;
+    opacity: 0.9;
+    font-weight: 600;
+}
+
+.vac-banner-back-btn {
+    background: rgba(255, 255, 255, 0.18);
+    border: 1.5px solid rgba(255, 255, 255, 0.4);
+    border-radius: 8px;
+    color: #ffffff;
+    padding: 0.55rem 1.25rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.vac-banner-back-btn:hover {
+    background: rgba(255, 255, 255, 0.28);
+    color: #ffffff;
+    transform: translateY(-1px);
+}
+
+/* 2. Tarjetas de Estadísticas (Cards) */
+.vac-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.25rem;
+    margin-bottom: 1.5rem;
+}
+
+@media (max-width: 1100px) {
+    .vac-cards-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .vac-cards-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.vac-card {
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    border-left: 5px solid #cbd5e1;
+    padding: 1.25rem 1.25rem 1rem;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.05);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 180px;
+}
+
+.vac-card.border-blue {
+    border-left-color: #3b82f6;
+}
+
+.vac-card.border-orange {
+    border-left-color: #78350f;
+}
+
+.vac-card.border-green {
+    border-left-color: #10b981;
+}
+
+.vac-card.border-brown {
+    border-left-color: #78350f;
+}
+
+.vac-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.vac-card-title {
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: #1e293b;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.vac-card-watermark {
+    font-size: 1.6rem;
+    color: #cbd5e1;
+}
+
+.vac-card-value {
+    font-size: 2.4rem;
+    font-weight: 800;
+    color: #1e293b;
+    line-height: 1;
+    margin: 0.75rem 0 1rem;
+}
+
+.vac-card-body-actions {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    margin: 0.5rem 0 1rem;
+    min-height: 44px;
+}
+
+.vac-icon-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    border: none;
+    color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.15rem;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.vac-icon-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.vac-icon-btn-amber {
+    background-color: #b45309;
+}
+
+.vac-icon-btn-green {
+    background-color: #10b981;
+}
+
+.vac-card-footer {
+    margin-top: auto;
+    width: 100%;
+}
+
+.vac-btn-full {
+    width: 100%;
+    padding: 0.65rem 1rem;
+    border-radius: 8px;
+    border: none;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+    transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.vac-btn-full:hover {
+    transform: translateY(-1px);
+    opacity: 0.95;
+}
+
+.vac-btn-primary {
+    background-color: #3b82f6;
+}
+
+.vac-btn-brown {
+    background-color: #78350f;
+}
+
+.vac-btn-green {
+    background-color: #10b981;
+}
+
+/* 3. Toolbar y Tabla */
+.vac-table-section {
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    padding: 1.25rem;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.05);
+}
+
+.vac-table-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 1rem;
+}
+
+.vac-search-input {
+    width: 260px;
+    padding: 0.55rem 0.85rem;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    outline: none;
+    color: #1e293b;
+    transition: border-color 0.15s ease;
+}
+
+.vac-search-input:focus {
+    border-color: #3b82f6;
+}
+
+.vac-table-container {
+    width: 100%;
+    overflow-x: auto;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.vac-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.vac-table thead tr {
+    background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+    color: #ffffff;
+}
+
+.vac-table thead th {
+    padding: 0.85rem 1rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #ffffff;
+    white-space: nowrap;
+    border: none;
+}
+
+.vac-table tbody tr {
+    border-bottom: 1px solid #f1f5f9;
+    transition: background-color 0.15s ease;
+}
+
+.vac-table tbody tr:hover {
+    background-color: #f8fafc;
+}
+
+.vac-table tbody td {
+    padding: 1rem;
+    font-size: 0.88rem;
+    color: #334155;
+    vertical-align: middle;
+}
+
+.col-periodo {
+    text-align: left;
+    width: 12%;
+}
+
+.col-periodo-value {
+    text-align: left;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.col-center {
+    text-align: center;
+    white-space: nowrap;
+}
+
+.col-detalle {
+    text-align: left;
+    width: 40%;
+}
+
+.col-detalle-value {
+    text-align: left;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    color: #475569;
+}
+
+/* Grupo de valor y botón pastilla 'Ver detalle' */
+.vac-value-badge-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.vac-pill-btn {
+    background-color: #3b82f6;
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    padding: 3px 8px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    line-height: 1.2;
+    transition: background-color 0.15s ease, transform 0.1s ease;
+}
+
+.vac-pill-btn:hover {
+    background-color: #2563eb;
+    transform: translateY(-1px);
+}

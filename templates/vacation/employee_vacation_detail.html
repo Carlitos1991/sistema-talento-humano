@@ -5,184 +5,180 @@
 
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/vacations.css' %}">
-    <link rel="stylesheet" href="{% static 'css/permission.css' %}">
 {% endblock %}
 
 {% block content %}
-    {% csrf_token %}
-    <div data-employee-id="{{ employee.id }}" style="display: none;"></div>
-    
-    <div class="vacation-detail-banner">
-        <div class="vacation-banner-left">
-            <i class="fas fa-plane vacation-banner-icon"></i>
-            <div class="vacation-banner-title">
+    <!-- 1. Banner Superior -->
+    <div class="vac-banner">
+        <div class="vac-banner-left">
+            <div class="vac-banner-icon">
+                <i class="fas fa-plane"></i>
+            </div>
+            <div class="vac-banner-title">
                 <h1>VACACIONES</h1>
             </div>
-            {% if employee.person.photo %}
-                <img src="{{ employee.person.photo.url }}" alt="{{ employee.person.get_full_name }}"
-                     class="vacation-employee-photo">
-            {% else %}
-                <div class="vacation-employee-photo-placeholder">
-                    <i class="fas fa-user"></i>
-                </div>
-            {% endif %}
-            <div>
-                <div class="vacation-employee-info-name">{{ employee.person.full_name }}</div>
-                <div class="vacation-employee-info-doc">{{ employee.person.document_number }}</div>
+            <div class="vac-banner-avatar-wrapper">
+                {% if employee.person.photo %}
+                    <img src="{{ employee.person.photo.url }}" alt="{{ employee.person.get_full_name }}"
+                         class="vac-banner-avatar">
+                {% else %}
+                    <div class="vac-banner-avatar-placeholder">
+                        {{ employee.person.last_name|first }}{{ employee.person.first_name|first }}
+                    </div>
+                {% endif %}
+            </div>
+            <div class="vac-banner-employee-info">
+                <h2>{{ employee.person.full_name }}</h2>
+                <span>{{ employee.person.document_number|default:"--" }}</span>
             </div>
         </div>
-        <a href="{% url 'vacation:request_list' %}" class="btn-header-premium btn-header-back">
+        <a href="{% url 'vacation:request_list' %}" class="vac-banner-back-btn">
             <i class="fas fa-arrow-left"></i> Volver al Listado
         </a>
     </div>
 
-    <!-- Cards de estadísticas -->
-    <div class="vacation-stats-cards">
+    <!-- 2. Tarjetas de Estadísticas y Acciones -->
+    <div class="vac-cards-grid">
         <!-- Saldo Vacaciones -->
-        <div class="vacation-stat-card border-blue">
-            <div class="stat-card-header">
-                <div class="stat-card-info">
-                    <h3 class="stat-card-title-blue">SALDO VACACIONES</h3>
-                    <div class="stat-card-value">
-                        {% if active_balance %}
-                            {{ active_balance.balance_days|floatformat:2 }}
-                        {% else %}
-                            0.00
-                        {% endif %}
-                    </div>
-                </div>
-                <i class="fas fa-chart-pie stat-card-icon stat-card-icon-blue"></i>
+        <div class="vac-card border-blue">
+            <div class="vac-card-header">
+                <span class="vac-card-title">SALDO VACACIONES</span>
+                <i class="fas fa-chart-pie vac-card-watermark"></i>
             </div>
-            {% if active_balance %}
-                <div class="stat-card-footer">
-                    <button class="btn-action btn-blue-rectangle" onclick="openNewVacationModal({{ employee.id }})">
+            <div class="vac-card-value">
+                {% if active_balance %}
+                    {{ active_balance.balance_days|floatformat:2 }}
+                {% else %}
+                    0,00
+                {% endif %}
+            </div>
+            <div class="vac-card-footer">
+                {% if active_balance %}
+                    <button type="button" class="vac-btn-full vac-btn-primary btn-vacation-modal"
+                            data-url="{% url 'vacation:create_new_vacation' employee.id %}">
                         <i class="fas fa-plus"></i> Nueva vacación
                     </button>
-                </div>
-            {% endif %}
+                {% else %}
+                    <button type="button" class="vac-btn-full vac-btn-primary btn-vacation-modal"
+                            data-url="{% url 'vacation:create_first_vacation' employee.id %}">
+                        <i class="fas fa-plus"></i> Cargar Saldo Inicial
+                    </button>
+                {% endif %}
+            </div>
         </div>
 
-        <!-- Permiso con cargo a vacaciones -->
-        <div class="vacation-stat-card border-orange">
-            <div class="stat-card-header">
-                <div class="stat-card-info">
-                    <h3 class="stat-card-title-orange">PERMISO CON CARGO A VACACIONES</h3>
-                </div>
-                <i class="fas fa-file-alt stat-card-icon stat-card-icon-orange"></i>
+        <!-- Permiso con Cargo a Vacaciones -->
+        <div class="vac-card border-orange">
+            <div class="vac-card-header">
+                <span class="vac-card-title">PERMISO CON CARGO A VACACIONES</span>
+                <i class="fas fa-file-alt vac-card-watermark"></i>
             </div>
-            <div class="permit-buttons-container">
-                <button class="btn-action permit-icon-btn" onclick="openHourPermitModal({{ employee.id }})"
+            <div class="vac-card-body-actions">
+                <button type="button" class="vac-icon-btn vac-icon-btn-amber btn-vacation-modal"
+                        data-url="{% url 'vacation:create_hour_permit' employee.id %}"
                         title="Permisos por Horas">
                     <i class="fas fa-clock"></i>
                 </button>
-                <button class="btn-action permit-icon-btn" onclick="openDayPermitModal({{ employee.id }})"
-                        title="Permisos por días">
+                <button type="button" class="vac-icon-btn vac-icon-btn-amber btn-vacation-modal"
+                        data-url="{% url 'vacation:create_day_permit' employee.id %}"
+                        title="Permisos por Días">
                     <i class="fas fa-calendar"></i>
                 </button>
             </div>
-            <div class="stat-card-footer stat-card-footer-margin">
-                <button class="btn-action stat-btn-orange" onclick="openPermitListModal({{ employee.id }})">
+            <div class="vac-card-footer">
+                <button type="button" class="vac-btn-full vac-btn-brown btn-vacation-modal"
+                        data-url="{% url 'vacation:permit_list' employee.id %}">
                     <i class="fas fa-list"></i> Listado de permisos
                 </button>
             </div>
         </div>
 
         <!-- Liquidación Vacaciones -->
-        <div class="vacation-stat-card border-green">
-            <div class="stat-card-header">
-                <div class="stat-card-info">
-                    <h3 class="stat-card-title-green">LIQUIDACIÓN VACACIONES</h3>
-
-                </div>
-                <i class="fas fa-plane-departure stat-card-icon stat-card-icon-green"></i>
+        <div class="vac-card border-green">
+            <div class="vac-card-header">
+                <span class="vac-card-title">LIQUIDACIÓN VACACIONES</span>
+                <i class="fas fa-plane-departure vac-card-watermark"></i>
             </div>
-            <div class="permit-buttons-container">
-                <button class="btn-action liquidation-icon-btn"
-                        onclick="openLiquidationModal({{ employee.id }})"
+            <div class="vac-card-body-actions">
+                <button type="button" class="vac-icon-btn vac-icon-btn-green btn-vacation-modal"
+                        data-url="{% url 'vacation:create_liquidation' employee.id %}"
                         title="Nueva Liquidación">
-                    <i class="fa-solid fa-file-circle-plus"></i>
+                    <i class="fas fa-file-circle-plus"></i>
                 </button>
             </div>
-            <div class="stat-card-footer stat-card-footer-margin">
-                <button class="btn-action btn-approve" onclick="openLiquidationListModal({{ employee.id }})">
+            <div class="vac-card-footer">
+                <button type="button" class="vac-btn-full vac-btn-green btn-vacation-modal"
+                        data-url="{% url 'vacation:liquidation_list' employee.id %}">
                     <i class="fas fa-list"></i> Ver Listado
                 </button>
             </div>
         </div>
 
         <!-- Reportes -->
-        <div class="vacation-stat-card border-cyan">
-            <div class="stat-card-header">
-                <div class="stat-card-info">
-                    <h3 class="stat-card-title-cyan">REPORTES</h3>
-                </div>
-                <i class="fas fa-file-alt stat-card-icon stat-card-icon-cyan"></i>
+        <div class="vac-card border-brown">
+            <div class="vac-card-header">
+                <span class="vac-card-title">REPORTES</span>
+                <i class="fas fa-file-alt vac-card-watermark"></i>
             </div>
-            <div class="stat-card-footer">
-                <button class="btn-action stat-btn-cyan" onclick="openPermitReportModal()">
+            <div class="vac-card-body-actions"></div>
+            <div class="vac-card-footer">
+                <button type="button" class="vac-btn-full vac-btn-brown btn-vacation-modal"
+                        data-url="{% url 'vacation:permit_report_modal' employee.id %}">
                     <i class="fas fa-file-pdf"></i> Reporte de permisos
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Buscador y Tabla -->
-    <div class="content-table">
-        <div class="table-controls">
-            <div class="search-box">
-                <input type="text" id="table-search" class="input-field"
-                       placeholder="Buscar por periodo..." value="{{ search_query }}"
-                       onchange="document.getElementById('searchForm').submit()">
-            </div>
-            <form method="get" id="searchForm" class="search-form-hidden">
-                <input type="hidden" name="search" id="search-hidden" value="{{ search_query }}">
-                <input type="hidden" name="per_page" value="{{ per_page }}">
-            </form>
+    <!-- 3. Buscador y Tabla de Periodos -->
+    <div class="vac-table-section">
+        <div class="vac-table-toolbar">
+            <input type="text" id="vacationDetailSearch" class="vac-search-input"
+                   placeholder="Buscar por periodo..." value="{{ search_query }}">
         </div>
 
-        <!-- Tabla de Periodos -->
         {% if vacation_balances %}
-            <div class="vacation-detail-table-container">
-                <table class="vacation-detail-table">
+            <div class="vac-table-container">
+                <table class="vac-table">
                     <thead>
                     <tr>
-                        <th><i class="fas fa-calendar"></i> PERIODO</th>
-                        <th><i class="fas fa-envelope"></i> TOTAL DÍAS</th>
-                        <th><i class="fas fa-calendar-plus"></i> D. ADIC.</th>
-                        <th><i class="fas fa-calculator"></i> LIQUID.</th>
-                        <th><i class="fas fa-user-times"></i> PERMISOS</th>
-                        <th><i class="fas fa-minus-circle"></i> DESC.</th>
-                        <th class="table-detail-column"><i class="fas fa-info-circle"></i> DETALLE</th>
+                        <th class="col-periodo"><i class="fas fa-calendar me-1"></i> PERIODO</th>
+                        <th class="col-center"><i class="fas fa-envelope me-1"></i> TOTAL DÍAS</th>
+                        <th class="col-center"><i class="fas fa-calendar-plus me-1"></i> D. ADIC.</th>
+                        <th class="col-center"><i class="fas fa-calculator me-1"></i> LIQUID.</th>
+                        <th class="col-center"><i class="fas fa-user-times me-1"></i> PERMISOS</th>
+                        <th class="col-center"><i class="fas fa-minus-circle me-1"></i> DESC.</th>
+                        <th class="col-detalle"><i class="fas fa-info-circle me-1"></i> DETALLE</th>
                     </tr>
                     </thead>
                     <tbody>
                     {% for balance in vacation_balances %}
                         <tr>
-                            <td>{{ balance.period.name }}</td>
-                            <td>{{ balance.total_days|floatformat:1 }}</td>
-                            <td>
-                                <span>{{ balance.additional_days|floatformat:2 }}</span>
-                            </td>
-                            <td>
-                                <div class="cell-with-button">
+                            <td class="col-periodo-value">{{ balance.period.name }}</td>
+                            <td class="col-center">{{ balance.total_days|floatformat:1 }}</td>
+                            <td class="col-center">{{ balance.additional_days|floatformat:2 }}</td>
+                            <td class="col-center">
+                                <div class="vac-value-badge-group">
                                     <span>{{ balance.vacation_days|floatformat:2 }}</span>
-                                    <button class="btn-action btn-ver-detalle"
-                                            onclick="openVacationHistoryModal({{ balance.id }})">
+                                    <button type="button" class="vac-pill-btn btn-vacation-modal"
+                                            data-url="{% url 'vacation:vacation_history' balance.id %}"
+                                            title="Ver Detalle">
                                         <i class="fas fa-eye"></i> Ver detalle
                                     </button>
                                 </div>
                             </td>
-                            <td>
-                                <div class="cell-with-button">
+                            <td class="col-center">
+                                <div class="vac-value-badge-group">
                                     <span>{{ balance.permit_days|floatformat:2 }}</span>
-                                    <button class="btn-action btn-ver-detalle"
-                                            onclick="openPermitHistoryModal({{ balance.id }})">
+                                    <button type="button" class="vac-pill-btn btn-vacation-modal"
+                                            data-url="{% url 'vacation:permit_history' balance.id %}"
+                                            title="Ver Detalle">
                                         <i class="fas fa-eye"></i> Ver detalle
                                     </button>
                                 </div>
                             </td>
-                            <td>0,0</td>
-                            <td>{{ balance.observation }}</td>
+                            <td class="col-center">0,0</td>
+                            <td class="col-detalle-value">{{ balance.observation|default:"--" }}</td>
                         </tr>
                     {% endfor %}
                     </tbody>
@@ -190,76 +186,51 @@
             </div>
 
             <!-- Paginación -->
-            <div class="pagination-container">
-            <span class="pagination-info">
-                {% if vacation_balances %}
-                    Mostrando {{ vacation_balances.start_index }} a {{ vacation_balances.end_index }} de
-                    {{ vacation_balances.paginator.count }}
-                {% else %}
-                    Mostrando 0 de 0
-                {% endif %}
-            </span>
-                <ul class="pagination-list">
-                    <li>
-                        {% if vacation_balances.has_previous %}
-                            <a href="?page=1&search={{ search_query }}&per_page={{ per_page }}" class="page-btn">
-                                <i class="fas fa-angle-double-left"></i>
-                            </a>
-                        {% else %}
-                            <button class="page-btn" disabled style="opacity: 0.5; cursor: not-allowed;">
-                                <i class="fas fa-angle-double-left"></i>
-                            </button>
-                        {% endif %}
-                    </li>
-                    <li>
-                        {% if vacation_balances.has_previous %}
-                            <a href="?page={{ vacation_balances.previous_page_number }}&search={{ search_query }}&per_page={{ per_page }}"
-                               class="page-btn">
-                                <i class="fas fa-chevron-left"></i>
-                            </a>
-                        {% else %}
-                            <button class="page-btn" disabled style="opacity: 0.5; cursor: not-allowed;">
-                                <i class="fas fa-chevron-left"></i>
-                            </button>
-                        {% endif %}
-                    </li>
-                    <li>
-                    <span class="pagination-page-number">
-                        {% if vacation_balances %}{{ vacation_balances.number }} de
-                            {{ vacation_balances.paginator.num_pages }}{% else %}1 de 1{% endif %}
+            {% if vacation_balances.paginator.num_pages > 1 %}
+                <div class="pagination-container">
+                    <span class="pagination-info">
+                        Mostrando {{ vacation_balances.start_index }} a {{ vacation_balances.end_index }} de {{ vacation_balances.paginator.count }}
                     </span>
-                    </li>
-                    <li>
-                        {% if vacation_balances.has_next %}
-                            <a href="?page={{ vacation_balances.next_page_number }}&search={{ search_query }}&per_page={{ per_page }}"
-                               class="page-btn">
-                                <i class="fas fa-chevron-right"></i>
+                    <div class="pagination-controls">
+                        {% if vacation_balances.has_previous %}
+                            <a href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}" class="page-btn"
+                               title="Primera">
+                                <i class="fas fa-angle-double-left"></i>
                             </a>
-                        {% else %}
-                            <button class="page-btn" disabled style="opacity: 0.5; cursor: not-allowed;">
-                                <i class="fas fa-chevron-right"></i>
-                            </button>
+                            <a href="?page=
+
+                                    {{ vacation_balances.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}"
+                               class="page-btn" title="Anterior">
+                                <i class="fas fa-angle-left"></i>
+                            </a>
                         {% endif %}
-                    </li>
-                    <li>
+
+                        <div class="page-input-wrapper">
+                            <input type="number" class="page-input" value="{{ vacation_balances.number }}" readonly>
+                            <span class="total-pages-badge">de {{ vacation_balances.paginator.num_pages }}</span>
+                        </div>
+
                         {% if vacation_balances.has_next %}
-                            <a href="?page={{ vacation_balances.paginator.num_pages }}&search={{ search_query }}&per_page={{ per_page }}"
-                               class="page-btn">
+                            <a href="?page=
+
+                                    {{ vacation_balances.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}"
+                               class="page-btn" title="Siguiente">
+                                <i class="fas fa-angle-right"></i>
+                            </a>
+                            <a href="?page=
+
+                                    {{ vacation_balances.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}"
+                               class="page-btn" title="Última">
                                 <i class="fas fa-angle-double-right"></i>
                             </a>
-                        {% else %}
-                            <button class="page-btn" disabled style="opacity: 0.5; cursor: not-allowed;">
-                                <i class="fas fa-angle-double-right"></i>
-                            </button>
                         {% endif %}
-                    </li>
-                </ul>
-            </div>
-            </div>
+                    </div>
+                </div>
+            {% endif %}
         {% else %}
-            <div class="empty-message-container">
-                <i class="fas fa-inbox empty-icon"></i>
-                <p class="empty-text">
+            <div class="empty-state-container">
+                <i class="fas fa-calendar-times empty-state-icon"></i>
+                <p class="empty-state-text">
                     {% if search_query %}
                         No se encontraron periodos de vacaciones que coincidan con "{{ search_query }}".
                     {% else %}
@@ -268,29 +239,12 @@
                 </p>
             </div>
         {% endif %}
+    </div>
 
-    <!-- Modal para nueva vacación -->
-    <div id="modalNewVacation" class="modal-overlay hidden"></div>
-
-    <!-- Modal para permiso por horas -->
-    <div id="modalHourPermit" class="modal-overlay hidden"></div>
-
-    <!-- Modal para permiso por días -->
-    <div id="modalDayPermit" class="modal-overlay hidden"></div>
-
-    <!-- Modal para listado de permisos -->
-    <div id="modalPermitList" class="modal-overlay hidden"></div>
-
-    <!-- Contenedor para modal de historial de liquidaciones -->
-    <div id="vacationHistoryModalContainer"></div>
-
-    <!-- Contenedor para modal de historial de permisos -->
-    <div id="permitHistoryModalContainer"></div>
-
-    <!-- Modal para Reporte de Permisos -->
-    <div id="permitReportModalContainer"></div>
+    <!-- Contenedor único para modales AJAX de main.js -->
+    <div id="modal-root"></div>
 {% endblock %}
 
 {% block extra_js %}
-    <script src="{% static 'js/vacation/vacation_detail.js' %}"></script>
+    <script src="{% static 'js/vacation/vacation.js' %}"></script>
 {% endblock %}

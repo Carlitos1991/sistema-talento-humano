@@ -1,154 +1,99 @@
+{% load static %}
 <div class="table-container">
-    <table>
-        <thead>
-        <tr>
-            <th>#</th>
-            <th class="sortable" onclick="sortTable('name')">
-                <i class="far fa-calendar header-icon"></i> Nombre Periodo
-                {% if current_order == 'name' %}
-                    {% if current_direction == 'asc' %}
-                        <i class="fas fa-sort-up sort-icon"></i>
-                    {% else %}
-                        <i class="fas fa-sort-down sort-icon"></i>
-                    {% endif %}
-                {% else %}
-                    <i class="fas fa-sort sort-icon"></i>
-                {% endif %}
-            </th>
-            <th class="sortable" onclick="sortTable('is_active')">
-                <i class="fa-solid fa-toggle-on header-icon"></i> Estado
-                {% if current_order == 'is_active' %}
-                    {% if current_direction == 'asc' %}
-                        <i class="fas fa-sort-up sort-icon"></i>
-                    {% else %}
-                        <i class="fas fa-sort-down sort-icon"></i>
-                    {% endif %}
-                {% else %}
-                    <i class="fas fa-sort sort-icon"></i>
-                {% endif %}
-            </th>
-            <th><i class="fas fa-gears header-icon"></i> Acciones</th>
-        </tr>
-        </thead>
-        <tbody id="table-body">
-        {% for period in periods %}
-            <tr class="row-hover">
-                <td>{% if is_paginated %}{{ page_obj.start_index|add:forloop.counter0 }}{% else %}{{ forloop.counter }}{% endif %}</td>
-
-                <td>
-                    <div class="period-info" style="font-weight: bold; color: #333;">
-                        {{ period.name }}
-                    </div>
-                </td>
-
-                <!-- Estado -->
-                <td class="text-center">
-                    {% if period.is_active %}
-                        <span class="status-badge active"
-                              style="background: #d1fae5; color: #065f46; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">
-                            ACTIVO
-                        </span>
-                    {% else %}
-                        <span class="status-badge inactive"
-                              style="background: #f3f4f6; color: #374151; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">
-                            CERRADO
-                        </span>
-                    {% endif %}
-                </td>
-
-                <!-- Acciones -->
-                <td>
-                    <div class="actions-wrapper">
-                        <button class="btn-list-action" title="Editar Periodo" 
-                                onclick="open_modal('{% url 'vacation:period_edit' period.pk %}')">
-                            <i class="fa-solid fa-pen-to-square"></i>
-                        </button>
-                    </div>
-                </td>
-            </tr>
-        {% empty %}
+    <div class="table-scroll-top">
+        <table class="managed-table exportable-table"
+               data-title="Reporte Periodos Vacaciones"
+               data-filename="Reporte_Periodos_Vacaciones"
+               data-list-url="{% url 'vacation:period_list' %}"
+               data-external-pagination="true"
+               data-external-search="true">
+            <thead>
             <tr>
-                <td colspan="4">
-                    <div class="empty-state-container" style="text-align: center; padding: 20px;">
-                        <i class="fas fa-calendar-times empty-state-icon" style="font-size: 2rem; color: #ccc;"></i>
-                        <p class="empty-state-text">No existen periodos vacacionales creados.</p>
-                    </div>
-                </td>
+                <th class="width-10 no-sort">#</th>
+                <th class="width-50" data-field="name">Nombre Periodo</th>
+                <th class="width-20 text-center" data-field="is_active">Estado</th>
+                <th class="width-20 no-sort text-center actions">Acciones</th>
             </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+            </thead>
+            <tbody id="table-body">
+            {% if periods %}
+                {% for period in periods %}
+                    <tr class="location-row" id="row-period-{{ period.id }}">
+                        <td>{{ page_obj.start_index|add:forloop.counter0 }}</td>
+                        <td class="bold text-primary">{{ period.name }}</td>
+                        <td class="text-center">
+                            {% if period.is_active %}
+                                <span class="badge badge-green">ACTIVO</span>
+                            {% else %}
+                                <span class="badge badge-gray">CERRADO</span>
+                            {% endif %}
+                        </td>
+                        <td class="actions text-center">
+                            <div class="actions-wrapper">
+                                <button type="button" class="btn-tenth btn-vacation-modal"
+                                        data-url="{% url 'vacation:period_edit' period.pk %}"
+                                        title="Editar Periodo">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="4">
+                        <div class="empty-state-container">
+                            <i class="fas fa-calendar-times empty-state-icon"></i>
+                            <p class="empty-state-text">No existen periodos vacacionales creados.</p>
+                        </div>
+                    </td>
+                </tr>
+            {% endif %}
+            </tbody>
+        </table>
+    </div>
 </div>
 
-<!-- PAGINACIÓN -->
-<div class="pagination-container">
-    {% if periods %}
+{% if paginator.num_pages > 0 %}
+    <div id="js-pagination" class="pagination-container">
         <span class="pagination-info">
-            {% if is_paginated %}
-                Mostrando {{ page_obj.start_index }}-{{ page_obj.end_index }} de {{ page_obj.paginator.count }}
-            {% else %}
-                Mostrando {{ periods|length }} de {{ periods|length }}
-            {% endif %}
+            Mostrando {{ page_obj.start_index|default:"0" }}-{{ page_obj.end_index|default:"0" }} de {{ paginator.count|default:"0" }}
         </span>
-        <ul class="pagination-list">
-            {% if is_paginated %}
-                <li>
-                    {% if page_obj.has_previous %}
-                        <button class="page-btn" onclick="loadPeriodTable('?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}')">
-                            <i class="fas fa-chevron-left"></i>
-                        </button>
-                    {% else %}
-                        <button class="page-btn" disabled>
-                            <i class="fas fa-chevron-left"></i>
-                        </button>
-                    {% endif %}
-                </li>
-                <li>
-                    <span style="padding: 0 10px; font-weight: bold;">{{ page_obj.number }}</span>
-                </li>
-                <li>
-                    {% if page_obj.has_next %}
-                        <button class="page-btn" onclick="loadPeriodTable('?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}')">
-                            <i class="fas fa-chevron-right"></i>
-                        </button>
-                    {% else %}
-                        <button class="page-btn" disabled>
-                            <i class="fas fa-chevron-right"></i>
-                        </button>
-                    {% endif %}
-                </li>
-            {% else %}
-                <li>
-                    <button class="page-btn" disabled>
-                        <i class="fas fa-chevron-left"></i>
-                    </button>
-                </li>
-                <li>
-                    <span style="padding: 0 10px; font-weight: bold;">1</span>
-                </li>
-                <li>
-                    <button class="page-btn" disabled>
-                        <i class="fas fa-chevron-right"></i>
-                    </button>
-                </li>
-            {% endif %}
-        </ul>
-    {% else %}
-        <span class="pagination-info">Mostrando 0 de 0</span>
-        <ul class="pagination-list">
-            <li>
-                <button class="page-btn" disabled>
-                    <i class="fas fa-chevron-left"></i>
-                </button>
-            </li>
-            <li>
-                <span style="padding: 0 10px; font-weight: bold;">1</span>
-            </li>
-            <li>
-                <button class="page-btn" disabled>
-                    <i class="fas fa-chevron-right"></i>
-                </button>
-            </li>
-        </ul>
-    {% endif %}
-</div>
+        <div class="pagination-controls">
+            <button type="button" class="page-btn page-first {% if not page_obj.has_previous %}disabled{% endif %}"
+                    title="Primera" data-page="1"
+                    {% if not page_obj.has_previous %}disabled{% endif %}>
+                <i class="fas fa-angle-double-left"></i>
+            </button>
+
+            <button type="button" class="page-btn page-prev {% if not page_obj.has_previous %}disabled{% endif %}"
+                    title="Anterior"
+                    data-page="{% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% else %}1{% endif %}"
+                    {% if not page_obj.has_previous %}disabled{% endif %}>
+                <i class="fas fa-angle-left"></i>
+            </button>
+
+            <div class="page-input-wrapper">
+                <input type="number" class="page-input"
+                       value="{{ page_obj.number }}"
+                       min="1" max="{{ paginator.num_pages }}"
+                       data-max-page="{{ paginator.num_pages }}">
+                <span class="total-pages-badge">de {{ paginator.num_pages }}</span>
+            </div>
+
+            <button type="button" class="page-btn page-next {% if not page_obj.has_next %}disabled{% endif %}"
+                    title="Siguiente"
+                    data-page="
+                            {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages }}{% endif %}"
+                    {% if not page_obj.has_next %}disabled{% endif %}>
+                <i class="fas fa-angle-right"></i>
+            </button>
+
+            <button type="button" class="page-btn page-last {% if not page_obj.has_next %}disabled{% endif %}"
+                    title="Última" data-page="{{ paginator.num_pages }}"
+                    {% if not page_obj.has_next %}disabled{% endif %}>
+                <i class="fas fa-angle-double-right"></i>
+            </button>
+        </div>
+    </div>
+{% endif %}

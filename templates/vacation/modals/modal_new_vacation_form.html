@@ -1,88 +1,86 @@
 {% load static %}
-<div class="modal-container-large shadow-card">
-    <div class="modal-content">
+<div class="modal-overlay">
+    <div class="modal-container-large">
 
         <!-- HEADER -->
-        <div class="modal-header-refined">
-            <div class="header-title-group">
+        <div class="modal-header-medium">
+            <div class="header-content-group">
                 <div class="header-icon-circle">
                     <i class="fas fa-plane"></i>
                 </div>
-                <h2 class="header-title-text">{{ titulo }}</h2>
+                <h3 class="header-title">{{ titulo }}</h3>
             </div>
-
-            <button type="button" class="btn-close-modal js-close-modal-new-vacation" title="Cerrar">
+            <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
                 <i class="fas fa-times"></i>
             </button>
         </div>
 
-        <!-- Información del Empleado -->
-        <div style="background: #f8f9fa; padding: 1rem; margin: 1rem; border-radius: 8px; border-left: 4px solid #3b82f6;">
-            <h3 style="margin: 0 0 0.5rem 0; font-size: 1rem; display: flex; align-items: center; gap: 0.5rem;">
-                <i class="fas fa-user"></i> Empleado Seleccionado
-            </h3>
-            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; font-size: 0.8rem;">
-                <div>
-                    <strong>Nombre:</strong> {{ employee.person.full_name }}
-                </div>
-                <div>
-                    <strong>Cargo:</strong> 
-                    {% if employee.current_budget_line.first.position_item %}
-                        {{ employee.current_budget_line.first.position_item.name }}
+        <div class="modal-body modal-body-custom">
+            <!-- Banner Empleado -->
+            <div class="quick-view-banner-compact">
+                <div class="quick-view-avatar-col">
+                    {% if employee.person.photo %}
+                        <img src="{{ employee.person.photo.url }}" alt="{{ employee.person.full_name }}"
+                             class="avatar-md">
                     {% else %}
-                        Sin cargo
+                        <div class="avatar-placeholder-md">
+                            {{ employee.person.first_name|first }}{{ employee.person.last_name|first }}
+                        </div>
                     {% endif %}
                 </div>
-            </div>
-        </div>
-
-        <!-- Información Automática -->
-        <div style="background: #e0f2fe; padding: 1rem; margin: 1rem; border-radius: 8px; border-left: 4px solid #0ea5e9;">
-            <h3 style="margin: 0 0 0.5rem 0; font-size: 1rem; display: flex; align-items: center; gap: 0.5rem;">
-                <i class="fas fa-info-circle"></i> Información Automática
-            </h3>
-            <ul style="margin: 0; padding-left: 1.5rem; font-size: 0.9rem;">
-                <li><strong>Total de días:</strong> Se calculan automáticamente según el estado laboral del empleado</li>
-                <li><strong>Estado TRABAJADOR:</strong> 15 días base + 1 día adicional por año a partir del 5to año (máximo 30 días)</li>
-                <li><strong>Otros estados:</strong> 30 días por período</li>
-                <li><strong>Balance de días:</strong> Se calcula automáticamente (período anterior + días nuevos)</li>
-                <li><strong>Límite máximo TRABAJADOR:</strong> 45 días (3 períodos)</li>
-                <li><strong>Límite máximo otros estados:</strong> 60 días</li>
-                <li><strong>Observaciones:</strong> Se genera automáticamente con el detalle del cálculo</li>
-            </ul>
-        </div>
-
-        <form id="newVacationForm" action="{{ action_url }}" method="post" autocomplete="off">
-            {% csrf_token %}
-
-            <div class="modal-body">
-                {% for field in form %}
-                    <div class="form-group">
-                        <label for="{{ field.id_for_label }}" class="control-label">
-                            {{ field.label }} {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
-                        </label>
-                        {{ field }}
-                        
-                        {% if field.name == 'period' %}
-                            <small class="form-text text-muted">Seleccione el periodo de vacaciones al que corresponde esta nueva asignación.</small>
-                        {% elif field.name == 'total_days' %}
-                            <small class="form-text text-muted">Los días se calculan automáticamente según el estado laboral del empleado.</small>
-                        {% endif %}
-                        
-                        <div class="field-errors" id="error-{{ field.name }}"></div>
+                <div class="quick-view-header-col">
+                    <h2 class="quick-view-name">{{ employee.person.last_name }} {{ employee.person.first_name }}</h2>
+                    <div class="quick-view-subrow">
+                        <span class="text-muted bold small">
+                            <i class="fa-regular fa-id-card me-1"></i>{{ employee.person.document_number|default:"--" }}
+                        </span>
+                        <span class="badge badge-blue">
+                            {% if employee.current_budget_line.first.position_item %}
+                                {{ employee.current_budget_line.first.position_item.name }}
+                            {% else %}
+                                Sin cargo asignado
+                            {% endif %}
+                        </span>
                     </div>
-                {% endfor %}
+                </div>
             </div>
 
-            <!-- FOOTER -->
-            <div class="modal-footer-centered">
-                <button type="button" class="btn-cancel js-close-modal-new-vacation">
-                    <i class="fas fa-times-circle"></i> CANCELAR
-                </button>
-                <button type="submit" class="btn-save">
-                    <i class="fas fa-plane"></i> CREAR NUEVO PERÍODO
-                </button>
+            <div class="alert alert-info">
+                <i class="fas fa-circle-info"></i>
+                <div>
+                    <strong>Cálculo Automático:</strong> Trabajador: 15 días base + 1 día adicional desde el 5to año
+                    (máx 45 días). Empleados: 30 días base (máx 60 días).
+                </div>
             </div>
-        </form>
+
+            <form id="newVacationForm" action="{{ action_url }}" method="post" autocomplete="off">
+                {% csrf_token %}
+
+                <div class="form-section-card">
+                    {% for field in form %}
+                        <div class="form-group">
+                            <label for="{{ field.id_for_label }}" class="form-label">
+                                {{ field.label }} {% if field.field.required %}*{% endif %}
+                            </label>
+                            {{ field }}
+                            {% if field.help_text %}
+                                <small class="form-hint">{{ field.help_text }}</small>
+                            {% endif %}
+                            <div class="invalid-feedback" id="error-{{ field.name }}"></div>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <div class="modal-footer-fixed">
+                    <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">
+                        <i class="fas fa-times me-1"></i> Cancelar
+                    </button>
+                    <button type="submit" class="btn-success">
+                        <i class="fas fa-plane me-1"></i> Crear Nuevo Período
+                    </button>
+                </div>
+            </form>
+        </div>
+
     </div>
 </div>
