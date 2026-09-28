@@ -31,7 +31,6 @@ class VacationRequestListView(LoginRequiredMixin, ListView):
     paginate_by = 10
 
     def get_queryset(self):
-        # Obtener empleados activos con sus relaciones
         qs = Employee.objects.filter(
             is_active=True
         ).select_related(
@@ -42,37 +41,47 @@ class VacationRequestListView(LoginRequiredMixin, ListView):
                      queryset=EmployeeVacationBalance.objects.select_related('period').filter(is_active=True))
         ).order_by('person__last_name', 'person__first_name')
 
-        # Búsqueda
+        # Búsqueda multi-palabra idéntica a person_list
         q = self.request.GET.get('q', '').strip()
         if q:
-            qs = qs.filter(
-                Q(person__first_name__icontains=q) |
-                Q(person__last_name__icontains=q) |
-                Q(person__document_number__icontains=q)
-            )
+            terms = q.split()
+            for term in terms:
+                qs = qs.filter(
+                    Q(person__first_name__icontains=term) |
+                    Q(person__last_name__icontains=term) |
+                    Q(person__document_number__icontains=term)
+                )
 
         return qs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        # Preparar datos para cada empleado
         employees_data = []
         for employee in context['object_list']:
-            # Obtener el presupuesto activo
             budget = BudgetLine.objects.filter(
                 current_employee=employee,
                 is_active=True
             ).select_related('position_item').first()
 
-            # Obtener saldo de vacaciones activo
             vacation_balance = employee.employeevacationbalance_set.filter(is_active=True).first()
+
+            # --- VERIFICACIÓN DE FOTO FÍSICA ---
+            has_valid_photo = False
+            person = employee.person
+            if person and person.photo:
+                try:
+                    # Comprueba si el archivo físico existe en storage sin levantarlo a memoria
+                    has_valid_photo = person.photo.storage.exists(person.photo.name)
+                except Exception:
+                    has_valid_photo = False
 
             employees_data.append({
                 'employee': employee,
                 'budget': budget,
                 'vacation_balance': vacation_balance,
-                'has_vacation': vacation_balance is not None
+                'has_vacation': vacation_balance is not None,
+                'has_valid_photo': has_valid_photo  # <-- Flag limpio
             })
 
         context['employees_data'] = employees_data

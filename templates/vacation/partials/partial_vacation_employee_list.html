@@ -1,88 +1,145 @@
+{% load static %}
 <div class="table-container">
-    <table>
-        <thead>
-        <tr>
-            <th style="width: 20px;">Foto</th>
-            <th style="width: 23%;">Nombres y Apellidos</th>
-            <th style="width: 13%;">Cédula</th>
-            <th style="width: 22%;">Cargo</th>
-            <th style="width: 17%;">Área</th>
-            <th class="text-center actions" style="width: 16%;">Acciones</th>
-        </tr>
-        </thead>
-        <tbody>
-        {% for item in employees_data %}
+    <div class="table-scroll-top">
+        <table class="managed-table exportable-table"
+               data-title="Reporte Empleados Vacaciones"
+               data-filename="Reporte_Empleados_Vacaciones"
+               data-list-url="{% url 'vacation:request_list' %}"
+               data-external-pagination="true"
+               data-external-search="true">
+            <thead>
             <tr>
-                <!-- Foto -->
-                <td class="text-center">
-                    {% if item.employee.person.photo %}
-                        <img src="{{ item.employee.person.photo.url }}"
-                             alt="{{ item.employee.person.get_full_name }}"
-                             class="employee-avatar"
-                             style="width: 38px; height: 38px; border-radius: 50%; object-fit: cover;">
-                    {% else %}
-                        <div class="employee-avatar-placeholder"
-                             style="width: 38px; height: 38px; border-radius: 50%; background: #e0e7ff; display: flex; align-items: center; justify-content: center; margin: 0 auto;">
-                            <i class="fas fa-user" style="color: #6366f1; font-size: 0.8rem;"></i>
+                <th class="width-3 no-sort">N.</th>
+                <th class="width-25" data-field="person__last_name">Empleado</th>
+                <th class="width-10" data-field="person__document_number">Cédula</th>
+                <th class="width-22" data-field="budget__position_item__name">Cargo</th>
+                <th class="width-23" data-field="area__name">Dependencia</th>
+                <th class="width-15 no-sort text-center actions">Acciones</th>
+            </tr>
+            </thead>
+            <tbody id="table-body">
+            {% if employees_data %}
+                {% for item in employees_data %}
+                    <tr class="location-row" id="row-employee-{{ item.employee.id }}">
+                        <td>{{ page_obj.start_index|add:forloop.counter0 }}</td>
+
+                        <!-- Estructura exacta a person_list -->
+                        <td>
+                            <div class="person-info">
+                                <div class="person-avatar-link">
+                                    {% if item.has_valid_photo %}
+                                        <img src="{{ item.employee.person.photo.url }}"
+                                             alt="{{ item.employee.person.first_name }}"
+                                             class="person-avatar">
+                                    {% else %}
+                                        <div class="person-avatar-placeholder">
+                                            {{ item.employee.person.last_name|first }}{{ item.employee.person.first_name|first }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="person-details">
+                                    <h4>{{ item.employee.person.last_name }} {{ item.employee.person.first_name }}</h4>
+                                </div>
+                            </div>
+                        </td>
+
+                        <td>{{ item.employee.person.document_number|default:"--" }}</td>
+
+                        <td>
+                            {% if item.budget and item.budget.position_item %}
+                                {{ item.budget.position_item.name }}
+                            {% else %}
+                                <span class="text-muted small italic">Sin cargo asignado</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {% if item.employee.area %}
+                                <div class="font-weight-700 small text-primary">
+                                    {{ item.employee.area.name }}
+                                </div>
+                            {% else %}
+                                <span class="text-muted small italic">Sin unidad asignada</span>
+                            {% endif %}
+                        </td>
+
+                        <td class="actions text-center">
+                            <div class="actions-wrapper">
+                                {% if item.has_vacation %}
+                                    <button type="button"
+                                            class="btn-blue-circle btn-vacation-action"
+                                            data-url="{% url 'vacation:employee_vacation_detail' item.employee.id %}"
+                                            title="Ver Vacaciones">
+                                        <i class="fas fa-plane"></i>
+                                    </button>
+                                {% else %}
+                                    <button type="button"
+                                            class="btn-green-circle btn-vacation-action"
+                                            data-url="{% url 'vacation:create_first_vacation' item.employee.id %}"
+                                            title="Crear Primera Vacación">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="6">
+                        <div class="empty-state-container">
+                            <i class="fas fa-calendar-times empty-state-icon"></i>
+                            <p class="empty-state-text">No se encontraron registros.</p>
                         </div>
-                    {% endif %}
-                </td>
-
-                <!-- Nombres y Apellidos -->
-                <td style="font-weight: 500;">
-                    {{ item.employee.person.full_name }}
-                </td>
-
-                <!-- Cédula -->
-                <td>{{ item.employee.person.document_number }}</td>
-
-                <!-- Cargo -->
-                <td>
-                    {% if item.budget and item.budget.position_item %}
-                        {{ item.budget.position_item.name }}
-                    {% else %}
-                        <span style="color: #999;">Sin cargo asignado</span>
-                    {% endif %}
-                </td>
-
-                <!-- Área -->
-                <td>
-                    {% if item.employee.area %}
-                        {{ item.employee.area.name }}
-                    {% else %}
-                        <span style="color: #999;">Sin área</span>
-                    {% endif %}
-                </td>
-
-                <!-- Acciones -->
-                <td class="text-center">
-                    <div class="action-buttons" style="display: flex; justify-content: center; gap: 5px;">
-                        {% if item.has_vacation %}
-                            <!-- Botón Ver Vacaciones -->
-                            <button class="btn-blue-circle"
-                                    onclick="openVacationModal({{ item.employee.id }})"
-                                    title="Ver Vacaciones">
-                                <i class="fas fa-plane"></i>
-                            </button>
-                        {% else %}
-                            <!-- Botón Crear Primera Vacación -->
-                            <button class="btn-green-circle"
-                                    onclick="createFirstVacation({{ item.employee.id }})"
-                                    title="Crear Primera Vacación">
-                                <i class="fas fa-plus"></i>
-                            </button>
-                        {% endif %}
-                    </div>
-                </td>
-            </tr>
-        {% empty %}
-            <tr>
-                <td colspan="6" class="text-center" style="padding: 2rem;">
-                    <i class="fas fa-users" style="font-size: 3rem; color: #cbd5e1; margin-bottom: 1rem;"></i>
-                    <p style="color: #64748b;">No se encontraron empleados</p>
-                </td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+                    </td>
+                </tr>
+            {% endif %}
+            </tbody>
+        </table>
+    </div>
 </div>
+
+{% if paginator.num_pages > 0 %}
+    <div id="js-pagination" class="pagination-container">
+        <span class="pagination-info">
+            Mostrando {{ page_obj.start_index|default:"0" }}-{{ page_obj.end_index|default:"0" }} de {{ paginator.count|default:"0" }}
+        </span>
+        <div class="pagination-controls">
+            <button type="button" class="page-btn page-first {% if not page_obj.has_previous %}disabled{% endif %}"
+                    title="Primera" data-page="1"
+                    {% if not page_obj.has_previous %}disabled{% endif %}>
+                <i class="fas fa-angle-double-left"></i>
+            </button>
+
+            <button type="button" class="page-btn page-prev {% if not page_obj.has_previous %}disabled{% endif %}"
+                    title="Anterior"
+                    data-page="{% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% else %}1{% endif %}"
+                    {% if not page_obj.has_previous %}disabled{% endif %}>
+                <i class="fas fa-angle-left"></i>
+            </button>
+
+            <div class="page-input-wrapper">
+                <input type="number" class="page-input"
+                       value="{{ page_obj.number }}"
+                       min="1" max="{{ paginator.num_pages }}"
+                       data-max-page="{{ paginator.num_pages }}">
+                <span class="total-pages-badge">de {{ paginator.num_pages }}</span>
+            </div>
+
+            <button type="button" class="page-btn page-next {% if not page_obj.has_next %}disabled{% endif %}"
+                    title="Siguiente"
+                    data-page="
+
+                            {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages }}{% endif %}"
+                    {% if not page_obj.has_next %}disabled{% endif %}>
+                <i class="fas fa-angle-right"></i>
+            </button>
+
+            <button type="button" class="page-btn page-last {% if not page_obj.has_next %}disabled{% endif %}"
+                    title="Última" data-page="{{ paginator.num_pages }}"
+                    {% if not page_obj.has_next %}disabled{% endif %}>
+                <i class="fas fa-angle-double-right"></i>
+            </button>
+        </div>
+    </div>
+{% endif %}
