@@ -1,92 +1,86 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{% if perms.permitrequest.change_permitrequest %}Generar Permisos{% else %}Generar Bitácora{% endif %} | SIGETH{% endblock %}
+{% block title %}{% if perms.permitrequest.change_permitrequest %}Generar Permisos{% else %}Generar Bitácora{% endif %}
+    | SIGETH{% endblock %}
 
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/permission.css' %}">
 {% endblock %}
 
 {% block content %}
-    <div id="personApp" data-urls='{
-        "list": "{% url 'permissions:permit_employee_list' %}",
-        "create": "#",
-        "update": "#",
-        "detail": "#",
-        "locations": "#",
-        "createCredentials": "#",
-        "administrative_units": "#"
-    }'>
-
-        <div class="header-card">
-            <div>
-                {% if perms.permitrequest.change_permitrequest %}
-                    <h1>Generar Permisos</h1>
-                    <p>Seleccione un empleado para generar o consultar permisos.</p>
-                {% else %}
-                    <h1>Generar Bitácora</h1>
-                    <p>Seleccione un empleado para generar o consultar bitácoras.</p>
-                {% endif %}
-            </div>
+    <div class="header-card">
+        <div>
+            {% if perms.permitrequest.change_permitrequest %}
+                <h1><i class="fa-solid fa-file-signature me-2"></i> Generar Permisos</h1>
+                <p>Seleccione un empleado para generar o consultar permisos.</p>
+            {% else %}
+                <h1><i class="fa-solid fa-clipboard-list me-2"></i> Generar Bitácora</h1>
+                <p>Seleccione un empleado para generar o consultar bitácoras.</p>
+            {% endif %}
         </div>
+    </div>
 
-        <div id="table-app">
-            <!-- Configuración oculta requerida por employee_permits.js -->
-            <input type="hidden" id="csrf-token" value="{{ csrf_token }}">
-            <input type="hidden" id="url-list" value="{% url 'permissions:permit_employee_list' %}">
-            <div class="content-table">
-                <div class="table-controls" data-manual-export="true">
-                    <div class="search-box">
-                        <input type="text" id="table-search" name="table_search" class="input-field" placeholder="Buscar por cédula o nombre..." autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <div id="table-app">
+        <div class="content-table">
+            <div class="table-controls toolbar-row">
+                <div class="toolbar-center"></div>
+                <div class="toolbar-right">
+                    <input type="text" class="table-search-input table-search-input--large" id="table-search"
+                           placeholder="Buscar por nombres, apellidos o cédula" value="{{ request.GET.q|default:'' }}">
+                </div>
+            </div>
+
+            <!-- Contenedor donde SOLO se inyecta la tabla parcial -->
+            <div id="table-content-wrapper">
+                {% include 'permissions/partials/partial_employee_list.html' %}
+            </div>
+
+            <!-- PAGINACIÓN GLOBAL AL PIE DEL CONTENEDOR (Fija abajo) -->
+            <div class="pagination-container" id="js-pagination">
+                <span class="pagination-info">
+                    Mostrando {{ page_obj.start_index|default:"0" }}-{{ page_obj.end_index|default:"0" }} de {{ paginator.count|default:"0" }}
+                </span>
+                <div class="pagination-controls" {% if paginator.num_pages <= 1 %}style="visibility:hidden;"{% endif %}>
+                    <button type="button" class="page-btn page-first" title="Primera"
+                            {% if not page_obj.has_previous %}disabled{% endif %}
+                            data-page="1">
+                        <i class="fas fa-angle-double-left"></i>
+                    </button>
+                    <button type="button" class="page-btn page-prev" title="Anterior"
+                            {% if not page_obj.has_previous %}disabled{% endif %}
+                            data-page="
+                                    {% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% else %}1{% endif %}">
+                        <i class="fas fa-angle-left"></i>
+                    </button>
+                    <div class="page-input-wrapper">
+                        <input type="number" class="page-input"
+                               value="{{ page_obj.number|default:1 }}"
+                               min="1" max="{{ paginator.num_pages|default:1 }}"
+                               onchange="window.location.search = new URLSearchParams({...Object.fromEntries(new URLSearchParams(window.location.search)), page: this.value}).toString()">
+                        <span class="total-pages-badge">de {{ paginator.num_pages|default:1 }}</span>
                     </div>
-                </div>
-
-                <div id="table-content-wrapper">
-                    {% include 'permissions/partials/partial_employee_list.html' %}
+                    <button type="button" class="page-btn page-next" title="Siguiente"
+                            {% if not page_obj.has_next %}disabled{% endif %}
+                            data-page="
+                                    {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages|default:1 }}{% endif %}">
+                        <i class="fas fa-angle-right"></i>
+                    </button>
+                    <button type="button" class="page-btn page-last" title="Última"
+                            {% if not page_obj.has_next %}disabled{% endif %}
+                            data-page="{{ paginator.num_pages|default:1 }}">
+                        <i class="fas fa-angle-double-right"></i>
+                    </button>
                 </div>
             </div>
+
         </div>
-
-    </div>
-{% endblock %}
-
-{% block modals %}
-    <!-- Modal para generar permiso -->
-    <div id="customModal" class="modal-overlay hidden">
-        <div id="modal-dynamic-content"></div>
     </div>
 
-    <!-- Modal para historial de permisos -->
-    {% include 'permissions/modals/modal_employee_permit_history.html' %}
-    
-    <!-- Modal para registrar bitácora -->
-    <div id="bitacoraModal" class="modal-overlay hidden">
-        <div id="bitacora-modal-content"></div>
-    </div>
-    
-    <!-- Modal para Historial Bitácoras Aprobadas (incluir estático para evitar inyección desde JS) -->
-    <div id="modalContentContainer" class="modal-overlay hidden" role="dialog">
-        {% include 'permissions/modals/modal_binnacle_history.html' %}
-    </div>
-
-    <!-- Modal para listar bitácoras -->
-    <div id="bitacoraListModal" class="modal-overlay hidden">
-        {% include 'permissions/modals/modal_binnacle_list.html' %}
-    </div>
+    <!-- Contenedor único para modales AJAX de main.js -->
+    <div id="modal-root"></div>
 {% endblock %}
 
 {% block extra_js %}
-    <script src="{% static 'js/person.js' %}"></script>
-    <script src="{% static 'js/permissions/employee_permits.js' %}"></script>
-    <script>
-        // Inicializar paginación desde el servidor para compatibilidad inicial
-        {% if page_obj %}
-        window.initialPagination = {
-            current_page: {{ page_obj.number }},
-            total_pages: {{ page_obj.paginator.num_pages }},
-            has_previous: {{ page_obj.has_previous|yesno:"true,false" }},
-            has_next: {{ page_obj.has_next|yesno:"true,false" }}
-        };
-        {% endif %}
-    </script>
+    <script src="{% static 'js/permissions/permit.js' %}"></script>
 {% endblock %}

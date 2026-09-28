@@ -1,78 +1,95 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Tipos de Permisos{% endblock %}
+{% block title %}Tipos de Permisos | SIGETH{% endblock %}
 
 {% block extra_css %}
-        <link rel="stylesheet" href="{% static 'css/permission.css' %}">
+    <link rel="stylesheet" href="{% static 'css/permission.css' %}">
 {% endblock %}
 
 {% block content %}
     <div class="content-wrapper">
-        <!-- Configuración oculta -->
-        <input type="hidden" id="csrf-token" value="{{ csrf_token }}">
-        <input type="hidden" id="url-list" value="{% url 'permissions:permit_type_list' %}">
-
         <!-- Encabezado -->
-
         <div class="header-card">
             <div>
-                <h1>Gestión de Tipos de Permisos</h1>
-                <p>Administra la información de tipos de Permisos.</p>
+                <h1><i class="fa-solid fa-list-check me-2"></i> Gestión de Tipos de Permisos</h1>
+                <p>Administra la información de tipos y subtipos de permisos institucionales.</p>
             </div>
             {% if perms.permitrequest.add_permittype %}
-                <button id="btn-add-type" type="button"
-                        data-url="{% url 'permissions:permit_type_create' %}"
+                <button type="button"
+                        onclick="openAjaxModal('{% url 'permissions:permit_type_create' %}')"
                         class="btn-white-rectangle">
-                    <i class="fas fa-plus"></i> Nuevo Tipo de permiso
+                    <i class="fas fa-plus me-1"></i> Nuevo Tipo de permiso
                 </button>
             {% endif %}
         </div>
 
-        <!-- Buscador -->
+        <!-- Tabla -->
         <div id="table-app">
             <div class="content-table">
-                <div class="table-controls">
-                    <div class="search-box">
-                        <input type="text" id="table-search" class="input-field"
-                               placeholder="Buscar en la tabla">
+                <!-- Toolbar estructurada idéntica a Acción de Personal -->
+                <div class="table-controls toolbar-row">
+                    <div class="toolbar-center"></div>
+                    <div class="toolbar-right">
+                        <input type="text"
+                               class="table-search-input table-search-input--large"
+                               id="table-search"
+                               placeholder="Buscar por nombre o descripción..."
+                               value="{{ request.GET.q|default:'' }}">
                     </div>
                 </div>
-                <!-- 3.1 Zona de recarga AJAX (Solo tabla) -->
+
+                <!-- Contenedor dinámico de la tabla parcial -->
                 <div id="table-content-wrapper">
                     {% include 'permissions/partials/partial_permissions_type_list.html' %}
                 </div>
+
+                <!-- Paginador institucional ubicado al pie -->
                 <div class="pagination-container" id="js-pagination">
-                    <span class="pagination-info" id="page-info">Mostrando 0 a 0 registros de 0 registros</span>
-                    <ul class="pagination-list">
-                        <li>
-                            <button id="btn-prev" class="page-btn"><i class="fas fa-chevron-left"></i></button>
-                        </li>
-                        <li>
-                            <span id="current-page-display" style="padding: 0 10px; font-weight: bold;">1</span>
-                        </li>
-                        <li>
-                            <button id="btn-next" class="page-btn"><i class="fas fa-chevron-right"></i></button>
-                        </li>
-                    </ul>
+                    <span class="pagination-info">
+                        Mostrando {{ page_obj.start_index|default:"0" }}-{{ page_obj.end_index|default:"0" }} de {{ paginator.count|default:"0" }}
+                    </span>
+                    <div class="pagination-controls"
+                         {% if paginator.num_pages <= 1 %}style="visibility:hidden;"{% endif %}>
+                        <button type="button" class="page-btn page-first" title="Primera"
+                                {% if not page_obj.has_previous %}disabled{% endif %}
+                                data-page="1">
+                            <i class="fas fa-angle-double-left"></i>
+                        </button>
+                        <button type="button" class="page-btn page-prev" title="Anterior"
+                                {% if not page_obj.has_previous %}disabled{% endif %}
+                                data-page="
+                                        {% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% else %}1{% endif %}">
+                            <i class="fas fa-angle-left"></i>
+                        </button>
+                        <div class="page-input-wrapper">
+                            <input type="number" class="page-input"
+                                   value="{{ page_obj.number|default:1 }}"
+                                   min="1" max="{{ paginator.num_pages|default:1 }}"
+                                   onchange="window.location.search = new URLSearchParams({...Object.fromEntries(new URLSearchParams(window.location.search)), page: this.value}).toString()">
+                            <span class="total-pages-badge">de {{ paginator.num_pages|default:1 }}</span>
+                        </div>
+                        <button type="button" class="page-btn page-next" title="Siguiente"
+                                {% if not page_obj.has_next %}disabled{% endif %}
+                                data-page="
+                                        {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages|default:1 }}{% endif %}">
+                            <i class="fas fa-angle-right"></i>
+                        </button>
+                        <button type="button" class="page-btn page-last" title="Última"
+                                {% if not page_obj.has_next %}disabled{% endif %}
+                                data-page="{{ paginator.num_pages|default:1 }}">
+                            <i class="fas fa-angle-double-right"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-{% endblock %}
 
-{% block modals %}
-    <!-- Modal Personalizado -->
-    <div id="customModal" class="modal-overlay hidden">
-        <div id="modal-dynamic-content">
-            <!-- Aquí se carga el contenido dinámico del modal -->
-        </div>
-    </div>
-
-    <!-- Modal para listar sub-tipos -->
-    {% include 'permissions/modals/modal_permissions_subtype_list.html' %}
+    <!-- Contenedor único para modales AJAX -->
+    <div id="modal-root"></div>
 {% endblock %}
 
 {% block extra_js %}
-    <script src="{% static 'js/permissions/permissions_type.js' %}"></script>
+    <script src="{% static 'js/permissions/permit.js' %}"></script>
 {% endblock %}

@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Administrar Permisos | SIGETH{% endblock %}
+
+{% block content %}
+    <!-- 1. Encabezado Oficial -->
+    <div class="header-card">
+        <div>
+            <h1>Gestión de Permisos</h1>
+            <p>Administra los permisos del personal de la institución</p>
+        </div>
+    </div>
+
+    <!-- 2. Contenedor Continuo-->
+    <div id="table-app">
+        <div class="content-table">
+
+            <form id="filtersForm" onsubmit="handlePermitSearch(event)" class="mb-3">
+                <!-- Panel con Grid Nativo de 3 columnas (2 filas fijas) -->
+                <div class="search-panel">
+                    <div class="search-grid">
+                        <!-- Fila 1 -->
+                        <div>
+                            <input type="text" id="table-search-permits" name="q"
+                                   class="form-control"
+                                   placeholder="Nombres/Apellidos/Cédula"
+                                   value="{{ current_filters.q|default:'' }}">
+                        </div>
+                        <div>
+                            <input type="date" id="filter_date_from" name="date_from"
+                                   class="form-control"
+                                   value="{{ current_filters.date_from|default:'' }}"
+                                   placeholder="Vigencia Desde">
+                        </div>
+                        <div>
+                            <input type="date" id="filter_date_to" name="date_to"
+                                   class="form-control"
+                                   value="{{ current_filters.date_to|default:'' }}"
+                                   placeholder="Vigencia Hasta">
+                        </div>
+
+                        <!-- Fila 2 -->
+                        <div>
+                            <select id="filter_area" name="area" class="input-field select2">
+                                <option value="">Dependencia</option>
+                                {% for area in areas %}
+                                    <option value="{{ area.id }}"
+                                            {% if current_filters.area == area.id|stringformat:"s" %}selected{% endif %}>
+                                        {{ area.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <select id="filter_permit_type" name="permit_type" class="input-field select2">
+                                <option value="">Tipo de Permiso</option>
+                                {% for t in permit_types %}
+                                    <option value="{{ t.id }}"
+                                            {% if current_filters.permit_type == t.id|stringformat:"s" %}selected{% endif %}>
+                                        {{ t.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <select id="filter_status" name="status" class="input-field select2">
+                                <option value="">Estado</option>
+                                {% for value, label in status_choices %}
+                                    <option value="{{ value }}"
+                                            {% if current_filters.status == value %}selected{% endif %}>
+                                        {{ label }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Barra de Acciones: Excel/PDF a la izquierda y BUSCAR / LIMPIAR centrados -->
+                <div class="search-toolbar">
+                    <div class="table-controls person-filter-controls rubric-export-controls"></div>
+                    <div class="search-filter-actions">
+                        <button type="submit" class="btn-blue-rectangle">
+                            <i class="fas fa-search me-1"></i> BUSCAR
+                        </button>
+                        <button type="button" class="btn-blue-rectangle-outline" onclick="clearPermitFilters()">
+                            <i class="fas fa-eraser me-1"></i> LIMPIAR
+                        </button>
+                    </div>
+                    <div></div>
+                </div>
+            </form>
+
+            <!-- Contenedor donde se inyecta la tabla parcial -->
+            <div id="table-content-wrapper">
+                {% include 'permissions/partials/partial_permit_table.html' %}
+            </div>
+
+            <!-- Paginación Global -->
+            <div class="pagination-container">
+                <span class="pagination-info">
+                    Mostrando {{ page_obj.start_index|default:"0" }}-{{ page_obj.end_index|default:"0" }} de {{ paginator.count|default:"0" }}
+                </span>
+                <div class="pagination-controls" {% if paginator.num_pages <= 1 %}style="visibility:hidden;"{% endif %}>
+                    <button type="button" class="page-btn page-first" title="Primera"
+                            {% if not page_obj.has_previous %}disabled{% endif %}
+                            data-page="1">
+                        <i class="fas fa-angle-double-left"></i>
+                    </button>
+                    <button type="button" class="page-btn page-prev" title="Anterior"
+                            {% if not page_obj.has_previous %}disabled{% endif %}
+                            data-page="
+
+                                    {% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% else %}1{% endif %}">
+                        <i class="fas fa-angle-left"></i>
+                    </button>
+                    <div class="page-input-wrapper">
+                        <input type="number" class="page-input"
+                               value="{{ page_obj.number|default:1 }}"
+                               min="1" max="{{ paginator.num_pages|default:1 }}"
+                               onchange="window.location.search = new URLSearchParams({...Object.fromEntries(new URLSearchParams(window.location.search)), page: this.value}).toString()">
+                        <span class="total-pages-badge">de {{ paginator.num_pages|default:1 }}</span>
+                    </div>
+                    <button type="button" class="page-btn page-next" title="Siguiente"
+                            {% if not page_obj.has_next %}disabled{% endif %}
+                            data-page="
+
+                                    {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages|default:1 }}{% endif %}">
+                        <i class="fas fa-angle-right"></i>
+                    </button>
+                    <button type="button" class="page-btn page-last" title="Última"
+                            {% if not page_obj.has_next %}disabled{% endif %}
+                            data-page="{{ paginator.num_pages|default:1 }}">
+                        <i class="fas fa-angle-double-right"></i>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Contenedor Universal para Modales AJAX de main.js -->
+    <div id="modal-root"></div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/permissions/permit.js' %}"></script>
+{% endblock %}

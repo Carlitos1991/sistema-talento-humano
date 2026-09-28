@@ -4,7 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Detalle del Permiso - {{ permit.employee.person.full_name }}</title>
+    <title>Validación de Permiso - {{ permit.employee.person.full_name }} | SIGETH</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         * {
             margin: 0;
@@ -14,156 +15,153 @@
 
         :root {
             --ink: #0f172a;
-            --muted: #475569;
-            --line: #dbe2ea;
+            --muted: #64748b;
+            --line: #e2e8f0;
             --paper: #ffffff;
             --soft: #f8fafc;
-            --soft-2: #f1f7ff;
-            --brand: #0b5cab;
+            --brand-dark: #0f172a;
+            --brand-primary: #1e3a8a;
             --ok-bg: #dcfce7;
-            --ok-text: #166534;
+            --ok-text: #15803d;
             --warn-bg: #fef3c7;
-            --warn-text: #92400e;
+            --warn-text: #b45309;
             --bad-bg: #fee2e2;
-            --bad-text: #991b1b;
+            --bad-text: #b91c1c;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
-            background: radial-gradient(circle at 20% 10%, rgba(17, 129, 204, 0.12) 0, transparent 38%),
-            linear-gradient(180deg, #eef4fb 0%, #e8eff7 100%);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: linear-gradient(180deg, #e2e8f0 0%, #cbd5e1 100%);
             color: var(--ink);
-            padding: 12px;
+            padding: 20px 12px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
 
         .sheet {
-            width: min(940px, 100%);
-            margin: 0 auto;
+            width: min(850px, 100%);
             background: var(--paper);
-            border: 1px solid var(--line);
-            border-radius: 10px;
+            border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 14px 32px rgba(15, 23, 42, 0.12);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--line);
         }
 
         .header {
-            padding: 14px 18px;
-            background: linear-gradient(125deg, #0b355f 0%, #0b5cab 55%, #1181cc 100%);
-            color: #fff;
-            border-bottom: 3px solid #0a4f8a;
+            background: linear-gradient(135deg, var(--brand-dark) 0%, var(--brand-primary) 100%);
+            color: #ffffff;
+            padding: 20px 24px;
         }
 
         .header-top {
             display: flex;
             justify-content: space-between;
-            align-items: flex-start;
+            align-items: center;
             gap: 16px;
         }
 
         .header-ident {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 14px;
         }
 
-        .header-ident img {
-            width: 42px;
-            height: 42px;
-            object-fit: contain;
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.18);
-            padding: 4px;
+        .header-ident i {
+            font-size: 2.2rem;
+            color: #38bdf8;
         }
 
         .header h1 {
-            font-size: 18px;
-            letter-spacing: 0.04em;
+            font-size: 1.15rem;
             font-weight: 800;
-            margin-bottom: 2px;
+            letter-spacing: 0.02em;
         }
 
         .header p {
-            font-size: 11px;
-            opacity: 0.95;
+            font-size: 0.8rem;
+            color: #94a3b8;
         }
 
         .doc-meta {
             text-align: right;
-            font-size: 10px;
+            font-size: 0.78rem;
+            color: #e2e8f0;
             line-height: 1.4;
-            opacity: 0.95;
-            min-width: 180px;
         }
 
         .body {
-            padding: 12px 14px 14px;
+            padding: 20px 24px;
         }
 
         .status-row {
-            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed var(--line);
         }
 
-        .status-badge {
+        .badge-status {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            font-size: 10px;
+            gap: 6px;
+            font-size: 0.75rem;
             font-weight: 700;
-            letter-spacing: 0.04em;
             text-transform: uppercase;
-            padding: 6px 12px;
-            border-radius: 999px;
-            border: 1px solid transparent;
+            padding: 6px 14px;
+            border-radius: 9999px;
+            letter-spacing: 0.05em;
         }
 
-        .status-approved {
+        .badge-approved {
             background: var(--ok-bg);
             color: var(--ok-text);
-            border-color: #86efac;
         }
 
-        .status-requested {
+        .badge-requested {
             background: var(--warn-bg);
             color: var(--warn-text);
-            border-color: #fde68a;
         }
 
-        .status-rejected,
-        .status-canceled {
+        .badge-rejected, .badge-canceled {
             background: var(--bad-bg);
             color: var(--bad-text);
-            border-color: #fecaca;
         }
 
-        .section {
-            margin-bottom: 10px;
+        .section-box {
+            background: var(--soft);
             border: 1px solid var(--line);
             border-radius: 8px;
-            overflow: hidden;
-            background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+            padding: 14px;
+            margin-bottom: 14px;
         }
 
-        .grid {
+        .section-title {
+            font-size: 0.75rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--muted);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .grid-two {
             display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 8px;
-            padding: 10px;
-        }
-
-        .grid.two {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
         }
 
         .cell {
-            background: linear-gradient(180deg, var(--soft) 0%, var(--soft-2) 100%);
-            border: 1px solid #e2e8f0;
+            background: #ffffff;
+            border: 1px solid var(--line);
             border-radius: 6px;
-            padding: 8px 9px;
-            min-height: 52px;
-        }
-
-        .cell.wide {
-            grid-column: span 2;
+            padding: 10px 12px;
         }
 
         .cell.full {
@@ -171,43 +169,30 @@
         }
 
         .label {
-            font-size: 9px;
+            font-size: 0.72rem;
             font-weight: 700;
-            color: #64748b;
+            color: var(--muted);
             text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 4px;
+            margin-bottom: 2px;
         }
 
         .value {
-            font-size: 12px;
-            color: #0f172a;
+            font-size: 0.92rem;
             font-weight: 600;
-            line-height: 1.3;
+            color: var(--ink);
             word-break: break-word;
         }
 
         .footer {
+            background: var(--soft);
             border-top: 1px solid var(--line);
-            margin-top: 0;
-            padding: 8px 10px 6px;
-            font-size: 10px;
-            color: #64748b;
+            padding: 14px;
             text-align: center;
-            line-height: 1.35;
+            font-size: 0.75rem;
+            color: var(--muted);
         }
 
-        @media (max-width: 900px) {
-            body {
-                padding: 8px;
-            }
-
-            .header,
-            .body {
-                padding-left: 10px;
-                padding-right: 10px;
-            }
-
+        @media (max-width: 640px) {
             .header-top {
                 flex-direction: column;
                 align-items: flex-start;
@@ -215,20 +200,10 @@
 
             .doc-meta {
                 text-align: left;
-                min-width: 0;
             }
 
-            .grid {
+            .grid-two {
                 grid-template-columns: 1fr;
-            }
-
-            .grid.two {
-                grid-template-columns: 1fr;
-            }
-
-            .cell.wide,
-            .cell.full {
-                grid-column: auto;
             }
         }
     </style>
@@ -236,155 +211,130 @@
 <body>
 
 <div class="sheet">
+    <!-- Header -->
     <div class="header">
         <div class="header-top">
             <div class="header-ident">
-                <img src="{% static 'img/logo.png' %}" alt="SIGETH">
+                <i class="fa-solid fa-shield-halved"></i>
                 <div>
                     <h1>MUNICIPIO DE LOJA</h1>
-                    <p>Validación pública de permiso - SIGETH</p>
+                    <p>Validación Oficial de Permiso - SIGETH</p>
                 </div>
             </div>
             <div class="doc-meta">
-                <div><strong>No. Permiso:</strong> {{ permit.id }}</div>
-                <div><strong>Consultado:</strong> {% now "d/m/Y H:i" %}</div>
-                <div><strong>Empleado:</strong> {{ permit.employee.person.document_number|default:'N/A' }}</div>
+                <div><strong>Permiso ID:</strong> #{{ permit.id }}</div>
+                <div><strong>Verificado:</strong> {% now "d/m/Y H:i" %}</div>
             </div>
         </div>
     </div>
 
+    <!-- Body -->
     <div class="body">
         <div class="status-row">
-            {% if permit.status == 'APPROVED' %}
-                <span class="status-badge status-approved">Permiso aprobado</span>
-            {% elif permit.status == 'REQUESTED' %}
-                <span class="status-badge status-requested">Permiso pendiente</span>
-            {% elif permit.status == 'REJECTED' %}
-                <span class="status-badge status-rejected">Permiso rechazado</span>
-            {% elif permit.status == 'CANCELED' %}
-                <span class="status-badge status-canceled">Permiso anulado</span>
-            {% endif %}
+            <div>
+                {% if permit.status == 'APPROVED' %}
+                    <span class="badge-status badge-approved"><i
+                            class="fas fa-check-circle"></i> Permiso Aprobado</span>
+                {% elif permit.status == 'REQUESTED' %}
+                    <span class="badge-status badge-requested"><i
+                            class="fas fa-clock"></i> Pendiente de Aprobación</span>
+                {% elif permit.status == 'REJECTED' %}
+                    <span class="badge-status badge-rejected"><i class="fas fa-ban"></i> Solicitud Rechazada</span>
+                {% else %}
+                    <span class="badge-status badge-canceled"><i class="fas fa-times-circle"></i> Permiso Anulado</span>
+                {% endif %}
+            </div>
+            <div class="label">Token QR Validado</div>
         </div>
 
-        <div class="section">
-            <div class="section-title">Datos Del Empleado</div>
-            <div class="grid two">
+        <!-- Empleado -->
+        <div class="section-box">
+            <div class="section-title"><i class="fas fa-user"></i> Servidor Público</div>
+            <div class="grid-two">
                 <div class="cell">
-                    <div class="label">Cédula</div>
-                    <div class="value">{{ permit.employee.person.document_number|default:'N/A' }}</div>
+                    <div class="label">Nombres Completos</div>
+                    <div class="value">{{ permit.employee.person.full_name }}</div>
                 </div>
                 <div class="cell">
-                    <div class="label">Servidor Público</div>
-                    <div class="value">{{ permit.employee.person.full_name }}</div>
+                    <div class="label">Número de Cédula</div>
+                    <div class="value">{{ permit.employee.person.document_number|default:'--' }}</div>
                 </div>
             </div>
         </div>
 
-        <div class="section">
-            <div class="section-title">Detalle Del Permiso</div>
-            <div class="grid two">
+        <!-- Detalle -->
+        <div class="section-box">
+            <div class="section-title"><i class="fas fa-file-lines"></i> Parámetros de la Solicitud</div>
+            <div class="grid-two">
                 <div class="cell">
                     <div class="label">Tipo de Permiso</div>
-                    <div class="value">{{ permit.permit_type.name|default:'N/A' }}</div>
+                    <div class="value">{{ permit.permit_type.name|default:'No especificado' }}</div>
                 </div>
                 <div class="cell">
-                    <div class="label">Afecta Vacaciones</div>
-                    <div class="value">{% if permit.permit_type.affects_vacation %}Sí{% else %}No{% endif %}</div>
+                    <div class="label">Descuento a Vacaciones</div>
+                    <div class="value">{% if permit.permit_type.affects_vacation %}Sí aplica descuento{% else %}No
+                        descuenta{% endif %}</div>
                 </div>
                 <div class="cell">
-                    <div class="label">Fecha/Hora Inicio</div>
+                    <div class="label">Fecha y Hora de Inicio</div>
                     <div class="value">
                         {{ permit.start_date|date:"d/m/Y" }}
-                        {% if permit.start_time %}- {{ permit.start_time|time:"H:i" }}{% endif %}
+                        {% if permit.start_time %} - {{ permit.start_time|time:"H:i" }}{% endif %}
                     </div>
                 </div>
                 <div class="cell">
-                    <div class="label">Fecha/Hora Fin</div>
+                    <div class="label">Fecha y Hora de Fin</div>
                     <div class="value">
                         {% if permit.end_date %}
                             {{ permit.end_date|date:"d/m/Y" }}
-                            {% if permit.end_time %}- {{ permit.end_time|time:"H:i" }}{% endif %}
+                            {% if permit.end_time %} - {{ permit.end_time|time:"H:i" }}{% endif %}
                         {% else %}
-                            N/A
+                            --:--
                         {% endif %}
                     </div>
                 </div>
-                <div class="cell">
-                    <div class="label">Duración</div>
+                <div class="cell full">
+                    <div class="label">Duración Total</div>
                     <div class="value">
                         {% if permit.days > 0 %}{{ permit.days }} día(s){% endif %}
                         {% if permit.hours > 0 %} {{ permit.hours }} hora(s){% endif %}
                         {% if permit.minutes > 0 %} {{ permit.minutes }} minuto(s){% endif %}
-                        {% if permit.days == 0 and permit.hours == 0 and permit.minutes == 0 %}N/A{% endif %}
+                        {% if permit.days == 0 and permit.hours == 0 and permit.minutes == 0 %}Intradía{% endif %}
                     </div>
                 </div>
-                {% if permit.justification_file %}
-                    <div class="cell full">
-                        <div class="label">Justificativo</div>
-                        <div class="value">Documento PDF adjunto en expediente digital.</div>
-                    </div>
-                {% endif %}
             </div>
         </div>
 
+        <!-- Respuesta -->
         {% if permit.status != 'REQUESTED' and permit.response_by %}
-            <div class="section">
-                <div class="section-title">Validación Y Respuesta</div>
-                <div class="grid two">
+            <div class="section-box">
+                <div class="section-title"><i class="fas fa-check-double"></i> Resolución</div>
+                <div class="grid-two">
                     <div class="cell">
                         <div class="label">Procesado Por</div>
-                        <div class="value">
-                            {% if permit.response_by %}
-                                {{ permit.response_by.get_full_name|default:permit.response_by.username }}
-                            {% else %}
-                                N/A
-                            {% endif %}
-                        </div>
+                        <div class="value">{{ permit.response_by.get_full_name|default:permit.response_by.username }}</div>
                     </div>
                     <div class="cell">
-                        <div class="label">Fecha de Respuesta</div>
+                        <div class="label">Fecha de Procesamiento</div>
                         <div class="value">{{ permit.response_date|date:"d/m/Y H:i" }}</div>
                     </div>
                     {% if permit.response_note %}
                         <div class="cell full">
-                            <div class="label">Observación</div>
-                            <div class="value">{{ permit.response_note }}</div>
+                            <div class="label">Observaciones / Notas</div>
+                            <div class="value" style="font-size: 0.85rem; font-weight: normal;">
+                                {{ permit.response_note|safe }}
+                            </div>
                         </div>
                     {% endif %}
                 </div>
             </div>
         {% endif %}
+    </div>
 
-        <div class="section">
-            <div class="section-title">Auditoría</div>
-            <div class="grid two">
-                <div class="cell">
-                    <div class="label">Registrado Por</div>
-                    <div class="value">
-                        {% if permit.created_by %}
-                            {% if permit.created_by.get_full_name %}
-                                {{ permit.created_by.get_full_name }}
-                            {% else %}
-                                {{ permit.created_by.username }}
-                            {% endif %}
-                        {% else %}
-                            Sistema
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="cell">
-                    <div class="label">Fecha de Registro</div>
-                    <div class="value">{{ permit.created_at|date:"d/m/Y H:i" }}</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="footer">
-            <p>
-                Documento consultado electrónicamente por código QR.<br>
-                Fecha de consulta: {% now "d/m/Y H:i" %}
-            </p>
-        </div>
+    <!-- Footer -->
+    <div class="footer">
+        <p>Documento consultado electrónicamente mediante Código QR oficial de SIGETH.</p>
+        <p class="small text-muted mt-1">Cuerpo de Bomberos del Cantón Loja / GAD Municipal de Loja</p>
     </div>
 </div>
 

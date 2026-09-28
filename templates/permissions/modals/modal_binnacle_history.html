@@ -1,108 +1,103 @@
 {% load static %}
 
-<div id="bitacora-history-container" class="modal-container-medium animate-scale-in"
-     data-can-edit="{{ can_edit|yesno:'1,0' }}">
-
-    <div class="modal-header-medium modal-header-gradient">
-        <h3 class="modal-title text-white">
-            <i class="fa-solid fa-clipboard-list me-2"></i> Historial Bitácoras Aprobadas: [[ employee_name || '' ]]
-        </h3>
-        <button type="button" class="btn-close-modal js-close-bitacora-modal" title="Cerrar">
-            <i class="fas fa-times"></i>
-        </button>
-    </div>
-
-    <div class="modal-body-content modal-body-custom" style="display:flex; flex-direction:column; height:100%;">
-        <div class="table-controls mb-3" style="align-items:center; gap:12px;">
-            <div style="display:flex; gap:8px; align-items:center;">
-                <label style="font-weight:600; color:#334155;">Desde:</label>
-                <input type="date" id="bitacora-history-from" class="input-field"/>
-                <label style="font-weight:600; color:#334155;">Hasta:</label>
-                <input type="date" id="bitacora-history-to" class="input-field"/>
-                <button type="button" class="btn-pill-action" id="bitacora-history-clear">Limpiar</button>
-            </div>
-            <div style="display:flex; gap:10px; align-items:center; margin-left:auto;">
-                <!-- acciones si se requieren -->
-            </div>
+<div class="modal-overlay hidden">
+    <div class="modal-container-large">
+        <!-- HEADER -->
+        <div class="modal-header-medium">
+            <h3 class="header-title">
+                <i class="fa-solid fa-clipboard-check me-2"></i> Historial de Bitácoras Aprobadas: {{ employee_name }}
+            </h3>
+            <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
 
-        <div class="table-container flex-grow-1" style="overflow-y:auto; min-height:300px;">
-            <table class="w-100 table-vue-custom" style="width: 100%; border-collapse: collapse;">
-                <thead>
-                <tr>
-                    <th style="width:4%;">N°</th>
-                    <th style="width:12%;">Fecha Bit.</th>
-                    <th style="width:8%;">Inicio</th>
-                    <th style="width:8%;">Fin</th>
-                    <th style="width:8%;">Estado</th>
-                    <th style="width:20%;">Registrado por</th>
-                    <th style="width:12%;">Fecha Registro</th>
-                    <th style="width:18%;">Aprobado por</th>
-                    <th style="width:10%;">Fecha Aprobación</th>
-                    <th style="width:10%;">Acciones</th>
-                </tr>
-                </thead>
-                <tbody id="bitacora-history-tbody">
-                <tr v-if="bitacoras.length === 0">
-                    <td colspan="10" class="text-center py-4">No hay bitácoras aprobadas</td>
-                </tr>
-                <tr v-for="(b, idx) in bitacoras" :key="b.id">
-                    <td class="text-center">[[ (page - 1) * page_size + idx + 1 ]]</td>
-                    <td>[[ formatDate(b.start_date) ]]</td>
-                    <td class="text-center">[[ b.start_time || '--:--' ]]</td>
-                    <td class="text-center">
-                        <div>[[ b.end_time || '--:--' ]]</div>
-                        <div v-if="b.end_date && b.end_date !== b.start_date" style="font-size:11px;color:#6b7280;">
-                            [[ formatDate(b.end_date) ]]
-                        </div>
-                    </td>
-                    <td class="text-center"><span class="status-badge active">[[ b.status === 'APPROVED' ? 'APROBADAS' : b.status ]]</span>
-                    </td>
-                    <td style="font-size:12px; white-space:normal;">[[ b.created_by_full_name || '' ]]</td>
-                    <td style="font-size:12px;">[[ formatDateTimeShort(b.created_at) ]]</td>
-                    <td style="font-size:12px;">[[ b.approved_by_full_name || '' ]]</td>
-                    <td style="font-size:12px;">[[ formatDateTimeShort(b.response_date) ]]</td>
-                    <td class="text-center">
-                        <button class="btn-pill-action" v-if="can_edit" data-id="[[ b.id ]]" data-action="review">
-                            Revisar Permiso
-                        </button>
-                    </td>
-                </tr>
-                </tbody>
-            </table>
-        </div>
-
-        <div class="pagination-container mt-3" v-show="true">
-            <span id="bitacora-history-info" class="pagination-info">Mostrando [[ startIndex ]] a [[ endIndex ]] de [[ total_count ]]</span>
-            <div class="pagination-controls">
-                <button type="button" class="page-btn" title="Primera"
-                        :disabled="page === 1"
-                        @click="page = 1">&laquo;
-                </button>
-                <button type="button" class="page-btn" title="Anterior"
-                        :disabled="page === 1"
-                        @click="page = Math.max(1, page - 1)">&lsaquo;
-                </button>
-
-                <div class="page-input-wrapper">
-                    <input type="number" id="bitacora-history-current" v-model.number="page" min="1" :max="total_pages"
-                           class="page-input" style="width:80px; text-align:center;">
-                    <span id="bitacora-history-total" class="total-pages-badge">de [[ total_pages ]]</span>
+        <!-- BODY -->
+        <div class="modal-body-content modal-body-custom">
+            <!-- Controles de fecha -->
+            <div class="toolbar-row mb-3">
+                <div class="toolbar-left d-flex align-items-center gap-2">
+                    <label class="label-muted m-0">Desde:</label>
+                    <input type="date" id="history-filter-from" class="form-control" style="width: 145px; height: 36px;"
+                           onchange="filterBinnacleHistoryRows()">
+                    <label class="label-muted m-0 ms-1">Hasta:</label>
+                    <input type="date" id="history-filter-to" class="form-control" style="width: 145px; height: 36px;"
+                           onchange="filterBinnacleHistoryRows()">
+                    <button type="button" class="btn-white-rectangle py-1 px-3 ms-1"
+                            style="height: 36px; font-size: 0.75rem;" onclick="clearHistoryDates()">
+                        <i class="fas fa-eraser me-1"></i> Limpiar
+                    </button>
                 </div>
+            </div>
 
-                <button type="button" class="page-btn" title="Siguiente"
-                        :disabled="page === total_pages"
-                        @click="page = Math.min(total_pages, page + 1)">&rsaquo;
-                </button>
-                <button type="button" class="page-btn" title="Última"
-                        :disabled="page === total_pages"
-                        @click="page = total_pages">&raquo;
-                </button>
+            <!-- TABLA -->
+            <div class="table-container" style="max-height: 50vh; overflow-y: auto;">
+                <table class="managed-table m-0" id="binnacle-history-table">
+                    <thead style="position: sticky; top: 0; z-index: 2;">
+                    <tr>
+                        <th class="width-5 text-center">N°</th>
+                        <th class="width-12">Fecha Bitácora</th>
+                        <th class="width-8 text-center">Inicio</th>
+                        <th class="width-8 text-center">Fin</th>
+                        <th class="width-10 text-center">Estado</th>
+                        <th class="width-18">Registrado por</th>
+                        <th class="width-12 text-center">Fecha Registro</th>
+                        <th class="width-18">Aprobado por</th>
+                        <th class="width-12 text-center">Fecha Aprobación</th>
+                        {% if can_edit %}
+                            <th class="width-10 text-center no-sort actions"><i class="fas fa-cogs"></i> Acciones</th>
+                        {% endif %}
+                    </tr>
+                    </thead>
+                    <tbody id="binnacle-history-tbody">
+                    {% for b in bitacoras %}
+                        <tr data-date="{{ b.start_date|date:'Y-m-d' }}" data-id="{{ b.id }}">
+                            <td class="text-center">{{ forloop.counter }}</td>
+                            <td class="font-monospace bold">{{ b.start_date|date:"d/m/Y" }}</td>
+                            <td class="text-center font-monospace">{{ b.start_time|time:"H:i"|default:"--:--" }}</td>
+                            <td class="text-center font-monospace">
+                                <div>{{ b.end_time|time:"H:i"|default:"--:--" }}</div>
+                                {% if b.end_date and b.end_date != b.start_date %}
+                                    <div class="text-muted small">{{ b.end_date|date:"d/m/Y" }}</div>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <span class="badge badge-green">APROBADA</span>
+                            </td>
+                            <td class="small">{{ b.created_by.get_full_name|default:"Sistema" }}</td>
+                            <td class="text-center small font-monospace">{{ b.created_at|date:"d/m/Y H:i" }}</td>
+                            <td class="small">{{ b.response_by.get_full_name|default:"Sistema" }}</td>
+                            <td class="text-center small font-monospace">{{ b.response_date|date:"d/m/Y H:i"|default:"--" }}</td>
+                            {% if can_edit %}
+                                <td class="actions text-center">
+                                    <button type="button" class="btn-blue-rectangle-outline py-1 px-2"
+                                            style="font-size: 0.75rem;"
+                                            onclick="reviewBinnacleModal({{ b.id }})"
+                                            title="Reabrir bitácora para modificación">
+                                        <i class="fas fa-redo me-1"></i> Revisar
+                                    </button>
+                                </td>
+                            {% endif %}
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="{% if can_edit %}10{% else %}9{% endif %}">
+                                <div class="empty-state-container">
+                                    <i class="fa-solid fa-inbox empty-state-icon"></i>
+                                    <p class="empty-state-text">No se registran bitácoras aprobadas para este
+                                        empleado.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
-    </div>
 
-    <div class="modal-footer modal-footer-spaced">
-        <button type="button" class="btn-cancel js-close-bitacora-modal">Cerrar</button>
+        <!-- FOOTER -->
+        <div class="modal-footer-medium">
+            <button type="button" class="btn-default-outline" onclick="closeModal()">Cerrar</button>
+        </div>
     </div>
 </div>

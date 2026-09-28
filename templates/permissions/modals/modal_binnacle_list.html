@@ -1,184 +1,159 @@
 {% load static %}
 
-<div id="bitacora-list-app" v-cloak>
-    <style>
-        .note-label { font-weight: 700; margin-right: 6px; }
-        .note-label.note-reject { color: #dc2626; }
-        .note-label.note-justifica { color: #16a34a; }
-        .note-label.note-modifica { color: #2563eb; }
-        .note-label.note-creation { color: #0f172a; }
-        .note-text { color: #111827; }
-    </style>
-    <div class="modal-overlay" :class="{ 'hidden': !isVisible }" role="dialog">
+<div class="modal-overlay hidden">
+    <div class="modal-container-large">
+        <!-- HEADER -->
+        <div class="modal-header-medium">
+            <h3 class="header-title">
+                <i class="fa-solid fa-clock-rotate-left me-2"></i> Bitácoras Pendientes: {{ employee_name }}
+            </h3>
+            <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
 
-        <!-- Modal container -->
-        <div class="modal-container-medium animate-scale-in">
+        <!-- BODY -->
+        <div class="modal-body-content modal-body-custom">
+            <!-- Barra Superior sin colisiones -->
+            <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+                <!-- Filtros Fecha (Izquierda) -->
+                <div class="d-flex align-items-center gap-2">
+                    <label class="label-muted m-0" style="font-weight: 700;">Desde:</label>
+                    <input type="date" id="binnacle-filter-from" class="form-control"
+                           style="width: 140px; height: 36px;">
+                    <label class="label-muted m-0 ms-1" style="font-weight: 700;">Hasta:</label>
+                    <input type="date" id="binnacle-filter-to" class="form-control" style="width: 140px; height: 36px;">
+                    <button type="button" class="btn-white-rectangle py-1 px-3 ms-1"
+                            style="height: 36px; font-size: 0.75rem;" onclick="clearBinnacleDates()">
+                        <i class="fas fa-eraser me-1"></i> LIMPIAR
+                    </button>
+                </div>
 
-            <!-- HEADER -->
-            <div class="modal-header-medium modal-header-gradient">
-                <h3 class="modal-title text-white">
-                    <i class="fa-solid fa-lock me-2"></i> Bitácoras Pendientes: [[ employeeName ]]
-                </h3>
-                <button type="button" class="btn-close-modal js-close-bitacora-modal" title="Cerrar" @click="closeModal">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-
-            <!-- BODY -->
-            <div class="modal-body-content modal-body-custom"
-                 style="display: flex; flex-direction: column; height: 100%;">
-
-                <!-- CONTROLES: rango de fechas -->
-                <div class="table-controls mb-3" style="align-items:center; gap:12px;">
-                    <div style="display:flex; gap:8px; align-items:center;">
-                        <label style="font-weight:600; color:#334155;">Desde:</label>
-                        <input type="date" v-model="fromDate" class="input-field" @change="currentPage=1">
-                        <label style="font-weight:600; color:#334155;">Hasta:</label>
-                        <input type="date" v-model="toDate" class="input-field" @change="currentPage=1">
-                        <button type="button" class="btn-pill-action" @click="clearDates()">Limpiar</button>
-                    </div>
-                    <div style="display: flex; gap: 10px; align-items: center; margin-left:auto;">
-                        <button class="btn-success-action" @click="approveSelected"
-                                v-if="selectedBitacoras.length > 0"
-                                title="Aprobar Seleccionadas">
+                <!-- Botones de Acción Masiva (Derecha, no tapan Limpiar) -->
+                <div class="d-flex align-items-center gap-2">
+                    {% if perms.permitrequest.change_permitrequest %}
+                        <button type="button" id="btn-approve-selected-binnacles" class="btn-green-circle"
+                                onclick="approveSelectedBinnacles()" title="Aprobar Seleccionadas"
+                                style="display: none; width: 36px; height: 36px;">
                             <i class="fas fa-check"></i>
                         </button>
-                        <button class="btn-reject-action" @click="rejectSelected"
-                                v-if="selectedBitacoras.length > 0"
-                                title="Rechazar Seleccionadas">
+                        <button type="button" id="btn-reject-selected-binnacles" class="btn-yellow-circle"
+                                onclick="rejectSelectedBinnacles()" title="Rechazar Seleccionadas"
+                                style="display: none; width: 36px; height: 36px;">
                             <i class="fas fa-ban"></i>
                         </button>
-                        <button class="btn-delete-action" @click="deleteSelected"
-                                v-if="selectedBitacoras.length > 0"
-                                title="Eliminar Seleccionadas">
+                    {% endif %}
+                    {% if perms.permitrequest.delete_permitrequest %}
+                        <button type="button" id="btn-delete-selected-binnacles" class="btn-red-circle"
+                                onclick="deleteSelectedBinnacles()" title="Eliminar Seleccionadas"
+                                style="display: none; width: 36px; height: 36px;">
                             <i class="fas fa-trash"></i>
                         </button>
-                    </div>
+                    {% endif %}
                 </div>
+            </div>
 
-                <!-- TABLA -->
-                <div class="table-container flex-grow-1" style="overflow-y: auto; min-height: 300px;">
-                    <table class="w-100">
-                        <thead>
-                        <tr>
-                            {% if perms.permitrequest.change_permitrequest %}
-                                <th style="width: 4%;">
-                                    <input type="checkbox" @change="toggleAll" v-model="selectAll">
-                                </th>
-                            {% endif %}
-                            <th style="width: 4%;">N°</th>
-                            <th style="width: 10%;">Fecha</th>
-                            <th style="width: 8%;">Inicio</th>
-                            <th style="width: 8%;">Fin</th>
-                            <th style="width: 8%;">Estado</th>
-                            <th style="width: 25%;">Justificación</th>
-                            <th style="width: 10%;">Documento</th>
-                            <th style="width: 13%;">Registrado por</th>
-                            <th style="width: 10%;">Fecha Registro</th>
-                            <th style="width: 8%; text-align:center;">Acciones</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr v-for="(bitacora, index) in paginatedBitacoras" :key="bitacora.id">
+            <!-- TABLA -->
+            <div class="table-container" style="max-height: 52vh; overflow-y: auto;">
+                <table class="managed-table m-0" id="binnacle-pending-table">
+                    <thead style="position: sticky; top: 0; z-index: 2;">
+                    <tr>
+                        {% if perms.permitrequest.change_permitrequest %}
+                            <th class="width-3 text-center no-sort">
+                                <input type="checkbox" id="check-all-binnacles" class="custom-checkbox"
+                                       style="width: 18px; height: 18px;" onchange="toggleAllBinnacles(this.checked)">
+                            </th>
+                        {% endif %}
+                        <th class="width-5 text-center">N°</th>
+                        <th class="width-10">Fecha</th>
+                        <th class="width-8 text-center">Inicio</th>
+                        <th class="width-8 text-center">Fin</th>
+                        <th class="width-10 text-center">Estado</th>
+                        <th class="width-24">Justificación</th>
+                        <th class="width-10 text-center">Documento</th>
+                        <th class="width-12">Registrado por</th>
+                        <th class="width-10 text-center actions no-sort"><i class="fas fa-cogs"></i> Acciones</th>
+                    </tr>
+                    </thead>
+                    <tbody id="binnacle-pending-tbody">
+                    {% for b in bitacoras %}
+                        <tr data-date="{{ b.start_date|date:'Y-m-d' }}" data-id="{{ b.id }}">
                             {% if perms.permitrequest.change_permitrequest %}
                                 <td class="text-center">
-                                    <input type="checkbox" :value="bitacora.id" v-model="selectedBitacoras">
+                                    <input type="checkbox" class="binnacle-check-item custom-checkbox"
+                                           style="width: 18px; height: 18px;" value="{{ b.id }}"
+                                           onchange="updateBinnacleSelectionState()">
                                 </td>
                             {% endif %}
-                            <td class="text-center">[[ (currentPage - 1) * perPage + index + 1 ]]</td>
-                            <td>[[ formatDate(bitacora.start_date) ]]</td>
-                            <td class="text-center">[[ formatTime(bitacora.start_time) ]]</td>
+                            <td class="text-center">{{ forloop.counter }}</td>
+                            <td class="font-monospace bold">{{ b.start_date|date:"d/m/Y" }}</td>
+                            <td class="text-center font-monospace">{{ b.start_time|time:"H:i"|default:"--:--" }}</td>
+                            <td class="text-center font-monospace">
+                                <div>{{ b.end_time|time:"H:i"|default:"--:--" }}</div>
+                                {% if b.end_date and b.end_date != b.start_date %}
+                                    <div class="text-muted small">{{ b.end_date|date:"d/m/Y" }}</div>
+                                {% endif %}
+                            </td>
                             <td class="text-center">
-                                <div>[[ formatTime(bitacora.end_time) ]]</div>
-                                <div v-if="bitacora.end_date && bitacora.end_date !== bitacora.start_date" style="font-size:11px;color:#6b7280;">
-                                    [[ formatDate(bitacora.end_date) ]]
+                                {% if b.status == 'REQUESTED' %}
+                                    <span class="badge badge-amber">PENDIENTE</span>
+                                {% elif b.status == 'REJECTED' %}
+                                    <span class="badge badge-red">RECHAZADA</span>
+                                {% else %}
+                                    <span class="badge badge-gray">{{ b.get_status_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="small">
+                                {% if b.response_note %}
+                                    {{ b.response_note|safe }}
+                                {% else %}
+                                    <span class="text-muted italic">Sin justificación</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if b.justification_file %}
+                                    <a href="{{ b.justification_file.url }}" target="_blank"
+                                       class="btn-blue-rectangle-outline py-0 px-2" style="font-size: 0.72rem;">
+                                        <i class="fas fa-file-pdf me-1"></i> PDF
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted small">Sin archivo</span>
+                                {% endif %}
+                            </td>
+                            <td class="small">{{ b.created_by.get_full_name|default:b.created_by.username|default:"Sistema" }}</td>
+                            <td class="actions text-center">
+                                <div class="actions-wrapper">
+                                    <button type="button" class="btn-yellow-circle"
+                                            onclick="openEditBitacoraModal({{ b.id }}, '{{ b.start_time|time:'H:i'|default:'' }}', '{{ b.end_time|time:'H:i'|default:'' }}')"
+                                            title="Editar bitácora">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </button>
+                                    <button type="button" class="btn-red-circle"
+                                            onclick="deleteBinnacleSingle({{ b.id }})"
+                                            title="Eliminar bitácora">
+                                        <i class="fa-solid fa-trash-can"></i>
+                                    </button>
                                 </div>
                             </td>
-                            <td class="text-center">
-                                <span class="status-badge" :class="getStatusClass(bitacora.status)">
-                                    [[ getStatusLabel(bitacora.status) ]]
-                                </span>
-                            </td>
-                            <td style="font-size: 12px;">
-                                <span v-if="bitacora.response_note" :title="stripHtml(bitacora.response_note)" v-html="joinHtmlSegments(bitacora.response_note)"></span>
-                                <span v-else style="color: #999;">Sin justificación</span>
-                            </td>
-                            <td class="text-center">
-                                <a v-if="bitacora.justification_file"
-                                   :href="'/media/' + bitacora.justification_file"
-                                   target="_blank"
-                                   class="btn-pdf-link"
-                                   title="Ver documento PDF">
-                                    <span class="pdf-badge"><i class="fas fa-file-pdf"></i> PDF</span>
-                                </a>
-                                <span v-else style="color: #999; font-size: 12px;">Sin PDF</span>
-                            </td>
-                            <td class="registrado-por" style="font-size: 12px; white-space: normal;">[[
-                                bitacora.created_by__full_name || 'Sistema' ]]
-                            </td>
-                            <td style="font-size: 12px;">[[ formatDateTime(bitacora.created_at) ]]</td>
-                            <td class="text-center">
-                                <button type="button" class="btn-views-action"
-                                    @click="openEditSwal(bitacora)"
-                                    title="Editar bitácora"><i class="fa-solid fa-pen-to-square"></i></button>
-                                <button type="button" class="btn-delete-action" @click="deleteSingle(bitacora.id)"
-                                        title="Eliminar bitácora"><i class="fa-solid fa-trash-can"></i></button>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="10">
+                                <div class="empty-state-container">
+                                    <i class="fa-solid fa-inbox empty-state-icon"></i>
+                                    <p class="empty-state-text">No existen bitácoras pendientes registradas.</p>
+                                </div>
                             </td>
                         </tr>
-                        </tbody>
-                    </table>
-
-                    <!-- EMPTY STATE -->
-                    <div v-if="filteredBitacoras.length === 0" class="text-center py-5">
-                        <i class="fas fa-inbox" style="font-size: 3rem; color: #ccc;"></i>
-                        <p class="mt-3 text-muted">No hay bitácoras registradas</p>
-                    </div>
-                </div>
-
-                <!-- PAGINACIÓN -->
-                <div class="pagination-container mt-3" v-if="totalPages > 1">
-                    <span class="pagination-info">
-                        Mostrando [[ startIndex ]] a [[ endIndex ]] de [[ filteredBitacoras.length ]] registros
-                    </span>
-                    <div class="pagination-controls">
-                        <button class="page-btn" title="Primera"
-                                :disabled="currentPage === 1"
-                                @click="currentPage = 1">
-                            <i class="fas fa-angle-double-left"></i>
-                        </button>
-                        <button class="page-btn" title="Anterior"
-                                :disabled="currentPage === 1"
-                                @click="currentPage = Math.max(1, currentPage - 1)">
-                            <i class="fas fa-angle-left"></i>
-                        </button>
-
-                        <div class="page-input-wrapper">
-                            <input type="number" class="page-input"
-                                   v-model.number="currentPage"
-                                   :min="1" :max="totalPages"
-                                   @change="currentPage = Math.min(Math.max(1, currentPage), totalPages)"
-                                   @keypress.enter="currentPage = Math.min(Math.max(1, currentPage), totalPages)">
-                            <span class="total-pages-badge">de [[ totalPages ]]</span>
-                        </div>
-
-                        <button class="page-btn" title="Siguiente"
-                                :disabled="currentPage === totalPages"
-                                @click="currentPage = Math.min(totalPages, currentPage + 1)">
-                            <i class="fas fa-angle-right"></i>
-                        </button>
-                        <button class="page-btn" title="Última"
-                                :disabled="currentPage === totalPages"
-                                @click="currentPage = totalPages">
-                            <i class="fas fa-angle-double-right"></i>
-                        </button>
-                    </div>
-                </div>
+                    {% endfor %}
+                    </tbody>
+                </table>
             </div>
+        </div>
 
-            <!-- FOOTER -->
-            <div class="modal-footer modal-footer-spaced">
-                <button type="button" class="btn-cancel" @click="closeModal">Cerrar</button>
-            </div>
+        <!-- FOOTER -->
+        <div class="modal-footer-medium">
+            <button type="button" class="btn-default-outline" onclick="closeModal()">Cerrar</button>
         </div>
     </div>
 </div>

@@ -1,0 +1,103 @@
+{% load static %}
+<div class="table-container">
+    <div class="table-scroll-top">
+        <table id="permitAdminTable"
+               class="managed-table exportable-table"
+               data-title="Gestión de Permisos"
+               data-filename="Gestion_Permisos"
+               data-list-url="{% url 'permissions:permit_admin' %}"
+               data-external-pagination="true"
+               data-external-search="true">
+            <thead>
+            <tr>
+                <th data-field="employee" class="width-25">Empleado</th>
+                <th data-field="permit_type" class="width-10"> Tipo</th>
+                <th data-field="start_date" class="width-12"> Fec. Inicio</th>
+                <th data-field="end_date" class="width-12"> Fec. Fin</th>
+                <th data-field="area" class="width-20">Dependencia</th>
+                <th data-field="status" class="width-10 text-center"> Estado</th>
+                <th class="width-15 text-center no-sort actions">Acciones</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for permit in permits %}
+                <tr>
+                    <td>
+                        <strong>{{ permit.employee.person.name_and_last_name }}</strong>
+                        <div>CI: {{ permit.employee.person.document_number|default:'-' }}</div>
+                    </td>
+                    <td>
+                        <span class="badge badge-cyan">
+                            {{ permit.permit_type.name }}
+                        </span>
+                    </td>
+                    <td>
+                        {{ permit.start_date|date:"d/m/Y" }} <span
+                            class="text-muted small">{{ permit.start_time|time:"H:i"|default:"" }}</span>
+                    </td>
+                    <td>
+                        {{ permit.end_date|date:"d/m/Y"|default:"--" }} <span
+                            class="text-muted small">{{ permit.end_time|time:"H:i"|default:"" }}</span>
+                    </td>
+                    <td>{{ permit.employee.area.name|default:"--" }}</td>
+                    <td class="text-center">
+                        {% if permit.status == 'REQUESTED' %}
+                            <span class="badge badge-amber"><i class="fa-solid fa-clock me-1"></i> PENDIENTE</span>
+                        {% elif permit.status == 'APPROVED' %}
+                            <span class="badge badge-green"><i
+                                    class="fa-solid fa-circle-check me-1"></i> APROBADO</span>
+                        {% elif permit.status == 'REJECTED' %}
+                            <span class="badge badge-red"><i class="fa-solid fa-circle-xmark me-1"></i> RECHAZADO</span>
+                        {% else %}
+                            <span class="badge badge-gray">{{ permit.get_status_display }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="actions text-center">
+                        <div class="actions-wrapper">
+                            <!-- Ver Detalle -->
+                            <button type="button" class="btn-blue-circle"
+                                    onclick="openAjaxModal('/permitrequest/admin/{{ permit.id }}/detail/')"
+                                    title="Ver Detalle">
+                                <i class="fas fa-eye"></i>
+                            </button>
+
+                            <!-- Aprobar / Rechazar -->
+                            {% if permit.status == 'REQUESTED' and perms.permitrequest.change_permitrequest %}
+                                <button type="button" class="btn-green-circle"
+                                        onclick="openAjaxModal('/permitrequest/admin/{{ permit.id }}/approve/')"
+                                        title="Aprobar Solicitud">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                                <button type="button" class="btn-red-circle"
+                                        onclick="openAjaxModal('/permitrequest/admin/{{ permit.id }}/reject/')"
+                                        title="Rechazar Solicitud">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            {% endif %}
+
+                            <!-- Imprimir Reporte -->
+                            {% if permit.status == 'APPROVED' %}
+                                <button type="button" class="btn-dark-blue-circle"
+                                        onclick="printPermitReport({{ permit.id }})"
+                                        title="Imprimir Reporte">
+                                    <i class="fas fa-print"></i>
+                                </button>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="8">
+                        <div class="empty-state-container">
+                            <i class="fa-solid fa-inbox empty-state-icon"></i>
+                            <p class="empty-state-text">No se encontraron permisos registrados con los criterios
+                                seleccionados.</p>
+                        </div>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>

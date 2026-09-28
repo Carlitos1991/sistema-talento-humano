@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reporte de Permiso - {{ permit.employee.person.full_name }}</title>
+    <title>Comprobante de Permiso - {{ permit.employee.person.full_name }}</title>
     <style>
         * {
             margin: 0;
@@ -13,462 +13,487 @@
         }
 
         :root {
-            --ink: #0f172a;
-            --muted: #475569;
-            --line: #dbe2ea;
-            --paper: #ffffff;
-            --soft: #f8fafc;
-            --soft-2: #f1f7ff;
-            --brand: #0b5cab;
-            --ok-bg: #dcfce7;
-            --ok-text: #166534;
+            --primary: #1e3a8a;
+            --secondary: #0f172a;
+            --text-dark: #1e293b;
+            --text-muted: #64748b;
+            --border-color: #cbd5e1;
+            --bg-light: #f8fafc;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
-            background:
-                radial-gradient(circle at 20% 10%, rgba(17, 129, 204, 0.12) 0, transparent 38%),
-                linear-gradient(180deg, #eef4fb 0%, #e8eff7 100%);
-            color: var(--ink);
-            padding: 12px;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+            background-color: #e2e8f0;
+            color: var(--text-dark);
+            padding: 24px;
+            font-size: 13px;
+            line-height: 1.4;
         }
 
-        .sheet {
-            width: min(940px, 100%);
+        .document-container {
+            width: 100%;
+            max-width: 840px;
             margin: 0 auto;
-            background: var(--paper);
-            border: 1px solid var(--line);
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 14px 32px rgba(15, 23, 42, 0.12);
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+            padding: 32px 36px;
+            position: relative;
         }
 
-        .header {
-            padding: 14px 18px;
-            background: linear-gradient(125deg, #0b355f 0%, #0b5cab 55%, #1181cc 100%);
-            color: #fff;
-            border-bottom: 3px solid #0a4f8a;
-        }
-
-        .header-top {
+        /* MEMBRETE INSTITUCIONAL */
+        .institution-header {
             display: flex;
+            align-items: center;
             justify-content: space-between;
-            align-items: flex-start;
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 16px;
+            margin-bottom: 20px;
+        }
+
+        .institution-branding {
+            display: flex;
+            align-items: center;
             gap: 16px;
         }
 
-        .header h1 {
-            font-size: 18px;
-            letter-spacing: 0.04em;
+        .institution-logo {
+            width: 64px;
+            height: 64px;
+            object-fit: contain;
+        }
+
+        .institution-titles h1 {
+            font-size: 17px;
             font-weight: 800;
+            color: var(--secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
             margin-bottom: 2px;
         }
 
-        .header-ident {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .header-ident img {
-            width: 42px;
-            height: 42px;
-            object-fit: contain;
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.18);
-            padding: 4px;
-        }
-
-        .header p {
-            font-size: 11px;
-            opacity: 0.95;
-        }
-
-        .doc-meta {
-            text-align: right;
-            font-size: 10px;
-            line-height: 1.4;
-            opacity: 0.95;
-            min-width: 180px;
-        }
-
-        .body {
-            padding: 12px 14px 14px;
-        }
-
-        .status-row {
-            margin-bottom: 10px;
-        }
-
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 10px;
-            font-weight: 700;
-            letter-spacing: 0.04em;
+        .institution-titles h2 {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--primary);
             text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+
+        .institution-titles p {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .document-id-box {
+            text-align: right;
+            border-left: 2px solid #e2e8f0;
+            padding-left: 14px;
+        }
+
+        .document-id-box .doc-type {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+
+        .document-id-box .doc-number {
+            font-size: 17px;
+            font-weight: 800;
+            font-family: monospace;
+            color: var(--primary);
+            margin: 2px 0;
+        }
+
+        .document-id-box .doc-date {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        /* SECCIONES Y TABLAS FORMALES */
+        .section-block {
+            margin-bottom: 18px;
+        }
+
+        .section-header {
+            font-size: 12px;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: var(--primary);
+            background: var(--bg-light);
+            border: 1px solid var(--border-color);
+            border-bottom: none;
             padding: 6px 12px;
-            border-radius: 999px;
-            background: var(--ok-bg);
-            color: var(--ok-text);
+            letter-spacing: 0.05em;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid var(--border-color);
+        }
+
+        .data-table td, .data-table th {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            vertical-align: middle;
+        }
+
+        .data-table .label {
+            width: 25%;
+            background-color: var(--bg-light);
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .data-table .value {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .badge-status {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            background-color: #dcfce7;
+            color: #166534;
             border: 1px solid #86efac;
         }
 
-        .section {
-            margin-bottom: 10px;
-            border: 1px solid var(--line);
-            border-radius: 8px;
-            overflow: hidden;
-            background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
-        }
-
-        .grid {
+        /* DISTRIBUCIÓN INFERIOR: RESOLUCIÓN Y QR */
+        .bottom-distribution-grid {
             display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 8px;
-            padding: 10px;
-        }
-
-        .grid.two {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-
-        .cell {
-            background: linear-gradient(180deg, var(--soft) 0%, var(--soft-2) 100%);
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
-            padding: 8px 9px;
-            min-height: 52px;
-        }
-
-        .cell.wide {
-            grid-column: span 2;
-        }
-
-        .cell.full {
-            grid-column: 1 / -1;
-        }
-
-        .label {
-            font-size: 9px;
-            font-weight: 700;
-            color: #64748b;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 4px;
-        }
-
-        .value {
-            font-size: 12px;
-            color: #0f172a;
-            font-weight: 600;
-            line-height: 1.3;
-            word-break: break-word;
-        }
-
-        .meta-row {
-            display: grid;
-            grid-template-columns: 1fr 140px;
-            gap: 10px;
+            grid-template-columns: 1fr 180px;
+            gap: 16px;
             align-items: stretch;
+            margin-bottom: 24px;
         }
 
-        .verify-box {
-            border: 1px solid var(--line);
-            border-radius: 8px;
-            background: linear-gradient(180deg, #fbfdff 0%, #f2f7ff 100%);
-            padding: 8px;
+        .verification-panel {
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-light);
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
             text-align: center;
         }
 
-        .verify-title {
-            font-size: 10px;
-            font-weight: 700;
-            color: #334155;
-            text-transform: uppercase;
-            margin-bottom: 8px;
-            letter-spacing: 0.04em;
-        }
-
-        .qr {
+        .qr-frame {
+            background: #ffffff;
+            padding: 6px;
+            border: 1px solid var(--border-color);
             display: inline-block;
-            padding: 7px;
-            border: 1px solid #cbd5e1;
-            border-radius: 6px;
-            background: #fff;
+            margin-bottom: 8px;
         }
 
-        .qr img {
-            width: 94px;
-            height: 94px;
+        .qr-frame img {
+            width: 110px;
+            height: 110px;
             display: block;
         }
 
-        .verify-note {
-            margin-top: 7px;
-            font-size: 9px;
-            color: #64748b;
-            line-height: 1.35;
-        }
-
-        .footer {
-            border-top: 1px solid var(--line);
-            margin-top: 0;
-            padding: 8px 10px 6px;
+        .verification-label {
             font-size: 10px;
-            color: #64748b;
-            text-align: center;
-            line-height: 1.35;
-        }
-
-        .print-button {
-            position: fixed;
-            right: 26px;
-            bottom: 26px;
-            border: none;
-            border-radius: 999px;
-            background: #0b5cab;
-            color: #fff;
-            font-size: 14px;
             font-weight: 700;
-            padding: 12px 22px;
+            color: var(--primary);
+            text-transform: uppercase;
+            margin-bottom: 2px;
+        }
+
+        .verification-desc {
+            font-size: 9px;
+            color: var(--text-muted);
+            line-height: 1.3;
+        }
+
+        /* FIRMAS DE RESPONSABILIDAD CON ESPACIO SUFICIENTE */
+        .signatures-section {
+            margin-top: 24px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            padding: 0 20px;
+        }
+
+        .signature-box {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .signature-space {
+            height: 85px; /* Espacio para rúbrica y sello físico */
+            width: 100%;
+        }
+
+        .signature-line {
+            width: 100%;
+            max-width: 250px;
+            border-top: 1.5px solid var(--text-dark);
+            margin-bottom: 6px;
+        }
+
+        .signature-name {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-dark);
+            text-transform: uppercase;
+        }
+
+        .signature-role {
+            font-size: 10px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        /* PIE DE PÁGINA */
+        .document-footer {
+            border-top: 1px solid var(--border-color);
+            margin-top: 28px;
+            padding-top: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 10px;
+            color: var(--text-muted);
+        }
+
+        .validation-hash {
+            font-family: monospace;
+            font-size: 10px;
+            font-weight: 700;
+        }
+
+        /* BOTÓN FLOTANTE */
+        .floating-print-btn {
+            position: fixed;
+            right: 28px;
+            bottom: 28px;
+            background-color: var(--primary);
+            color: #ffffff;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 50px;
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
             cursor: pointer;
-            box-shadow: 0 10px 20px rgba(11, 92, 171, 0.28);
+            box-shadow: 0 4px 12px rgba(30, 58, 138, 0.35);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
         }
 
-        .print-button:hover {
-            background: #0a4f93;
+        .floating-print-btn:hover {
+            background-color: #172554;
+            transform: translateY(-2px);
         }
 
-        @media screen and (max-width: 900px) {
-            body {
-                padding: 8px;
-            }
-
-            .header,
-            .body {
-                padding-left: 10px;
-                padding-right: 10px;
-            }
-
-            .header-top {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-
-            .doc-meta {
-                text-align: left;
-                min-width: 0;
-            }
-
-            .meta-row {
-                grid-template-columns: 1fr;
-            }
-
-            .grid,
-            .grid.two {
-                grid-template-columns: 1fr;
-            }
-
-            .cell.wide,
-            .cell.full {
-                grid-column: auto;
-            }
-        }
-
+        /* IMPRESIÓN */
         @media print {
-            html,
             body {
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-            }
-
-            body {
-                background: #fff !important;
+                background: #ffffff !important;
                 padding: 0 !important;
             }
 
-            .sheet {
-                width: 100% !important;
-                min-height: auto;
-                border: none;
-                border-radius: 0;
-                box-shadow: none;
-                margin: 0;
+            .document-container {
+                border: none !important;
+                box-shadow: none !important;
+                padding: 10mm 12mm !important;
+                max-width: 100% !important;
             }
 
-            .header {
-                background: linear-gradient(125deg, #0b355f 0%, #0b5cab 55%, #1181cc 100%) !important;
-                color: #fff !important;
-            }
-
-            .header-top {
-                display: flex !important;
-                flex-direction: row !important;
-                align-items: flex-start !important;
-                justify-content: space-between !important;
-            }
-
-            .doc-meta {
-                text-align: right !important;
-                min-width: 160px !important;
-            }
-
-            .meta-row {
-                grid-template-columns: 1fr 140px !important;
-            }
-
-            .grid.two {
-                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-            }
-
-            .cell.full {
-                grid-column: 1 / -1 !important;
-            }
-
-            .print-button {
-                display: none;
+            .floating-print-btn {
+                display: none !important;
             }
 
             @page {
-                size: A4;
-                margin: 8mm;
+                size: A4 portrait;
+                margin: 6mm;
             }
         }
     </style>
 </head>
 <body>
-<div class="sheet">
-    <div class="header">
-        <div class="header-top">
-            <div class="header-ident">
-                <img src="{% static 'img/logo.png' %}" alt="SIGETH">
-                <div>
-                    <h1>MUNICIPIO DE LOJA</h1>
-                    <p>Sistema de Gestión de Talento Humano - SIGETH</p>
-                </div>
+
+<div class="document-container">
+    <!-- MEMBRETE OFICIAL -->
+    <header class="institution-header">
+        <div class="institution-branding">
+            <img src="{% static 'img/logo.png' %}" alt="Logo Institucional" class="institution-logo">
+            <div class="institution-titles">
+                <h1>Municipio de Loja</h1>
+                <h2>Dirección de Talento Humano</h2>
+                <p>Sistema Integrado de Gestión de Talento Humano (SIGETH)</p>
             </div>
-            <div class="doc-meta">
-                <div><strong>No. Permiso:</strong> {{ permit.id }}</div>
-                <div><strong>Emitido:</strong> {% now "d/m/Y H:i" %}</div>
-                <div><strong>Estado:</strong> Aprobado</div>
+        </div>
+        <div class="document-id-box">
+            <div class="doc-type">Solicitud Aprobada</div>
+            <div class="doc-number"># {{ permit.id|stringformat:"06d" }}</div>
+            <div class="doc-date">Emisión: {% now "d/m/Y H:i" %}</div>
+        </div>
+    </header>
+
+    <!-- DATOS DEL SERVIDOR -->
+    <section class="section-block">
+        <div class="section-header">1. Información del Servidor Público</div>
+        <table class="data-table">
+            <tr>
+                <td class="label">Nombres y Apellidos:</td>
+                <td class="value" colspan="3">{{ permit.employee.person.full_name }}</td>
+            </tr>
+            <tr>
+                <td class="label">Cédula de Identidad:</td>
+                <td class="value"
+                    style="font-family: monospace;">{{ permit.employee.person.document_number|default:'N/A' }}</td>
+                <td class="label">Dependencia / Área:</td>
+                <td class="value">{{ permit.employee.area.name|default:'No asignada' }}</td>
+            </tr>
+        </table>
+    </section>
+
+    <!-- DETALLE Y CONDICIONES DEL PERMISO -->
+    <section class="section-block">
+        <div class="section-header">2. Condiciones del Permiso Concedido</div>
+        <table class="data-table">
+            <tr>
+                <td class="label">Tipo de Permiso:</td>
+                <td class="value">{{ permit.permit_type.name }}</td>
+                <td class="label">Estado Actual:</td>
+                <td class="value">
+                    <span class="badge-status">Aprobado</span>
+                </td>
+            </tr>
+            <tr>
+                <td class="label">Fecha y Hora Desde:</td>
+                <td class="value">
+                    {{ permit.start_date|date:"d/m/Y" }}
+                    {% if permit.start_time %} a las {{ permit.start_time|time:"H:i" }}{% endif %}
+                </td>
+                <td class="label">Fecha y Hora Hasta:</td>
+                <td class="value">
+                    {% if permit.end_date %}
+                        {{ permit.end_date|date:"d/m/Y" }}
+                        {% if permit.end_time %} a las {{ permit.end_time|time:"H:i" }}{% endif %}
+                    {% else %}
+                        {{ permit.start_date|date:"d/m/Y" }}
+                        {% if permit.end_time %} a las {{ permit.end_time|time:"H:i" }}{% endif %}
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td class="label">Tiempo Concedido:</td>
+                <td class="value">
+                    {% if permit.days > 0 and permit.hours == 0 and permit.minutes == 0 %}
+                        <strong>{{ permit.days }} día(s) completo(s)</strong>
+                    {% elif permit.hours > 0 or permit.minutes > 0 %}
+                        <strong>
+                            {% if permit.days > 0 %}{{ permit.days }} d {% endif %}
+                            {% if permit.hours > 0 %}{{ permit.hours }} hora(s) {% endif %}
+                            {% if permit.minutes > 0 %}{{ permit.minutes }} min{% endif %}
+                        </strong>
+                        <span style="color: var(--text-muted); font-size: 11px;">(Permiso por horas)</span>
+                    {% else %}
+                        <strong>Desde {{ permit.start_date|date:"d/m/Y" }}
+                            hasta {{ permit.end_date|default:permit.start_date|date:"d/m/Y" }}</strong>
+                    {% endif %}
+                </td>
+                <td class="label">Descuento Vacaciones:</td>
+                <td class="value">{% if permit.permit_type.affects_vacation %}Sí aplica cargo a vacaciones{% else %}No
+                    imputable a vacaciones{% endif %}</td>
+            </tr>
+        </table>
+    </section>
+
+    <!-- VALIDACIÓN, RESOLUCIÓN Y CÓDIGO QR -->
+    <div class="bottom-distribution-grid">
+        <div class="section-block" style="margin-bottom: 0;">
+            <div class="section-header">3. Resolución Administrativa</div>
+            <table class="data-table" style="height: calc(100% - 30px);">
+                <tr>
+                    <td class="label" style="width: 32%;">Autorizado Por:</td>
+                    <td class="value">
+                        {% if permit.response_by %}
+                            {{ permit.response_by.get_full_name|default:permit.response_by.username }}
+                        {% else %}
+                            Autorización del Sistema
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label">Fecha Aprobación:</td>
+                    <td class="value">{{ permit.response_date|date:"d/m/Y H:i"|default:"N/A" }}</td>
+                </tr>
+                <tr>
+                    <td class="label">Observación / Base:</td>
+                    <td class="value">
+                        {{ permit.response_note|safe|default:"Permiso concedido de conformidad con la normativa institucional vigente." }}
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- CÓDIGO QR DE AUTENTICIDAD -->
+        <div class="verification-panel">
+            <div class="verification-label">Validación Electrónica</div>
+            <div class="qr-frame">
+                <img src="data:image/png;base64,{{ qr_code }}" alt="Código QR Oficial">
             </div>
+            <div class="verification-desc">Escanee para certificar la vigencia y originalidad del permiso.</div>
         </div>
     </div>
 
-    <div class="body">
-        <div class="status-row">
-            <span class="status-badge">Permiso aprobado</span>
+    <!-- FIRMAS DE RESPONSABILIDAD -->
+    <div class="signatures-section">
+        <div class="signature-box">
+            <div class="signature-space"></div>
+            <div class="signature-line"></div>
+            <div class="signature-name">{{ permit.employee.person.full_name }}</div>
+            <div class="signature-role">Servidor Público Solicitante</div>
         </div>
-
-        <div class="section">
-            <div class="section-title">Datos Del Empleado</div>
-            <div class="grid two">
-                <div class="cell">
-                    <div class="label">Cédula</div>
-                    <div class="value">{{ permit.employee.person.document_number|default:'N/A' }}</div>
-                </div>
-                <div class="cell">
-                    <div class="label">Servidor Público</div>
-                    <div class="value">{{ permit.employee.person.full_name }}</div>
-                </div>
+        <div class="signature-box">
+            <div class="signature-space"></div>
+            <div class="signature-line"></div>
+            <div class="signature-name">
+                {% if permit.response_by %}
+                    {{ permit.response_by.get_full_name }}
+                {% else %}
+                    Jefatura / Dirección
+                {% endif %}
             </div>
-        </div>
-
-        <div class="meta-row">
-            <div>
-                <div class="section">
-                    <div class="section-title">Detalle Del Permiso</div>
-                    <div class="grid two">
-                        <div class="cell">
-                            <div class="label">Tipo de Permiso</div>
-                            <div class="value">{{ permit.permit_type.name|default:'N/A' }}</div>
-                        </div>
-                        <div class="cell">
-                            <div class="label">Afecta Vacaciones</div>
-                            <div class="value">{% if permit.permit_type.affects_vacation %}Sí{% else %}No{% endif %}</div>
-                        </div>
-                        <div class="cell">
-                            <div class="label">Fecha/Hora Inicio</div>
-                            <div class="value">
-                                {{ permit.start_date|date:"d/m/Y" }}
-                                {% if permit.start_time %}- {{ permit.start_time|time:"H:i" }}{% endif %}
-                            </div>
-                        </div>
-                        <div class="cell">
-                            <div class="label">Fecha/Hora Fin</div>
-                            <div class="value">
-                                {% if permit.end_date %}
-                                    {{ permit.end_date|date:"d/m/Y" }}
-                                    {% if permit.end_time %}- {{ permit.end_time|time:"H:i" }}{% endif %}
-                                {% else %}
-                                    N/A
-                                {% endif %}
-                            </div>
-                        </div>
-                        <div class="cell">
-                            <div class="label">Duración</div>
-                            <div class="value">
-                                {% if permit.days > 0 %}{{ permit.days }} día(s){% endif %}
-                                {% if permit.hours > 0 %} {{ permit.hours }} hora(s){% endif %}
-                                {% if permit.minutes > 0 %} {{ permit.minutes }} minuto(s){% endif %}
-                                {% if permit.days == 0 and permit.hours == 0 and permit.minutes == 0 %}N/A{% endif %}
-                            </div>
-                        </div>
-                        {% if permit.justification_file %}
-                            <div class="cell full">
-                                <div class="label">Justificativo</div>
-                                <div class="value">Documento PDF adjunto en expediente digital.</div>
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <div class="section">
-                    <div class="section-title">Validación Y Aprobación</div>
-                    <div class="grid two">
-                        <div class="cell">
-                            <div class="label">Aprobado Por</div>
-                            <div class="value">
-                                {% if permit.response_by %}
-                                    {{ permit.response_by.get_full_name|default:permit.response_by.username }}
-                                {% else %}
-                                    Sistema / Migrado
-                                {% endif %}
-                            </div>
-                        </div>
-                        <div class="cell">
-                            <div class="label">Fecha de Aprobación</div>
-                            <div class="value">{{ permit.response_date|date:"d/m/Y H:i"|default:"N/A" }}</div>
-                        </div>
-                        {% if permit.response_note %}
-                            <div class="cell full">
-                                <div class="label">Observación de Respuesta</div>
-                                <div class="value">{{ permit.response_note|safe }}</div>
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-
-            <div class="verify-box">
-                <div class="verify-title">Código QR</div>
-                <div class="qr">
-                    <img src="data:image/png;base64,{{ qr_code }}" alt="Código QR de verificación">
-                </div>
-                <div class="verify-note">Escanee para consultar el detalle oficial del permiso.</div>
-            </div>
-        </div>
-
-        <div class="footer">
-            Documento generado electrónicamente por SIGETH.<br>
-            Validación pública mediante código QR.<br>
-            Código de validación: {{ validation_code }}
+            <div class="signature-role">Jefatura Inmediata / Talento Humano</div>
         </div>
     </div>
+
+    <!-- PIE DE DOCUMENTO -->
+    <footer class="document-footer">
+        <div>SIGETH - Sistema Integrado de Talento Humano</div>
+        <div>Código de Verificación: <span class="validation-hash">{{ validation_code }}</span></div>
+        <div>Página 1 de 1</div>
+    </footer>
 </div>
 
-<button class="print-button" onclick="window.print()">Imprimir reporte</button>
+<button type="button" class="floating-print-btn" onclick="window.print()">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="6 9 6 2 18 2 18 9"></polyline>
+        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+        <rect x="6" y="14" width="12" height="8"></rect>
+    </svg>
+    Imprimir Reporte
+</button>
+
 </body>
 </html>

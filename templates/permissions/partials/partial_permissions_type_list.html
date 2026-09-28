@@ -1,120 +1,124 @@
-<div class="table-container">
+{% load static %}
 
-    <!-- Header para navegación de sub-niveles -->
+<div class="table-container">
     {% if current_parent %}
         <div class="d-flex align-items-center justify-content-between p-3 bg-light border-bottom">
-            <span class="font-weight-700 text-primary">
-                <i class="fa-solid fa-folder-open me-2"></i>Sub-items de: {{ current_parent.name }}
+            <span class="fw-bold text-primary">
+                <i class="fa-solid fa-folder-open me-2"></i> Subtipos de: {{ current_parent.name }}
             </span>
-            <button class="btn btn-sm btn-white-rectangle js-load-parent" data-url="{% url 'permissions:permit_type_list' %}">
+            <button type="button" class="btn-white-rectangle" onclick="refreshCurrentTable({ parent: '' })">
                 <i class="fa-solid fa-arrow-up me-1"></i> Subir Nivel
             </button>
         </div>
     {% endif %}
 
-    <table class="sortable-table exportable-table" data-title="Reporte Empleados">
-        <thead>
-        <tr>
-            <th>Nombre</th>
-            <th class="text-center">Req. Justificación</th>
-            <th class="text-center">Desc. Vacaciones</th>
-            <th class="text-center">Estado</th>
-            <th class="text-center actions">Acciones</th>
-        </tr>
-        </thead>
-        <tbody>
-        {% for type in types %}
+    <div class="table-scroll-top">
+        <table class="managed-table exportable-table"
+               data-title="Tipos de Permiso"
+               data-filename="Reporte_Tipos_Permiso"
+               data-list-url="{% url 'permissions:permit_type_list' %}"
+               data-external-pagination="true"
+               data-external-search="true">
+            <thead>
             <tr>
-                <!-- Nombre + Badge de hijos -->
-                <td>
-                    {{ type.name }}
-                    {% if type.sub_types.exists %}
-                        <span class="badge-sm badge-blue">
-                            {{ type.sub_types.count }} Sub-tipos
-                        </span>
-                    {% endif %}
-                </td>
-
-                <!-- Iconos Booleanos Limpios -->
-                <td class="text-center" style="vertical-align: middle; padding: 0.75rem;">
-                    {% if type.needs_justification %}
-                        <i class="fa-solid fa-circle-check"
-                           style="font-size: 1.3rem; color: #22c55e; display: inline-block;"></i>
-                    {% else %}
-                        <i class="fa-solid fa-circle-xmark"
-                           style="font-size: 1.3rem; color: #ef4444; opacity: 0.5; display: inline-block;"></i>
-                    {% endif %}
-                </td>
-                <td class="text-center" style="vertical-align: middle; padding: 0.75rem;">
-                    {% if type.affects_vacation %}
-                        <i class="fa-solid fa-circle-check"
-                           style="font-size: 1.3rem; color: #22c55e; display: inline-block;"></i>
-                    {% else %}
-                        <i class="fa-solid fa-circle-xmark"
-                           style="font-size: 1.3rem; color: #ef4444; opacity: 0.5; display: inline-block;"></i>
-                    {% endif %}
-                </td>
-
-                <!-- Badge de Estado (Usando tus clases status-badge) -->
-                <td class="text-center">
-                    {% if type.is_active %}
-                        <span class="badge badge-green">Activo</span>
-                    {% else %}
-                        <span class="badge badge-red">Inactivo</span>
-                    {% endif %}
-                </td>
-
-                <!-- ACCIONES (Usando tus botones circulares de style.css) -->
-                <td class="actions">
-                    <div class="actions-wrapper">
-
-                        <!-- 1. EDITAR (Amarillo/Ambar) -->
-                        {% if perms.permitrequest.change_permittype %}
-                            <button class="btn-yellow-circle js-edit"
-                                    data-url="{% url 'permissions:permit_type_update' type.pk %}"
-                                    title="Editar">
-                                <i class="fa-solid fa-pen"></i>
-                            </button>
-                        {% endif %}
-
-                        <!-- 2. ALTA/BAJA (Cyan) -->
-                        {% if perms.permitrequest.change_permittype %}
-                            <button class="btn-red-circle js-toggle"
-                                    data-url="{% url 'permissions:permit_type_toggle' type.pk %}"
-                                    title="{% if type.is_active %}Dar de Baja{% else %}Dar de Alta{% endif %}">
-                                <i class="fa-solid fa-power-off"></i>
-                            </button>
-                        {% endif %}
-
-                        <!-- 3. AGREGAR SUB-ITEM (Verde) -->
-                        {% if perms.permitrequest.add_permittype %}
-                            <button class="btn-green-circle js-add-sub"
-                                    data-url="{% url 'permissions:permit_type_create' %}?parent={{ type.pk }}"
-                                    title="Agregar Sub-item">
-                                <i class="fa-solid fa-plus"></i>
-                            </button>
-                        {% endif %}
-
-                        <!-- 4. LISTAR SUB-ITEMS (Azul oscuro) -->
-                        <button class="btn-dark-blue-circle js-view-subs-modal"
-                                data-parent-id="{{ type.pk }}"
-                                title="Ver Sub-items">
-                            <i class="fa-solid fa-list-ul"></i>
-                        </button>
-
-                    </div>
-                </td>
+                <th class="width-35">Nombre</th>
+                <th class="width-15 text-center">Req. Justificación</th>
+                <th class="width-15 text-center">Desc. Vacaciones</th>
+                <th class="width-15 text-center">Estado</th>
+                {% if perms.permitrequest.change_permittype %}
+                    <th class="width-20 text-center actions no-sort"><i class="fas fa-cogs"></i> Acciones</th>
+                {% endif %}
             </tr>
-        {% empty %}
-            <tr>
-                <td colspan="5" class="text-center" style="padding: 3rem;">
-                    <div class="empty-state-content">
-                        <i class="fa-regular fa-folder-open fa-3x text-muted mb-3"></i>
-                        <p class="text-muted fw-bold">No se encontraron registros.</p>
-                    </div>
-                </td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+            {% for type in types %}
+                <tr>
+                    <td>
+                        <strong>{{ type.name }}</strong>
+                        {% if type.sub_types.exists %}
+                            <span class="badge badge-blue ms-1">
+                                {{ type.sub_types.count }} Subtipo{{ type.sub_types.count|pluralize }}
+                            </span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Justificación Requerida -->
+                    <td class="text-center">
+                        {% if type.needs_justification %}
+                            <i class="fa-solid fa-circle-check text-green" style="font-size: 1.15rem;"></i>
+                        {% else %}
+                            <i class="fa-solid fa-circle-xmark text-muted"
+                               style="font-size: 1.15rem; opacity: 0.5;"></i>
+                        {% endif %}
+                    </td>
+
+                    <!-- Descuento de Vacaciones -->
+                    <td class="text-center">
+                        {% if type.affects_vacation %}
+                            <i class="fa-solid fa-circle-check text-green" style="font-size: 1.15rem;"></i>
+                        {% else %}
+                            <i class="fa-solid fa-circle-xmark text-muted"
+                               style="font-size: 1.15rem; opacity: 0.5;"></i>
+                        {% endif %}
+                    </td>
+
+                    <!-- Estado -->
+                    <td class="text-center">
+                        {% if type.is_active %}
+                            <span class="badge badge-green">Activo</span>
+                        {% else %}
+                            <span class="badge badge-red">Inactivo</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Acciones -->
+                    {% if perms.permitrequest.change_permittype %}
+                        <td class="actions text-center">
+                            <div class="actions-wrapper">
+                                <!-- Editar Tipo -->
+                                <button type="button" class="btn-yellow-circle"
+                                        onclick="openAjaxModal('{% url 'permissions:permit_type_update' type.pk %}')"
+                                        title="Editar">
+                                    <i class="fa-solid fa-pen"></i>
+                                </button>
+
+                                <!-- Activar / Desactivar -->
+                                <button type="button" class="btn-red-circle"
+                                        onclick="toggleStatusAjax('{% url 'permissions:permit_type_toggle' type.pk %}', '{{ type.name }}', {{ type.is_active|yesno:'true,false' }})"
+                                        title="{% if type.is_active %}Dar de Baja{% else %}Dar de Alta{% endif %}">
+                                    <i class="fa-solid fa-power-off"></i>
+                                </button>
+
+                                <!-- Agregar Subtipo -->
+                                {% if perms.permitrequest.add_permittype %}
+                                    <button type="button" class="btn-green-circle"
+                                            onclick="openAjaxModal('{% url 'permissions:permit_type_create' %}?parent={{ type.pk }}')"
+                                            title="Agregar Subtipo">
+                                        <i class="fa-solid fa-plus"></i>
+                                    </button>
+                                {% endif %}
+
+                                <!-- Ver Subtipos (modal) -->
+                                <button type="button" class="btn-dark-blue-circle"
+                                        onclick="openAjaxModal('{% url 'permissions:permit_type_subitems' type.pk %}')"
+                                        title="Ver Subtipos">
+                                    <i class="fa-solid fa-list-ul"></i>
+                                </button>
+                            </div>
+                        </td>
+                    {% endif %}
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="5">
+                        <div class="empty-state-container">
+                            <i class="fa-solid fa-folder-open empty-state-icon"></i>
+                            <p class="empty-state-text">No se encontraron tipos de permiso registrados.</p>
+                        </div>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>

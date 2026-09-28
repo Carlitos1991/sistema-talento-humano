@@ -1,102 +1,118 @@
-<div class="modal-container-medium shadow-card animate-scale-in" style="max-width: 600px;">
-    <form id="modalForm" method="post" action="
+{% load static %}
 
-            
-            {% if form.instance.pk %}{% url 'permissions:permit_type_update' form.instance.pk %}{% else %}{% url 'permissions:permit_type_create' %}{% endif %}">
-        {% csrf_token %}
+<div class="modal-overlay hidden">
+    <div class="modal-container-medium">
+        <form method="POST" action="
+                {% if form.instance.pk %}{% url 'permissions:permit_type_update' form.instance.pk %}{% else %}{% url 'permissions:permit_type_create' %}{% endif %}"
+              onsubmit="submitAjaxForm(event)">
+            {% csrf_token %}
 
-        <!-- HEADER con estilo gradient -->
-        <div class="modal-header-medium modal-header-gradient">
-            <h3 class="modal-title text-white">
-                <i class="fa-solid fa-file-signature me-2"></i>
-                {% if form.instance.pk %}Editar Tipo de Permiso{% else %}Nuevo Tipo de Permiso{% endif %}
-            </h3>
-            <button type="button" class="btn-close-modal text-white-opacity js-close-modal">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-
-        <!-- BODY con estilo gris suave -->
-        <div class="modal-body-content modal-body-custom">
-            <!-- Error global -->
-            <div id="global-errors" style="display:none;" class="alert alert-danger mb-3"></div>
-
-            <div class="form-group">
-                <label class="form-label">
-                    <i class="fa-solid fa-tag"></i> Nombre del Permiso <span class="text-danger">*</span>
-                </label>
-                {{ form.name }}
-                <div class="invalid-feedback"></div>
-                <p class="form-hint">Nombre descriptivo del tipo de permiso.</p>
+            <!-- HEADER -->
+            <div class="modal-header-medium">
+                <h3 class="header-title">
+                    <i class="fa-solid fa-file-signature me-2"></i>
+                    {% if form.instance.pk %}Editar Tipo de Permiso{% else %}Nuevo Tipo de Permiso{% endif %}
+                </h3>
+                <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
 
-            <!-- Campo Parent siempre oculto (se maneja automáticamente desde el botón de crear subitem) -->
-            {% if request.GET.parent %}
-                <input type="hidden" name="parent" value="{{ request.GET.parent }}">
-            {% else %}
-                <input type="hidden" name="parent" value="{% if form.instance.parent %}{{ form.instance.parent.pk }}{% endif %}">
-            {% endif %}
+            <!-- BODY -->
+            <div class="modal-body-content modal-body-custom">
+                <!-- Nombre del Tipo -->
+                <div class="form-section-card mb-3">
+                    <div class="form-group mb-0">
+                        <label class="form-label" for="{{ form.name.id_for_label }}">
+                            <i class="fa-solid fa-tag me-1"></i> Nombre del Permiso <span class="text-red">*</span>
+                        </label>
+                        {{ form.name }}
+                        <div class="invalid-feedback"></div>
+                        <small class="form-hint">Nombre descriptivo del tipo o subtipo de permiso.</small>
+                    </div>
+                </div>
 
-            <!-- Título de sección -->
-            <div class="section-title mt-3">
-                <i class="fa-solid fa-sliders"></i> Configuración
+                <!-- Campo Padre (Oculto) -->
+                {% if request.GET.parent %}
+                    <input type="hidden" name="parent" value="{{ request.GET.parent }}">
+                {% else %}
+                    <input type="hidden" name="parent"
+                           value="{% if form.instance.parent %}{{ form.instance.parent.pk }}{% endif %}">
+                {% endif %}
+
+                <!-- Configuración con Switches Oficiales -->
+                <div class="form-section-card mb-0">
+                    <h6 class="section-title"><i class="fa-solid fa-sliders"></i> Reglas de Configuración</h6>
+
+                    <div class="grid-2-cols">
+                        <!-- Toggle Vacaciones -->
+                        <div class="form-group mb-2">
+                            <label class="d-inline-flex align-items-center gap-2 cursor-pointer w-100">
+                                <input type="checkbox" name="affects_vacation"
+                                       id="{{ form.affects_vacation.id_for_label }}"
+                                       class="switch-input switch-blue"
+                                       {% if form.affects_vacation.value %}checked{% endif %}>
+                                <span class="switch-wrapper w-100 justify-content-between px-3 py-2">
+                                    <span class="switch-text">¿Descuenta Vacaciones?</span>
+                                    <span class="switch-circle"></span>
+                                </span>
+                            </label>
+                        </div>
+
+                        <!-- Toggle PDF -->
+                        <div class="form-group mb-2">
+                            <label class="d-inline-flex align-items-center gap-2 cursor-pointer w-100">
+                                <input type="checkbox" name="requires_attachment"
+                                       id="{{ form.requires_attachment.id_for_label }}"
+                                       class="switch-input switch-blue"
+                                       {% if form.requires_attachment.value %}checked{% endif %}>
+                                <span class="switch-wrapper w-100 justify-content-between px-3 py-2">
+                                    <span class="switch-text">¿Adjuntar PDF?</span>
+                                    <span class="switch-circle"></span>
+                                </span>
+                            </label>
+                        </div>
+
+                        <!-- Toggle Justificación -->
+                        <div class="form-group mb-2">
+                            <label class="d-inline-flex align-items-center gap-2 cursor-pointer w-100">
+                                <input type="checkbox" name="needs_justification"
+                                       id="{{ form.needs_justification.id_for_label }}"
+                                       class="switch-input switch-blue"
+                                       {% if form.needs_justification.value %}checked{% endif %}>
+                                <span class="switch-wrapper w-100 justify-content-between px-3 py-2">
+                                    <span class="switch-text">¿Necesita Justificar?</span>
+                                    <span class="switch-circle"></span>
+                                </span>
+                            </label>
+                        </div>
+
+                        <!-- Toggle Activo -->
+                        <div class="form-group mb-2">
+                            <label class="d-inline-flex align-items-center gap-2 cursor-pointer w-100">
+                                <input type="checkbox" name="is_active" id="{{ form.is_active.id_for_label }}"
+                                       class="switch-input switch-green"
+                                       {% if form.is_active.value or form.instance.pk is None %}checked{% endif %}>
+                                <span class="switch-wrapper w-100 justify-content-between px-3 py-2">
+                                    <span class="switch-text">Estado Activo</span>
+                                    <span class="switch-circle"></span>
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
-            <!-- Grid de toggles usando grid-2-cols -->
-            <div class="grid-2-cols">
-
-                <!-- Toggle 1: Vacaciones  -->
-                <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-white">
-                    <label class="form-label mb-0" for="{{ form.affects_vacation.id_for_label }}">¿Descuenta
-                        Vacaciones?</label>
-                    <label class="toggle-switch">
-                        {{ form.affects_vacation }}
-                        <span class="toggle-slider"></span>
-                    </label>
-                </div>
-
-
-                <!-- Toggle 2: PDF -->
-                <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-white">
-                    <label class="form-label mb-0" for="{{ form.requires_attachment.id_for_label }}">¿Adjuntar
-                        PDF?</label>
-                    <label class="toggle-switch">
-                        {{ form.requires_attachment }}
-                        <span class="toggle-slider"></span>
-                    </label>
-                </div>
-
-                <!-- Toggle 3: Justificación -->
-                <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-white">
-                    <label class="form-label mb-0" for="{{ form.needs_justification.id_for_label }}">¿Necesita
-                        Justificar?</label>
-                    <label class="toggle-switch">
-                        {{ form.needs_justification }}
-                        <span class="toggle-slider"></span>
-                    </label>
-                </div>
-
-
-                <!-- Toggle 4: Activo -->
-                <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-white">
-                    <label class="form-label mb-0" for="{{ form.is_active.id_for_label }}">Estado Activo</label>
-                    <label class="toggle-switch">
-                        {{ form.is_active }}
-                        <span class="toggle-slider"></span>
-                    </label>
-                </div>
-
+            <!-- FOOTER -->
+            <div class="modal-footer-medium modal-footer-spaced">
+                <button type="button" class="btn-default-outline" onclick="closeModal()">
+                    <i class="fa-solid fa-times me-1"></i> Cancelar
+                </button>
+                <button type="submit" class="btn-dark-blue-rectangle">
+                    <i class="fa-solid fa-save me-1"></i> Guardar
+                </button>
             </div>
-        </div>
-
-        <!-- FOOTER con botones -->
-        <div class="modal-footer-medium modal-footer-spaced">
-            <button type="button" class="btn-cancel js-close-modal">
-                <i class="fa-solid fa-times"></i> Cancelar
-            </button>
-            <button type="submit" class="btn-save">
-                <i class="fa-solid fa-save"></i> Guardar
-            </button>
-        </div>
-    </form>
+        </form>
+    </div>
 </div>

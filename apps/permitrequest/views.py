@@ -426,51 +426,27 @@ class EmployeePermitListView(LoginRequiredMixin, PermissionRequiredMixin, ListVi
 
 
 class EmployeePermitHistoryView(LoginRequiredMixin, PermissionRequiredMixin, View):
-    """Vista para obtener el historial de permisos de un empleado"""
+    """Vista para obtener el historial de permisos de un empleado en modal"""
     permission_required = 'permitrequest.view_permitrequest'
 
     def get(self, request, employee_id):
         if not request.user.has_perm('permitrequest.view_permitrequest'):
-            return JsonResponse({
-                'success': False,
-                'message': 'No tiene permisos para ver esta información'
-            }, status=403)
+            return HttpResponse('No tiene permisos para ver esta información', status=403)
 
-        try:
-            employee = get_object_or_404(Employee, pk=employee_id)
-            # Accesos seguros a datos de la persona relacionada (evitar AttributeError si no existe)
-            emp_person = getattr(employee, 'person', None)
-            employee_name = getattr(emp_person, 'full_name', '') if emp_person else (
-                        getattr(employee, 'get_full_name', lambda: '')() or '')
-            employee_identification = getattr(emp_person, 'document_number', '') if emp_person else ''
-            permits = PermitRequest.objects.filter(
-                employee=employee
-            ).exclude(status__in=['CANCELED', 'INACTIVE']).select_related('permit_type').order_by('-created_at')
+        employee = get_object_or_404(Employee, pk=employee_id)
+        permits = PermitRequest.objects.filter(
+            employee=employee
+        ).exclude(status__in=['CANCELED', 'INACTIVE']).select_related('permit_type').order_by('-start_date')
 
-            permits_data = []
-            for permit in permits:
-                permits_data.append({
-                    'id': permit.id,
-                    'permit_type__name': permit.permit_type.name,
-                    'start_date': permit.start_date.strftime('%Y-%m-%d') if permit.start_date else None,
-                    'end_date': permit.end_date.strftime('%Y-%m-%d') if permit.end_date else None,
-                    'status': permit.status,
-                    'created_at': permit.created_at.strftime('%Y-%m-%d %H:%M:%S') if permit.created_at else None
-                })
-
-            return JsonResponse({
-                'success': True,
-                'employee_name': employee.person.full_name,
-                'employee_identification': employee.person.document_number,
-                'permits': permits_data
-            })
-        except Exception as e:
-            import traceback
-            return JsonResponse({
-                'success': False,
-                'message': f'Error al cargar historial: {str(e)}',
-                'traceback': traceback.format_exc()
-            }, status=500)
+        html = render_to_string(
+            'permissions/modals/modal_employee_permit_history.html',
+            {
+                'employee': employee,
+                'permits': permits,
+            },
+            request=request
+        )
+        return HttpResponse(html)
 
 
 class GeneratePermitFormView(LoginRequiredMixin, View):
@@ -645,26 +621,24 @@ class PermitTypeToggleView(LoginRequiredMixin, View):
 
 
 class PermitTypeSubItemsView(LoginRequiredMixin, View):
-    """Vista para obtener los subitems de un tipo de permiso en JSON."""
+    """Vista para mostrar el modal con los subtipos de un tipo de permiso."""
 
     def get(self, request, pk):
-        # Verificar permisos manualmente para respuesta JSON apropiada
         if not request.user.has_perm('permitrequest.view_permittype'):
-            return JsonResponse({
-                'success': False,
-                'message': 'No tiene permisos para ver esta información'
-            }, status=403)
+            return HttpResponse('No tiene permisos para ver esta información', status=403)
 
         parent = get_object_or_404(PermitType, pk=pk)
-        subtypes = PermitType.objects.filter(parent=parent).values(
-            'id', 'name', 'needs_justification', 'affects_vacation', 'is_active'
+        items = PermitType.objects.filter(parent=parent).order_by('name')
+
+        html = render_to_string(
+            'permissions/modals/modal_permissions_subtype_list.html',
+            {
+                'parent': parent,
+                'items': items,
+            },
+            request=request
         )
-        return JsonResponse({
-            'success': True,
-            'parent_name': parent.name,
-            'parent_id': parent.id,
-            'items': list(subtypes)
-        })
+        return HttpResponse(html)
 
 
 def get_subtypes_api(request, parent_id):
@@ -687,8 +661,8 @@ def get_subtypes_api(request, parent_id):
 class PermitAdminListView(LoginRequiredMixin, PermissionRequiredMixin, JSONResponseMixin, ListView):
     """Vista para administrar permisos (aprobar/rechazar)"""
     model = PermitRequest
-    template_name = 'permissions/permit_admin_list.html'
-    partial_template_name = 'permissions/partials/partial_permit_admin_table.html'
+    template_name = 'permissions/permit_list.html'
+    partial_template_name = 'permissions/partials/partial_permit_table.html'
     context_object_name = 'permits'
     permission_required = 'permitrequest.view_permitrequest'
     paginate_by = 10
@@ -743,7 +717,8 @@ class PermitAdminListView(LoginRequiredMixin, PermissionRequiredMixin, JSONRespo
 
         context['areas'] = AdministrativeUnit.objects.filter(is_active=True).order_by('name')
         context['permit_types'] = PermitType.objects.filter(parent__isnull=True, is_active=True).order_by('name')
-        context['permit_subtypes'] = PermitType.objects.filter(is_active=True, parent__isnull=False).select_related('parent').order_by('parent__name', 'name')
+        context['permit_subtypes'] = PermitType.objects.filter(is_active=True, parent__isnull=False).select_related(
+            'parent').order_by('parent__name', 'name')
         context['status_choices'] = PermitRequest.STATUS_CHOICES
 
         context['current_filters'] = {
@@ -1358,41 +1333,41 @@ class BitacoraRegisterView(LoginRequiredMixin, PermissionRequiredMixin, View):
 
 
 class BitacoraListView(LoginRequiredMixin, PermissionRequiredMixin, View):
-    """Vista para listar bitácoras pendientes de un empleado"""
+    """Vista para listar bitácoras pendientes de un empleado en modal"""
     permission_required = 'permitrequest.view_permitrequest'
 
     def get(self, request, employee_id):
-        employee = get_object_or_404(Employee, pk=employee_id)
+        # 1. Obtener empleado junto con sus datos de persona
+        employee = get_object_or_404(
+            Employee.objects.select_related('person'),
+            pk=employee_id
+        )
 
-        # Obtener tipo de permiso "Bitácora"
+        # 2. Buscar tipo bitácora
         bitacora_type = PermitType.objects.filter(name__icontains='Bitácora').first()
 
+        bitacoras = []
         if bitacora_type:
+            # 3. QuerySet de objetos completos (SIN .values()) para que funcionen fechas y archivos
             bitacoras = PermitRequest.objects.filter(
                 employee=employee,
                 permit_type=bitacora_type,
                 status__in=['REQUESTED', 'REJECTED']
-            ).select_related('created_by').values(
-                'id', 'start_date', 'end_date', 'start_time', 'end_time',
-                'status', 'created_at', 'created_by__first_name', 'created_by__last_name',
-                'response_note', 'justification_file'
-            ).order_by('-start_date', '-start_time')
+            ).select_related('created_by').order_by('-start_date', '-start_time')
 
-            # Construir full_name del created_by (nombre + apellidos)
-            for bitacora in bitacoras:
-                first_name = bitacora.pop('created_by__first_name', '') or ''
-                last_name = bitacora.pop('created_by__last_name', '') or ''
-                full_name = f"{first_name} {last_name}".strip()
-                bitacora['created_by__full_name'] = full_name if full_name else 'Sistema'
-        else:
-            bitacoras = []
-
-        return JsonResponse({
-            'success': True,
-            'bitacoras': list(bitacoras),
+        context = {
+            'employee': employee,
             'employee_name': employee.person.full_name,
-            'employee_identification': employee.person.document_number
-        })
+            'bitacoras': bitacoras,
+        }
+
+        # 4. Renderizar la plantilla del modal para inyectar en modal-root
+        html = render_to_string(
+            'permissions/modals/modal_binnacle_list.html',
+            context,
+            request=request
+        )
+        return HttpResponse(html)
 
 
 class BitacoraHistoryView(LoginRequiredMixin, PermissionRequiredMixin, View):
@@ -1406,7 +1381,7 @@ class BitacoraHistoryView(LoginRequiredMixin, PermissionRequiredMixin, View):
             # Valores seguros para evitar NameError si faltan datos relacionados
             emp_person = getattr(employee, 'person', None)
             employee_name = getattr(emp_person, 'full_name', '') if emp_person else (
-                        getattr(employee, 'get_full_name', lambda: '')() or '')
+                    getattr(employee, 'get_full_name', lambda: '')() or '')
             employee_identification = getattr(emp_person, 'document_number', '') if emp_person else ''
 
             qs = PermitRequest.objects.none()
