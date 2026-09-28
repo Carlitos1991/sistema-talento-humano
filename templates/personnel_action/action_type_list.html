@@ -1,41 +1,35 @@
 {% extends 'base.html' %}
 {% load static %}
+
 {% block title %}Tipos de Acción | SIGETH{% endblock %}
 
 {% block content %}
-    <div id="action-type-list-view">
-
-        <div class="header-card">
-            <div>
-                <h1><i class="fa-solid fa-file-pen mr-2"></i> Tipos de Acción</h1>
-                <p>Catálogo de movimientos de personal.</p>
-            </div>
-            <button class="btn-white-rectangle" onclick="window.openActionTypeModal()">
-                <i class="fas fa-plus"></i> NUEVO TIPO
-            </button>
+    <div class="header-card">
+        <div>
+            <h1><i class="fa-solid fa-file-pen me-2"></i> Tipos de Acción</h1>
+            <p>Catálogo de movimientos de personal.</p>
         </div>
-
-        <div class="table-app">
-            <div class="content-table">
-                <div class="table-controls toolbar-row">
-                     <div class="toolbar-center">
-                    </div>
-                    <div class="toolbar-right">
-                        <input type="text" id="searchInput" onkeyup="window.debouncedSearch()"
-                               class="table-search-input" placeholder="Buscar por nombre">
-                    </div>
-                </div>
-
-                <div id="table-content-wrapper">
-                    {% include 'personnel_action/partials/partial_action_type_list.html' %}
-                </div>
-            </div>
-        </div>
-        <div class="pagination-container" id="js-pagination"></div>
+        <button type="button" class="btn-white-rectangle" id="btnNewActionType">
+            <i class="fas fa-plus"></i> NUEVO TIPO
+        </button>
     </div>
 
-    {% include 'personnel_action/modals/modal_action_type_form.html' %}
+    <div class="content-table">
+        <div class="table-controls toolbar-row">
+            <div class="toolbar-center"></div>
+            <div class="toolbar-right">
+                <input type="text" id="table-search" class="table-search-input table-search-input--large"
+                       placeholder="Buscar por código o nombre..." value="{{ search_query|default:'' }}">
+            </div>
+        </div>
 
+        <div id="table-content-wrapper">
+            {% include 'personnel_action/partials/partial_action_type_list.html' %}
+        </div>
+    </div>
+
+    <!-- Contenedor único para modales AJAX según main.js -->
+    <div id="modal-root"></div>
 {% endblock %}
 
 {% block extra_js %}

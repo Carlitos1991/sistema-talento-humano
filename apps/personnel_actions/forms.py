@@ -1,23 +1,28 @@
 from django import forms
 from django.db.models import Q
-from .models import PersonnelAction, ActionMovement, ActionType
 from core.models import User
+from .models import PersonnelAction, ActionMovement, ActionType
 
 
 class PersonnelActionForm(forms.ModelForm):
     class Meta:
         model = PersonnelAction
-        fields = ['employee', 'action_type', 'number', 'motivation',
-                  'date_issue', 'date_effective', 'explanation',
-                  'authority_1', 'authority_2', 'reviewer', 'register']
+        fields = [
+            'employee', 'action_type', 'number', 'motivation',
+            'date_issue', 'date_effective', 'explanation',
+            'authority_1', 'authority_2', 'reviewer', 'register'
+        ]
         widgets = {
             'employee': forms.Select(attrs={'class': 'input-field-select select2'}),
             'action_type': forms.Select(attrs={'class': 'input-field-select select2'}),
             'motivation': forms.TextInput(attrs={'class': 'input-field', 'placeholder': 'Ej: Nombramiento definitivo'}),
             'date_issue': forms.DateInput(attrs={'type': 'date', 'class': 'input-field'}, format='%Y-%m-%d'),
             'date_effective': forms.DateInput(attrs={'type': 'date', 'class': 'input-field'}, format='%Y-%m-%d'),
-            'explanation': forms.Textarea(attrs={'rows': 4, 'class': 'input-textarea',
-                                                 'placeholder': 'Descripción detallada de la acción de personal'}),
+            'explanation': forms.Textarea(attrs={
+                'rows': 4,
+                'class': 'input-textarea',
+                'placeholder': 'Descripción detallada de la acción de personal'
+            }),
             'number': forms.TextInput(attrs={'class': 'input-field'}),
             'authority_1': forms.Select(attrs={'class': 'input-field-select select2 action-signature-select'}),
             'authority_2': forms.Select(attrs={'class': 'input-field-select select2 action-signature-select'}),
@@ -48,8 +53,8 @@ class PersonnelActionForm(forms.ModelForm):
         signature_queryset = signature_queryset.order_by('first_name', 'last_name', 'username')
 
         def signature_label(user):
-            label = user.signature_name
-            if user.signature_position:
+            label = user.signature_name or user.get_full_name() or user.username
+            if getattr(user, 'signature_position', None):
                 label = f'{label} - {user.signature_position}'
             return label
 
@@ -86,35 +91,75 @@ class PersonnelActionForm(forms.ModelForm):
 class ActionMovementForm(forms.ModelForm):
     class Meta:
         model = ActionMovement
-        fields = ['previous_remuneration', 'new_remuneration',
-                  'new_unit', 'new_position', 'new_budget_line', 'location_text']
+        fields = [
+            'previous_remuneration', 'new_remuneration',
+            'new_unit', 'new_position', 'new_budget_line', 'location_text'
+        ]
         widgets = {
-            'new_unit': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Unidad Administrativa Nueva'}),
-            'new_position': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Puesto Nuevo'}),
-            'new_budget_line': forms.Select(attrs={'class': 'form-select select2'}),
-            'previous_remuneration': forms.NumberInput(attrs={'class': 'form-control'}),
-            'new_remuneration': forms.NumberInput(attrs={'class': 'form-control'}),
-            'location_text': forms.TextInput(attrs={'class': 'form-control'}),
+            'new_unit': forms.TextInput(attrs={'class': 'input-field', 'placeholder': 'Unidad Administrativa Nueva'}),
+            'new_position': forms.TextInput(attrs={'class': 'input-field', 'placeholder': 'Puesto Nuevo'}),
+            'new_budget_line': forms.Select(attrs={'class': 'input-field-select select2'}),
+            'previous_remuneration': forms.NumberInput(attrs={'class': 'input-field'}),
+            'new_remuneration': forms.NumberInput(attrs={'class': 'input-field'}),
+            'location_text': forms.TextInput(attrs={'class': 'input-field'}),
         }
 
 
 class ActionTypeForm(forms.ModelForm):
     class Meta:
         model = ActionType
-        fields = ['name', 'code', 'is_active', 'default_authority_1', 'default_authority_2', 'default_reviewer',
-                  'default_register']
+        fields = [
+            'code', 'name', 'is_active',
+            'default_authority_1', 'default_authority_2',
+            'default_reviewer', 'default_register'
+        ]
         widgets = {
-            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'EJ: NOMBRAMIENTO PROVISIONAL'}),
             'code': forms.TextInput(attrs={
-                'class': 'form-control uppercase-input',
+                'class': 'input-field uppercase-input',
                 'placeholder': 'EJ: NOM-PROV',
                 'oninput': 'this.value = this.value.toUpperCase()'
             }),
-            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'name': forms.TextInput(attrs={
+                'class': 'input-field',
+                'placeholder': 'EJ: NOMBRAMIENTO PROVISIONAL'
+            }),
+            'is_active': forms.CheckboxInput(attrs={'class': 'switch-input switch-green'}),
+            'default_authority_1': forms.Select(attrs={'class': 'input-field select2'}),
+            'default_authority_2': forms.Select(attrs={'class': 'input-field select2'}),
+            'default_reviewer': forms.Select(attrs={'class': 'input-field select2'}),
+            'default_register': forms.Select(attrs={'class': 'input-field select2'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Si estamos editando, el código no se debe modificar
+        if self.instance and self.instance.pk:
+            self.fields['code'].widget.attrs['readonly'] = True
+            self.fields['code'].widget.attrs['class'] += ' readonly-styled'
+
+        signature_fields = [
+            'default_authority_1',
+            'default_authority_2',
+            'default_reviewer',
+            'default_register'
+        ]
+        users_qs = User.objects.filter(is_active=True).order_by('first_name', 'last_name', 'username')
+
+        def signature_label(user):
+            name = user.signature_name or user.get_full_name() or user.username
+            pos = getattr(user, 'signature_position', '')
+            return f"{name} - {pos}" if pos else name
+
+        for f_name in signature_fields:
+            if f_name in self.fields:
+                self.fields[f_name].queryset = users_qs
+                self.fields[f_name].required = False
+                self.fields[f_name].empty_label = '--- Seleccionar Firma por Defecto ---'
+                self.fields[f_name].label_from_instance = signature_label
 
     def clean_code(self):
         code = self.cleaned_data.get('code')
         if code:
-            return code.upper()
+            return code.upper().strip()
         return code

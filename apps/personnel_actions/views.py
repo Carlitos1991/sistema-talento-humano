@@ -1,13 +1,15 @@
-import json
+import datetime as dt
 from datetime import timedelta
 
+from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q
-from django.http import HttpResponse
-from django.http import JsonResponse
-from django.shortcuts import render, get_object_or_404
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import render, get_object_or_404, redirect
 from django.template.loader import render_to_string
+from django.urls import reverse_lazy, reverse
 from django.views import View
 from django.views.generic import ListView, CreateView, UpdateView
 
@@ -19,17 +21,16 @@ from .forms import PersonnelActionForm, ActionTypeForm
 from .models import PersonnelAction, ActionMovement, ActionType
 
 
+# ==============================================================================
+# HELPER FUNCTIONS
+# ==============================================================================
+
 def _save_action_movement(action, request, is_create=False):
     """
     Función auxiliar para procesar y guardar el movimiento (Situación Actual vs Propuesta)
     """
-    from budget.models import BudgetLine
-    from institution.models import AdministrativeUnit
-
-    # 1. Obtener o crear el objeto de movimiento
     if is_create:
         movement = ActionMovement(personnel_action=action)
-        # Solo en la creación capturamos la "Situación Actual" (Snapshot)
         employee = action.employee
         current_budget = employee.current_budget_line.first()
         current_unit = employee.area
@@ -39,13 +40,11 @@ def _save_action_movement(action, request, is_create=False):
         movement.previous_position = current_budget.position_item.name if current_budget and current_budget.position_item else ''
         movement.previous_remuneration = current_budget.remuneration if current_budget else 0
     else:
-        # En edición, buscamos el movimiento existente
         movement, _ = ActionMovement.objects.get_or_create(personnel_action=action)
 
-    # 2. Capturar "Situación Propuesta" desde los inputs ocultos que genera el JS
     new_unit_id = request.POST.get('movement_new_unit')
     new_budget_line_id = request.POST.get('movement_new_budget_line')
-    location_text = request.POST.get('location_text')  # Si tienes este campo en el form
+    location_text = request.POST.get('location_text')
 
     if new_unit_id:
         try:
@@ -126,20 +125,9 @@ def _spanish_date_without_year(date_value):
         return ''
 
     months = {
-        1: 'enero',
-        2: 'febrero',
-        3: 'marzo',
-        4: 'abril',
-        5: 'mayo',
-        6: 'junio',
-        7: 'julio',
-        8: 'agosto',
-        9: 'septiembre',
-        10: 'octubre',
-        11: 'noviembre',
-        12: 'diciembre',
+        1: 'enero', 2: 'febrero', 3: 'marzo', 4: 'abril', 5: 'mayo', 6: 'junio',
+        7: 'julio', 8: 'agosto', 9: 'septiembre', 10: 'octubre', 11: 'noviembre', 12: 'diciembre',
     }
-
     return f"{date_value.day} de {months.get(date_value.month, '')}"
 
 
@@ -149,6 +137,10 @@ def _movement_reason(action):
         action_name = 'acción de personal'
     return f"{action_name} a partir del {_spanish_date_without_year(action.date_effective)}"
 
+
+# ==============================================================================
+# MAIN PERSONNEL ACTIONS VIEWS
+# ==============================================================================
 
 class PersonnelActionListView(LoginRequiredMixin, ListView):
     model = PersonnelAction
@@ -161,7 +153,7 @@ class PersonnelActionListView(LoginRequiredMixin, ListView):
             'employee__person',
             'action_type'
         ).prefetch_related('movement')
-        # Filtros básicos y avanzados
+
         q = self.request.GET.get('q', '').strip()
         action_type = self.request.GET.get('action_type', '').strip()
         date_from = self.request.GET.get('date_from', '').strip()
@@ -173,11 +165,8 @@ class PersonnelActionListView(LoginRequiredMixin, ListView):
         detail = self.request.GET.get('detail', '').strip()
 
         if q:
-            # Búsqueda combinada: divide el término en palabras
-            # y busca registros que contengan todas las palabras en nombres/apellidos
             terms = q.split()
             if len(terms) > 1:
-                # Búsqueda combinada: todos los términos deben estar en nombres/apellidos
                 query = Q()
                 for term in terms:
                     query &= (
@@ -186,7 +175,6 @@ class PersonnelActionListView(LoginRequiredMixin, ListView):
                     )
                 qs = qs.filter(query)
             else:
-                # Búsqueda simple: un solo término
                 qs = qs.filter(
                     Q(employee__person__first_name__icontains=q) |
                     Q(employee__person__last_name__icontains=q) |
@@ -197,35 +185,27 @@ class PersonnelActionListView(LoginRequiredMixin, ListView):
 
         if action_type:
             qs = qs.filter(Q(action_type__id=action_type) | Q(action_type__name__icontains=action_type))
-
         if date_from:
             try:
                 qs = qs.filter(date_effective__gte=date_from)
             except Exception:
                 pass
-
         if date_to:
             try:
                 qs = qs.filter(date_effective__lte=date_to)
             except Exception:
                 pass
-
         if prev_unit:
             qs = qs.filter(movement__previous_unit__icontains=prev_unit)
-
         if new_unit:
             qs = qs.filter(movement__new_unit__icontains=new_unit)
-
         if prev_pos:
             qs = qs.filter(movement__previous_position__icontains=prev_pos)
-
         if new_pos:
             qs = qs.filter(movement__new_position__icontains=new_pos)
-
         if detail:
             qs = qs.filter(Q(explanation__icontains=detail) | Q(motivation__icontains=detail))
 
-        # Aplicar orden dinámico si se solicita
         order_by = self.request.GET.get('order_by', '').strip()
         direction = self.request.GET.get('direction', 'asc').strip().lower()
         if order_by:
@@ -236,18 +216,14 @@ class PersonnelActionListView(LoginRequiredMixin, ListView):
             except Exception:
                 pass
 
-        # Orden por defecto y limitar a últimos 3000 registros
-        ordered = qs.order_by('-pk')
-        return ordered[:3000]
+        return qs.order_by('-pk')[:3000]
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        # Añadir lista de tipos para el select de filtros
         context['action_types'] = ActionType.objects.all()
         return context
 
     def render_to_response(self, context, **response_kwargs):
-        """Si es AJAX, devolver JSON con HTML de la tabla"""
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
             html_table = render_to_string(
                 'personnel_action/partials/partial_personnel_action_table.html',
@@ -255,7 +231,6 @@ class PersonnelActionListView(LoginRequiredMixin, ListView):
                 request=self.request
             )
             page_obj = context['page_obj']
-
             return JsonResponse({
                 'html': html_table,
                 'page_number': page_obj.number,
@@ -264,7 +239,6 @@ class PersonnelActionListView(LoginRequiredMixin, ListView):
                 'num_pages': context['paginator'].num_pages,
                 'total_records': context['paginator'].count
             })
-
         return super().render_to_response(context, **response_kwargs)
 
 
@@ -275,10 +249,7 @@ class PersonnelActionCreateView(LoginRequiredMixin, CreateView):
     template_name = 'personnel_action/modals/modal_personnel_action_form.html'
 
     def get(self, request, *args, **kwargs):
-        """Devolver el formulario vacío o con empleado preseleccionado (Blindado)"""
         try:
-            from employee.models import Employee
-
             employee_id = request.GET.get('employee_id')
             employee = None
 
@@ -302,9 +273,6 @@ class PersonnelActionCreateView(LoginRequiredMixin, CreateView):
             })
 
         except Exception as e:
-            import traceback
-            print("🔥 ERROR CRÍTICO AL ABRIR EL MODAL DE ACCIÓN DE PERSONAL:")
-            traceback.print_exc()
             return HttpResponse(f"Error interno del servidor: {str(e)}", status=500)
 
     def form_valid(self, form):
@@ -314,86 +282,65 @@ class PersonnelActionCreateView(LoginRequiredMixin, CreateView):
                 self.object.created_by = self.request.user
                 self.object.elaboration = self.request.user
 
-                # Asignación automática de firmas
                 if self.object.action_type:
                     self.object.authority_1 = self.object.action_type.default_authority_1
                     self.object.authority_2 = self.object.action_type.default_authority_2
                     self.object.reviewer = self.object.action_type.default_reviewer
                     self.object.register = self.object.action_type.default_register
 
-                # Lógica de número automático
                 if not self.object.number or self.object.number.strip() == '':
-                    from datetime import datetime
-                    year = datetime.now().year
+                    year = dt.datetime.now().year
                     last_action = PersonnelAction.objects.filter(number__endswith=f'-{year}').order_by(
                         '-created_at').first()
                     new_num = 1
                     if last_action:
                         try:
                             new_num = int(last_action.number.split('-')[0]) + 1
-                        except:
+                        except Exception:
                             pass
                     self.object.number = f'{new_num:04d}-{year}'
 
                 self.object.save()
-
                 _save_action_movement(self.object, self.request, is_create=True)
 
             if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({'success': True, 'message': 'Acción de personal creada correctamente'})
+                return JsonResponse(
+                    {'status': 'success', 'success': True, 'message': 'Acción de personal creada correctamente'})
 
             return super().form_valid(form)
 
         except Exception as e:
-            import traceback
-            traceback.print_exc()
             if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({'success': False, 'message': f'Fallo interno: {str(e)}'}, status=500)
+                return JsonResponse({'status': 'error', 'success': False, 'message': f'Fallo interno: {str(e)}'},
+                                    status=500)
             raise e
 
     def form_invalid(self, form):
         if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            # Extraer el primer mensaje de error para mostrar en la alerta
-            error_list = []
-            errors_data = {}
-
-            for field, errors in form.errors.items():
-                msg = errors[0]
-                errors_data[field] = msg
-                # Si el error es de un campo específico o global
-                field_label = form.fields[field].label if field in form.fields and form.fields[field].label else field
-                if field == '__all__':
-                    error_list.append(f"• {msg}")
-                else:
-                    error_list.append(f"• <b>{field_label}:</b> {msg}")
-
-            detailed_message = "<br>".join(error_list)
-
+            errors_data = {field: errors[0] for field, errors in form.errors.items()}
             return JsonResponse({
+                'status': 'error',
                 'success': False,
-                'message': detailed_message or 'Por favor, revise los campos del formulario.',
+                'message': 'Por favor, revise los campos del formulario.',
                 'errors': errors_data
             }, status=400)
-
         return super().form_invalid(form)
 
 
 class ActionInactivateView(LoginRequiredMixin, View):
-    """Cambia el estado is_active a False (Anulación)"""
-
     def post(self, request, pk):
         action = get_object_or_404(PersonnelAction, pk=pk)
-
         if not request.user.has_perm('personnel_actions.delete_personnelaction'):
-            return JsonResponse({'success': False, 'message': 'No tienes permiso'}, status=403)
+            return JsonResponse({'status': 'error', 'success': False, 'message': 'No tienes permiso'}, status=403)
         action.is_active = False
         action.save()
+        return JsonResponse(
+            {'status': 'success', 'success': True, 'message': f'Acción {action.number} inactivada correctamente.'})
 
-        return JsonResponse({
-            'success': True,
-            'message': f'Acción {action.number} inactivada correctamente.'
-        })
 
+# ==============================================================================
+# TIPOS DE ACCIÓN (ESTANDARIZADO DJANGO + MAIN.JS)
+# ==============================================================================
 
 class ActionTypeListView(LoginRequiredMixin, ListView):
     model = ActionType
@@ -403,8 +350,8 @@ class ActionTypeListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         qs = super().get_queryset()
-        query = self.request.GET.get('q')
-        status = self.request.GET.get('status')
+        query = self.request.GET.get('q', '').strip()
+        status = self.request.GET.get('status', '').strip()
 
         if query:
             qs = qs.filter(Q(name__icontains=query) | Q(code__icontains=query))
@@ -416,134 +363,133 @@ class ActionTypeListView(LoginRequiredMixin, ListView):
 
         return qs.order_by('name')
 
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        # Estadísticas Globales
-        ctx['stats_total'] = ActionType.objects.count()
-        ctx['stats_active'] = ActionType.objects.filter(is_active=True).count()
-        ctx['stats_inactive'] = ActionType.objects.filter(is_active=False).count()
-        return ctx
-
-    def get_template_names(self):
+    def render_to_response(self, context, **response_kwargs):
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return ['personnel_action/partials/partial_action_type_list.html']
-        return [self.template_name]
-
-
-class ActionTypeCreateOrUpdateView(LoginRequiredMixin, View):
-    """Maneja Crear (POST sin ID) y Actualizar (POST con ID) de Tipos de Acción"""
-
-    def post(self, request, pk=None):
-        try:
-            # 1. Leer el JSON enviado por Vue
-            data = json.loads(request.body)
-
-            # 2. LIMPIEZA VITAL: Convertir strings vacíos a None
-            firmas_fields = ['default_authority_1', 'default_authority_2', 'default_reviewer', 'default_register']
-            for field in firmas_fields:
-                if data.get(field) == '':
-                    data[field] = None
-
-            # 3. Instanciar el formulario (Editar si hay PK, Crear si no hay)
-            if pk:
-                instance = get_object_or_404(ActionType, pk=pk)
-                form = ActionTypeForm(data, instance=instance)
-            else:
-                form = ActionTypeForm(data)
-
-            # 4. Validar y Guardar
-            if form.is_valid():
-                form.save()
-                return JsonResponse({'success': True})
-            else:
-                return JsonResponse({'success': False, 'errors': form.errors}, status=400)
-
-        except json.JSONDecodeError:
-            return JsonResponse({'success': False, 'message': 'El formato JSON enviado es inválido.'}, status=400)
-
-        except Exception as e:
-            print(f"🔥 ERROR CRÍTICO EN ActionTypeCreateOrUpdateView: {str(e)}")
-            return JsonResponse({'success': False, 'message': f"Error interno: {str(e)}"}, status=500)
-
-
-class ActionTypeDetailJsonView(LoginRequiredMixin, View):
-    """Devuelve los datos de un registro en JSON para cargarlos en Vue"""
-
-    def get(self, request, pk):
-        obj = get_object_or_404(ActionType, pk=pk)
-        data = {
-            'id': obj.pk,
-            'name': obj.name,
-            'code': obj.code,
-            'is_active': obj.is_active,
-
-            # Devolvemos ID y Texto (Nombre de firma) para inyectar en Select2
-            'auth1_id': obj.default_authority_1.id if obj.default_authority_1 else None,
-            'auth1_text': obj.default_authority_1.signature_name if obj.default_authority_1 else '',
-
-            'auth2_id': obj.default_authority_2.id if obj.default_authority_2 else None,
-            'auth2_text': obj.default_authority_2.signature_name if obj.default_authority_2 else '',
-
-            'reviewer_id': obj.default_reviewer.id if obj.default_reviewer else None,
-            'reviewer_text': obj.default_reviewer.signature_name if obj.default_reviewer else '',
-
-            'register_id': obj.default_register.id if obj.default_register else None,
-            'register_text': obj.default_register.signature_name if obj.default_register else '',
-        }
-        return JsonResponse(data)
-
-
-class ActionTypeDeleteView(LoginRequiredMixin, View):
-    def post(self, request, pk):
-        obj = get_object_or_404(ActionType, pk=pk)
-        obj.delete()
-        types = ActionType.objects.all().order_by('name')
-        html_table = render_to_string(
-            'personnel_action/partials/partial_action_type_list.html',
-            {'types': types},
-            request=request
-        )
-        return JsonResponse({'success': True, 'html': html_table})
+            html_table = render_to_string(
+                'personnel_action/partials/partial_action_type_list.html',
+                context,
+                request=self.request
+            )
+            page_obj = context.get('page_obj')
+            paginator = context.get('paginator')
+            return JsonResponse({
+                'html': html_table,
+                'page_number': page_obj.number if page_obj else 1,
+                'has_next': page_obj.has_next() if page_obj else False,
+                'has_previous': page_obj.has_previous() if page_obj else False,
+                'num_pages': paginator.num_pages if paginator else 1,
+                'total_records': paginator.count if paginator else 0,
+            })
+        return super().render_to_response(context, **response_kwargs)
 
 
 class ActionTypeCreateView(LoginRequiredMixin, CreateView):
     model = ActionType
     form_class = ActionTypeForm
     template_name = 'personnel_action/modals/modal_action_type_form.html'
+    success_url = reverse_lazy('personnel_actions:action_type_list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['action_url'] = reverse('personnel_actions:action_type_create')
+        context['is_edit'] = False
+        return context
 
     def form_valid(self, form):
-        form.save()
-        return render(self.request, 'personnel_action/partials/partial_action_type_list.html', {
-            'types': ActionType.objects.all().order_by('name')
-        })
+        self.object = form.save()
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({
+                'status': 'success',
+                'success': True,
+                'message': f'Tipo de Acción "{self.object.name}" creado correctamente.'
+            })
+        messages.success(self.request, f'Tipo de Acción "{self.object.name}" creado correctamente.')
+        return redirect(self.success_url)
+
+    def form_invalid(self, form):
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            errors_data = {field: errors[0] for field, errors in form.errors.items()}
+            return JsonResponse({
+                'status': 'error',
+                'success': False,
+                'message': 'Por favor corrija los errores en el formulario.',
+                'errors': errors_data
+            }, status=400)
+        return super().form_invalid(form)
 
 
 class ActionTypeUpdateView(LoginRequiredMixin, UpdateView):
     model = ActionType
     form_class = ActionTypeForm
     template_name = 'personnel_action/modals/modal_action_type_form.html'
+    success_url = reverse_lazy('personnel_actions:action_type_list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['action_url'] = reverse('personnel_actions:action_type_edit', kwargs={'pk': self.object.pk})
+        context['is_edit'] = True
+        return context
 
     def form_valid(self, form):
-        form.save()
-        return render(self.request, 'personnel_action/partials/partial_action_type_list.html', {
-            'types': ActionType.objects.all().order_by('name')
-        })
+        self.object = form.save()
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({
+                'status': 'success',
+                'success': True,
+                'message': f'Tipo de Acción "{self.object.name}" actualizado correctamente.'
+            })
+        messages.success(self.request, f'Tipo de Acción "{self.object.name}" actualizado correctamente.')
+        return redirect(self.success_url)
+
+    def form_invalid(self, form):
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            errors_data = {field: errors[0] for field, errors in form.errors.items()}
+            return JsonResponse({
+                'status': 'error',
+                'success': False,
+                'message': 'Por favor corrija los errores en el formulario.',
+                'errors': errors_data
+            }, status=400)
+        return super().form_invalid(form)
 
 
-# Vista especial para cambiar estado (Toggle) vía AJAX
-class ActionTypeToggleStatusView(LoginRequiredMixin, View):
+class ActionTypeDeleteView(LoginRequiredMixin, View):
     def post(self, request, pk):
         obj = get_object_or_404(ActionType, pk=pk)
-        obj.is_active = not obj.is_active
-        obj.save()
-        types = ActionType.objects.all().order_by('name')
-        html_table = render_to_string(
-            'personnel_action/partials/partial_action_type_list.html',
-            {'types': types},
-            request=request
-        )
-        return JsonResponse({'success': True, 'html': html_table})
+        name = obj.name
 
+        # Verificar si existen acciones de personal vinculadas
+        if PersonnelAction.objects.filter(action_type=obj).exists():
+            return JsonResponse({
+                'status': 'error',
+                'success': False,
+                'message': f'No se puede eliminar el tipo "{name}" porque ya tiene Acciones de Personal registradas.'
+            }, status=400)
+
+        try:
+            obj.delete()
+            return JsonResponse({
+                'status': 'success',
+                'success': True,
+                'message': f'Tipo de Acción "{name}" eliminado correctamente.'
+            })
+        except ProtectedError:
+            return JsonResponse({
+                'status': 'error',
+                'success': False,
+                'message': f'No se puede eliminar "{name}" debido a que existen registros vinculados.'
+            }, status=400)
+        except Exception as e:
+            return JsonResponse({
+                'status': 'error',
+                'success': False,
+                'message': f'Error al eliminar el registro: {str(e)}'
+            }, status=500)
+
+
+# ==============================================================================
+# EMPLOYEE LIST FOR CREATING ACTIONS
+# ==============================================================================
 
 class EmployeeActionListView(LoginRequiredMixin, ListView):
     model = Employee
@@ -553,7 +499,6 @@ class EmployeeActionListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         qs = Employee.objects.filter(is_active=True).select_related('person', 'area')
-
         q = self.request.GET.get('q', '').strip()
         if q:
             terms = q.split()
@@ -587,15 +532,12 @@ class EmployeeActionListView(LoginRequiredMixin, ListView):
 
 
 class ActionHistoryView(LoginRequiredMixin, ListView):
-    """Vista para mostrar el historial de acciones de un empleado específico"""
     model = PersonnelAction
     template_name = 'personnel_action/action_history.html'
     context_object_name = 'actions'
 
     def get_queryset(self):
-        from employee.models import Employee
         self.employee = get_object_or_404(Employee, pk=self.kwargs['employee_id'])
-
         queryset = PersonnelAction.objects.filter(
             employee=self.employee,
             is_active=True
@@ -608,7 +550,6 @@ class ActionHistoryView(LoginRequiredMixin, ListView):
                 Q(action_type__name__icontains=query) |
                 Q(date_issue__icontains=query)
             )
-
         return queryset
 
     def get_context_data(self, **kwargs):
@@ -628,8 +569,6 @@ class ActionHistoryView(LoginRequiredMixin, ListView):
 
 
 class ActionDetailView(LoginRequiredMixin, View):
-    """Vista para mostrar detalles de una acción en modal"""
-
     def get(self, request, pk):
         action = get_object_or_404(
             PersonnelAction.objects.select_related(
@@ -647,18 +586,15 @@ class ActionDetailView(LoginRequiredMixin, View):
             pk=pk
         )
         movement = getattr(action, 'movement', None)
-
         html = render_to_string(
             'personnel_action/modals/modal_action_detail.html',
             {'action': action, 'history_action': movement},
             request=request
         )
-
         return HttpResponse(html)
 
 
 def user_search_json(request):
-    """JSON endpoint para buscar usuarios (Select2 AJAX)"""
     if not request.user.is_authenticated:
         return JsonResponse({'results': []}, status=401)
 
@@ -684,7 +620,6 @@ def user_search_json(request):
 
 
 class ActionUpdateView(LoginRequiredMixin, UpdateView):
-    """Vista para editar una acción (solo si no está registrada)"""
     model = PersonnelAction
     form_class = PersonnelActionForm
     template_name = 'personnel_action/modals/modal_personnel_action_form.html'
@@ -697,20 +632,15 @@ class ActionUpdateView(LoginRequiredMixin, UpdateView):
         return obj
 
     def get_form_kwargs(self):
-        """Sobrescribir para pasar datos iniciales con fechas en formato correcto"""
         kwargs = super().get_form_kwargs()
-
-        # Si es GET y tenemos un objeto, preparar initial data con fechas correctas
         if self.request.method == 'GET' and hasattr(self, 'object') and self.object:
             kwargs['initial'] = {
                 'date_issue': self.object.date_issue.strftime('%Y-%m-%d') if self.object.date_issue else '',
                 'date_effective': self.object.date_effective.strftime('%Y-%m-%d') if self.object.date_effective else '',
             }
-
         return kwargs
 
     def get(self, request, *args, **kwargs):
-        """Devolver el formulario con los datos de la acción"""
         self.object = self.get_object()
         form = self.get_form()
 
@@ -723,7 +653,6 @@ class ActionUpdateView(LoginRequiredMixin, UpdateView):
                 'is_edit': True
             })
 
-        # Si es vista directa, renderizar página completa que incluya el modal
         return render(request, 'personnel_action/action_form_page.html', {
             'form': form,
             'action': self.object,
@@ -741,26 +670,24 @@ class ActionUpdateView(LoginRequiredMixin, UpdateView):
                     self.object.number = original.number
 
                 self.object.save()
-
                 _save_action_movement(self.object, self.request, is_create=False)
 
             if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({'success': True, 'message': 'Acción actualizada correctamente'})
+                return JsonResponse(
+                    {'status': 'success', 'success': True, 'message': 'Acción actualizada correctamente'})
 
             return super().form_valid(form)
 
         except Exception as e:
             if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({'success': False, 'message': f'Error: {str(e)}'}, status=400)
+                return JsonResponse({'status': 'error', 'success': False, 'message': f'Error: {str(e)}'}, status=400)
             raise e
 
     def form_invalid(self, form):
-        import logging
-        print("❌ ERRORES DE VALIDACIÓN EN PERSONNEL ACTION:")
-        print(form.errors.as_json())
         if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             errors_data = {field: errors[0] for field, errors in form.errors.items()}
             return JsonResponse({
+                'status': 'error',
                 'success': False,
                 'message': 'Error de validación en el formulario',
                 'errors': errors_data
@@ -769,8 +696,6 @@ class ActionUpdateView(LoginRequiredMixin, UpdateView):
 
 
 class ActionRegisterView(LoginRequiredMixin, View):
-    """Vista para registrar una acción (cambiar is_registered a True)"""
-
     def post(self, request, pk):
         action = get_object_or_404(
             PersonnelAction.objects.select_related('employee__area', 'action_type'),
@@ -778,10 +703,8 @@ class ActionRegisterView(LoginRequiredMixin, View):
         )
 
         if action.is_registered:
-            return JsonResponse({
-                'success': False,
-                'message': 'Esta acción ya está registrada'
-            }, status=400)
+            return JsonResponse({'status': 'error', 'success': False, 'message': 'Esta acción ya está registrada'},
+                                status=400)
 
         try:
             with transaction.atomic():
@@ -807,13 +730,11 @@ class ActionRegisterView(LoginRequiredMixin, View):
                                 'La fecha efectiva de la acción no permite liberar la partida antes de su inicio.')
 
                 if movement and movement.new_unit:
-                    from institution.models import AdministrativeUnit
                     try:
                         unit = AdministrativeUnit.objects.get(name=movement.new_unit)
                         action.employee.area = unit
                         action.employee.save(update_fields=['area'])
                     except AdministrativeUnit.DoesNotExist:
-                        # no se encontró unidad con ese nombre; no actualizar área
                         pass
 
                 if new_budget_line:
@@ -884,20 +805,14 @@ class ActionRegisterView(LoginRequiredMixin, View):
                 action.register = request.user
                 action.save(update_fields=['is_registered', 'register'])
         except Exception as e:
-            return JsonResponse({
-                'success': False,
-                'message': f'No se pudo registrar la acción: {str(e)}'
-            }, status=400)
+            return JsonResponse(
+                {'status': 'error', 'success': False, 'message': f'No se pudo registrar la acción: {str(e)}'},
+                status=400)
 
-        return JsonResponse({
-            'success': True,
-            'message': 'Acción registrada correctamente'
-        })
+        return JsonResponse({'status': 'success', 'success': True, 'message': 'Acción registrada correctamente'})
 
 
 class ActionPDFView(LoginRequiredMixin, View):
-    """Vista para generar PDF de la acción"""
-
     def get(self, request, pk):
         action = get_object_or_404(
             PersonnelAction.objects.select_related(
@@ -920,7 +835,6 @@ class ActionPDFView(LoginRequiredMixin, View):
         )
 
         movement = getattr(action, 'movement', None)
-
         current_unit = action.employee.area if action.employee else None
         proposed_unit = None
 
@@ -936,7 +850,6 @@ class ActionPDFView(LoginRequiredMixin, View):
         management_period = getattr(action, 'management_period', None)
         contract_type = getattr(management_period, 'contract_type', None) if management_period else None
         contract_category = getattr(contract_type, 'contract_type_category', '') if contract_type else ''
-
         show_without_current_situation = bool(contract_category == 'ACCION_PERSONAL')
 
         if movement and movement.previous_budget_line:
@@ -964,7 +877,6 @@ class ActionPDFView(LoginRequiredMixin, View):
             elif management_period:
                 proposed_budget = getattr(management_period, 'budget_line', None)
 
-        # Resolución segura de nombres y cargos de firmas (Fallback a Defaults si es None)
         auth1_user = action.authority_1 or action.action_type.default_authority_1
         auth2_user = action.authority_2 or action.action_type.default_authority_2
         reviewer_user = action.reviewer or action.action_type.default_reviewer
@@ -974,16 +886,12 @@ class ActionPDFView(LoginRequiredMixin, View):
         signatures = {
             'auth1_name': auth1_user.signature_name if auth1_user else '',
             'auth1_pos': auth1_user.signature_position if auth1_user else 'AUTORIDAD NOMINADORA O DELEGADO',
-
             'auth2_name': auth2_user.signature_name if auth2_user else '',
             'auth2_pos': auth2_user.signature_position if auth2_user else 'RESPONSABLE DE TALENTO HUMANO',
-
             'reviewer_name': reviewer_user.signature_name if reviewer_user else '',
             'reviewer_pos': reviewer_user.signature_position if reviewer_user else 'REVISIÓN',
-
             'register_name': register_user.signature_name if register_user else '',
             'register_pos': register_user.signature_position if register_user else 'REGISTRO',
-
             'elaboration_name': elaboration_user.signature_name if elaboration_user else '',
             'elaboration_pos': elaboration_user.signature_position if elaboration_user else 'ELABORACIÓN',
         }
@@ -991,16 +899,13 @@ class ActionPDFView(LoginRequiredMixin, View):
         try:
             from weasyprint import HTML
 
-            current_unit_snapshot = _unit_snapshot(current_unit)
-            proposed_unit_snapshot = _unit_snapshot(proposed_unit) if proposed_unit else None
-
             context = {
                 'action': action,
                 'movement': movement,
                 'current_unit': current_unit,
                 'proposed_unit': proposed_unit,
-                'current_unit_snapshot': current_unit_snapshot,
-                'proposed_unit_snapshot': proposed_unit_snapshot,
+                'current_unit_snapshot': _unit_snapshot(current_unit),
+                'proposed_unit_snapshot': _unit_snapshot(proposed_unit) if proposed_unit else None,
                 'current_budget': _budget_snapshot(current_budget),
                 'proposed_budget': _budget_snapshot(proposed_budget) if proposed_budget else None,
                 'show_without_current_situation': show_without_current_situation,
@@ -1023,73 +928,48 @@ class ActionPDFView(LoginRequiredMixin, View):
             return response
 
         except Exception as e:
-            import traceback
-            print("🔥 ERROR GENERANDO PDF DE ACCIÓN DE PERSONAL:")
-            traceback.print_exc()
-            return HttpResponse(f"<h3>Error al generar PDF:</h3><pre>{traceback.format_exc()}</pre>", status=500)
+            return HttpResponse(f"<h3>Error al generar PDF:</h3><p>{str(e)}</p>", status=500)
 
 
-# ==========================================
-# APIs PARA MODAL DE ACCIONES DE PERSONAL
-# ==========================================
+# ==============================================================================
+# APIS FOR ADMINISTRATIVE UNITS AND BUDGET LINES
+# ==============================================================================
 
 class AdministrativeUnitChildrenJsonView(LoginRequiredMixin, View):
-    """API para obtener unidades administrativas en cascada (Para Reubicar)"""
-
     def get(self, request):
         parent_id = request.GET.get('parent_id')
 
         if not parent_id:
-            # Nivel raíz: unidades sin padre (nivel 1)
-            from institution.models import AdministrativeUnit
-            units = AdministrativeUnit.objects.filter(
-                is_active=True,
-                parent__isnull=True
-            ).values('id', 'name').order_by('name')
+            units = AdministrativeUnit.objects.filter(is_active=True, parent__isnull=True).values('id',
+                                                                                                  'name').order_by(
+                'name')
         else:
-            # Unidades que dependen de parent_id
-            from institution.models import AdministrativeUnit
-            units = AdministrativeUnit.objects.filter(
-                is_active=True,
-                parent_id=parent_id
-            ).values('id', 'name').order_by('name')
+            units = AdministrativeUnit.objects.filter(is_active=True, parent_id=parent_id).values('id',
+                                                                                                  'name').order_by(
+                'name')
 
-        # Convertir a lista y agregar información de si tienen hijos
         result = []
         for unit in units:
-            from institution.models import AdministrativeUnit
-            has_children = AdministrativeUnit.objects.filter(
-                parent_id=unit['id'],
-                is_active=True
-            ).exists()
+            has_children = AdministrativeUnit.objects.filter(parent_id=unit['id'], is_active=True).exists()
             result.append({
                 'id': unit['id'],
                 'name': unit['name'],
                 'has_children': has_children
             })
 
-        return JsonResponse({
-            'success': True,
-            'units': result
-        })
+        return JsonResponse({'success': True, 'units': result})
 
 
 class SearchBudgetLinesJsonView(LoginRequiredMixin, View):
-    """API para buscar partidas presupuestarias disponibles"""
-
     def get(self, request):
         search_term = request.GET.get('term', '').strip()
 
-        # Partidas libres: por estado 'LIBRE' o que no tengan empleado actual asignado
         qs = BudgetLine.objects.filter(
             is_active=True
         ).filter(
             Q(status_item__code__iexact='LIBRE') |
             Q(current_employee__isnull=True)
-        ).select_related(
-            'position_item',
-            'activity__project__subprogram__program'
-        )
+        ).select_related('position_item', 'activity__project__subprogram__program')
 
         if search_term:
             qs = qs.filter(
@@ -1099,7 +979,6 @@ class SearchBudgetLinesJsonView(LoginRequiredMixin, View):
             )
 
         qs = qs.order_by('code')[:30]
-
         results = []
         for line in qs:
             program_name = ''
