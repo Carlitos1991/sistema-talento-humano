@@ -21,18 +21,18 @@
 function getCleanText(element) {
     const clone = element.cloneNode(true);
 
-    // Si la celda tiene .person-details, extraer nombre y cédula directamente
     const personDetails = clone.querySelector('.person-details');
     if (personDetails) {
         const name = personDetails.querySelector('h4')?.innerText?.trim() || '';
         const doc = personDetails.querySelector('p')?.innerText?.trim().replace(/\s+/g, ' ') || '';
-        return name + (doc ? ' - ' + doc : '');
+        return (name + (doc ? ' - ' + doc : '')).replace(/[\r\n\t]+/g, ' ').trim();
     }
 
-    // Caso general: eliminar íconos, flechas y botones
     const garbage = clone.querySelectorAll('.sort-arrow, i, svg, button, .btn, .avatar-wrapper, .person-avatar, .person-avatar-placeholder');
     garbage.forEach(el => el.remove());
-    return clone.innerText.trim().replace(/\s+/g, ' ');
+
+    // Normaliza el texto en una sola línea continua sin saltos de línea
+    return clone.innerText.replace(/[\r\n\t]+/g, ' ').replace(/\s{2,}/g, ' ').trim();
 }
 
 function getTableMetadata(table) {
@@ -42,14 +42,33 @@ function getTableMetadata(table) {
     return {title, filename};
 }
 
-// ─── OBTENER DATOS DE LA TABLA (solo filas visibles del DOM) ─────────────────
-function getTableData(table) {
-    const headers = [];
-    const body = [];
-
+/**
+ * Determina qué índices de columna deben incluirse en la exportación,
+ * excluyendo 'Acciones', 'Estado' o celdas marcadas con 'no-export'.
+ */
+function getExportableColumnIndices(table) {
     const ths = Array.from(table.querySelectorAll('thead th'));
-    const headerRow = ths.slice(0, -1).map(th => getCleanText(th));
-    headers.push(headerRow);
+    const validIndices = [];
+
+    ths.forEach((th, index) => {
+        const text = getCleanText(th).toLowerCase();
+        const isActions = th.classList.contains('actions') || text.includes('accion') || text.includes('acciones');
+        const isStatus = th.classList.contains('no-export') || th.dataset.noExport === 'true' || text === 'estado';
+
+        if (!isActions && !isStatus) {
+            validIndices.push(index);
+        }
+    });
+
+    return validIndices;
+}
+
+// ─── OBTENER DATOS DE LA TABLA (DOM) ─────────────────────────────────────────
+function getTableData(table) {
+    const validIndices = getExportableColumnIndices(table);
+    const ths = Array.from(table.querySelectorAll('thead th'));
+    const headers = [validIndices.map(idx => getCleanText(ths[idx]))];
+    const body = [];
 
     let sourceRows = [];
     if (table._tableManager && table._tableManager.currentRows) {
@@ -61,164 +80,275 @@ function getTableData(table) {
     }
 
     sourceRows.forEach(tr => {
-        if (tr.innerText.includes('No se encontraron registros')) return;
+        if (tr.innerText.includes('No se encontraron registros') || tr.classList.contains('empty-results-row')) return;
         const tds = Array.from(tr.querySelectorAll('td'));
         if (tds.length > 0) {
-            body.push(tds.slice(0, -1).map(td => getCleanText(td)));
+            body.push(validIndices.map(idx => tds[idx] ? getCleanText(tds[idx]) : ''));
         }
     });
 
     return {headers, body};
 }
 
-// ─── FETCH DE TODOS LOS DATOS (paginación backend) ───────────────────────────
+// ─── FETCH DE TODOS LOS DATOS (BACKEND) ───────────────────────────────────────
 async function getAllRowsFromServer(table) {
-    // Si la tabla tiene data-list-url, usar esa para exportación
     const listUrl = table.getAttribute('data-list-url');
     if (listUrl) {
-        const params = new URLSearchParams();
-        
-        // Pasar filtros actuales (presupuesto) - AMBOS: q y status
+        const params = new URLSearchParams(window.location.search);
+
         if (typeof currentFilters !== 'undefined') {
-            if (currentFilters.q) {
-                params.set('q', currentFilters.q);
-            }
-            if (currentFilters.status && currentFilters.status !== 'all') {
-                params.set('status', currentFilters.status);
-            }
+            if (currentFilters.q) params.set('q', currentFilters.q);
+            if (currentFilters.status && currentFilters.status !== 'all') params.set('status', currentFilters.status);
         }
-        
-        // Pasar filtros de perfiles (function_manual)
+
         if (typeof currentProfileFilters !== 'undefined' && currentProfileFilters.q) {
             params.set('q', currentProfileFilters.q);
         }
-        
-        // Para otros: si existe window._personExport con getFilters
-        if (!params.has('q') && window._personExport && typeof window._personExport.getFilters === 'function') {
+
+        if (window._personExport && typeof window._personExport.getFilters === 'function') {
             const filters = window._personExport.getFilters();
             Object.entries(filters).forEach(([key, val]) => {
                 if (val) params.set(key, val);
             });
         }
-        
-        // Si aun no hay búsqueda, intentar obtener del DOM
-        if (!params.has('q')) {
-            const searchInputsSelectors = [
-                '#table-search-budget',  // budget
-                '#table-search-profiles',  // function_manual
-                'input.input-field[type="text"]',
-            ];
-            
-            for (const selector of searchInputsSelectors) {
-                const input = document.querySelector(selector);
-                if (input && input.value.trim()) {
-                    params.set('q', input.value.trim());
-                    break;
-                }
-            }
-        }
-        
+
         params.set('partial', 'true');
         params.set('export', 'true');
-        
+
         try {
             const resp = await fetch(listUrl + '?' + params.toString(), {
                 headers: {'X-Requested-With': 'XMLHttpRequest'}
             });
             const html = await resp.text();
-            
-            // Parsear el HTML recibido y extraer filas
+
             const parser = new DOMParser();
             const doc = parser.parseFromString(html, 'text/html');
             const rows = Array.from(doc.querySelectorAll('tbody tr')).filter(tr =>
                 !tr.innerText.includes('No se encontraron') && tr.querySelectorAll('td').length > 1
             );
 
-            // Extraer headers del DOM actual
+            const validIndices = getExportableColumnIndices(table);
             const ths = Array.from(table.querySelectorAll('thead th'));
-            const headers = [ths.slice(0, -1).map(th => getCleanText(th))];
+            const headers = [validIndices.map(idx => getCleanText(ths[idx]))];
 
-            const body = rows.map(tr =>
-                Array.from(tr.querySelectorAll('td')).slice(0, -1).map(td => getCleanText(td))
-            );
+            const body = rows.map(tr => {
+                const tds = Array.from(tr.querySelectorAll('td'));
+                return validIndices.map(idx => tds[idx] ? getCleanText(tds[idx]) : '');
+            });
 
             return {headers, body};
         } catch (e) {
-            console.error('Error al obtener todos los datos del servidor:', e);
+            console.error('Error al obtener datos del servidor:', e);
             return null;
         }
     }
 
-    // Fallback antigua lógica para compatibilidad
-    if (table.dataset.externalPagination !== 'true') return null;
-    if (!window._personExport || !window._personExport.listUrl) {
-        console.warn("Exportación completa abortada: Falta listUrl en window._personExport");
-        return null;
-    }
-
-    const filters = window._personExport.getFilters ? window._personExport.getFilters() : {};
-    const params = new URLSearchParams(filters);
-    params.set('page_size', '99999');  // pedir todo
-    params.set('page', '1');
-
-    try {
-        const resp = await fetch(window._personExport.listUrl + '?' + params.toString(), {
-            headers: {'X-Requested-With': 'XMLHttpRequest'}
-        });
-        const json = await resp.json();
-        if (!json.success) return null;
-
-        // Parsear el HTML recibido y extraer filas
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(json.html, 'text/html');
-        const rows = Array.from(doc.querySelectorAll('tbody tr')).filter(tr =>
-            !tr.innerText.includes('No se encontraron') && tr.querySelectorAll('td').length > 1
-        );
-
-        // Extraer headers del DOM actual
-        const ths = Array.from(table.querySelectorAll('thead th'));
-        const headers = [ths.slice(0, -1).map(th => getCleanText(th))];
-
-        const body = rows.map(tr =>
-            Array.from(tr.querySelectorAll('td')).slice(0, -1).map(td => getCleanText(td))
-        );
-
-        return {headers, body};
-    } catch (e) {
-        console.error('Error al obtener todos los datos:', e);
-        return null;
-    }
+    return null;
 }
 
-// ─── EXPORTAR EXCEL ───────────────────────────────────────────────────────────
+// ─── EXPORTAR EXCEL CON FORMATO XML NATIVO (COLORES, BORDES Y SIN ADVERTENCIA) ───
 async function exportTableToExcel(table) {
-    if (!window.XLSX) {
-        alert('Cargando dependencias, intente en un momento...');
-        return;
-    }
+    const {filename, title} = getTableMetadata(table);
 
-    const {filename} = getTableMetadata(table);
-
-    // Mostrar indicador mientras carga
     const btn = document.querySelector('.btn-export-excel');
     if (btn) {
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...';
     }
 
-    // Intentar obtener todos los datos del servidor
     const allData = await getAllRowsFromServer(table);
-    const {headers, body} = allData || getTableData(table);
+    let {headers, body} = allData || getTableData(table);
 
     if (btn) {
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-file-excel"></i> Excel';
     }
 
-    const ws = XLSX.utils.aoa_to_sheet([...headers, ...body]);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Datos');
-    XLSX.writeFile(wb, filename + '.xlsx');
+    // 1. Separar columna 'Empleado' en Cédula, Apellidos y Nombres si viene agrupada
+    if (headers && headers[0] && headers[0][0] && headers[0][0].toLowerCase().includes('empleado')) {
+        headers[0].splice(0, 1, 'Cédula', 'Apellidos', 'Nombres');
+        body = body.map(row => {
+            const empStr = row[0] || '';
+            let cedula = '';
+            let fullName = empStr;
+
+            if (empStr.includes('CI:')) {
+                const parts = empStr.split('CI:');
+                fullName = parts[0].trim();
+                cedula = parts[1].trim();
+            } else if (empStr.includes('-')) {
+                const parts = empStr.split('-');
+                fullName = parts[0].trim();
+                cedula = parts[1].trim();
+            }
+
+            const tokens = fullName.split(' ').filter(t => t.trim().length > 0);
+            let apellidos = '';
+            let nombres = '';
+            if (tokens.length >= 4) {
+                apellidos = tokens.slice(0, 2).join(' ');
+                nombres = tokens.slice(2).join(' ');
+            } else if (tokens.length === 3) {
+                apellidos = tokens.slice(0, 2).join(' ');
+                nombres = tokens[2];
+            } else if (tokens.length === 2) {
+                apellidos = tokens[0];
+                nombres = tokens[1];
+            } else {
+                apellidos = fullName;
+                nombres = '';
+            }
+
+            return [cedula, apellidos, nombres, ...row.slice(1)];
+        });
+    }
+
+    const totalCols = (headers && headers[0]) ? headers[0].length : 7;
+    const today = new Date().toLocaleDateString();
+
+    const escapeXml = (str) => {
+        if (str === null || str === undefined) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&apos;');
+    };
+
+    // Anchos proporcionales de columnas en puntos
+    const colWidths = [95, 150, 150, 85, 120, 120, 250];
+
+    // 2. Construcción de libro XML Spreadsheet 2003 compatible al 100% con Excel
+    let xml = `<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:html="http://www.w3.org/TR/REC-html40">
+ <Styles>
+  <Style ss:ID="Default" ss:Name="Normal">
+   <Alignment ss:Vertical="Center"/>
+   <Borders/>
+   <Font ss:FontName="Arial" ss:Size="10"/>
+   <Interior/>
+   <NumberFormat/>
+   <Protection/>
+  </Style>
+  <!-- Estilo del Título Institucional -->
+  <Style ss:ID="sHeaderTitle">
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+   <Font ss:FontName="Arial" ss:Size="14" ss:Bold="1" ss:Color="#203C7D"/>
+  </Style>
+  <!-- Estilo del Subtítulo -->
+  <Style ss:ID="sHeaderSubtitle">
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+   <Font ss:FontName="Arial" ss:Size="11" ss:Bold="1" ss:Color="#334155"/>
+  </Style>
+  <!-- Estilo de Fecha a la derecha -->
+  <Style ss:ID="sHeaderDate">
+   <Alignment ss:Horizontal="Right" ss:Vertical="Center"/>
+   <Font ss:FontName="Arial" ss:Size="8.5" ss:Color="#64748B"/>
+  </Style>
+  <!-- Estilo de Cabecera de Tabla (Fondo azul institucional, texto blanco y borde negro fino) -->
+  <Style ss:ID="sTableHeader">
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
+   </Borders>
+   <Font ss:FontName="Arial" ss:Size="10" ss:Bold="1" ss:Color="#FFFFFF"/>
+   <Interior ss:Color="#203C7D" ss:Pattern="Solid"/>
+  </Style>
+  <!-- Estilo de Celdas de Texto (Alineadas a la izquierda con borde negro fino) -->
+  <Style ss:ID="sCellLeft">
+   <Alignment ss:Horizontal="Left" ss:Vertical="Center"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
+   </Borders>
+   <Font ss:FontName="Arial" ss:Size="9"/>
+   <NumberFormat ss:Format="@"/>
+  </Style>
+  <!-- Estilo de Celdas Centradas con borde negro fino -->
+  <Style ss:ID="sCellCenter">
+   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+   <Borders>
+    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
+    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
+    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
+    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
+   </Borders>
+   <Font ss:FontName="Arial" ss:Size="9"/>
+   <NumberFormat ss:Format="@"/>
+  </Style>
+ </Styles>
+ <Worksheet ss:Name="Datos">
+  <Table>`;
+
+    // Ancho por columna
+    for (let c = 0; c < totalCols; c++) {
+        const w = colWidths[c] || 120;
+        xml += `\n   <Column ss:Width="${w}"/>`;
+    }
+
+    // Fila 1: Título MUNICIPIO DE LOJA
+    xml += `\n   <Row ss:Height="28">
+    <Cell ss:MergeAcross="${totalCols - 1}" ss:StyleID="sHeaderTitle"><Data ss:Type="String">MUNICIPIO DE LOJA</Data></Cell>
+   </Row>`;
+
+    // Fila 2: Subtítulo de Reporte
+    xml += `\n   <Row ss:Height="20">
+    <Cell ss:MergeAcross="${totalCols - 1}" ss:StyleID="sHeaderSubtitle"><Data ss:Type="String">Reporte: ${escapeXml(title.toUpperCase())}</Data></Cell>
+   </Row>`;
+
+    // Fila 3: Fecha a la derecha
+    xml += `\n   <Row ss:Height="18">
+    <Cell ss:MergeAcross="${totalCols - 1}" ss:StyleID="sHeaderDate"><Data ss:Type="String">Fecha de generación: ${today}</Data></Cell>
+   </Row>`;
+
+    // Fila 4: Encabezados de Columna (Inmediatamente tras la fecha, sin fila vacía)
+    xml += `\n   <Row ss:Height="24">`;
+    headers[0].forEach(thText => {
+        xml += `\n    <Cell ss:StyleID="sTableHeader"><Data ss:Type="String">${escapeXml(thText)}</Data></Cell>`;
+    });
+    xml += `\n   </Row>`;
+
+    // Filas de Datos con 22pt de altura
+    body.forEach(row => {
+        xml += `\n   <Row ss:Height="22">`;
+        row.forEach((cellText, colIdx) => {
+            const isCenter = colIdx === 0 || colIdx === 3 || colIdx === 4 || colIdx === 5;
+            const styleId = isCenter ? 'sCellCenter' : 'sCellLeft';
+            xml += `\n    <Cell ss:StyleID="${styleId}"><Data ss:Type="String">${escapeXml(cellText || '')}</Data></Cell>`;
+        });
+        xml += `\n   </Row>`;
+    });
+
+    xml += `\n  </Table>
+  <WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">
+   <DisplayGridlines/>
+  </WorksheetOptions>
+ </Worksheet>
+</Workbook>`;
+
+    // 3. Descarga oficial en formato SpreadsheetML (se abre directamente sin mensajes de advertencia)
+    const blob = new Blob([xml], {
+        type: 'application/vnd.ms-excel;charset=utf-8'
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${filename}.xls`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 }
 
 // ─── EXPORTAR PDF ─────────────────────────────────────────────────────────────
@@ -255,9 +385,9 @@ async function exportTableToPDF(table) {
         body: body,
         startY: 27,
         theme: 'grid',
-        styles: {fontSize: 7, cellPadding: 2},
-        headStyles: {fillColor: [30, 64, 175]},
-        alternateRowStyles: {fillColor: [245, 247, 250]}
+        styles: {fontSize: 8, cellPadding: 3},
+        headStyles: {fillColor: [32, 60, 125]},
+        alternateRowStyles: {fillColor: [248, 250, 252]}
     });
     doc.save(filename + '.pdf');
 }
@@ -270,7 +400,6 @@ function addExportButtonsToTables() {
         if (!controls) return;
         if (controls.dataset.manualExport === 'true') return;
 
-        // Eliminar botones viejos — tras AJAX apuntaban a tabla anterior
         const existing = controls.querySelector('.table-export-btns');
         if (existing) existing.remove();
 
@@ -305,11 +434,18 @@ function addExportButtonsToTables() {
 
 window.addExportButtonsToTables = addExportButtonsToTables;
 
-// Try to initialize export buttons safely: if DOMContentLoaded already passed, call immediately.
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    try { addExportButtonsToTables(); } catch(e){ console.warn('table-export init failed', e); }
+    try {
+        addExportButtonsToTables();
+    } catch (e) {
+        console.warn('table-export init failed', e);
+    }
 } else {
-    document.addEventListener('DOMContentLoaded', function(){ try { addExportButtonsToTables(); } catch(e){ console.warn('table-export init failed', e); } });
+    document.addEventListener('DOMContentLoaded', function () {
+        try {
+            addExportButtonsToTables();
+        } catch (e) {
+            console.warn('table-export init failed', e);
+        }
+    });
 }
-
-// debug badge removed
