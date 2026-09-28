@@ -17,9 +17,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300..700&family=Lexend:wght@400;600;700;800&display=swap"
           rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Select2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet"/>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <!-- CSS Personalizado Consolidated -->
+
+    <!-- CSS Personalizado Consolidado -->
     <link rel="stylesheet" href="{% static 'css/swal2-toast-font-sm.css' %}">
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
     <link rel="stylesheet" href="{% static 'css/sidebar.css' %}">
@@ -27,11 +29,8 @@
     <link rel="stylesheet" href="{% static 'css/table-manager.css' %}">
     <link rel="stylesheet" href="{% static 'css/modal-change-password.css' %}">
     {% block extra_css %}{% endblock %}
-    <style>
-        [v-cloak] {
-            display: none !important;
-        }
 
+    <style>
         /* Evita mostrar el HTML antes de que los scripts inicialicen el layout y las tablas. */
         html.app-loading body {
             visibility: hidden;
@@ -46,6 +45,7 @@
             document.getElementById('mainWrapper').classList.add('is-collapsed');
         }
     </script>
+
     <!-- Sidebar -->
     {% include 'sidebar.html' %}
 
@@ -61,8 +61,9 @@
         <!-- Footer -->
         {% include 'footer.html' %}
     </div>
-
 </div>
+
+<!-- Contenedor único para modales AJAX -->
 <div id="modal-root"></div>
 {% block modals %}{% endblock %}
 
@@ -81,12 +82,42 @@
     ]
 </script>
 
+<!-- =========================================================================
+     SCRIPTS BASE Y LIBRERÍAS DE TERCEROS (ORDEN ESTRICTO)
+     ========================================================================= -->
+<!-- 1. jQuery (Requerido antes de Select2) -->
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+
+<!-- 2. Select2 JS -->
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<!-- 3. SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<!-- 4. ExcelJS (Librería para exportación de tablas con estilos, bordes y sin alertas) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+
+<!-- 5. Motor Central SIGETH (Inicializa CSRF, Modales, Tablas y Adapta SweetAlert2) -->
+<script src="{% static 'js/main.js' %}"></script>
+<script src="{% static 'js/core/modal-change-password.js' %}"></script>
+
+<!-- 6. Scripts Específicos de cada vista -->
+{% block extra_js %}{% endblock %}
+
+<!-- 7. Scripts complementarios del Layout -->
+<script src="{% static 'js/table-export.js' %}"></script>
+<script src="{% static 'js/sidebar.js' %}"></script>
+<script src="{% static 'js/dashboard.js' %}"></script>
+<script src="{% static 'js/capture_device_info.js' %}"></script>
+
+<!-- =========================================================================
+     INICIALIZACIÓN GLOBAL DE SELECT2, ALERTAS Y COMPENSACIÓN DE SCROLL
+     ========================================================================= -->
 <script>
+    // Inicialización global de mensajes Django mediante SweetAlert2 configurado por main.js
     document.addEventListener('DOMContentLoaded', function () {
         const node = document.getElementById('django-messages');
-        if (!node || typeof Swal === 'undefined') {
-            return;
-        }
+        if (!node || typeof Swal === 'undefined') return;
 
         let payload = [];
         try {
@@ -95,9 +126,7 @@
             payload = [];
         }
 
-        if (!Array.isArray(payload) || payload.length === 0) {
-            return;
-        }
+        if (!Array.isArray(payload) || payload.length === 0) return;
 
         const iconMap = {
             success: 'success',
@@ -112,33 +141,20 @@
             const icon = iconMap[rawTag] || 'info';
 
             setTimeout(() => {
-                Swal.fire({
-                    toast: true,
-                    position: 'top-end',
-                    icon,
-                    title: item.text || '',
-                    showConfirmButton: false,
-                    timer: 3200,
-                    timerProgressBar: true
-                });
+                if (typeof window.showToast === 'function') {
+                    window.showToast(item.text, icon);
+                } else {
+                    Swal.fire({
+                        icon,
+                        title: item.text || '',
+                        timer: 3200
+                    });
+                }
             }, index * 180);
         });
     });
-</script>
 
-<!-- Scripts Base -->
-<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-<script src="{% static 'js/main.js' %}"></script>
-<script src="{% static 'js/core/modal-change-password.js' %}"></script>
-{% block extra_js %}{% endblock %}
-
-<script src="{% static 'js/table-export.js' %}"></script>
-<script src="{% static 'js/sidebar.js' %}"></script>
-
-<!-- Inicialización Select2 (jQuery Legacy) -->
-<script>
+    // Configuración por defecto en español para Select2
     $(document).ready(function () {
         if ($.fn.select2 && $.fn.select2.defaults && $.fn.select2.defaults.set) {
             $.fn.select2.defaults.set('language', {
@@ -154,16 +170,10 @@
                 }
             });
         }
-        $('.select2').select2();
+        $('.select2').select2({width: '100%'});
     });
-</script>
 
-<!-- Lógica Dashboard Limpia -->
-<script src="{% static 'js/dashboard.js' %}"></script>
-
-<!-- Captura de Información del Dispositivo -->
-<script src="{% static 'js/capture_device_info.js' %}"></script>
-<script>
+    // Compensación de ancho de scrollbar para evitar saltos al abrir modales
     function syncScrollbarCompensation() {
         const width = Math.max(0, window.innerWidth - document.documentElement.clientWidth);
         document.documentElement.style.setProperty('--viewport-scrollbar-width', `${width}px`);

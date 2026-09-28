@@ -1,22 +1,14 @@
-(function loadDeps() {
-    if (!window.XLSX) {
-        const script = document.createElement('script');
-        script.src = '/static/vendor/xlsx.full.min.js';
-        document.head.appendChild(script);
-    }
-    if (!window.jspdf) {
-        const script = document.createElement('script');
-        script.src = '/static/vendor/jspdf.umd.min.js';
-        script.onload = () => {
-            if (!window.jspdf.plugin?.autotable) {
-                const atScript = document.createElement('script');
-                atScript.src = '/static/vendor/jspdf.plugin.autotable.min.js';
-                document.head.appendChild(atScript);
-            }
-        };
-        document.head.appendChild(script);
-    }
-})();
+// ─── CARGA ASÍNCRONA DE DEPENDENCIAS (LAZY LOADING) ──────────────────────────
+async function ensureExcelJS() {
+    if (window.ExcelJS) return;
+    await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js';
+        s.onload = resolve;
+        s.onerror = () => reject(new Error('No se pudo cargar la librería ExcelJS'));
+        document.head.appendChild(s);
+    });
+}
 
 function getCleanText(element) {
     const clone = element.cloneNode(true);
@@ -31,7 +23,6 @@ function getCleanText(element) {
     const garbage = clone.querySelectorAll('.sort-arrow, i, svg, button, .btn, .avatar-wrapper, .person-avatar, .person-avatar-placeholder');
     garbage.forEach(el => el.remove());
 
-    // Normaliza el texto en una sola línea continua sin saltos de línea
     return clone.innerText.replace(/[\r\n\t]+/g, ' ').replace(/\s{2,}/g, ' ').trim();
 }
 
@@ -42,10 +33,6 @@ function getTableMetadata(table) {
     return {title, filename};
 }
 
-/**
- * Determina qué índices de columna deben incluirse en la exportación,
- * excluyendo 'Acciones', 'Estado' o celdas marcadas con 'no-export'.
- */
 function getExportableColumnIndices(table) {
     const ths = Array.from(table.querySelectorAll('thead th'));
     const validIndices = [];
@@ -146,7 +133,7 @@ async function getAllRowsFromServer(table) {
     return null;
 }
 
-// ─── EXPORTAR EXCEL CON FORMATO XML NATIVO (COLORES, BORDES Y SIN ADVERTENCIA) ───
+// ─── EXPORTACIÓN A EXCEL NATIVO CON EXCELJS (CERO ADVERTENCIAS) ───────────────
 async function exportTableToExcel(table) {
     const {filename, title} = getTableMetadata(table);
 
@@ -164,7 +151,7 @@ async function exportTableToExcel(table) {
         btn.innerHTML = '<i class="fas fa-file-excel"></i> Excel';
     }
 
-    // 1. Separar columna 'Empleado' en Cédula, Apellidos y Nombres si viene agrupada
+    // Separar columna 'Empleado' en Cédula, Apellidos y Nombres si viene agrupada
     if (headers && headers[0] && headers[0][0] && headers[0][0].toLowerCase().includes('empleado')) {
         headers[0].splice(0, 1, 'Cédula', 'Apellidos', 'Nombres');
         body = body.map(row => {
@@ -205,157 +192,112 @@ async function exportTableToExcel(table) {
 
     const totalCols = (headers && headers[0]) ? headers[0].length : 7;
     const today = new Date().toLocaleDateString();
+    const BLUE = 'FF203C7D';
 
-    const escapeXml = (str) => {
-        if (str === null || str === undefined) return '';
-        return String(str)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&apos;');
+    // Carga de ExcelJS bajo demanda
+    await ensureExcelJS();
+
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'SIGETH - Municipio de Loja';
+    wb.created = new Date();
+
+    const ws = wb.addWorksheet('Datos', {
+        views: [{showGridLines: true}]
+    });
+
+    // Anchos en caracteres
+    const colWidths = [17, 27, 27, 15, 22, 22, 45];
+    ws.columns = Array.from({length: totalCols}, (_, i) => ({
+        width: colWidths[i] || 22
+    }));
+
+    const thin = {style: 'thin', color: {argb: 'FF000000'}};
+    const allBorders = {top: thin, left: thin, bottom: thin, right: thin};
+
+    // Filas 1-3: Banner Institucional
+    const addBanner = (rowNum, text, font, align, height) => {
+        ws.mergeCells(rowNum, 1, rowNum, totalCols);
+        const cell = ws.getCell(rowNum, 1);
+        cell.value = text;
+        cell.font = font;
+        cell.alignment = {horizontal: align, vertical: 'middle'};
+        ws.getRow(rowNum).height = height;
     };
 
-    // Anchos proporcionales de columnas en puntos
-    const colWidths = [95, 150, 150, 85, 120, 120, 250];
+    addBanner(1, 'MUNICIPIO DE LOJA', {
+        name: 'Arial', size: 14, bold: true, color: {argb: BLUE}
+    }, 'center', 28);
 
-    // 2. Construcción de libro XML Spreadsheet 2003 compatible al 100% con Excel
-    let xml = `<?xml version="1.0"?>
-<?mso-application progid="Excel.Sheet"?>
-<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
- xmlns:o="urn:schemas-microsoft-com:office:office"
- xmlns:x="urn:schemas-microsoft-com:office:excel"
- xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
- xmlns:html="http://www.w3.org/TR/REC-html40">
- <Styles>
-  <Style ss:ID="Default" ss:Name="Normal">
-   <Alignment ss:Vertical="Center"/>
-   <Borders/>
-   <Font ss:FontName="Arial" ss:Size="10"/>
-   <Interior/>
-   <NumberFormat/>
-   <Protection/>
-  </Style>
-  <!-- Estilo del Título Institucional -->
-  <Style ss:ID="sHeaderTitle">
-   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
-   <Font ss:FontName="Arial" ss:Size="14" ss:Bold="1" ss:Color="#203C7D"/>
-  </Style>
-  <!-- Estilo del Subtítulo -->
-  <Style ss:ID="sHeaderSubtitle">
-   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
-   <Font ss:FontName="Arial" ss:Size="11" ss:Bold="1" ss:Color="#334155"/>
-  </Style>
-  <!-- Estilo de Fecha a la derecha -->
-  <Style ss:ID="sHeaderDate">
-   <Alignment ss:Horizontal="Right" ss:Vertical="Center"/>
-   <Font ss:FontName="Arial" ss:Size="8.5" ss:Color="#64748B"/>
-  </Style>
-  <!-- Estilo de Cabecera de Tabla (Fondo azul institucional, texto blanco y borde negro fino) -->
-  <Style ss:ID="sTableHeader">
-   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
-   <Borders>
-    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
-    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
-    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
-    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
-   </Borders>
-   <Font ss:FontName="Arial" ss:Size="10" ss:Bold="1" ss:Color="#FFFFFF"/>
-   <Interior ss:Color="#203C7D" ss:Pattern="Solid"/>
-  </Style>
-  <!-- Estilo de Celdas de Texto (Alineadas a la izquierda con borde negro fino) -->
-  <Style ss:ID="sCellLeft">
-   <Alignment ss:Horizontal="Left" ss:Vertical="Center"/>
-   <Borders>
-    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
-    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
-    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
-    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
-   </Borders>
-   <Font ss:FontName="Arial" ss:Size="9"/>
-   <NumberFormat ss:Format="@"/>
-  </Style>
-  <!-- Estilo de Celdas Centradas con borde negro fino -->
-  <Style ss:ID="sCellCenter">
-   <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
-   <Borders>
-    <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
-    <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
-    <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
-    <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#000000"/>
-   </Borders>
-   <Font ss:FontName="Arial" ss:Size="9"/>
-   <NumberFormat ss:Format="@"/>
-  </Style>
- </Styles>
- <Worksheet ss:Name="Datos">
-  <Table>`;
+    addBanner(2, 'Reporte: ' + (title ? title.toUpperCase() : 'REPORTE GENERAL'), {
+        name: 'Arial', size: 11, bold: true, color: {argb: 'FF334155'}
+    }, 'center', 20);
 
-    // Ancho por columna
-    for (let c = 0; c < totalCols; c++) {
-        const w = colWidths[c] || 120;
-        xml += `\n   <Column ss:Width="${w}"/>`;
-    }
+    addBanner(3, 'Fecha de generación: ' + today, {
+        name: 'Arial', size: 8.5, color: {argb: 'FF64748B'}
+    }, 'right', 18);
 
-    // Fila 1: Título MUNICIPIO DE LOJA
-    xml += `\n   <Row ss:Height="28">
-    <Cell ss:MergeAcross="${totalCols - 1}" ss:StyleID="sHeaderTitle"><Data ss:Type="String">MUNICIPIO DE LOJA</Data></Cell>
-   </Row>`;
-
-    // Fila 2: Subtítulo de Reporte
-    xml += `\n   <Row ss:Height="20">
-    <Cell ss:MergeAcross="${totalCols - 1}" ss:StyleID="sHeaderSubtitle"><Data ss:Type="String">Reporte: ${escapeXml(title.toUpperCase())}</Data></Cell>
-   </Row>`;
-
-    // Fila 3: Fecha a la derecha
-    xml += `\n   <Row ss:Height="18">
-    <Cell ss:MergeAcross="${totalCols - 1}" ss:StyleID="sHeaderDate"><Data ss:Type="String">Fecha de generación: ${today}</Data></Cell>
-   </Row>`;
-
-    // Fila 4: Encabezados de Columna (Inmediatamente tras la fecha, sin fila vacía)
-    xml += `\n   <Row ss:Height="24">`;
-    headers[0].forEach(thText => {
-        xml += `\n    <Cell ss:StyleID="sTableHeader"><Data ss:Type="String">${escapeXml(thText)}</Data></Cell>`;
+    // Fila 4: Encabezados de Tabla
+    const headerRow = ws.getRow(4);
+    headerRow.height = 24;
+    headers[0].forEach((text, i) => {
+        const cell = headerRow.getCell(i + 1);
+        cell.value = text;
+        cell.font = {name: 'Arial', size: 10, bold: true, color: {argb: 'FFFFFFFF'}};
+        cell.fill = {type: 'pattern', pattern: 'solid', fgColor: {argb: BLUE}};
+        cell.alignment = {horizontal: 'center', vertical: 'middle', wrapText: true};
+        cell.border = allBorders;
     });
-    xml += `\n   </Row>`;
 
-    // Filas de Datos con 22pt de altura
-    body.forEach(row => {
-        xml += `\n   <Row ss:Height="22">`;
-        row.forEach((cellText, colIdx) => {
-            const isCenter = colIdx === 0 || colIdx === 3 || colIdx === 4 || colIdx === 5;
-            const styleId = isCenter ? 'sCellCenter' : 'sCellLeft';
-            xml += `\n    <Cell ss:StyleID="${styleId}"><Data ss:Type="String">${escapeXml(cellText || '')}</Data></Cell>`;
+    // Filas de Datos
+    body.forEach((row, r) => {
+        const excelRow = ws.getRow(5 + r);
+        excelRow.height = 22;
+
+        row.forEach((text, c) => {
+            const cell = excelRow.getCell(c + 1);
+            cell.value = text !== null && text !== undefined ? String(text) : '';
+            cell.numFmt = '@'; // Formato de texto para preservar ceros a la izquierda en cédulas
+            cell.font = {name: 'Arial', size: 9};
+            cell.border = allBorders;
+
+            const isCenter = (c === 0 || c === 3 || c === 4 || c === 5);
+            cell.alignment = {
+                horizontal: isCenter ? 'center' : 'left',
+                vertical: 'middle'
+            };
         });
-        xml += `\n   </Row>`;
     });
 
-    xml += `\n  </Table>
-  <WorksheetOptions xmlns="urn:schemas-microsoft-com:office:excel">
-   <DisplayGridlines/>
-  </WorksheetOptions>
- </Worksheet>
-</Workbook>`;
-
-    // 3. Descarga oficial en formato SpreadsheetML (se abre directamente sin mensajes de advertencia)
-    const blob = new Blob([xml], {
-        type: 'application/vnd.ms-excel;charset=utf-8'
+    // Generar buffer .xlsx binario real
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     });
+
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `${filename}.xls`;
+    link.download = `${filename}.xlsx`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 // ─── EXPORTAR PDF ─────────────────────────────────────────────────────────────
 async function exportTableToPDF(table) {
-    if (!window.jspdf || !window.jspdf.jsPDF) {
-        alert('Cargando dependencias, intente en un momento...');
-        return;
+    if (!window.jspdf) {
+        await new Promise((resolve) => {
+            const s = document.createElement('script');
+            s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+            s.onload = () => {
+                const atScript = document.createElement('script');
+                atScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js';
+                atScript.onload = resolve;
+                document.head.appendChild(atScript);
+            };
+            document.head.appendChild(s);
+        });
     }
 
     const {jsPDF} = window.jspdf;
