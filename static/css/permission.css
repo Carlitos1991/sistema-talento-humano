@@ -33,6 +33,7 @@
     padding: 5px;
     font-size: 14px;
 }
+
 .btn-icon {
     padding: 6px 10px;
 }
@@ -198,6 +199,7 @@
     justify-content: space-between;
     align-items: center;
 }
+
 .btn-close {
     background: none;
     border: none;
@@ -478,4 +480,137 @@
 /* ocultar texto del uploader para mostrar solo el icono */
 .file-upload-text, .file-upload-subtext {
     display: none;
+}
+
+/* --- BUSCADOR: UPLOADER + FILTROS CON MEDIDAS EXACTAS --- */
+.permit-integrated-search-grid {
+    display: grid;
+    /* 1 columna fija para el Excel + 3 columnas proporcionales idénticas al diseño original */
+    grid-template-columns: 105px repeat(3, minmax(0, 1fr));
+    grid-template-rows: auto auto;
+    gap: 10px 12px;
+    align-items: center;
+    /* Ancho idéntico al estándar de search-grid en style.css */
+    width: min(100%, 860px);
+    margin: 0 auto;
+    position: relative;
+}
+
+@media (max-width: 900px) {
+    .permit-integrated-search-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+    }
+}
+
+/* Columna Uploader */
+.permit-excel-uploader-column {
+    grid-row: span 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.permit-excel-uploader-column .form-label {
+    text-align: center;
+    justify-content: center;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 4px;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+}
+
+.permit-excel-dropzone {
+    width: 92px !important;
+    height: 84px !important;
+    background-color: #f1f5f9;
+    border: 1px dashed #cbd5e1;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin: 0 !important;
+}
+
+.permit-excel-dropzone:hover {
+    background-color: #f0fdf4;
+    border-color: #10b981;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(16, 185, 129, 0.12);
+}
+
+.permit-excel-dropzone.file-selected {
+    background-color: #ecfdf5;
+    border-color: #86efac;
+}
+
+.permit-excel-main-icon {
+    font-size: 38px;
+    color: #10b981;
+    line-height: 1;
+    transition: transform 0.2s ease;
+}
+
+.permit-file-helper-text {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #64748b;
+    margin-top: 4px;
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+}
+
+/* Badge a la izquierda flotando en el espacio libre sin mover la grilla */
+.permit-excel-left-badge {
+    position: absolute;
+    right: calc(100% + 14px);
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background-color: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 20px;
+    padding: 6px 12px;
+    white-space: nowrap;
+    box-shadow: 0 2px 5px rgba(16, 185, 129, 0.12);
+    z-index: 10;
+}
+
+.permit-excel-left-badge .badge {
+    font-size: 0.78rem;
+    padding: 0;
+    background: transparent !important;
+    border: none !important;
+    color: #166534;
+    font-weight: 700;
+}
+
+.btn-clear-identification-tag {
+    background: none;
+    border: none;
+    color: #ef4444;
+    cursor: pointer;
+    font-size: 0.85rem;
+    padding: 0 2px;
+    display: inline-flex;
+    align-items: center;
+    line-height: 1;
+    transition: color 0.15s ease;
+}
+
+.btn-clear-identification-tag:hover {
+    color: #b91c1c;
+}
+
+.permit-filter-input-cell {
+    width: 100%;
 }

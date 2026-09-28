@@ -14,7 +14,8 @@ urlpatterns = [
 
     # --- Lista de Empleados para Generar Permisos ---
     path('employees/', views.EmployeePermitListView.as_view(), name='permit_employee_list'),
-    path('employees/<int:employee_id>/history/', views.EmployeePermitHistoryView.as_view(), name='permit_employee_history'),
+    path('employees/<int:employee_id>/history/', views.EmployeePermitHistoryView.as_view(),
+         name='permit_employee_history'),
 
     # --- Solicitudes de Permiso (OBSOLETO - usar permit_admin) ---
     # path('requests/', views.PermitRequestListView.as_view(), name='permit_list'),
@@ -22,10 +23,10 @@ urlpatterns = [
     path('requests/create/', views.GeneratePermitFormView.as_view(), name='permit_create'),  # POST para crear permiso
     # path('requests/update/<int:pk>/', views.PermitRequestUpdateView.as_view(), name='permit_update'),
     path('api/type/<int:pk>/', views.permit_type_detail_api, name='api_type_details'),
-    
+
     # --- API para subtipos ---
     path('api/subtypes/<int:parent_id>/', views.get_subtypes_api, name='api_subtypes'),
-    
+
     # --- Administración de Permisos ---
     path('admin/', views.PermitAdminListView.as_view(), name='permit_admin'),
     path('admin/<int:pk>/detail/', views.PermitDetailView.as_view(), name='permit_detail'),
@@ -33,7 +34,7 @@ urlpatterns = [
     path('admin/<int:pk>/report/', views.PermitReportView.as_view(), name='permit_report'),
     path('admin/<int:pk>/insist/', views.PermitInsistView.as_view(), name='permit_insist'),
     path('admin/<int:pk>/<str:action>/', views.PermitResponseView.as_view(), name='permit_response'),
-    
+
     # --- Bitácoras ---
     path('bitacora/register/<int:employee_id>/', views.BitacoraRegisterView.as_view(), name='bitacora_register'),
     path('bitacora/list/<int:employee_id>/', views.BitacoraListView.as_view(), name='bitacora_list'),
@@ -43,4 +44,6 @@ urlpatterns = [
     path('bitacora/delete/', views.BitacoraDeleteView.as_view(), name='bitacora_delete'),
     path('bitacora/edit/<int:pk>/', views.BitacoraEditView.as_view(), name='bitacora_edit'),
     path('bitacora/review/<int:pk>/', views.BitacoraReviewView.as_view(), name='bitacora_review'),
+    path('admin/parse-identifications/', views.ParsePermitIdentificationExcelView.as_view(),
+         name='parse_permit_identifications'),
 ]

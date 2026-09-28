@@ -138,6 +138,9 @@
                 $(form).find('select.select2').val('').trigger('change');
             }
         }
+        if (typeof window.clearLoadedIdentifications === 'function') {
+            window.clearLoadedIdentifications();
+        }
         applyPermitFilters(1);
     };
 
@@ -540,4 +543,114 @@ window.toggleStatusAjax = function (url, name, isActive) {
                 });
         }
     });
+};
+// =========================================================================
+// 4. BÚSQUEDA POR EXCEL DE CÉDULAS (IDENTIFICATIONS BATCH UPLOAD)
+// =========================================================================
+
+document.addEventListener('DOMContentLoaded', () => {
+    initIdentificationExcelUpload();
+});
+
+function initIdentificationExcelUpload() {
+    const fileInput = document.getElementById('identification_excel_input');
+    if (!fileInput) return;
+
+    fileInput.addEventListener('change', function (e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // Validación estricta en frontend: Máximo 1 MB (1024 * 1024 bytes)
+        const maxSizeBytes = 1 * 1024 * 1024;
+        if (file.size > maxSizeBytes) {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Archivo muy pesado',
+                    text: 'El archivo Excel no debe superar 1 MB.'
+                });
+            }
+            fileInput.value = '';
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('identification_file', file);
+
+        const iconBox = document.getElementById('permit-excel-icon-box');
+        const originalIconHtml = iconBox ? iconBox.innerHTML : '';
+        if (iconBox) {
+            iconBox.innerHTML = '<i class="fas fa-spinner fa-spin" style="font-size: 32px; color: #10b981;"></i>';
+        }
+
+        fetch('/permitrequest/admin/parse-identifications/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': typeof getCSRF === 'function' ? getCSRF() : '',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const hiddenInput = document.getElementById('filter_document_numbers');
+                    if (hiddenInput) {
+                        hiddenInput.value = data.document_numbers.join(',');
+                    }
+
+                    const badgeBox = document.getElementById('identification-badge-container');
+                    const countText = document.getElementById('identification-count-text');
+                    const dropzone = document.getElementById('permit-excel-dropzone-label');
+
+                    if (badgeBox && countText) {
+                        countText.innerText = `${data.count} cédula(s)`;
+                        badgeBox.style.display = 'inline-flex';
+                    }
+                    if (dropzone) {
+                        dropzone.classList.add('file-selected');
+                    }
+
+                    if (typeof showToast === 'function') {
+                        showToast(data.message, 'success');
+                    }
+                } else {
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Atención',
+                            text: data.message || 'No se pudo procesar el archivo'
+                        });
+                    }
+                }
+            })
+            .catch(err => {
+                console.error('Error uploading identification excel:', err);
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Error de comunicación al procesar el archivo.'
+                    });
+                }
+            })
+            .finally(() => {
+                if (iconBox) iconBox.innerHTML = originalIconHtml;
+                fileInput.value = '';
+            });
+    });
+}
+
+window.clearLoadedIdentifications = function () {
+    const hiddenInput = document.getElementById('filter_document_numbers');
+    if (hiddenInput) hiddenInput.value = '';
+
+    const badgeBox = document.getElementById('identification-badge-container');
+    if (badgeBox) badgeBox.style.display = 'none';
+
+    const dropzone = document.getElementById('permit-excel-dropzone-label');
+    if (dropzone) dropzone.classList.remove('file-selected');
+
+    const fileInput = document.getElementById('identification_excel_input');
+    if (fileInput) fileInput.value = '';
 };

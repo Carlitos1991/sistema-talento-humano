@@ -21,11 +21,11 @@ urlpatterns = [
     path('requests/liquidation-list/<int:employee_id>/', views.EmployeeLiquidationListView.as_view(), name='liquidation_list'),
     path('requests/register-liquidation/<int:action_id>/', views.RegisterLiquidationView.as_view(), name='register_liquidation'),
     path('requests/edit-liquidation/<int:action_id>/', views.EditLiquidationView.as_view(), name='edit_liquidation'),
-    
+
     # Historiales
     path('requests/vacation-history/<int:balance_id>/', views.VacationHistoryDetailView.as_view(), name='vacation_history'),
     path('requests/permit-history/<int:balance_id>/', views.PermitHistoryDetailView.as_view(), name='permit_history'),
-    
+
     # Reportes
     path('requests/permit-report-modal/<int:employee_id>/', views.PermitReportModalView.as_view(), name='permit_report_modal'),
     path('requests/permit-report-pdf/<int:employee_id>/', views.PermitReportPDFView.as_view(), name='permit_report_pdf'),
@@ -35,4 +35,6 @@ urlpatterns = [
     path('periods/', views.PeriodListView.as_view(), name='period_list'),
     path('periods/create/', views.PeriodCreateView.as_view(), name='period_create'),
     path('periods/edit/<int:pk>/', views.PeriodUpdateView.as_view(), name='period_edit'),
+
+
 ]

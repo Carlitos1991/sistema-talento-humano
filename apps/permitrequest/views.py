@@ -18,7 +18,8 @@ from types import SimpleNamespace
 import logging
 
 logger = logging.getLogger(__name__)
-
+import re
+import openpyxl
 from .models import PermitType, PermitRequest
 from .forms import PermitTypeForm, PermitRequestForm
 from employee.models import Employee
@@ -146,6 +147,12 @@ def build_permit_admin_queryset(request):
     default_date_from, default_date_to = get_current_month_date_bounds()
     date_from = (request.GET.get('date_from') or default_date_from.isoformat()).strip()
     date_to = (request.GET.get('date_to') or default_date_to.isoformat()).strip()
+    raw_document_numbers = (request.GET.get('document_numbers') or '').strip()
+
+    if raw_document_numbers:
+        cedulas_list = [c.strip() for c in raw_document_numbers.split(',') if c.strip()]
+        if cedulas_list:
+            queryset = queryset.filter(employee__person__document_number__in=cedulas_list)
 
     if query:
         tokens = [token for token in query.split() if token]
@@ -183,7 +190,6 @@ def build_permit_admin_queryset(request):
     if date_to:
         queryset = queryset.filter(start_date__lte=date_to)
 
-    # Excluir permisos cuyo tipo esté desactivado y estados inactivos heredados
     queryset = queryset.filter(permit_type__is_active=True).exclude(status='INACTIVE')
 
     order_by = _parse_permit_admin_sort_list(request)
@@ -729,6 +735,7 @@ class PermitAdminListView(LoginRequiredMixin, PermissionRequiredMixin, JSONRespo
             'status': (self.request.GET.get('status') or '').strip(),
             'date_from': selected_date_from,
             'date_to': selected_date_to,
+            'document_numbers': (self.request.GET.get('document_numbers') or '').strip(),
             'sort_field': self.request.GET.get('sort_field', 'start_date'),
             'sort_dir': self.request.GET.get('sort_dir', 'desc'),
         }
@@ -1940,3 +1947,61 @@ class BitacoraEditView(LoginRequiredMixin, PermissionRequiredMixin, View):
         except Exception as e:
             logger.exception('Error in BitacoraEditView.post')
             return JsonResponse({'success': False, 'message': f'Error: {str(e)}'}, status=400)
+
+
+class ParsePermitIdentificationExcelView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """
+    Parses an Excel file containing employee identification numbers (cédulas)
+    and returns a unique list of sanitized numbers in JSON format.
+    Enforces a strict 1 MB file size limit.
+    """
+    permission_required = 'permitrequest.view_permitrequest'
+
+    def post(self, request, *args, **kwargs):
+        excel_file = request.FILES.get('identification_file')
+        if not excel_file:
+            return JsonResponse({'success': False, 'message': 'No se proporcionó ningún archivo Excel.'}, status=400)
+
+        # 1 MB maximum file size validation
+        max_file_size = 1 * 1024 * 1024
+        if excel_file.size > max_file_size:
+            return JsonResponse({'success': False, 'message': 'El archivo supera el tamaño máximo permitido de 1 MB.'},
+                                status=400)
+
+        if not (excel_file.name.endswith('.xlsx') or excel_file.name.endswith('.xls')):
+            return JsonResponse({'success': False, 'message': 'El archivo debe tener formato .xlsx o .xls.'},
+                                status=400)
+
+        try:
+            workbook = openpyxl.load_workbook(excel_file, read_only=True, data_only=True)
+            first_sheet = workbook.active
+            identification_numbers = []
+
+            for row in first_sheet.iter_rows(values_only=True):
+                if not row:
+                    continue
+                for cell_value in row:
+                    if cell_value is not None:
+                        clean_val = re.sub(r'[^0-9]', '', str(cell_value).strip())
+                        if 9 <= len(clean_val) <= 13:
+                            identification_numbers.append(clean_val)
+
+            workbook.close()
+            unique_identifications = list(dict.fromkeys(identification_numbers))
+
+            if not unique_identifications:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'No se encontraron cédulas válidas (9 a 13 dígitos) en el archivo.'
+                }, status=400)
+
+            return JsonResponse({
+                'success': True,
+                'count': len(unique_identifications),
+                'document_numbers': unique_identifications,
+                'message': f'Se cargaron {len(unique_identifications)} cédula(s) correctamente.'
+            })
+
+        except Exception as exc:
+            logger.exception('Error processing identification excel')
+            return JsonResponse({'success': False, 'message': f'Error al procesar el archivo: {str(exc)}'}, status=500)

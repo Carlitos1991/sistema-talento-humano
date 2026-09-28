@@ -1,6 +1,8 @@
 {% extends 'base.html' %}
 {% load static %}
-
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/permission.css' %}">
+{% endblock %}
 {% block title %}Administrar Permisos | SIGETH{% endblock %}
 
 {% block content %}
@@ -17,23 +19,59 @@
         <div class="content-table">
 
             <form id="filtersForm" onsubmit="handlePermitSearch(event)" class="mb-3">
-                <!-- Panel con Grid Nativo de 3 columnas (2 filas fijas) -->
+                <input type="hidden" id="filter_document_numbers" name="document_numbers"
+                       value="{{ current_filters.document_numbers|default:'' }}">
+
+                <!-- Panel con Grid Integrado (Uploader de 2 filas a la izquierda + Filtros) -->
                 <div class="search-panel">
-                    <div class="search-grid">
+                    <div class="permit-integrated-search-grid">
+
+                        <!-- Columna Uploader Excel (2 filas) con Badge a la izquierda -->
+                        <div class="permit-excel-uploader-column">
+                            <!-- Badge ubicado a la izquierda sin alterar la grilla -->
+                            <div id="identification-badge-container" class="permit-excel-left-badge"
+                                 style="display: none;">
+                                <span class="badge badge-green" id="identification-count-badge">
+                                    <i class="fa-solid fa-users me-1"></i>
+                                    <span id="identification-count-text">0 cédula(s)</span>
+                                </span>
+                                <button type="button" class="btn-clear-identification-tag"
+                                        onclick="clearLoadedIdentifications()" title="Eliminar filtro">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                            </div>
+
+                            <label class="form-label text-center">EXCEL CÉDULAS</label>
+
+                            <input type="file" id="identification_excel_input" accept=".xlsx, .xls"
+                                   class="file-input-hidden">
+
+                            <label for="identification_excel_input" class="file-upload-label permit-excel-dropzone"
+                                   id="permit-excel-dropzone-label">
+                                <span class="permit-excel-icon-wrapper" id="permit-excel-icon-box">
+                                    <i class="fa-solid fa-file-excel permit-excel-main-icon"></i>
+                                </span>
+                            </label>
+
+                            <span class="permit-file-helper-text" id="permit-excel-helper-label">
+                                <i class="fa-solid fa-paperclip me-1"></i> Max: 1 MB
+                            </span>
+                        </div>
+
                         <!-- Fila 1 -->
-                        <div>
+                        <div class="permit-filter-input-cell">
                             <input type="text" id="table-search-permits" name="q"
                                    class="form-control"
                                    placeholder="Nombres/Apellidos/Cédula"
                                    value="{{ current_filters.q|default:'' }}">
                         </div>
-                        <div>
+                        <div class="permit-filter-input-cell">
                             <input type="date" id="filter_date_from" name="date_from"
                                    class="form-control"
                                    value="{{ current_filters.date_from|default:'' }}"
                                    placeholder="Vigencia Desde">
                         </div>
-                        <div>
+                        <div class="permit-filter-input-cell">
                             <input type="date" id="filter_date_to" name="date_to"
                                    class="form-control"
                                    value="{{ current_filters.date_to|default:'' }}"
@@ -41,7 +79,7 @@
                         </div>
 
                         <!-- Fila 2 -->
-                        <div>
+                        <div class="permit-filter-input-cell">
                             <select id="filter_area" name="area" class="input-field select2">
                                 <option value="">Dependencia</option>
                                 {% for area in areas %}
@@ -52,7 +90,7 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        <div>
+                        <div class="permit-filter-input-cell">
                             <select id="filter_permit_type" name="permit_type" class="input-field select2">
                                 <option value="">Tipo de Permiso</option>
                                 {% for t in permit_types %}
@@ -63,7 +101,7 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        <div>
+                        <div class="permit-filter-input-cell">
                             <select id="filter_status" name="status" class="input-field select2">
                                 <option value="">Estado</option>
                                 {% for value, label in status_choices %}
@@ -74,10 +112,11 @@
                                 {% endfor %}
                             </select>
                         </div>
+
                     </div>
                 </div>
 
-                <!-- Barra de Acciones: Excel/PDF a la izquierda y BUSCAR / LIMPIAR centrados -->
+                <!-- Barra de Acciones: BUSCAR / LIMPIAR centrados -->
                 <div class="search-toolbar">
                     <div class="table-controls person-filter-controls rubric-export-controls"></div>
                     <div class="search-filter-actions">
@@ -112,6 +151,11 @@
                             {% if not page_obj.has_previous %}disabled{% endif %}
                             data-page="
 
+
+
+
+
+
                                     {% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% else %}1{% endif %}">
                         <i class="fas fa-angle-left"></i>
                     </button>
@@ -125,6 +169,11 @@
                     <button type="button" class="page-btn page-next" title="Siguiente"
                             {% if not page_obj.has_next %}disabled{% endif %}
                             data-page="
+
+
+
+
+
 
                                     {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages|default:1 }}{% endif %}">
                         <i class="fas fa-angle-right"></i>
