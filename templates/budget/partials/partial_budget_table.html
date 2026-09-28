@@ -150,7 +150,8 @@
     </div>
 
     <!-- Paginación Global -->
-    <div class="pagination-container">
+</div>
+<div id="js-pagination" class="pagination-container">
         <span class="pagination-info">
             Mostrando {{ page_obj.start_index|default:"0" }}-{{ page_obj.end_index|default:"0" }} de {{ page_obj.paginator.count|default:"0" }}
         </span>
@@ -185,5 +186,4 @@
                 <i class="fas fa-angle-double-right"></i>
             </button>
         </div>
-    </div>
 </div>

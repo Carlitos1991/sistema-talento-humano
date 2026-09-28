@@ -128,11 +128,7 @@ window.refreshCurrentTable = function (extraParams = {}, callback = null) {
         return;
     }
 
-    const currentTable = wrapper.querySelector('.managed-table');
-    const listUrl = currentTable?.getAttribute('data-list-url') || window.location.href;
-    const requestUrl = new URL(listUrl, window.location.origin);
-    const currentParams = new URLSearchParams(window.location.search);
-    currentParams.forEach((value, key) => requestUrl.searchParams.set(key, value));
+    const requestUrl = new URL(window.location.href);
     Object.keys(extraParams).forEach(key => {
         requestUrl.searchParams.set(key, extraParams[key]);
     });
@@ -151,7 +147,6 @@ window.refreshCurrentTable = function (extraParams = {}, callback = null) {
         .then(html => {
             if (!html) return;
             wrapper.innerHTML = html;
-            window.history.replaceState({}, '', requestUrl.toString());
 
             if (typeof TableManager !== 'undefined') {
                 const table = wrapper.querySelector('.managed-table');
