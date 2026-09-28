@@ -158,13 +158,12 @@
              {% if page_obj.paginator.num_pages <= 1 %}style="visibility:hidden;"{% endif %}>
             <button type="button" class="page-btn page-first" title="Primera"
                     {% if not page_obj.has_previous %}disabled{% endif %}
-                    onclick="changeBudgetPage(1)">
+                    data-page="1">
                 <i class="fas fa-angle-double-left"></i>
             </button>
             <button type="button" class="page-btn page-prev" title="Anterior"
                     {% if not page_obj.has_previous %}disabled{% endif %}
-                    onclick="changeBudgetPage(
-                            {% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% else %}1{% endif %})">
+                    data-page="{% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% else %}1{% endif %}">
                 <i class="fas fa-angle-left"></i>
             </button>
             <div class="page-input-wrapper">
@@ -177,13 +176,12 @@
             </div>
             <button type="button" class="page-btn page-next" title="Siguiente"
                     {% if not page_obj.has_next %}disabled{% endif %}
-                    onclick="changeBudgetPage(
-                            {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ page_obj.paginator.num_pages|default:1 }}{% endif %})">
+                    data-page="{% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ page_obj.paginator.num_pages|default:1 }}{% endif %}">
                 <i class="fas fa-angle-right"></i>
             </button>
             <button type="button" class="page-btn page-last" title="Última"
                     {% if not page_obj.has_next %}disabled{% endif %}
-                    onclick="changeBudgetPage({{ page_obj.paginator.num_pages|default:1 }})">
+                    data-page="{{ page_obj.paginator.num_pages|default:1 }}">
                 <i class="fas fa-angle-double-right"></i>
             </button>
         </div>
