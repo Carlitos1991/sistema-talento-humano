@@ -1,89 +1,73 @@
-<div class="modal-container-large shadow-card">
-    <!-- Botón de Cerrar (X) -->
-    <button type="button" class="btn-close-modal" data-modal="actionsHistoryModal" title="Cerrar">
-        <i class="fas fa-times"></i>
-    </button>
-
-    <!-- Cabecera Compacta -->
-    <div class="modal-header-refined">
-        <div class="header-content-group">
-            <div class="header-icon-circle">
-                <i class="fas fa-list-check"></i>
+{% load static %}
+<div class="modal-overlay">
+    <div class="modal-container-large">
+        <div class="modal-header-medium">
+            <div class="header-content-group">
+                <div class="header-icon-circle">
+                    <i class="fas fa-list-check"></i>
+                </div>
+                <h3 class="header-title">Historial de Acciones de Personal</h3>
             </div>
-            <h2 class="header-title-main">
-                Historial de Acciones de Personal
-            </h2>
+            <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
-    </div>
 
-    <!-- Cuerpo con Scroll -->
-    <div class="modal-body-scrolled">
-        <div class="section-card-standard">
-            <h4 class="section-title">
-                <i class="fas fa-user text-primary"></i> Empleado: <strong>{{ employee.person.full_name }}</strong>
-            </h4>
-            <div class="table-container">
-                <table>
-                    <thead>
-                    <tr>
-                        <th style="width: 10%;">Número</th>
-                        <th style="width: 8%;">Vigente:</th>
-                        <th style="width: 8%;">Tipo Acción</th>
-                        <th style="width: 52%;">Explicación</th>
-                        <th style="width: 8%;">Registrada</th>
-                        <th style="width: 8%;">Acción</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    {% for action in actions %}
-                        <tr>
-                            <td>
-                                <strong>{{ action.number }}</strong>
-                            </td>
-                            <td>{{ action.date_effective|date:"d/m/Y" }}</td>
-                            <td>{{ action.action_type }}</td>
-                            <td>
-                                <small class="text-truncate"
-                                       title="{{ action.explanation }}">{{ action.explanation|truncatewords:35   }}</small>
-                            </td>
-                            <td class="text-center">
-                                {% if action.is_registered %}
-                                    <span class="badge badge-success">Sí</span>
-                                {% else %}
-                                    <span class="badge badge-warning">No</span>
-                                {% endif %}
-                            </td>
-                            <td class="text-center">
-                                <button type="button" class="btn btn-sm btn-info-action js-view-detail-action"
-                                   data-action-id="{{ action.pk }}" title="Ver detalles">
-                                    <i class="fa-solid fa-eye"></i>
-                                </button>
-                            </td>
-                        </tr>
-                    {% empty %}
-                        <tr>
-                            <td colspan="7" class="text-center text-muted py-4">
-                                <i class="fa-solid fa-inbox" style="font-size: 2rem; margin-bottom: 0.5rem;"></i>
-                                <p>No hay acciones de tipo SANCIONES registradas para este empleado</p>
-                            </td>
-                        </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
-
-                {% if actions %}
-                    <div style="padding: 1rem; background-color: #f8f9fa; border-top: 1px solid #dee2e6; text-align: right;">
-                        <small class="text-muted"><strong>Total:</strong> {{ total_count }} acciones</small>
-                    </div>
-                {% endif %}
+        <div class="modal-body modal-body-custom">
+            <div class="section-title mb-3">
+                <i class="fas fa-user text-green"></i> {{ employee.person.full_name }} &bull;
+                CI: {{ employee.person.document_number|default:"--" }}
             </div>
-        </div>
-    </div>
 
-    <!-- Footer con botones -->
-    <div class="modal-footer-refined">
-        <button type="button" class="btn-cancel" data-modal="actionsHistoryModal">
-            <i class="fas fa-times"></i> Cerrar
-        </button>
+            {% if actions %}
+                <div class="modal-table-container">
+                    <table class="modal-table">
+                        <thead>
+                        <tr>
+                            <th>Número</th>
+                            <th>Vigencia</th>
+                            <th>Tipo Acción</th>
+                            <th>Explicación</th>
+                            <th class="text-center">Registrada</th>
+                            <th class="text-center actions">Acción</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for action in actions %}
+                            <tr>
+                                <td><strong>{{ action.number }}</strong></td>
+                                <td>{{ action.date_effective|date:"d/m/Y" }}</td>
+                                <td>{{ action.action_type.name }}</td>
+                                <td><small>{{ action.explanation|default:"--"|truncatewords:30 }}</small></td>
+                                <td class="text-center">
+                                    {% if action.is_registered %}
+                                        <span class="badge badge-green">Sí</span>
+                                    {% else %}
+                                        <span class="badge badge-amber">No</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    <button type="button" class="btn-tenth js-sanction-modal-btn"
+                                            data-url="{% url 'personnel_actions:action_detail' action.pk %}"
+                                            title="Ver Detalle">
+                                        <i class="fa-solid fa-eye"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="empty-state-container">
+                    <i class="fas fa-file-circle-xmark empty-state-icon"></i>
+                    <p class="empty-state-text">No hay acciones de tipo SANCIONES registradas para este empleado.</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="modal-footer-fixed">
+            <button type="button" class="btn-default-outline" onclick="closeModal()">Cerrar</button>
+        </div>
     </div>
 </div>

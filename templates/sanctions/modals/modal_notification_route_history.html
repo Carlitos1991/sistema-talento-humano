@@ -1,112 +1,64 @@
-<div class="modal-container-medium modal-compact shadow-card">
-    <button type="button" class="btn-close-modal js-close-modal" title="Cerrar">
-        <i class="fas fa-times"></i>
-    </button>
-
-    <div class="modal-header-refined">
-        <div class="header-content-group">
-            <div class="header-icon-circle">
-                <i class="fas fa-timeline"></i>
-            </div>
-            <h2 class="header-title-main">Ruta del Trámite</h2>
-        </div>
-    </div>
-
-    <div class="modal-body-scrolled">
-        <div class="section-card-standard border-left-primary">
-            <h4 class="section-title">
-                <i class="fas fa-user text-primary"></i> EMPLEADO
-            </h4>
-            <div class="p-3 bg-light rounded">
-                <strong>{{ notification.employee.person.full_name }}</strong><br>
-                <small class="text-muted">CI: {{ notification.employee.person.document_number }}</small>
-            </div>
-        </div>
-
-        <div class="section-card-standard">
-            <h4 class="section-title">
-                <i class="fas fa-route text-primary"></i> TRAZABILIDAD DE ASIGNACIONES
-            </h4>
-            {% if assignments %}
-                <div class="route-thread compact">
-                    {% for item in assignments %}
-                        <div class="route-item {% if item.is_current %}is-current{% endif %}">
-                            <div class="route-meta">
-                                <div>
-                                    <strong>{{ forloop.counter }}.</strong>
-                                    {{ item.assigned_by.get_full_name }}
-                                    &rarr; {{ item.assigned_to.get_full_name }}
-                                </div>
-                                <div>
-                                    {% if item.is_current %}
-                                        <span class="route-badge current">Actual</span>
-                                    {% else %}
-                                        <span class="route-badge closed">Cerrada</span>
-                                    {% endif %}
-                                </div>
-                            </div>
-                            <div class="route-meta route-meta-inline">
-                                <div>Recepcion: {{ item.start_date|date:"d/m/Y H:i" }}</div>
-                                <div>
-                                    Despacho:
-                                    {% if item.end_date %}
-                                        {{ item.end_date|date:"d/m/Y H:i" }}
-                                    {% else %}
-                                        En curso
-                                    {% endif %}
-                                </div>
-                                <div>Tiempo: {{ item.duration_days }}d {{ item.get_status_info.hours }}h</div>
-                            </div>
-                            <div class="route-body"><span class="route-body-label">Observaciones:</span> <span
-                                    class="route-body-content">{{ item.observation|default:"Sin observaciones registradas." }}</span>
-                            </div>
-                        </div>
-                    {% endfor %}
+{% load static %}
+<div class="modal-overlay">
+    <div class="modal-container-medium">
+        <div class="modal-header-medium">
+            <div class="header-content-group">
+                <div class="header-icon-circle">
+                    <i class="fas fa-timeline"></i>
                 </div>
-                <div class="route-total">
-                    Tiempo total: {{ total_duration.days }}d {{ total_duration.hours }}h laborales
-                </div>
-            {% else %}
-                <div class="text-center text-muted py-4">No hay historial de asignaciones disponible.</div>
-            {% endif %}
+                <h3 class="header-title">Ruta del Trámite</h3>
+            </div>
+            <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
 
-        <div class="section-card-standard">
-            <h4 class="section-title">
-                <i class="fas fa-file-circle-plus text-primary"></i> ESTADO FINAL
-            </h4>
-            <div class="p-3 bg-light rounded">
-                {% if final_sanction %}
-                    <div><strong>Sanción:</strong> Registrada (ID {{ final_sanction.id }})</div>
-                    <div><strong>Estado de la notificación:</strong> {{ notification.status }}</div>
-                    {% if personnel_action %}
-                        <div><strong>Acción de Personal:</strong> {{ personnel_action.number }}</div>
-                        <div>
-                            <strong>Elaboración:</strong>
-                            {% if personnel_action.date_issue and personnel_action.date_effective %}
-                                Completada
-                            {% else %}
-                                Pendiente de completar fechas/motivación/explicación
-                            {% endif %}
-                        </div>
-                        {% if notification.current_assignment %}
-                            <div><strong>Ruta:</strong> En curso</div>
-                        {% else %}
-                            <div><strong>Ruta:</strong> Cerrada</div>
-                        {% endif %}
-                    {% else %}
-                        <div><strong>Acción de Personal:</strong> No generada</div>
-                    {% endif %}
+        <div class="modal-body modal-body-custom">
+            <div class="quick-view-banner-compact">
+                <div class="quick-view-header-col">
+                    <h2 class="quick-view-name">{{ notification.employee.person.full_name }}</h2>
+                    <span class="text-muted small">C.I. {{ notification.employee.person.document_number|default:"--" }}</span>
+                </div>
+            </div>
+
+            <div class="form-section-card mt-3">
+                <div class="section-title"><i class="fas fa-route text-green"></i> Trazabilidad de Asignaciones</div>
+                {% if assignments %}
+                    <div class="route-thread compact">
+                        {% for item in assignments %}
+                            <div class="route-item {% if item.is_current %}is-current{% endif %}">
+                                <div class="route-meta">
+                                    <div><strong>{{ forloop.counter }}.</strong> {{ item.assigned_by.get_full_name }}
+                                        &rarr; {{ item.assigned_to.get_full_name }}</div>
+                                    <div>
+                                        {% if item.is_current %}
+                                            <span class="badge badge-green">Actual</span>
+                                        {% else %}
+                                            <span class="badge badge-gray">Cerrada</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="small text-muted mt-1">
+                                    Recepción: {{ item.start_date|date:"d/m/Y H:i" }} | Despacho:
+                                    {% if item.end_date %}{{ item.end_date|date:"d/m/Y H:i" }}{% else %}En
+                                        curso{% endif %}
+                                </div>
+                                <p class="small mt-1 mb-0">
+                                    <strong>Obs:</strong> {{ item.observation|default:"Sin observaciones registradas." }}
+                                </p>
+                            </div>
+                        {% endfor %}
+                    </div>
                 {% else %}
-                    <div><strong>Sanción:</strong> Aún no registrada</div>
+                    <div class="empty-state-container">
+                        <p class="empty-state-text">No hay historial de asignaciones registrado.</p>
+                    </div>
                 {% endif %}
             </div>
         </div>
-    </div>
 
-    <div class="modal-footer-refined">
-        <button type="button" class="btn-cancel js-close-modal">
-            <i class="fas fa-times"></i> Cerrar
-        </button>
+        <div class="modal-footer-fixed">
+            <button type="button" class="btn-default-outline" onclick="closeModal()">Cerrar</button>
+        </div>
     </div>
 </div>

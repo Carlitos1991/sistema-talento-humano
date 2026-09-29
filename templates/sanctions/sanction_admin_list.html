@@ -1,121 +1,50 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Administración de Sanciones{% endblock %}
+{% block title %}Administración de Sanciones | SIGETH{% endblock %}
 
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/sanction.css' %}">
 {% endblock %}
 
 {% block content %}
-    <div class="content-wrapper">
-        <!-- Configuración oculta -->
-        <input type="hidden" id="csrf-token" value="{{ csrf_token }}">
-        <input type="hidden" id="url-list" value="{% url 'sanctions:sanction_admin' %}">
-
-        <!-- Encabezado -->
-        <div class="header-card">
-            <div>
-                {% if filtered_employee %}
-                    <h1>Historial de Sanciones - {{ filtered_employee.person.full_name }}</h1>
-                    <p>Sanciones registradas para el empleado {{ filtered_employee.person.document_number }}</p>
-                {% else %}
-                    <h1>Administración de Sanciones</h1>
-                    <p>Gestiona todas las sanciones registradas en el sistema.</p>
-                {% endif %}
-            </div>
+    <div class="header-card">
+        <div>
             {% if filtered_employee %}
-                <button type="button" class="btn btn-create" onclick="window.history.back()">
-                    <i class="fas fa-arrow-left"></i> Volver Atrás
-                </button>
+                <h1><i class="fa-solid fa-gavel me-2"></i> Historial de Sanciones
+                    — {{ filtered_employee.person.full_name }}</h1>
+                <p>Sanciones registradas para el empleado con
+                    C.I. {{ filtered_employee.person.document_number|default:"--" }}</p>
+            {% else %}
+                <h1><i class="fa-solid fa-gavel me-2"></i> Administración de Sanciones</h1>
+                <p>Gestiona todas las sanciones disciplinarias registradas en la institución.</p>
             {% endif %}
         </div>
+        {% if filtered_employee %}
+            <button type="button" class="btn-white-rectangle" onclick="window.history.back()">
+                <i class="fas fa-arrow-left"></i> Volver Atrás
+            </button>
+        {% endif %}
+    </div>
 
-        <!-- Filtros y búsqueda -->
-        <div id="table-app">
-            <div class="content-table">
-                <div class="table-controls">
-                    <div class="search-box">>
-                        {% if filtered_employee %}
-                            <input type="text" id="table-search" class="input-field"
-                                   placeholder="Buscar por número, fecha (dd/mm/aaaa) o tipo">
-                        {% else %}
-                            <input type="text" id="table-search" class="input-field"
-                                   placeholder="Buscar por número, empleado, cédula o tipo">
-                        {% endif %}
-                    </div>
-
-                </div>
-
-                <!-- Zona de recarga AJAX -->
-                <div id="table-content-wrapper">
-                    {% include 'sanctions/partials/partial_sanction_admin_table.html' %}
-                </div>
-
-                <!-- Paginación -->
-                <div class="pagination-container" id="js-pagination">
-                    <span class="pagination-info" id="page-info">
-                        {% if page_obj %}
-                            Mostrando {{ page_obj.start_index }} a {{ page_obj.end_index }} registros de
-                            {{ page_obj.paginator.count }} registros
-                        {% else %}
-                            Mostrando 0 a 0 registros de 0 registros
-                        {% endif %}
-                    </span>
-                    <ul class="pagination-list">
-                        <li>
-                            <button id="btn-prev" class="page-btn"
-                                    {% if not page_obj.has_previous %}disabled{% endif %}>
-                                <i class="fas fa-chevron-left"></i>
-                            </button>
-                        </li>
-                        <li>
-                            <span id="current-page-display" style="padding: 0 10px; font-weight: bold;">
-                                {% if page_obj %}{{ page_obj.number }}{% else %}1{% endif %}
-                            </span>
-                        </li>
-                        <li>
-                            <button id="btn-next" class="page-btn" {% if not page_obj.has_next %}disabled{% endif %}>
-                                <i class="fas fa-chevron-right"></i>
-                            </button>
-                        </li>
-                    </ul>
-                </div>
+    <div class="content-table">
+        <div class="table-controls toolbar-row">
+            <div class="toolbar-center"></div>
+            <div class="toolbar-right">
+                <input type="text" id="table-search" class="table-search-input table-search-input--large"
+                       placeholder="{% if filtered_employee %}Buscar por número, fecha (dd/mm/aaaa) o tipo...{% else %}Buscar por número, empleado o cédula...{% endif %}">
             </div>
+        </div>
+
+        <div id="table-content-wrapper">
+            {% include 'sanctions/partials/partial_sanction_admin_table.html' %}
         </div>
     </div>
 
-    <!-- Modal para detalles y edición -->
-    <div id="sanctionDetailModal" class="modal-overlay hidden">
-        <div id="modal-detail-content"></div>
-    </div>
-{% endblock %}
-
-{% block modals %}
-    <!-- Modal para detalles de sanción -->
-    <div id="sanctionDetailModal" class="modal-overlay hidden">
-        <div id="modal-detail-content"></div>
-    </div>
+    <!-- Contenedor único para modales AJAX de main.js -->
+    <div id="modal-root"></div>
 {% endblock %}
 
 {% block extra_js %}
-    <script>
-        // Inicializar paginación desde el servidor
-        {% if page_obj %}
-            window.initialPagination = {
-                current_page: {{ page_obj.number }},
-                total_pages: {{ page_obj.paginator.num_pages }},
-                has_previous: {{ page_obj.has_previous|yesno:"true,false" }},
-                has_next: {{ page_obj.has_next|yesno:"true,false" }}
-            };
-        {% else %}
-            window.initialPagination = {
-                current_page: 1,
-                total_pages: 1,
-                has_previous: false,
-                has_next: false
-            };
-        {% endif %}
-    </script>
-    <script src="{% static 'js/sanctions/sanction_admin.js' %}"></script>
+    <script src="{% static 'js/sanctions.js' %}"></script>
 {% endblock %}

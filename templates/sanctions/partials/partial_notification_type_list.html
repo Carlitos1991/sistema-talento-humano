@@ -1,85 +1,116 @@
+{% load static %}
 <div class="table-container">
-    <table>
-        <thead>
-        <tr>
-            <th>Nombre</th>
-            <th>Regímenes</th>
-            <th class="text-center">Templates</th>
-            <th class="text-center">Estado</th>
-            <th class="actions">Acciones</th>
-        </tr>
-        </thead>
-        <tbody>
-        {% for type in types %}
+    <div class="table-scroll-top">
+        <table class="managed-table exportable-table"
+               data-title="Tipos de Notificación"
+               data-filename="Reporte_Tipos_Notificacion"
+               data-list-url="{% url 'sanctions:notification_type_list' %}"
+               data-external-pagination="true"
+               data-external-search="true">
+            <thead>
             <tr>
-                <td style="font-weight: 500;">
-                    {{ type.name }}
-                    {% if type.description %}
-                        <div class="text-muted" style="font-size: .82rem;">{{ type.description|truncatewords:12 }}</div>
-                    {% endif %}
-                </td>
-                <td>
-                    <div style="display:flex; gap: .35rem; flex-wrap: wrap;">
-                        {% for link in type.regime_templates.all %}
-                            <span class="status-badge active">{{ link.labor_regime.code }}</span>
-                        {% empty %}
-                            <span class="status-badge inactive">Sin regímenes</span>
-                        {% endfor %}
-                    </div>
-                </td>
-                <td class="text-center" style="vertical-align: middle;">
-                    <button class="btn-list-action js-open-template-list templates-counter-btn"
-                            type="button"
-                            title="Ver templates dinámicos"
-                            data-type-id="{{ type.id }}"
-                            data-type-name="{{ type.name|escape }}">
-                        {{ type.template_regime_items|length }}
-                    </button>
-                    <div id="template-data-{{ type.id }}" hidden>
-                        {% for item in type.template_regime_items %}
-                            <div class="template-data-item"
-                                 data-regime-id="{{ item.regime_id }}"
-                                 data-regime-code="{{ item.regime_code|escape }}"
-                                 data-regime-name="{{ item.regime_name|escape }}"
-                                 data-has-template="{{ item.has_template|yesno:'1,0' }}"
-                                 data-template-id="{{ item.template_id }}"
-                                 data-edit-url="{{ item.edit_url }}"
-                                 data-create-url="{{ item.create_url }}"></div>
-                        {% endfor %}
-                    </div>
-                </td>
-                <td class="text-center">
-                    {% if type.is_active %}
-                        <span class="status-badge active">Activo</span>
-                    {% else %}
-                        <span class="status-badge inactive">Inactivo</span>
-                    {% endif %}
-                </td>
-                <td class="actions">
-                    <div class="actions-wrapper">
-                        {% if perms.sanctions.change_sanctionnotificationtype %}
-                            <button class="btn-views-action js-edit"
-                                    data-url="{% url 'sanctions:notification_type_update' type.pk %}"
-                                    title="Editar">
-                                <i class="fa-solid fa-pen"></i>
-                            </button>
-                            <button class="{% if type.is_active %}btn-delete-action{% else %}btn-create-action{% endif %} js-toggle"
-                                    data-url="{% url 'sanctions:notification_type_toggle' type.pk %}"
-                                    title="{% if type.is_active %}Dar de Baja{% else %}Dar de Alta{% endif %}">
-                                <i class="fa-solid {% if type.is_active %}fa-toggle-off{% else %}fa-toggle-on{% endif %}"></i>
-                            </button>
-                        {% endif %}
-                    </div>
-                </td>
+                <th class="width-30" data-field="name">Nombre</th>
+                <th class="width-25">Regímenes Asociados</th>
+                <th class="width-15 text-center">Templates</th>
+                <th class="width-15 text-center" data-field="is_active">Estado</th>
+                <th class="width-15 no-sort text-center actions">Acciones</th>
             </tr>
-        {% empty %}
-            <tr>
-                <td colspan="5" class="text-center" style="padding: 2rem;">
-                    <i class="fa-solid fa-inbox" style="font-size: 3rem; color: #ccc;"></i>
-                    <p style="margin-top: 1rem; color: #666;">No hay tipos de notificaciones registrados</p>
-                </td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+            </thead>
+            <tbody id="table-body">
+            {% if types %}
+                {% for type in types %}
+                    <tr class="location-row" id="row-notification-type-{{ type.id }}">
+                        <td>
+                            <div class="bold text-primary">{{ type.name }}</div>
+                            {% if type.description %}
+                                <small class="text-muted">{{ type.description|truncatewords:10 }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="d-flex flex-wrap gap-1">
+                                {% for link in type.regime_templates.all %}
+                                    <span class="badge badge-blue">{{ link.labor_regime.code }}</span>
+                                {% empty %}
+                                    <span class="badge badge-gray">Sin regímenes</span>
+                                {% endfor %}
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge badge-green">{{ type.template_regime_items|length }} plantillas</span>
+                        </td>
+                        <td class="text-center">
+                            {% if type.is_active %}
+                                <span class="badge badge-green">ACTIVO</span>
+                            {% else %}
+                                <span class="badge badge-gray">INACTIVO</span>
+                            {% endif %}
+                        </td>
+                        <td class="actions text-center">
+                            <div class="actions-wrapper">
+                                {% if perms.sanctions.change_sanctionnotificationtype %}
+                                    <button type="button" class="btn-tenth js-sanction-modal-btn"
+                                            data-url="{% url 'sanctions:notification_type_update' type.pk %}"
+                                            title="Editar Tipo">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </button>
+                                    <button type="button" class="btn-tenth js-sanction-modal-btn"
+                                            data-url="{% url 'sanctions:notification_type_preview' type.pk %}"
+                                            title="Ver Formatos Configurados">
+                                        <i class="fa-solid fa-eye text-blue"></i>
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="5">
+                        <div class="empty-state-container">
+                            <i class="fas fa-file-circle-xmark empty-state-icon"></i>
+                            <p class="empty-state-text">No se encontraron tipos de notificaciones.</p>
+                        </div>
+                    </td>
+                </tr>
+            {% endif %}
+            </tbody>
+        </table>
+    </div>
 </div>
+
+{% if paginator.num_pages > 0 %}
+    <div id="js-pagination" class="pagination-container">
+        <span class="pagination-info">
+            Mostrando {{ page_obj.start_index|default:"0" }}-{{ page_obj.end_index|default:"0" }} de {{ paginator.count|default:"0" }}
+        </span>
+        <div class="pagination-controls" {% if paginator.num_pages <= 1 %}style="visibility:hidden;"{% endif %}>
+            <button type="button" class="page-btn page-first {% if not page_obj.has_previous %}disabled{% endif %}"
+                    title="Primera" data-page="1" {% if not page_obj.has_previous %}disabled{% endif %}>
+                <i class="fas fa-angle-double-left"></i>
+            </button>
+            <button type="button" class="page-btn page-prev {% if not page_obj.has_previous %}disabled{% endif %}"
+                    title="Anterior"
+                    data-page="{% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% else %}1{% endif %}"
+                    {% if not page_obj.has_previous %}disabled{% endif %}>
+                <i class="fas fa-angle-left"></i>
+            </button>
+            <div class="page-input-wrapper">
+                <input type="number" class="page-input" value="{{ page_obj.number }}"
+                       min="1" max="{{ paginator.num_pages }}"
+                       data-max-page="{{ paginator.num_pages }}">
+                <span class="total-pages-badge">de {{ paginator.num_pages }}</span>
+            </div>
+            <button type="button" class="page-btn page-next {% if not page_obj.has_next %}disabled{% endif %}"
+                    title="Siguiente" data-page="
+                    {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages }}{% endif %}"
+                    {% if not page_obj.has_next %}disabled{% endif %}>
+                <i class="fas fa-angle-right"></i>
+            </button>
+            <button type="button" class="page-btn page-last {% if not page_obj.has_next %}disabled{% endif %}"
+                    title="Última" data-page="{{ paginator.num_pages }}"
+                    {% if not page_obj.has_next %}disabled{% endif %}>
+                <i class="fas fa-angle-double-right"></i>
+            </button>
+        </div>
+    </div>
+{% endif %}

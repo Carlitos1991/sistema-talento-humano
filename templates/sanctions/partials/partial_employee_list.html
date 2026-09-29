@@ -1,102 +1,169 @@
+{% load static %}
 <div class="table-container">
-    <table>
-        <thead>
-        <tr>
-            <th style="width: 27%;">Nombres y Apellidos</th>
-            <th style="width: 24%;">Cargo</th>
-            <th style="width: 14%;">Tipo</th>
-            <th style="width: 17%;">Área</th>
-            <th class="text-center" style="width: 10%;">Notificación</th>
-            <th class="text-center actions" style="width: 8%;">Acciones</th>
-        </tr>
-        </thead>
-        <tbody>
-        {% for item in employees_data %}
+    <div class="table-scroll-top">
+        <table class="managed-table exportable-table"
+               data-title="Reporte Empleados Sanciones"
+               data-filename="Reporte_Empleados_Sanciones"
+               data-list-url="{% url 'sanctions:sanction_employee_list' %}"
+               data-external-pagination="true"
+               data-external-search="true">
+            <thead>
             <tr>
-                <!-- Nombres y Apellidos -->
-                <td style="font-weight: 500; padding-left: 8px;">
-                    {{ item.employee.person.full_name }}<br><small>{{ item.employee.person.document_number }}</small>
+                <th class="width-3 no-sort">#</th>
+                <th class="width-25" data-field="person__last_name">Empleado</th>
+                <th class="width-10" data-field="person__document_number">Cédula</th>
+                <th class="width-22" data-field="budget__position_item__name">Cargo</th>
+                <th class="width-18" data-field="area__name">Área / Dependencia</th>
+                <th class="width-10 text-center" data-field="employment_status__name">Régimen</th>
+                <th class="width-12 no-sort text-center actions">Acciones</th>
+            </tr>
+            </thead>
+            <tbody id="table-body">
+            {% if employees_data %}
+                {% for item in employees_data %}
+                    <tr class="location-row" id="row-employee-{{ item.employee.id }}">
+                        <td>{{ page_obj.start_index|add:forloop.counter0 }}</td>
 
-                </td>
-                <!-- Cargo -->
-                <td>
-                    {% if item.budget and item.budget.position_item %}
-                        {{ item.budget.position_item.name }}
-                    {% else %}
-                        <span style="color: #999;">Sin cargo asignado</span>
-                    {% endif %}
-                </td>
-                <!-- Estado -->
-                <td>
-                    {% with status=item.employee.employment_status.code %}
-                        <span class="status-badge {% if status == 'EMPLEADO' or status == 'CONTRATADO' %}active{% else %}inactive{% endif %}">
-                        {{ item.employee.employment_status.name }}
-                    </span>
-                    {% endwith %}
-                </td>
-                <!-- Área -->
-                <td>
-                    {% if item.employee.area %}
-                        {{ item.employee.area.name }}
-                    {% else %}
-                        <span style="color: #999;">Sin área</span>
-                    {% endif %}
-                </td>
+                        <!-- Avatar corporativo -->
+                        <td>
+                            <div class="person-info">
+                                <div class="person-avatar-link">
+                                    {% if item.has_valid_photo %}
+                                        <img src="{{ item.employee.person.photo.url }}"
+                                             alt="{{ item.employee.person.first_name }}"
+                                             class="person-avatar">
+                                    {% else %}
+                                        <div class="person-avatar-placeholder">
+                                            {{ item.employee.person.last_name|first }}{{ item.employee.person.first_name|first }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="person-details">
+                                    <h4>{{ item.employee.person.last_name }} {{ item.employee.person.first_name }}</h4>
+                                </div>
+                            </div>
+                        </td>
 
-                <!-- Notificación -->
-                <td class="text-center" style="padding: 12px 15px;">
-                    {% if perms.sanctions.add_sanctionnotification or perms.sanctions.add_sanction %}
-                        <div class="notification-buttons-wrapper">
-                            <button type="button" class="btn-restore-action js-generate-notification"
-                                    data-employee-id="{{ item.employee.pk }}"
-                                    data-employee-name="{{ item.employee.person.get_full_name }}"
-                                    title="Generar Notificación">
-                                <i class="fa-solid fa-bell"></i>
-                            </button>
-                            <button type="button" class="btn-list-action js-open-notification-list"
-                                    data-url="{% url 'sanctions:notification_list' %}"
-                                    data-employee-id="{{ item.employee.pk }}"
-                                    title="Listado de Notificaciones">
-                                <i class="fa-solid fa-list-ul"></i>
-                            </button>
+                        <td>{{ item.employee.person.document_number|default:"--" }}</td>
+
+                        <td>
+                            {% if item.budget and item.budget.position_item %}
+                                {{ item.budget.position_item.name }}
+                            {% else %}
+                                <span class="text-muted small italic">Sin cargo asignado</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {% if item.employee.area %}
+                                <span class="font-weight-700 small text-primary">{{ item.employee.area.name }}</span>
+                            {% else %}
+                                <span class="text-muted small italic">Sin área asignada</span>
+                            {% endif %}
+                        </td>
+
+                        <td class="text-center">
+                            {% with code=item.employee.employment_status.code %}
+                                <span class="badge {% if code == 'EMPLEADO' or code == 'CONTRATADO' or code == 'LOSEP' %}badge-green{% else %}badge-blue{% endif %}">
+                                    {{ item.employee.employment_status.name|default:"--" }}
+                                </span>
+                            {% endwith %}
+                        </td>
+
+                        <td class="actions text-center">
+                            <div class="actions-wrapper">
+                                <!-- Generar Notificación -->
+                                {% if perms.sanctions.add_sanctionnotification or perms.sanctions.add_sanction %}
+                                    <button type="button" class="btn-yellow-circle js-sanction-modal-btn"
+                                            data-url="{% url 'sanctions:generate_notification' %}?employee_id={{ item.employee.pk }}"
+                                            title="Generar Notificación">
+                                        <i class="fa-solid fa-bell"></i>
+                                    </button>
+                                    <button type="button" class="btn-tenth js-sanction-modal-btn"
+                                            data-url="{% url 'sanctions:notification_list' %}?employee_id={{ item.employee.pk }}"
+                                            title="Listado de Notificaciones">
+                                        <i class="fa-solid fa-list-check"></i>
+                                    </button>
+                                {% endif %}
+
+                                <!-- Generar Sanción -->
+                                {% if perms.sanctions.add_sanction %}
+                                    <button type="button" class="btn-green-circle js-sanction-modal-btn"
+                                            data-url="{% url 'sanctions:generate_sanction' %}?employee_id={{ item.employee.pk }}"
+                                            title="Generar Sanción">
+                                        <i class="fa-solid fa-plus"></i>
+                                    </button>
+                                {% endif %}
+
+                                <!-- Ver Historial -->
+                                {% if perms.sanctions.view_sanction %}
+                                    <a href="{% url 'sanctions:sanction_admin_by_employee' item.employee.pk %}"
+                                       class="btn-tenth"
+                                       title="Ver Historial de Sanciones">
+                                        <i class="fa-solid fa-list-ul"></i>
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="7">
+                        <div class="empty-state-container">
+                            <i class="fas fa-file-circle-xmark empty-state-icon"></i>
+                            <p class="empty-state-text">No se encontraron empleados registrados.</p>
                         </div>
-                    {% else %}
-                        <span style="color: #999;">-</span>
-                    {% endif %}
-                </td>
-
-                <!-- Acciones -->
-                <td class="actions">
-                    <div class="actions-wrapper">
-                        <!-- Generar Sanción -->
-                        {% if perms.sanctions.add_sanction %}
-                            <button type="button" class="btn-create-action js-generate-sanction"
-                                    data-employee-id="{{ item.employee.pk }}"
-                                    data-employee-name="{{ item.employee.person.get_full_name }}"
-                                    title="Generar Sanción">
-                                <i class="fa-solid fa-plus"></i>
-                            </button>
-                        {% endif %}
-
-                        <!-- Ver Historial -->
-                        {% if perms.sanctions.view_sanction %}
-                            <button type="button" class="btn-list-action js-view-history"
-                                    data-employee-id="{{ item.employee.pk }}"
-                                    title="Ver Historial de Sanciones">
-                                <i class="fa-solid fa-list-ul"></i>
-                            </button>
-                        {% endif %}
-                    </div>
-                </td>
-            </tr>
-        {% empty %}
-            <tr>
-                <td colspan="6" class="text-center" style="padding: 2rem;">
-                    <i class="fa-solid fa-inbox" style="font-size: 3rem; color: #ccc;"></i>
-                    <p style="margin-top: 1rem; color: #666;">No hay empleados registrados</p>
-                </td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+                    </td>
+                </tr>
+            {% endif %}
+            </tbody>
+        </table>
+    </div>
 </div>
+
+{% if paginator.num_pages > 0 %}
+    <div id="js-pagination" class="pagination-container">
+        <span class="pagination-info">
+            Mostrando {{ page_obj.start_index|default:"0" }}-{{ page_obj.end_index|default:"0" }} de {{ paginator.count|default:"0" }}
+        </span>
+        <div class="pagination-controls" {% if paginator.num_pages <= 1 %}style="visibility:hidden;"{% endif %}>
+            <button type="button" class="page-btn page-first {% if not page_obj.has_previous %}disabled{% endif %}"
+                    title="Primera" data-page="1"
+                    {% if not page_obj.has_previous %}disabled{% endif %}>
+                <i class="fas fa-angle-double-left"></i>
+            </button>
+
+            <button type="button" class="page-btn page-prev {% if not page_obj.has_previous %}disabled{% endif %}"
+                    title="Anterior"
+                    data-page="{% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% else %}1{% endif %}"
+                    {% if not page_obj.has_previous %}disabled{% endif %}>
+                <i class="fas fa-angle-left"></i>
+            </button>
+
+            <div class="page-input-wrapper">
+                <input type="number" class="page-input"
+                       value="{{ page_obj.number }}"
+                       min="1" max="{{ paginator.num_pages }}"
+                       data-max-page="{{ paginator.num_pages }}">
+                <span class="total-pages-badge">de {{ paginator.num_pages }}</span>
+            </div>
+
+            <button type="button" class="page-btn page-next {% if not page_obj.has_next %}disabled{% endif %}"
+                    title="Siguiente"
+                    data-page="
+
+
+                            {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages }}{% endif %}"
+                    {% if not page_obj.has_next %}disabled{% endif %}>
+                <i class="fas fa-angle-right"></i>
+            </button>
+
+            <button type="button" class="page-btn page-last {% if not page_obj.has_next %}disabled{% endif %}"
+                    title="Última" data-page="{{ paginator.num_pages }}"
+                    {% if not page_obj.has_next %}disabled{% endif %}>
+                <i class="fas fa-angle-double-right"></i>
+            </button>
+        </div>
+    </div>
+{% endif %}

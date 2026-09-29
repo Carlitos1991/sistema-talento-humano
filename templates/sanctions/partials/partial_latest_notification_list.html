@@ -1,182 +1,164 @@
-<div class="table-container" style="margin-bottom: 0;">
-    <table>
-        <thead>
-        <tr>
-            <th style="width: 3%;" class="text-center">
-                <label class="custom-checkbox">
-                    <input type="checkbox" id="check-all-notifications">
-                    <span class="checkmark">
-                    </span>
-                </label>
-            </th>
-            <th style="width: 6%;">Código</th>
-            <th style="width: 20%;">Empleado</th>
-            <th style="width: 6%;">Mes</th>
-            <th style="width: 13%;">Inconsistencias</th>
-            <th style="width: 19%;">Fecha Registro</th>
-            <th style="width: 15%;">Estado</th>
-            <th style="width: 4%;">Respuesta</th>
-            <th style="width: 5%;">Creado por:</th>
-            <th class="text-center actions" style="width: 11%;">Acciones</th>
-        </tr>
-        </thead>
-        <tbody>
-        {% for notification in latest_notifications_page_obj.object_list %}
+{% load static %}
+<div class="table-container">
+    <div class="table-scroll-top">
+        <table class="managed-table exportable-table"
+               data-title="Reporte Notificaciones Recientes"
+               data-filename="Reporte_Notificaciones_Recientes"
+               data-list-url="{% url 'sanctions:sanction_employee_list' %}"
+               data-external-pagination="true"
+               data-external-search="true">
+            <thead>
             <tr>
-                <td class="text-center">
-                    {% if notification.status == 'NOTIFICADO' %}
-                        <label class="custom-checkbox">
-                            <input type="checkbox" class="js-notification-checkbox" data-id="{{ notification.pk }}">
-                            <span class="checkmark"><i class="fa-solid fa-check"></i></span>
-                        </label>
-                    {% endif %}
-                </td>
-                <td>
-                    <strong>{{ notification.sequential_code }}</strong>
-                </td>
-                <td>
-                    {{ notification.employee.person.full_name }}<br>
-                    <small class="text-muted">{{ notification.employee.person.document_number }}</small>
-                </td>
-                <td>
-                    {{ notification.month_label }}
-                </td>
-                <td>
-                    <small class="text-muted"><b>Atrasos:</b> {{ notification.minutes_late }} minutos</small><br>
-                    <small class="text-muted"><b>Inconsistencias:</b> {{ notification.regs_without_mark }}</small>
-                </td>
-                <td>
-                    <small class="text-muted"><b>Registro:</b> {{ notification.registration_date|date:"j \d\e F \d\e Y" }}
-                    </small><br>
-                    <small class="text-muted"><b>Notif.:</b> {{ notification.notification_date|date:"j \d\e F \d\e Y" }}
-                    </small>
-                </td>
-                <td>
-                    {% if notification.status == 'GENERADO' %}
-                        <span class="payroll-value-badge">{{ notification.status }}</span>
-                    {% elif notification.status == 'EN_PROCESO' %}
-                        <span class="payroll-value-badge-blue">{{ notification.status }}</span>
-                    {% elif notification.status == 'SANCIONADO' %}
-                        <span class="payroll-value-badge-red">{{ notification.status }}</span>
-                    {% else %}
-                        <span class="payroll-value-badge-yellow">{{ notification.status }}</span>
-                    {% endif %}
-                </td>
-                <td>
-                    {% if notification.status == 'NOTIFICADO' %}
-                        <div class="modern-toggle-wrapper js-toggle-response {% if notification.has_responded %}modern-toggle-green{% endif %}"
-                             data-id="{{ notification.pk }}"
-                             style="cursor: pointer; user-select: none;">
-                            <div class="modern-toggle-circle"></div>
-                            <span class="modern-toggle-text">
-                                {% if notification.has_responded %}Sí{% else %}No{% endif %}
-                            </span>
-                        </div>
-                    {% else %}
-                        <span class="payroll-value-badge-gray">
-                            {% if notification.has_responded %}Sí{% else %}No{% endif %}
-                        </span>
-                    {% endif %}
-                </td>
-
-                <td>
-                    {{ notification.created_by.first_name }} {{ notification.created_by.last_name }}
-                </td>
-                <td class="actions">
-                    <div class="actions-wrapper" style="justify-content: center;">
-                        <a href="{% url 'sanctions:notification_pdf' notification.pk %}"
-                           target="_blank"
-                           class="btn-list-action"
-                           title="Ver PDF">
-                            <i class="fa-regular fa-file-pdf"></i>
-                        </a>
-                        {% if notification.status == 'GENERADO' %}
-                            <button type="button" class="btn-success-action js-btn-set-notified"
-                                    data-url="{% url 'sanctions:set_notification_date' notification.pk %}"
-                                    title="Marcar como Notificado" style="color: #10b981;">
-                                <i class="fa-solid fa-envelope-circle-check"></i>
-                            </button>
-                            <button class="btn-delete-action js-btn-archive" data-id="{{ notification.pk }}"
-                                    title="Archivar">
-                                <i class="fa-solid fa-box-archive"></i>
-                            </button>
-                        {% endif %}
-                        {% if perms.sanctions.change_sanctionnotification %}
-                            {% if notification.status == 'GENERADO' %}
-                                <button type="button" class="btn-views-action js-edit-notification"
-                                        data-notification-id="{{ notification.pk }}"
-                                        data-employee-id="{{ notification.employee_id }}"
-                                        title="Editar Notificación">
-                                    <i class="fa-solid fa-pen-to-square"></i>
-                                </button>
+                <th class="width-3 no-sort text-center">
+                    <label class="custom-checkbox">
+                        <input type="checkbox" id="check-all-notifications">
+                        <span class="checkmark"></span>
+                    </label>
+                </th>
+                <th class="width-8" data-field="sequence_number">Código</th>
+                <th class="width-22" data-field="employee__person__last_name">Empleado</th>
+                <th class="width-8" data-field="month">Mes</th>
+                <th class="width-16">Inconsistencias</th>
+                <th class="width-15" data-field="registration_date">Fechas</th>
+                <th class="width-10 text-center" data-field="status">Estado</th>
+                <th class="width-6 text-center">Respuesta</th>
+                <th class="width-12 no-sort text-center actions">Acciones</th>
+            </tr>
+            </thead>
+            <tbody id="table-body">
+            {% if latest_notifications_page_obj.object_list %}
+                {% for notification in latest_notifications_page_obj.object_list %}
+                    <tr class="location-row" id="row-notification-{{ notification.pk }}">
+                        <td class="text-center">
+                            {% if notification.status == 'NOTIFICADO' %}
+                                <label class="custom-checkbox">
+                                    <input type="checkbox" class="js-notification-checkbox"
+                                           data-id="{{ notification.pk }}">
+                                    <span class="checkmark"><i class="fa-solid fa-check"></i></span>
+                                </label>
                             {% endif %}
-                        {% endif %}
-                    </div>
-                </td>
-            </tr>
-        {% empty %}
-            <tr>
-                <td colspan="10" class="text-center" style="padding: 2rem;">
-                    <i class="fa-solid fa-inbox" style="font-size: 3rem; color: #ccc;"></i>
-                    <p style="margin-top: 1rem; color: #666;">No hay notificaciones registradas</p>
-                </td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
-</div>
+                        </td>
+                        <td><strong>{{ notification.sequential_code }}</strong></td>
+                        <td>
+                            <div class="bold text-primary">{{ notification.employee.person.full_name }}</div>
+                            <small class="text-muted">{{ notification.employee.person.document_number|default:"--" }}</small>
+                        </td>
+                        <td>{{ notification.month_label }}</td>
+                        <td>
+                            <div class="small"><strong>Atrasos:</strong> {{ notification.minutes_late }} min</div>
+                            <div class="small text-muted"><strong>Sin
+                                marcar:</strong> {{ notification.regs_without_mark }}</div>
+                        </td>
+                        <td>
+                            <div class="small"><strong>Reg:</strong> {{ notification.registration_date|date:"d/m/Y" }}
+                            </div>
+                            {% if notification.notification_date %}
+                                <div class="small text-muted">
+                                    <strong>Notif:</strong> {{ notification.notification_date|date:"d/m/Y" }}</div>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <span class="badge {% if notification.status == 'GENERADO' %}badge-amber{% elif notification.status == 'EN_PROCESO' %}badge-blue{% elif notification.status == 'SANCIONADO' %}badge-red{% else %}badge-green{% endif %}">
+                                {{ notification.get_status_display }}
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            {% if notification.status == 'NOTIFICADO' %}
+                                <div class="modern-toggle-wrapper js-toggle-response {% if notification.has_responded %}modern-toggle-green{% endif %}"
+                                     data-id="{{ notification.pk }}" style="cursor: pointer;">
+                                    <div class="modern-toggle-circle"></div>
+                                    <span class="modern-toggle-text">{% if notification.has_responded %}Sí{% else %}
+                                        No{% endif %}</span>
+                                </div>
+                            {% else %}
+                                <span class="badge badge-gray">{% if notification.has_responded %}Sí{% else %}
+                                    No{% endif %}</span>
+                            {% endif %}
+                        </td>
+                        <td class="actions text-center">
+                            <div class="actions-wrapper">
+                                <a href="{% url 'sanctions:notification_pdf' notification.pk %}"
+                                   target="_blank" rel="noopener noreferrer"
+                                   class="btn-tenth" title="Ver Documento PDF">
+                                    <i class="fa-solid fa-file-pdf text-red"></i>
+                                </a>
 
-<div class="pagination-container" id="notifications-js-pagination"
-     style="margin-top:5px; display:flex; justify-content:space-between; align-items:center;">
-    <div style="flex: 1; display: flex; align-items: center;">
-        <span class="pagination-info" id="notifications-page-info">
-            {% if latest_notifications_page_obj %}
-                Mostrando {{ latest_notifications_page_obj.start_index }} a
-                {{ latest_notifications_page_obj.end_index }} de {{ latest_notifications_page_obj.paginator.count }}
+                                {% if notification.status == 'GENERADO' %}
+                                    <button type="button" class="btn-green-circle js-sanction-modal-btn"
+                                            data-url="{% url 'sanctions:set_notification_date' notification.pk %}"
+                                            title="Registrar Fecha de Notificación">
+                                        <i class="fa-solid fa-envelope-circle-check"></i>
+                                    </button>
+                                    <button type="button" class="btn-red-circle js-btn-archive"
+                                            data-id="{{ notification.pk }}" title="Archivar Trámite">
+                                        <i class="fa-solid fa-box-archive"></i>
+                                    </button>
+                                    {% if perms.sanctions.change_sanctionnotification %}
+                                        <button type="button" class="btn-tenth js-sanction-modal-btn"
+                                                data-url="{% url 'sanctions:generate_notification' %}?employee_id={{ notification.employee_id }}&notification_id={{ notification.pk }}"
+                                                title="Editar Notificación">
+                                            <i class="fa-solid fa-pen-to-square"></i>
+                                        </button>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
             {% else %}
-                Mostrando 0 a 0 de 0
+                <tr>
+                    <td colspan="9">
+                        <div class="empty-state-container">
+                            <i class="fas fa-bell-slash empty-state-icon"></i>
+                            <p class="empty-state-text">No se encontraron notificaciones registradas.</p>
+                        </div>
+                    </td>
+                </tr>
             {% endif %}
-        </span>
+            </tbody>
+        </table>
     </div>
-
-    {% if latest_notifications_page_obj.paginator.num_pages > 1 %}
-        <div class="page-buttons-wrapper" style="flex: 1; display:flex; justify-content:center;">
-            <ul class="page-buttons pagination-list"
-                style="list-style:none; display:flex; align-items:center; gap:8px; margin:0; padding:0;">
-                <li>
-                    <button id="notifications-btn-first" class="page-btn btn-white-rectangle"
-                            {% if not latest_notifications_page_obj.has_previous %}disabled{% endif %} title="Primera">
-                        <i class="fas fa-angle-double-left"></i>
-                    </button>
-                </li>
-                <li>
-                    <button id="notifications-btn-prev" class="page-btn btn-white-rectangle"
-                            {% if not latest_notifications_page_obj.has_previous %}disabled{% endif %} title="Anterior">
-                        <i class="fas fa-chevron-left"></i>
-                    </button>
-                </li>
-                <li>
-                    <div class="page-input-wrapper">
-                        <input type="number" id="notifications-page-input" class="page-input" min="1"
-                               max="{{ latest_notifications_page_obj.paginator.num_pages }}"
-                               value="{{ latest_notifications_page_obj.number }}">
-                        <span class="total-pages-badge">de {{ latest_notifications_page_obj.paginator.num_pages }}</span>
-                    </div>
-                </li>
-                <li>
-                    <button id="notifications-btn-next" class="page-btn btn-white-rectangle"
-                            {% if not latest_notifications_page_obj.has_next %}disabled{% endif %} title="Siguiente">
-                        <i class="fas fa-chevron-right"></i>
-                    </button>
-                </li>
-                <li>
-                    <button id="notifications-btn-last" class="page-btn btn-white-rectangle"
-                            {% if not latest_notifications_page_obj.has_next %}disabled{% endif %} title="Última">
-                        <i class="fas fa-angle-double-right"></i>
-                    </button>
-                </li>
-            </ul>
-        </div>
-    {% endif %}
-    <div style="flex: 1;"></div>
 </div>
+
+{% if latest_notifications_page_obj.paginator.num_pages > 0 %}
+    <div id="js-pagination-notifications" class="pagination-container">
+        <span class="pagination-info">
+            Mostrando {{ latest_notifications_page_obj.start_index|default:"0" }}-{{ latest_notifications_page_obj.end_index|default:"0" }} de {{ latest_notifications_page_obj.paginator.count|default:"0" }}
+        </span>
+        <div class="pagination-controls"
+             {% if latest_notifications_page_obj.paginator.num_pages <= 1 %}style="visibility:hidden;"{% endif %}>
+            <button type="button"
+                    class="page-btn page-first {% if not latest_notifications_page_obj.has_previous %}disabled{% endif %}"
+                    title="Primera" data-page="1"
+                    {% if not latest_notifications_page_obj.has_previous %}disabled{% endif %}>
+                <i class="fas fa-angle-double-left"></i>
+            </button>
+            <button type="button"
+                    class="page-btn page-prev {% if not latest_notifications_page_obj.has_previous %}disabled{% endif %}"
+                    title="Anterior" data-page="
+                    {% if latest_notifications_page_obj.has_previous %}{{ latest_notifications_page_obj.previous_page_number }}{% else %}1{% endif %}"
+                    {% if not latest_notifications_page_obj.has_previous %}disabled{% endif %}>
+                <i class="fas fa-angle-left"></i>
+            </button>
+            <div class="page-input-wrapper">
+                <input type="number" class="page-input" value="{{ latest_notifications_page_obj.number }}"
+                       min="1" max="{{ latest_notifications_page_obj.paginator.num_pages }}"
+                       data-max-page="{{ latest_notifications_page_obj.paginator.num_pages }}">
+                <span class="total-pages-badge">de {{ latest_notifications_page_obj.paginator.num_pages }}</span>
+            </div>
+            <button type="button"
+                    class="page-btn page-next {% if not latest_notifications_page_obj.has_next %}disabled{% endif %}"
+                    title="Siguiente" data-page="
+                    {% if latest_notifications_page_obj.has_next %}{{ latest_notifications_page_obj.next_page_number }}{% else %}{{ latest_notifications_page_obj.paginator.num_pages }}{% endif %}"
+                    {% if not latest_notifications_page_obj.has_next %}disabled{% endif %}>
+                <i class="fas fa-angle-right"></i>
+            </button>
+            <button type="button"
+                    class="page-btn page-last {% if not latest_notifications_page_obj.has_next %}disabled{% endif %}"
+                    title="Última" data-page="{{ latest_notifications_page_obj.paginator.num_pages }}"
+                    {% if not latest_notifications_page_obj.has_next %}disabled{% endif %}>
+                <i class="fas fa-angle-double-right"></i>
+            </button>
+        </div>
+    </div>
+{% endif %}

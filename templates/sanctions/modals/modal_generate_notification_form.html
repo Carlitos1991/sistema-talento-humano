@@ -1,169 +1,154 @@
 {% load static %}
-
-<div class="modal-container-medium shadow-card">
-    <button type="button" class="btn-close-modal js-close-modal" title="Cerrar">
-        <i class="fas fa-times"></i>
-    </button>
-
-    <div class="modal-header-refined">
-        <div class="header-content-group">
-            <div class="header-icon-circle">
-                <i class="fas fa-bell"></i>
+<div class="modal-overlay">
+    <div class="modal-container-large">
+        <div class="modal-header-medium">
+            <div class="header-content-group">
+                <div class="header-icon-circle">
+                    <i class="fas fa-bell"></i>
+                </div>
+                <h3 class="header-title">{% if is_edit %}Editar Notificación{% else %}Registrar
+                    Notificación{% endif %}</h3>
             </div>
-            <h2 class="header-title-main">
-                {% if is_edit %}
-                    Editar Notificación
-                {% else %}
-                    Registrar Notificación
-                {% endif %}
-            </h2>
+            <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
-    </div>
 
-    <form method="post" action="{% url 'sanctions:generate_notification' %}" id="generateNotificationForm"
-          enctype="multipart/form-data"
-          data-preview-url="{% url 'sanctions:notification_preview' %}">
-        {% csrf_token %}
-        <input type="hidden" name="employee_id" value="{{ employee.id }}">
-        <input type="hidden" name="notification_id" value="{{ notification.id|default:'' }}">
-        <input type="hidden" name="regime_id" value="{{ regime_context.regime.id|default:'' }}">
-
-        <div class="modal-body-scrolled">
+        <div class="modal-body modal-body-custom">
             {% if not regime_context.regime %}
                 <div class="alert alert-warning mb-3">
-                    No se detectó un régimen laboral vigente para este empleado. Asigne un contrato o un régimen activo
-                    antes de generar la notificación.
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <div>No se detectó un régimen laboral vigente para este empleado. Asigne un contrato o régimen
+                        activo.
+                    </div>
                 </div>
             {% endif %}
 
-            <div class="section-card-standard border-left-primary">
-                <h4 class="section-title"><i class="fas fa-user text-primary"></i> INFORMACIÓN DEL EMPLEADO</h4>
-                <div class="p-3 bg-light rounded d-flex align-items-center gap-3">
+            <div class="quick-view-banner-compact">
+                <div class="quick-view-avatar-col">
                     {% if employee.person.photo %}
                         <img src="{{ employee.person.photo.url }}" alt="{{ employee.person.full_name }}"
-                             style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;">
+                             class="avatar-md">
                     {% else %}
-                        <div style="width: 50px; height: 50px; border-radius: 50%; background: #6366f1; display: flex; align-items: center; justify-content: center;">
-                            <i class="fas fa-user" style="color: white;"></i>
+                        <div class="avatar-placeholder-md">
+                            {{ employee.person.last_name|first }}{{ employee.person.first_name|first }}
                         </div>
                     {% endif %}
-                    <div>
-                        <div class="font-weight-700 text-dark">{{ employee.person.full_name }}</div>
-                        <small class="text-muted">CI: {{ employee.person.document_number }}</small><br>
-                        <small class="text-muted">Régimen detectado:
-                            <strong>{{ regime_context.regime.code|default:'Sin definir' }}</strong>
-                            - {{ regime_context.regime.name|default:'Sin definir' }}</small>
+                </div>
+                <div class="quick-view-header-col">
+                    <h2 class="quick-view-name">{{ employee.person.last_name }} {{ employee.person.first_name }}</h2>
+                    <div class="quick-view-subrow">
+                        <span class="text-muted bold small"><i
+                                class="fa-regular fa-id-card me-1"></i>{{ employee.person.document_number|default:"--" }}</span>
+                        <span class="badge badge-blue">Régimen: {{ regime_context.regime.name|default:'Sin definir' }}</span>
                     </div>
                 </div>
             </div>
 
-            <div class="section-card-standard">
-                <h4 class="section-title"><i class="fas fa-file-signature text-primary"></i> DATOS DE LA NOTIFICACIÓN
-                </h4>
-                <div class="grid-2-cols">
-                    <div class="form-group">
-                        <label class="form-label font-weight-700">Tipo de Notificación <span
-                                class="text-danger">*</span></label>
-                        {{ form.notification_type }}
-                        <div class="invalid-feedback"></div>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label font-weight-700">Fecha Registro <span
-                                class="text-danger">*</span></label>
-                        {{ form.registration_date }}
-                        <div class="invalid-feedback"></div>
-                    </div>
-                </div>
-                <div class="grid-3-cols">
-                    <div class="form-group">
-                        <label class="form-label font-weight-700">Mes Notificación <span
-                                class="text-danger">*</span></label>
-                        {{ form.month }}
-                        <div class="invalid-feedback"></div>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label font-weight-700">Año Notificación <span
-                                class="text-danger">*</span></label>
-                        {{ form.year }}
-                        <div class="invalid-feedback"></div>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label font-weight-700">Formato vigente</label>
-                        <input type="text" class="form-control"
-                               value="{{ regime_context.regime.name|default:'Sin régimen' }}" readonly>
-                    </div>
-                </div>
-            </div>
+            <form method="post" action="{% url 'sanctions:generate_notification' %}" id="generateNotificationForm"
+                  autocomplete="off">
+                {% csrf_token %}
+                <input type="hidden" name="employee_id" value="{{ employee.id }}">
+                <input type="hidden" name="notification_id" value="{{ notification.id|default:'' }}">
+                <input type="hidden" name="regime_id" value="{{ regime_context.regime.id|default:'' }}">
 
-            <div class="section-card-standard border-left-success">
-                <h4 class="section-title"><i class="fas fa-file-signature text-primary"></i> FIRMAS DE RESPONSABILIDAD
-                </h4>
-                <div class="grid-2-cols mb-3">
-                    <div class="form-group">
-                        <label class="form-label font-weight-700">Elaborado por <span
-                                class="text-danger">*</span></label>
-                        {{ form.elaborated_by }}
-                        <div class="invalid-feedback"></div>
+                <div class="form-section-card mt-3">
+                    <div class="section-title"><i class="fas fa-file-signature text-green"></i> Datos de la Notificación
                     </div>
-                    <div class="form-group">
-                        <label class="form-label font-weight-700">Revisado por</label>
-                        {{ form.reviewer }}
-                        <div class="invalid-feedback"></div>
+                    <div class="grid-2-cols">
+                        <div class="form-group">
+                            <label class="form-label" for="{{ form.notification_type.id_for_label }}">Tipo de
+                                Notificación *</label>
+                            {{ form.notification_type }}
+                            <div class="invalid-feedback" id="error-notification_type"></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="{{ form.registration_date.id_for_label }}">Fecha Registro
+                                *</label>
+                            {{ form.registration_date }}
+                            <div class="invalid-feedback" id="error-registration_date"></div>
+                        </div>
+                    </div>
+                    <div class="grid-2-cols mt-3">
+                        <div class="form-group">
+                            <label class="form-label" for="{{ form.month.id_for_label }}">Mes *</label>
+                            {{ form.month }}
+                            <div class="invalid-feedback" id="error-month"></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="{{ form.year.id_for_label }}">Año *</label>
+                            {{ form.year }}
+                            <div class="invalid-feedback" id="error-year"></div>
+                        </div>
                     </div>
                 </div>
-                <div class="grid-2-cols">
-                    <div class="form-group">
-                        <label class="form-label font-weight-700">Firma 1 <span class="text-danger">*</span></label>
-                        {{ form.authority_1 }}
-                        <div class="invalid-feedback"></div>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label font-weight-700">Firma 2</label>
-                        {{ form.authority_2 }}
-                        <div class="invalid-feedback"></div>
-                    </div>
-                </div>
-            </div>
 
-            <div class="section-card-standard">
-                <h4 class="section-title"><i class="fas fa-list-ol text-primary"></i> DATOS NUMÉRICOS</h4>
-                <div class="grid-3-cols">
-                    <div class="form-group">
-                        <label class="form-label font-weight-700">Minutos de Atraso</label>
-                        {{ form.minutes_late }}
-                        <div class="invalid-feedback"></div>
+                <div class="form-section-card mt-3">
+                    <div class="section-title"><i class="fas fa-signature text-green"></i> Firmas de Responsabilidad
                     </div>
-                    <div class="form-group">
-                        <label class="form-label font-weight-700">Regs. sin marcar</label>
-                        {{ form.regs_without_mark }}
-                        <div class="invalid-feedback"></div>
+                    <div class="grid-2-cols">
+                        <div class="form-group">
+                            <label class="form-label" for="{{ form.elaborated_by.id_for_label }}">Elaborado por
+                                *</label>
+                            {{ form.elaborated_by }}
+                            <div class="invalid-feedback" id="error-elaborated_by"></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="{{ form.reviewer.id_for_label }}">Revisado por</label>
+                            {{ form.reviewer }}
+                            <div class="invalid-feedback" id="error-reviewer"></div>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label class="form-label font-weight-700">Dias sin marcar</label>
-                        {{ form.days_without_mark }}
-                        <div class="invalid-feedback"></div>
+                    <div class="grid-2-cols mt-3">
+                        <div class="form-group">
+                            <label class="form-label" for="{{ form.authority_1.id_for_label }}">Firma 1 *</label>
+                            {{ form.authority_1 }}
+                            <div class="invalid-feedback" id="error-authority_1"></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="{{ form.authority_2.id_for_label }}">Firma 2</label>
+                            {{ form.authority_2 }}
+                            <div class="invalid-feedback" id="error-authority_2"></div>
+                        </div>
                     </div>
                 </div>
-                <div class="form-group">
-                    <label class="form-label font-weight-700">Observaciones</label>
-                    {{ form.observations }}
-                    <div class="invalid-feedback"></div>
+
+                <div class="form-section-card mt-3">
+                    <div class="section-title"><i class="fas fa-list-ol text-green"></i> Métricas y Observaciones</div>
+                    <div class="grid-3-cols">
+                        <div class="form-group">
+                            <label class="form-label" for="{{ form.minutes_late.id_for_label }}">Minutos Atraso</label>
+                            {{ form.minutes_late }}
+                            <div class="invalid-feedback" id="error-minutes_late"></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="{{ form.regs_without_mark.id_for_label }}">Regs. sin
+                                marcar</label>
+                            {{ form.regs_without_mark }}
+                            <div class="invalid-feedback" id="error-regs_without_mark"></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="{{ form.days_without_mark.id_for_label }}">Días sin
+                                marcar</label>
+                            {{ form.days_without_mark }}
+                            <div class="invalid-feedback" id="error-days_without_mark"></div>
+                        </div>
+                    </div>
+                    <div class="form-group mt-3">
+                        <label class="form-label" for="{{ form.observations.id_for_label }}">Observaciones</label>
+                        {{ form.observations }}
+                        <div class="invalid-feedback" id="error-observations"></div>
+                    </div>
                 </div>
-            </div>
+
+                <div class="modal-footer-fixed">
+                    <button type="button" class="btn-default-outline" onclick="closeModal()">Cancelar</button>
+                    <button type="submit" class="btn-success" {% if not regime_context.regime %}disabled{% endif %}>
+                        <i class="fas fa-save me-1"></i> {% if is_edit %}Actualizar{% else %}Generar{% endif %}
+                        Notificación
+                    </button>
+                </div>
+            </form>
         </div>
-
-        <div class="modal-footer-refined">
-            <button type="button" class="btn-cancel js-close-modal js-close-detail-modal">
-                <i class="fas fa-times"></i> Cancelar
-            </button>
-            <button type="submit" class="btn-save" {% if not regime_context.regime %}disabled{% endif %}>
-                <i class="fas fa-save"></i>
-                {% if is_edit %}
-                    Actualizar Notificación
-                {% else %}
-                    Generar Notificación
-                {% endif %}
-            </button>
-        </div>
-    </form>
+    </div>
 </div>

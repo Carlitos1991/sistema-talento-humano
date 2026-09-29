@@ -1,94 +1,88 @@
-<div class="modal-container-large shadow-card">
-    <!-- Botón de Cerrar (X) -->
-    <button type="button" class="btn-close-modal" data-modal="sanctionHistoryModal" title="Cerrar">
-        <i class="fas fa-times"></i>
-    </button>
+{% load static %}
+<div class="modal-overlay">
+    <div class="modal-container-large">
 
-    <!-- Cabecera Compacta -->
-    <div class="modal-header-refined">
-        <div class="header-content-group">
-            <div class="header-icon-circle">
-                <i class="fas fa-history"></i>
+        <!-- HEADER -->
+        <div class="modal-header-medium">
+            <div class="header-content-group">
+                <div class="header-icon-circle">
+                    <i class="fas fa-history"></i>
+                </div>
+                <h3 class="header-title">Historial de Sanciones</h3>
             </div>
-            <h2 class="header-title-main">
-                Historial de Sanciones
-            </h2>
+            <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
-    </div>
 
-    <!-- Cuerpo con Scroll -->
-    <div class="modal-body-scrolled">
-        <div class="section-card-standard">
-            <h4 class="section-title">
-                <i class="fas fa-user text-primary"></i> Empleado: <strong>{{ employee.person.full_name }}</strong>
-            </h4>
-            <div style="margin-top: 1.5rem;">
-                <table class="table table-striped" style="margin-bottom: 0; font-size: 0.9rem;">
-                    <thead class="table-header-style">
-                    <tr>
-                        <th style="width: 12%;">Fecha Sanción</th>
-                        <th style="width: 15%;">Tipo</th>
-                        <th style="width: 15%;">Gravedad</th>
-                        <th style="width: 20%;">Descripción</th>
-                        <th style="width: 12%;">Estado</th>
-                        <th style="width: 10%;">Acción</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    {% for sanction in sanctions %}
-                        <tr>
-                            <td>{{ sanction.sanction_date|date:"d/m/Y" }}</td>
-                            <td>
-                                <span class="badge badge-info">{{ sanction.sanction_type.name }}</span>
-                            </td>
-                            <td>
-                                <small>{{ sanction.get_severity_display }}</small>
-                            </td>
-                            <td>
-                                <small class="text-truncate" title="{{ sanction.description }}">{{ sanction.description|truncatewords:8 }}</small>
-                            </td>
-                            <td>
-                                <span class="badge badge-{{ sanction.status|lower }}">
-                                    {{ sanction.get_status_display }}
-                                </span>
-                            </td>
-                            <td class="text-center">
-                                {% if sanction.attachment_file %}
-                                    <a href="{{ sanction.attachment_file.url }}" target="_blank" class="btn btn-sm btn-outline-secondary" title="Descargar">
-                                        <i class="fa-solid fa-download"></i>
-                                    </a>
-                                {% endif %}
-                                {% if sanction.personnel_action %}
-                                    <a href="{% url 'personnel_actions:action_detail' sanction.personnel_action.pk %}" target="_blank" class="btn btn-sm btn-outline-primary" title="Ver acción">
-                                        <i class="fa-solid fa-file"></i>
-                                    </a>
-                                {% endif %}
-                            </td>
-                        </tr>
-                    {% empty %}
-                        <tr>
-                            <td colspan="6" class="text-center text-muted py-4">
-                                <i class="fa-solid fa-inbox" style="font-size: 2rem; margin-bottom: 0.5rem;"></i>
-                                <p>No hay sanciones registradas para este empleado</p>
-                            </td>
-                        </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
-
-                {% if sanctions %}
-                    <div style="padding: 1rem; background-color: #f8f9fa; border-top: 1px solid #dee2e6; text-align: right;">
-                        <small class="text-muted"><strong>Total:</strong> {{ total_count }} sanciones</small>
-                    </div>
-                {% endif %}
+        <!-- BODY -->
+        <div class="modal-body modal-body-custom">
+            <div class="quick-view-banner-compact">
+                <div class="quick-view-header-col">
+                    <h2 class="quick-view-name">{{ employee.person.full_name }}</h2>
+                    <span class="text-muted small">C.I. {{ employee.person.document_number|default:"--" }}</span>
+                </div>
             </div>
-        </div>
-    </div>
 
-    <!-- Footer con botones -->
-    <div class="modal-footer-refined">
-        <button type="button" class="btn-cancel" data-modal="sanctionHistoryModal">
-            <i class="fas fa-times"></i> Cerrar
-        </button>
+            {% if sanctions %}
+                <div class="modal-table-container mt-3">
+                    <table class="modal-table">
+                        <thead>
+                        <tr>
+                            <th>Fecha Sanción</th>
+                            <th>Tipo</th>
+                            <th>Gravedad</th>
+                            <th>Descripción</th>
+                            <th class="text-center">Estado</th>
+                            <th class="text-center actions">Acción</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for sanction in sanctions %}
+                            <tr>
+                                <td>{{ sanction.sanction_date|date:"d/m/Y" }}</td>
+                                <td class="bold text-primary">{{ sanction.sanction_type.name }}</td>
+                                <td><small>{{ sanction.get_severity_display }}</small></td>
+                                <td><small>{{ sanction.description|default:"--"|truncatewords:10 }}</small></td>
+                                <td class="text-center">
+                                        <span class="badge {% if sanction.status == 'ACTIVE' or sanction.status == 'REGISTERED' %}badge-green{% elif sanction.status == 'COMPLETED' %}badge-blue{% else %}badge-red{% endif %}">
+                                            {{ sanction.get_status_display }}
+                                        </span>
+                                </td>
+                                <td class="text-center">
+                                    <div class="actions-wrapper">
+                                        {% if sanction.attachment_file %}
+                                            <a href="{{ sanction.attachment_file.url }}" target="_blank"
+                                               class="btn-tenth" title="Descargar Respaldo">
+                                                <i class="fa-solid fa-download"></i>
+                                            </a>
+                                        {% endif %}
+                                        {% if sanction.personnel_action %}
+                                            <button type="button" class="btn-blue-circle js-sanction-modal-btn"
+                                                    data-url="{% url 'personnel_actions:action_detail' sanction.personnel_action.pk %}"
+                                                    title="Ver Acción de Personal">
+                                                <i class="fa-solid fa-file-contract"></i>
+                                            </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="empty-state-container">
+                    <i class="fas fa-file-circle-xmark empty-state-icon"></i>
+                    <p class="empty-state-text">No hay sanciones registradas para este empleado.</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- FOOTER -->
+        <div class="modal-footer-fixed">
+            <button type="button" class="btn-default-outline" onclick="closeModal()">Cerrar</button>
+        </div>
+
     </div>
 </div>

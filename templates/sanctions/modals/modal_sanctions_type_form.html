@@ -1,111 +1,101 @@
-<div class="modal-container-medium shadow-card animate-scale-in" style="max-width: 600px;">
-    <form id="modalForm" method="post" action="
+{% load static %}
+<div class="modal-overlay">
+    <div class="modal-container-medium">
 
-
-
-
-
-            
-            {% if form.instance.pk %}{% url 'sanctions:sanction_type_update' form.instance.pk %}{% else %}{% url 'sanctions:sanction_type_create' %}{% endif %}">
-        {% csrf_token %}
-
-        <!-- HEADER con estilo gradient -->
-        <div class="modal-header-medium modal-header-gradient">
-            <h3 class="modal-title text-white">
-                <i class="fa-solid fa-gavel me-2"></i>
-                {% if form.instance.pk %}Editar Tipo de Sanción{% else %}Nuevo Tipo de Sanción{% endif %}
-            </h3>
-            <button type="button" class="btn-close-modal text-white-opacity js-close-modal">
+        <!-- HEADER -->
+        <div class="modal-header-medium">
+            <div class="header-content-group">
+                <div class="header-icon-circle">
+                    <i class="fas fa-gavel"></i>
+                </div>
+                <h3 class="header-title">{% if form.instance.pk %}Editar Tipo de Sanción{% else %}Nuevo Tipo de
+                    Sanción{% endif %}</h3>
+            </div>
+            <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
                 <i class="fas fa-times"></i>
             </button>
         </div>
 
-        <!-- BODY con estilo gris suave -->
-        <div class="modal-body-content modal-body-custom">
-            <!-- Error global -->
-            <div id="global-errors" style="display:none;" class="alert alert-danger mb-3"></div>
+        <!-- BODY -->
+        <div class="modal-body modal-body-custom">
+            <form id="sanctionTypeForm" method="post" action="
+                    {% if form.instance.pk %}{% url 'sanctions:sanction_type_update' form.instance.pk %}{% else %}{% url 'sanctions:sanction_type_create' %}{% endif %}"
+                  autocomplete="off">
+                {% csrf_token %}
 
-            <div class="form-group">
-                <label class="form-label">
-                    <i class="fa-solid fa-tag"></i> Nombre de la Sanción <span class="text-danger">*</span>
-                </label>
-                {{ form.name }}
-                <div class="invalid-feedback"></div>
-                <p class="form-hint">Nombre descriptivo del tipo de sanción.</p>
-            </div>
+                <div class="form-section-card">
+                    <div class="form-group">
+                        <label class="form-label" for="{{ form.name.id_for_label }}">Nombre de la Sanción *</label>
+                        {{ form.name }}
+                        <div class="invalid-feedback" id="error-name"></div>
+                    </div>
 
-            <div class="form-group">
-                <label class="form-label">
-                    <i class="fa-solid fa-align-left"></i> Descripción
-                </label>
-                {{ form.description }}
-                <div class="invalid-feedback"></div>
-                <p class="form-hint">Descripción detallada del tipo de sanción.</p>
-            </div>
-
-            <!-- Título de sección -->
-            <div class="section-title mt-3">
-                <i class="fa-solid fa-sliders"></i> Configuración
-            </div>
-
-            <!-- Grid de toggles usando grid-2-cols -->
-            <div class="grid-2-cols">
-                <!-- Toggle 1: Requiere Adjunto -->
-                <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-white">
-                    <label class="form-label mb-0" for="{{ form.requires_attachment.id_for_label }}">¿Requiere
-                        Adjunto?</label>
-                    <label class="toggle-switch">
-                        {{ form.requires_attachment }}
-                        <span class="toggle-slider"></span>
-                    </label>
+                    <div class="form-group mt-3">
+                        <label class="form-label" for="{{ form.description.id_for_label }}">Descripción</label>
+                        {{ form.description }}
+                        <div class="invalid-feedback" id="error-description"></div>
+                    </div>
                 </div>
 
-                <!-- Toggle 2: Estado Activo -->
-                <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-white">
-                    <label class="form-label mb-0" for="{{ form.is_active.id_for_label }}">Estado Activo</label>
-                    <label class="toggle-switch">
-                        {{ form.is_active }}
-                        <span class="toggle-slider"></span>
-                    </label>
+                <div class="form-section-card mt-3">
+                    <div class="section-title"><i class="fas fa-sliders text-green"></i> Opciones Generales</div>
+                    <div class="grid-2-cols">
+                        <div class="form-group mb-0">
+                            <label class="form-label">¿Requiere Adjunto?</label>
+                            <label class="switch-wrapper">
+                                {{ form.requires_attachment }}
+                                <span class="switch-circle"></span>
+                                <span class="switch-text">Obligatorio</span>
+                            </label>
+                        </div>
+                        <div class="form-group mb-0">
+                            <label class="form-label">Estado</label>
+                            <label class="switch-wrapper">
+                                {{ form.is_active }}
+                                <span class="switch-circle"></span>
+                                <span class="switch-text">Activo</span>
+                            </label>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            <div class="section-title mt-3">
-                <i class="fa-solid fa-sliders"></i> Firmas Autorizadas
-            </div>
-            <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-white">
-                <label for="{{ form.authority_1.id_for_label }}">
-                    Firma 1
-                </label>
-                {{ form.authority_1 }}
-            </div>
-            <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-white">
-                <label for="{{ form.authority_2.id_for_label }}">
-                    Firma 2
-                </label>
-                {{ form.authority_2 }}
-            </div>
-            <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-white">
-                <label for="{{ form.authority_2.id_for_label }}">
-                    Revisado
-                </label>
-                {{ form.reviewer }}
-            </div>
-            <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-white">
-                <label for="{{ form.authority_2.id_for_label }}">
-                    Registrado
-                </label>
-                {{ form.register }}
-            </div>
+
+                <div class="form-section-card mt-3">
+                    <div class="section-title"><i class="fas fa-signature text-green"></i> Firmas Autorizadas</div>
+                    <div class="grid-2-cols">
+                        <div class="form-group">
+                            <label class="form-label" for="{{ form.authority_1.id_for_label }}">Firma 1</label>
+                            {{ form.authority_1 }}
+                            <div class="invalid-feedback" id="error-authority_1"></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="{{ form.authority_2.id_for_label }}">Firma 2</label>
+                            {{ form.authority_2 }}
+                            <div class="invalid-feedback" id="error-authority_2"></div>
+                        </div>
+                    </div>
+                    <div class="grid-2-cols mt-3">
+                        <div class="form-group">
+                            <label class="form-label" for="{{ form.reviewer.id_for_label }}">Revisado por</label>
+                            {{ form.reviewer }}
+                            <div class="invalid-feedback" id="error-reviewer"></div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="{{ form.register.id_for_label }}">Registrado por</label>
+                            {{ form.register }}
+                            <div class="invalid-feedback" id="error-register"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FOOTER -->
+                <div class="modal-footer-fixed">
+                    <button type="button" class="btn-default-outline" onclick="closeModal()">Cancelar</button>
+                    <button type="submit" class="btn-success">
+                        <i class="fas fa-save me-1"></i> Guardar
+                    </button>
+                </div>
+            </form>
         </div>
 
-        <!-- FOOTER con botones -->
-        <div class="modal-footer-medium modal-footer-spaced">
-            <button type="button" class="btn-cancel js-close-modal">
-                <i class="fa-solid fa-times"></i> Cancelar
-            </button>
-            <button type="submit" class="btn-save">
-                <i class="fa-solid fa-save"></i> Guardar
-            </button>
-        </div>
-    </form>
+    </div>
 </div>
