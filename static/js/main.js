@@ -687,7 +687,6 @@ class TableManager {
         clickedTh.classList.add(this.sortAsc ? 'sorted-asc' : 'sorted-desc');
         const arrow = clickedTh.querySelector('.sort-arrow');
         if (arrow) arrow.innerText = this.sortAsc ? '↑' : '↓';
-
         if (this.externalPagination || this.externalSearch) {
             const headerEl = allHeaders[colIndex];
             const field = headerEl?.dataset?.field || null;

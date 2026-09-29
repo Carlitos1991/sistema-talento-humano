@@ -1,17 +1,17 @@
 {% load static %}
 <div id="wizardModalOverlay" class="modal-overlay hidden" role="dialog" aria-modal="true">
     <div class="modal-container-xl animate-scale-in">
-        <!-- HEADER -->
-        <div class="modal-header-medium modal-header-gradient">
+        <!-- HEADER ESTANDARIZADO -->
+        <div class="modal-header-medium">
             <div class="header-content-group">
                 <div class="header-icon-circle"><i class="fas fa-file-signature"></i></div>
-                <h3 class="modal-title text-white mb-0" id="wizard-modal-title">
+                <h3 class="header-title" id="wizard-modal-title">
                     Nuevo Inicio de Gestión
                 </h3>
             </div>
 
-            <!-- STEPPER -->
-            <div class="wizard-stepper-container ms-auto me-5">
+            <!-- STEPPER NATIVO -->
+            <div class="wizard-stepper-container ms-auto me-4">
                 <div class="wizard-step active" id="step-indicator-1">
                     <div class="step-number">1</div>
                     <span class="step-label">MODALIDAD</span>
@@ -25,7 +25,11 @@
                     <span class="step-label">DATOS</span>
                 </div>
             </div>
-            <button type="button" class="btn-close-circle" id="btn-close-wizard-top">&times;</button>
+
+            <!-- BOTÓN CERRAR IDÉNTICO AL ESTÁNDAR GLOBAL -->
+            <button type="button" class="btn-close-circle" id="btn-close-wizard-top" title="Cerrar">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
 
         <form id="wizardForm">
@@ -63,18 +67,25 @@
 
                 <!-- PASO 2: BUSCADOR DE CÉDULA -->
                 <div id="wizard-step-2" class="wizard-step-pane hidden">
-                    <div class="form-section-card py-5 text-center">
-                        <div class="avatar-placeholder-md mx-auto mb-4"><i class="fas fa-id-card-alt fa-2x"></i></div>
-                        <h4 class="font-weight-800">Validación de Identidad</h4>
+                    <div class="form-section-card wizard-step-centered-card">
+                        <div class="avatar-placeholder-md mb-3">
+                            <i class="fas fa-id-card-alt fa-2x"></i>
+                        </div>
+                        <h4 class="font-weight-800 mb-2">Validación de Identidad</h4>
                         <p class="text-muted mb-4" id="wizard-identity-prompt-text">
                             Ingrese la cédula para validar al empleado y heredar su partida.
                         </p>
-                        <div class="search-box mx-auto" style="max-width: 450px;">
-                            <input type="text" id="wizard-search-doc-input" class="form-control with-icon"
-                                   placeholder="Cédula..." autocomplete="off">
-                            <button type="button" class="btn-search" id="btn-validate-employee">
-                                <span>VALIDAR</span>
-                            </button>
+
+                        <!-- CAJA DE BÚSQUEDA INTEGRADA CON BOTÓN A LA PAR -->
+                        <div class="wizard-identity-search-wrapper">
+                            <div class="wizard-search-input-group">
+                                <input type="text" id="wizard-search-doc-input" class="wizard-search-field"
+                                       placeholder="Ingrese número de cédula..." autocomplete="off">
+                                <button type="button" class="wizard-search-btn" id="btn-validate-employee"
+                                        title="Validar Cédula">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -237,11 +248,12 @@
                 </div>
             </div>
 
-            <div class="modal-footer-medium modal-footer-spaced">
-                <button type="button" class="btn-cancel" id="btn-wizard-prev">ANTERIOR</button>
-                <button type="button" class="btn-cancel" id="btn-wizard-cancel">CANCELAR</button>
-                <button type="submit" class="btn-save hidden" id="btn-wizard-submit">
-                    <i class="fas fa-check-double"></i> FINALIZAR GESTIÓN
+            <!-- FOOTER CON BOTONES ESTANDARIZADOS DE STYLE.CSS -->
+            <div class="modal-footer-medium wizard-footer-actions">
+                <button type="button" class="btn-dark-blue-rectangle-outline" id="btn-wizard-prev">ANTERIOR</button>
+                <button type="button" class="btn-dark-blue-rectangle-outline" id="btn-wizard-cancel">CANCELAR</button>
+                <button type="submit" class="btn-blue-rectangle hidden" id="btn-wizard-submit">
+                    <i class="fas fa-check-double me-1"></i> FINALIZAR GESTIÓN
                 </button>
             </div>
         </form>

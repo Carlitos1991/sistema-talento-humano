@@ -24,24 +24,15 @@
             line-height: 1.42;
             margin: 0;
             position: relative;
-        {% if is_pdf %}
-            background: transparent;
-        {% else %}
-            background: #eef1f4;
-        {% endif %}
+            background: {% if is_pdf %}transparent{% else %}#eef1f4{% endif %};
         }
 
         .document-page {
             position: relative;
             width: 210mm;
             min-height: 297mm;
-        {% if is_pdf %}
-            margin: 0;
-            box-shadow: none;
-        {% else %}
-            margin: 14px auto;
-            box-shadow: 0 2px 16px rgba(17, 24, 39, 0.18);
-        {% endif %}
+            margin: {% if is_pdf %}0{% else %}14px auto{% endif %};
+            box-shadow: {% if is_pdf %}none{% else %}0 2px 16px rgba(17, 24, 39, 0.18){% endif %};
             background: #ffffff;
             overflow: hidden;
         }
@@ -125,19 +116,44 @@
             text-transform: uppercase;
         }
 
+        .print-tools {
+            padding: 10px 16px;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            gap: 10px;
+            background: #ffffff;
+        }
+
+        .print-tools button {
+            padding: 6px 14px;
+            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+            background: #f8fafc;
+            color: #1e293b;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .print-tools button:hover {
+            background: #e2e8f0;
+        }
+
         @media print {
             .print-tools {
                 display: none !important;
             }
+
             body {
                 background: transparent;
             }
+
             .document-page {
                 width: 210mm;
                 min-height: 297mm;
                 margin: 0;
                 box-shadow: none;
             }
+
             .document-content {
                 padding: 3.1cm 2.2cm 1.8cm 2.2cm;
             }
@@ -146,17 +162,17 @@
 </head>
 <body>
 {% if not is_pdf %}
-<div class="print-tools" style="padding: 10px 16px; border-bottom: 1px solid #e5e7eb; display: flex; gap: 10px;">
-    <button onclick="window.print()">Imprimir</button>
-    <button onclick="window.close()">Cerrar</button>
-</div>
+    <div class="print-tools">
+        <button type="button" onclick="window.print()">Imprimir</button>
+        <button type="button" onclick="window.close()">Cerrar</button>
+    </div>
 {% endif %}
 
 <div class="document-page">
     {% if letterhead_path %}
-    <div class="letterhead">
-        <img src="{{ letterhead_path }}" alt="Membretada">
-    </div>
+        <div class="letterhead">
+            <img src="{{ letterhead_path }}" alt="Membrete">
+        </div>
     {% endif %}
 
     <div class="document-content">

@@ -1,23 +1,23 @@
 {% load static %}
 <div id="detailModalOverlay" class="modal-overlay hidden" role="dialog" aria-modal="true">
     <div class="modal-container-xl shadow-card animate-scale-in">
-        <button type="button" id="btn-close-detail-top" class="btn-close-circle">
-            <i class="fas fa-times"></i>
-        </button>
-
-        <div class="modal-header-refined">
+        <div class="modal-header-medium">
             <div class="header-content-group">
                 <div class="header-icon-circle"><i class="fas fa-folder-open"></i></div>
                 <div>
-                    <h2 class="header-title-main">Expediente de Gestión Laboral</h2>
+                    <h3 class="header-title mb-1">Expediente de Gestión Laboral</h3>
                     <p class="text-white-opacity small mb-0">
                         Documento: <strong id="detail-document-number">-</strong>
                     </p>
                 </div>
             </div>
-            <div class="ms-auto me-5">
+
+            <div class="d-flex align-items-center gap-3 ms-auto">
                 <button type="button" id="btn-detail-edit" class="btn-views-action hidden" title="Modificar Expediente">
                     <i class="fas fa-edit"></i>
+                </button>
+                <button type="button" id="btn-close-detail-top" class="btn-close-circle" title="Cerrar">
+                    <i class="fas fa-times"></i>
                 </button>
             </div>
         </div>
@@ -70,8 +70,10 @@
                 </div>
             </div>
 
-            <div class="modal-footer-fixed">
-                <button type="button" id="btn-close-detail-bottom" class="btn-cancel">CERRAR EXPEDIENTE</button>
+            <div class="modal-footer-medium modal-footer-spaced">
+                <button type="button" id="btn-close-detail-bottom" class="btn-dark-blue-rectangle-outline">CERRAR
+                    EXPEDIENTE
+                </button>
             </div>
         </div>
     </div>

@@ -1,93 +1,94 @@
-<!-- templates/contract/modals/modal_management_period_advanced_search.html -->
-<div class="search-modal-overlay" v-if="showAdvancedModal" v-cloak>
-    <div class="search-modal-container">
-        <button type="button" class="btn-close-modal-refined" @click="closeAdvancedModal">
-            <i class="fas fa-times"></i>
-        </button>
-
-        <div class="modal-header-medium modal-header-gradient">
+{% load static %}
+<div id="advancedSearchModalOverlay" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-container-medium shadow-card animate-scale-in">
+        <div class="modal-header-medium">
             <div class="header-content-group">
                 <div class="header-icon-circle"><i class="fas fa-search"></i></div>
-                <h3 class="modal-title text-white mb-0">Búsqueda Avanzada de Gestión</h3>
+                <h3 class="header-title mb-0">Búsqueda Avanzada de Gestión</h3>
             </div>
-        </div>
-
-        <div class="modal-body-content modal-body-custom">
-            <div class="section-title">
-                <i class="fas fa-user-tie"></i> Información del Personal
-            </div>
-            <div class="form-section-card">
-                <div class="grid-2-cols">
-                    <div class="form-group">
-                        <label class="form-label">Nombre o Cédula</label>
-                        <input type="text" v-model="advancedFilters.q" class="input-field" placeholder="Ej: Juan Pérez">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Unidad Administrativa</label>
-                        <select v-model="advancedFilters.unit" class="input-field">
-                            <option value="">Todas las dependencias</option>
-                            {% for unit in units %}
-                                <option value="{{ unit.id }}">{{ unit.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-            </div>
-
-            <div class="section-title mt-3">
-                <i class="fas fa-file-contract"></i> Detalles del Vínculo
-            </div>
-            <div class="form-section-card">
-                <div class="grid-3-cols">
-                    <div class="form-group">
-                        <label class="form-label">Régimen Laboral</label>
-                        <select v-model="advancedFilters.regime" class="input-field">
-                            <option value="">Todos</option>
-                            {% for regime in regimes %}
-                                <option value="{{ regime.id }}">{{ regime.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Nro. Documento / Acción</label>
-                        <input type="text" v-model="advancedFilters.doc_number" class="input-field">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Estado de Gestión</label>
-                        <select v-model="advancedFilters.status_code" class="input-field">
-                            <option value="">Cualquier estado</option>
-                            <option value="SIN_FIRMAR">Sin Firmar</option>
-                            <option value="FIRMADO">Firmado / Legalizado</option>
-                            <option value="FINALIZADO">Finalizado</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-
-            <div class="section-title mt-3">
-                <i class="fas fa-calendar-day"></i> Rango de Vigencia (Inicio)
-            </div>
-            <div class="form-section-card">
-                <div class="grid-2-cols">
-                    <div class="form-group">
-                        <label class="form-label">Desde</label>
-                        <input type="date" v-model="advancedFilters.date_from" class="input-field">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Hasta</label>
-                        <input type="date" v-model="advancedFilters.date_to" class="input-field">
-                    </div>
-                </div>
-            </div>
-        </div>
-
-       <div class="modal-footer-medium modal-footer-spaced">
-            <button type="button" class="btn-cancel" @click="resetAdvancedFilters">
-                <i class="fas fa-eraser me-2"></i> Limpiar Filtros
-            </button>
-            <button type="button" class="btn-save" @click="applyAdvancedSearch">
-                <i class="fas fa-search me-2"></i> Ejecutar Búsqueda
+            <button type="button" class="btn-close-circle" id="btn-close-advanced-search-top" title="Cerrar">
+                <i class="fas fa-times"></i>
             </button>
         </div>
+
+        <form id="advancedSearchForm">
+            <div class="modal-body-content modal-body-custom">
+                <div class="section-title">
+                    <i class="fas fa-user-tie"></i> Información del Personal
+                </div>
+                <div class="form-section-card">
+                    <div class="grid-2-cols">
+                        <div class="form-group mb-0">
+                            <label class="form-label" for="adv_q">Nombre o Cédula</label>
+                            <input type="text" id="adv_q" name="q" class="input-field" placeholder="Ej: Juan Pérez">
+                        </div>
+                        <div class="form-group mb-0">
+                            <label class="form-label" for="adv_unit">Unidad Administrativa</label>
+                            <select id="adv_unit" name="unit" class="input-field select2">
+                                <option value="">Todas las dependencias</option>
+                                {% for unit in units %}
+                                    <option value="{{ unit.id }}">{{ unit.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-title mt-3">
+                    <i class="fas fa-file-contract"></i> Detalles del Vínculo
+                </div>
+                <div class="form-section-card">
+                    <div class="grid-3-cols">
+                        <div class="form-group mb-0">
+                            <label class="form-label" for="adv_regime">Régimen Laboral</label>
+                            <select id="adv_regime" name="regime_code" class="input-field select2">
+                                <option value="">Todos</option>
+                                {% for regime in regimes %}
+                                    <option value="{{ regime.code }}">{{ regime.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group mb-0">
+                            <label class="form-label" for="adv_doc_number">Nro. Documento / Acción</label>
+                            <input type="text" id="adv_doc_number" name="doc_number" class="input-field" placeholder="EJ: ML-DTH-...">
+                        </div>
+                        <div class="form-group mb-0">
+                            <label class="form-label" for="adv_status">Estado de Gestión</label>
+                            <select id="adv_status" name="status_code" class="input-field select2">
+                                <option value="">Cualquier estado</option>
+                                <option value="SIN_FIRMAR">Sin Firmar</option>
+                                <option value="FIRMADO">Firmado / Legalizado</option>
+                                <option value="FINALIZADO">Finalizado</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-title mt-3">
+                    <i class="fas fa-calendar-day"></i> Rango de Vigencia (Inicio)
+                </div>
+                <div class="form-section-card mb-0">
+                    <div class="grid-2-cols">
+                        <div class="form-group mb-0">
+                            <label class="form-label" for="adv_date_from">Desde</label>
+                            <input type="date" id="adv_date_from" name="date_from" class="input-field">
+                        </div>
+                        <div class="form-group mb-0">
+                            <label class="form-label" for="adv_date_to">Hasta</label>
+                            <input type="date" id="adv_date_to" name="date_to" class="input-field">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer-medium modal-footer-spaced">
+                <button type="button" class="btn-dark-blue-rectangle-outline" id="btn-reset-advanced-filters">
+                    <i class="fas fa-eraser me-1"></i> Limpiar Filtros
+                </button>
+                <button type="submit" class="btn-blue-rectangle" id="btn-submit-advanced-search">
+                    <i class="fas fa-search me-1"></i> Ejecutar Búsqueda
+                </button>
+            </div>
+        </form>
     </div>
 </div>

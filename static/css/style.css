@@ -3042,22 +3042,31 @@ th a.active .sort-icon {
 }
 
 .sort-arrow {
-    font-size: 1.4em;
+    font-size: 1.3em;
     color: #b0b7c3;
-    margin-left: 8px;
+    margin-left: 6px;
     vertical-align: middle;
-    transition: color 0.2s, transform 0.2s;
     display: inline-block;
+    line-height: 1;
+    font-weight: normal;
+    -webkit-text-stroke: 0px transparent;
+    transition: color 0.2s ease, transform 0.2s ease;
 }
 
+/* Estado Ascendente: Verde nítido, grueso y orientado arriba */
 th.sorted-asc .sort-arrow {
-    color: #28af23;
-    transform: rotate(180deg);
+    color: #10b981 !important;
+    font-weight: 900;
+    -webkit-text-stroke: 0.9px #10b981;
+    transform: none !important;
 }
 
+/* Estado Descendente: Rojo nítido, grueso y orientado abajo */
 th.sorted-desc .sort-arrow {
-    color: #ef4444;
-    transform: rotate(0deg);
+    color: #ef4444 !important;
+    font-weight: 900;
+    -webkit-text-stroke: 0.9px #ef4444;
+    transform: none !important;
 }
 
 /* Actions wrapper en tabla general */

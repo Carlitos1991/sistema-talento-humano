@@ -1,0 +1,104 @@
+/* =====================================================================
+   MÓDULO DE HORARIOS (SCHEDULE) - ESTILOS DEDICADOS
+   ===================================================================== */
+
+/* Matriz interactiva de selección de días */
+.days-matrix {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.day-item {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: 2px solid #cbd5e1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    background-color: #ffffff;
+    user-select: none;
+    transition: all 0.2s ease;
+}
+
+.day-item:hover {
+    border-color: var(--accent-color, #059669);
+    background-color: #f0fdf4;
+}
+
+.day-item.active {
+    background-color: var(--primary-color, #203c7d);
+    border-color: var(--primary-color, #203c7d);
+    color: #ffffff;
+    box-shadow: 0 4px 8px rgba(32, 60, 125, 0.25);
+}
+
+.day-item.active .day-label {
+    color: #ffffff;
+}
+
+.day-label {
+    font-weight: 800;
+    font-size: 0.85rem;
+    color: #475569;
+}
+
+/* Badges específicos de rango de tiempo en tabla */
+.badge-time {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background-color: #f1f5f9;
+    color: #334155;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    font-family: 'Inter', monospace, sans-serif;
+}
+
+.badge-time.badge-time-secondary {
+    background-color: #ecfdf5;
+    color: #065f46;
+    border-color: #a7f3d0;
+}
+
+/* Modal de Historial de Horarios */
+#schedule-history-modal .modal-body-scrolled {
+    padding: 1rem 1.5rem;
+}
+
+#schedule-history-modal .history-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 0;
+}
+
+#schedule-history-modal .history-table th {
+    text-align: left;
+    padding: 0.55rem 0.75rem;
+    font-weight: 700;
+    font-size: 0.8rem;
+    background-color: #f8fafc;
+    color: #1e293b;
+    border-bottom: 1px solid #e2e8f0;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+#schedule-history-modal .history-table td {
+    padding: 0.65rem 0.75rem;
+    font-size: 0.85rem;
+    color: #334155;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+}
+
+#schedule-history-modal .history-table tbody tr:hover {
+    background-color: #f8fafc;
+}

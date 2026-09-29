@@ -16,6 +16,8 @@ from django.shortcuts import get_object_or_404
 from django.shortcuts import redirect
 from django.shortcuts import render
 from django.urls import reverse
+from django.db.models import Q, CharField
+from django.db.models.functions import Coalesce, Lower
 from django.template.loader import render_to_string
 from django.utils.decorators import method_decorator
 from django.utils import timezone
@@ -23,7 +25,7 @@ from django.utils.html import escape
 from django.utils.safestring import mark_safe
 from django.views.decorators.http import require_http_methods
 from django.views.generic import ListView, View
-
+from django.db.models.functions import Coalesce
 from budget.models import BudgetModificationHistory, BudgetAssignmentHistory
 from core.models import CatalogItem
 from core.models import SystemConfiguration
@@ -43,9 +45,32 @@ from .models import (
     ContractTemplateSection,
 )
 
+PERIOD_SORT_FIELDS = {
+    'employee': 'employee_sort_name',
+    'document_number': 'employee__person__document_number',
+    'budget_line': 'position_sort_name',
+    'unit': 'administrative_unit__name',
+    'contract_type': 'contract_type__name',
+    'start_date': 'start_date',
+    'end_date': 'end_date',
+    'status': 'status__name',
+    'created_at': 'created_at',
+}
+
 
 def _normalize_contract_template_content(content):
     return (content or '').replace('\r\n', '\n').replace('\r', '\n').strip()
+
+
+def _parse_period_sort(request):
+    sort_field = (request.GET.get('sort_field') or 'created_at').strip()
+    sort_dir = (request.GET.get('sort_dir') or 'desc').strip().lower()
+
+    mapped_field = PERIOD_SORT_FIELDS.get(sort_field, 'created_at')
+
+    if sort_dir == 'desc':
+        return [f'-{mapped_field}', '-pk']
+    return [mapped_field, 'pk']
 
 
 def _render_contract_inline_formatting(content):
@@ -909,8 +934,8 @@ class ManagementPeriodNotificationListView(LoginRequiredMixin, PermissionRequire
     paginate_by = 10
 
     def get_ordering(self):
-        sort = (self.request.GET.get('sort') or 'end_date').strip()
-        direction = (self.request.GET.get('direction') or 'asc').strip().lower()
+        sort = (self.request.GET.get('sort_field') or self.request.GET.get('sort') or 'end_date').strip()
+        direction = (self.request.GET.get('sort_dir') or self.request.GET.get('direction') or 'asc').strip().lower()
         allowed = {
             'last_name': 'employee__person__last_name',
             'document': 'employee__person__document_number',
@@ -1101,15 +1126,25 @@ class ManagementPeriodListView(LoginRequiredMixin, PermissionRequiredMixin, JSON
     paginate_by = 10
 
     def get_queryset(self):
+        # Anotamos el nombre del cargo unificado y en minúsculas para un orden alfabético estricto
         queryset = ManagementPeriod.objects.select_related(
             'employee__person',
             'budget_line__position_item',
             'contract_type__labor_regime',
             'administrative_unit',
             'status'
-        ).prefetch_related('history_set').order_by('-created_at')
+        ).prefetch_related('history_set').annotate(
+            position_sort_name=Lower(
+                Coalesce(
+                    'budget_line__position_item__name',
+                    'manual_position',
+                    output_field=CharField()
+                )
+            ),
+            employee_sort_name=Lower('employee__person__last_name')
+        )
 
-        # 1. Filtros por Query Parameters
+        # 1. Filtros de búsqueda
         q = (self.request.GET.get('q') or '').strip()
         regime_code = (self.request.GET.get('regime_code') or '').strip()
         unit_id = (self.request.GET.get('unit') or '').strip()
@@ -1150,7 +1185,9 @@ class ManagementPeriodListView(LoginRequiredMixin, PermissionRequiredMixin, JSON
         if date_to:
             queryset = queryset.filter(start_date__lte=date_to)
 
-        return queryset
+        # 2. Ordenamiento en Base de Datos de toda la búsqueda
+        order_by = _parse_period_sort(self.request)
+        return queryset.order_by(*order_by)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -1172,6 +1209,8 @@ class ManagementPeriodListView(LoginRequiredMixin, PermissionRequiredMixin, JSON
             'date_from': (self.request.GET.get('date_from') or '').strip(),
             'date_to': (self.request.GET.get('date_to') or '').strip(),
             'document_numbers': (self.request.GET.get('document_numbers') or '').strip(),
+            'sort_field': self.request.GET.get('sort_field', 'created_at'),
+            'sort_dir': self.request.GET.get('sort_dir', 'desc'),
         }
         return context
 

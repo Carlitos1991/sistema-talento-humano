@@ -1,6 +1,6 @@
 /**
  * SIGETH - Management Period Module
- * Follows the exact architecture of permit.js
+ * Uses global TableManager from main.js for sorting and pagination
  */
 
 (function () {
@@ -16,7 +16,7 @@
     });
 
     // =========================================================================
-    // 1. SELECT2 & FILTER MANAGEMENT (MIRRORS PERMIT.JS)
+    // 1. SELECT2 & FILTER MANAGEMENT
     // =========================================================================
 
     function initSelect2Filters() {
@@ -44,6 +44,23 @@
     function applyPeriodFilters(page = 1) {
         const params = collectFilters();
         params.page = page;
+
+        // Conservar orden actual si existe
+        if (window._currentTableSort) {
+            const table = document.querySelector('.managed-table');
+            if (table) {
+                const ths = table.querySelectorAll('thead th');
+                const th = ths[window._currentTableSort.col];
+                if (th && th.dataset.field) {
+                    params.sort_field = th.dataset.field;
+                    params.sort_dir = window._currentTableSort.asc ? 'asc' : 'desc';
+                }
+            }
+        }
+
+        const searchParams = new URLSearchParams(params);
+        window.history.pushState(null, '', '?' + searchParams.toString());
+
         if (typeof window.refreshCurrentTable === 'function') {
             window.refreshCurrentTable(params);
         }
@@ -63,11 +80,9 @@
             }
         }
         window.clearLoadedIdentifications();
-        applyPeriodFilters(1);
-    };
 
-    window.applyPeriodPagination = function (page) {
-        applyPeriodFilters(page);
+        window.history.pushState(null, '', window.location.pathname);
+        applyPeriodFilters(1);
     };
 
     function initSearchDebounce() {
@@ -90,7 +105,7 @@
     }
 
     // =========================================================================
-    // 2. EXCEL IDENTIFICATION UPLOADER (1 MB STRICT)
+    // 2. EXCEL IDENTIFICATION UPLOADER
     // =========================================================================
 
     function initIdentificationExcelUpload() {
@@ -468,7 +483,7 @@
         } finally {
             if (btn) {
                 btn.disabled = false;
-                btn.innerHTML = '<span>VALIDAR</span>';
+                btn.innerHTML = '<i class="fas fa-search"></i>';
             }
         }
     }

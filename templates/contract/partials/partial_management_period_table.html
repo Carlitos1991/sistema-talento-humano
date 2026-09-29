@@ -10,10 +10,10 @@
                data-external-search="true">
             <thead>
             <tr>
-                <th data-field="employee" class="width-25">Empleado</th>
-                <th data-field="budget_line" class="width-20">Cargo y Partida</th>
+                <th data-field="employee" class="width-20">Empleado</th>
+                <th data-field="budget_line" class="width-15">Cargo y Partida</th>
                 <th data-field="unit" class="width-17">Dependencia</th>
-                <th data-field="contract_type" class="width-13">Modalidad</th>
+                <th data-field="contract_type" class="width-25">Modalidad</th>
                 <th data-field="start_date" class="width-12">Vigencia</th>
                 <th data-field="status" class="width-10 text-center">Estado</th>
                 <th class="width-13 actions text-center no-sort" data-field="actions">Acciones</th>
@@ -115,5 +115,44 @@
             {% endfor %}
             </tbody>
         </table>
+    </div>
+</div>
+
+<!-- Paginación idéntica a permisos con data-page para main.js -->
+<div class="pagination-container" id="js-pagination">
+    <span class="pagination-info">
+        Mostrando {{ page_obj.start_index|default:"0" }}-{{ page_obj.end_index|default:"0" }} de {{ paginator.count|default:"0" }}
+    </span>
+    <div class="pagination-controls" {% if paginator.num_pages <= 1 %}style="visibility:hidden;"{% endif %}>
+        <button type="button" class="page-btn page-first" title="Primera"
+                {% if not page_obj.has_previous %}disabled{% endif %}
+                data-page="1">
+            <i class="fas fa-angle-double-left"></i>
+        </button>
+        <button type="button" class="page-btn page-prev" title="Anterior"
+                {% if not page_obj.has_previous %}disabled{% endif %}
+                data-page="{% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% else %}1{% endif %}">
+            <i class="fas fa-angle-left"></i>
+        </button>
+        <div class="page-input-wrapper">
+            <input type="number" class="page-input"
+                   value="{{ page_obj.number|default:1 }}"
+                   min="1" max="{{ paginator.num_pages|default:1 }}"
+                   onchange="if(window.refreshCurrentTable){ window.refreshCurrentTable({page: this.value}); }">
+            <span class="total-pages-badge">de {{ paginator.num_pages|default:1 }}</span>
+        </div>
+        <button type="button" class="page-btn page-next" title="Siguiente"
+                {% if not page_obj.has_next %}disabled{% endif %}
+                data-page="
+
+
+                        {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages|default:1 }}{% endif %}">
+            <i class="fas fa-angle-right"></i>
+        </button>
+        <button type="button" class="page-btn page-last" title="Última"
+                {% if not page_obj.has_next %}disabled{% endif %}
+                data-page="{{ paginator.num_pages|default:1 }}">
+            <i class="fas fa-angle-double-right"></i>
+        </button>
     </div>
 </div>

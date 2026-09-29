@@ -126,3 +126,163 @@
     overflow-y: auto;
     padding-right: 8px;
 }
+
+/* Centrado del buscador de identidad en el Paso 2 */
+.wizard-identity-search-wrapper {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0 auto;
+}
+
+.wizard-identity-search-wrapper .search-box {
+    width: 100%;
+    max-width: 420px;
+    margin: 0 auto;
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.wizard-identity-search-wrapper .search-box .table-search-input {
+    width: 100%;
+    max-width: 100%;
+    height: 44px;
+    padding-right: 48px;
+    box-sizing: border-box;
+}
+
+/* Forzar disposición en columna centrada en el Paso 2 */
+.wizard-step-centered-card {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    padding: 3rem 1.5rem !important;
+    margin: 0 auto !important;
+}
+
+.wizard-step-centered-card .avatar-placeholder-md {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem auto;
+}
+
+.wizard-step-centered-card h4,
+.wizard-step-centered-card p {
+    text-align: center;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 500px;
+}
+
+/* Contenedor y caja de búsqueda */
+.wizard-identity-search-wrapper {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0 auto;
+}
+
+.wizard-identity-search-wrapper .search-box {
+    width: 100%;
+    max-width: 420px;
+    margin: 0 auto;
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.wizard-identity-search-wrapper .search-box .table-search-input {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 44px;
+    padding-right: 48px;
+    box-sizing: border-box;
+}
+
+/* =========================================================================
+   PASO 2: INPUT Y BOTÓN A LA PAR (SIN DESBORDAMIENTOS)
+   ========================================================================= */
+.wizard-identity-search-wrapper {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0 auto;
+}
+
+.wizard-search-input-group {
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+    max-width: 440px;
+    height: 44px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    background-color: #ffffff;
+    overflow: hidden;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.wizard-search-input-group:focus-within {
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+
+.wizard-search-field {
+    flex: 1;
+    height: 100% !important;
+    border: none !important;
+    outline: none !important;
+    padding: 0 1rem !important;
+    font-size: 0.95rem;
+    color: #1e293b;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+.wizard-search-btn {
+    width: 48px;
+    height: 100%;
+    background-color: #10b981;
+    color: #ffffff;
+    border: none;
+    outline: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.2s ease;
+    flex-shrink: 0;
+}
+
+.wizard-search-btn:hover {
+    background-color: #059669;
+}
+
+.wizard-search-btn:disabled {
+    background-color: #6ee7b7;
+    cursor: not-allowed;
+}
+
+/* =========================================================================
+   FOOTER DEL WIZARD: SEPARACIÓN DE BOTONES
+   ========================================================================= */
+.wizard-footer-actions {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 1.5rem !important; /* Espacio de 24px entre ANTERIOR y FINALIZAR GESTIÓN */
+    padding: 1.25rem 2rem !important;
+}
+
+.wizard-footer-actions .btn-dark-blue-rectangle-outline,
+.wizard-footer-actions .btn-blue-rectangle {
+    min-width: 140px;
+}

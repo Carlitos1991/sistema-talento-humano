@@ -1,0 +1,18 @@
+/* Contenedor de la tabla interna del modal de modalidades */
+#contractTypeListModalOverlay .table-container {
+    max-height: 420px;
+    overflow-y: auto;
+    box-shadow: none;
+    border: 1px solid #e2e8f0;
+}
+
+#contractTypeListModalOverlay .table-clean-cv td {
+    padding: 0.6rem 0.75rem;
+    vertical-align: middle;
+}
+
+/* Estado opaco de tarjeta estadística inactiva */
+.stat-card.opacity-low {
+    opacity: 0.45;
+    transform: scale(0.98);
+}

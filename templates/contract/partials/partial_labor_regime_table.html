@@ -1,54 +1,82 @@
 {% load static %}
 <div class="table-container">
-    <table>
-        <thead>
-        <tr>
-            <th>Código</th>
-            <th>Nombre del Régimen</th>
-            <th class="text-center">Tipos de Contrato</th>
-            <th>Estado</th>
-            <th class="actions">Acciones</th>
-        </tr>
-        </thead>
-        <tbody>
-        {% for regime in regimes %}
+    <div class="table-scroll-top">
+        <table id="laborRegimeTable"
+               class="managed-table exportable-table table-hover"
+               data-title="Regímenes Laborales"
+               data-filename="Regimenes_Laborales">
+            <thead>
             <tr>
-                <td><strong>{{ regime.code }}</strong></td>
-                <td>{{ regime.name }}</td>
-                <td class="text-center">
-                    <button class="btn-list-action"
-                            onclick="regimeInstance.viewContractTypes({{ regime.id }}, '{{ regime.name }}')">
-                        {{ regime.contract_types.count }}
-                    </button>
-                </td>
-                <td>
-                <span class="status-badge {% if regime.is_active %}active{% else %}inactive{% endif %}">
-                    {{ regime.is_active|yesno:"Activo,Inactivo" }}
-                </span>
-                </td>
-                <td class="actions">
-                    <div class="actions-wrapper">
-                        <button class="btn-views-action" onclick="regimeInstance.openEditModal({{ regime.id }})">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="{% if regime.is_active %}btn-delete-action{% else %}btn-create-action{% endif %}"
-                                onclick="regimeInstance.toggleStatus({{ regime.id }}, {{ regime.is_active|yesno:'true,false' }})">
-                            <i class="fas {% if regime.is_active %}fa-toggle-off{% else %}fa-toggle-on{% endif %}"></i>
-                        </button>
-                    </div>
-                </td>
+                <th class="width-15">Código</th>
+                <th class="width-45">Nombre del Régimen</th>
+                <th class="width-15 text-center">Modalidades</th>
+                <th class="width-10 text-center">Estado</th>
+                <th class="width-15 actions text-center no-sort">Acciones</th>
             </tr>
-        {% empty %}
-            <tr>
-                <td colspan="7">
-                    <div class="no-results-content">
-                        <i class="fas fa-calendar-times no-results-icon"></i>
-                        <p class="no-results-text">No se encontraron horarios registrados.</p>
-                    </div>
-                </td>
-            </tr>
-        {% endfor %}
+            </thead>
+            <tbody id="labor-regime-tbody">
+            {% for regime in regimes %}
+                <tr data-status="{{ regime.is_active|yesno:'true,false' }}">
+                    <td><strong class="text-blue">{{ regime.code }}</strong></td>
+                    <td class="bold">{{ regime.name }}</td>
+                    <td class="text-center">
+                        <button type="button" class="badge badge-blue cursor-pointer"
+                                data-action="view-contract-types"
+                                data-id="{{ regime.id }}"
+                                data-name="{{ regime.name }}"
+                                title="Ver modalidades asociadas">
+                            <i class="fas fa-file-contract me-1"></i> {{ regime.contract_types.count }} modalidad(es)
+                        </button>
+                    </td>
+                    <td class="text-center">
+                        {% if regime.is_active %}
+                            <span class="badge badge-green">Activo</span>
+                        {% else %}
+                            <span class="badge badge-gray">Inactivo</span>
+                        {% endif %}
+                    </td>
+                    <td class="actions text-center">
+                        <div class="actions-wrapper">
+                            <!-- Editar Régimen -->
+                            <button type="button" class="btn-blue-circle"
+                                    data-action="edit-regime"
+                                    data-id="{{ regime.id }}"
+                                    title="Editar Régimen">
+                                <i class="fas fa-edit"></i>
+                            </button>
 
-        </tbody>
-    </table>
+                            <!-- Alternar Estado -->
+                            {% if regime.is_active %}
+                                <button type="button" class="btn-red-circle"
+                                        data-action="toggle-status"
+                                        data-id="{{ regime.id }}"
+                                        data-status="true"
+                                        title="Dar de Baja">
+                                    <i class="fas fa-toggle-on"></i>
+                                </button>
+                            {% else %}
+                                <button type="button" class="btn-green-circle"
+                                        data-action="toggle-status"
+                                        data-id="{{ regime.id }}"
+                                        data-status="false"
+                                        title="Activar">
+                                    <i class="fas fa-toggle-off"></i>
+                                </button>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="5">
+                        <div class="empty-state-container">
+                            <i class="fas fa-briefcase empty-state-icon"></i>
+                            <p class="empty-state-text">No se encontraron regímenes laborales registrados.</p>
+                        </div>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
