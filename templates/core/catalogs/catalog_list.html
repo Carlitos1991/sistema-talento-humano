@@ -1,80 +1,77 @@
 {% extends 'base.html' %}
 {% load static %}
+
 {% block title %}Catálogos | SIGETH{% endblock %}
 
 {% block content %}
-    <!-- 1. Header -->
+    <!-- 1. Encabezado Oficial -->
     <div class="header-card">
-        <div>
-            <h1>Gestión de Catálogos</h1>
-            <p>Administra la información de catálogos del sistema.</p>
+        <div class="header-card-body">
+            <h1><i class="fa-solid fa-folder-tree me-2"></i> Gestión de Catálogos</h1>
+            <p>Administra los catálogos y listas desplegables maestras del sistema institucional.</p>
         </div>
         {% if perms.core.add_catalog %}
-            <button id="btn-add-catalog" type="button" data-modal-open="catalog-modal"
-                    aria-controls="catalog-modal" aria-expanded="false" data-url="#"
-                    class="btn btn-create" data-bs-toggle="modal" data-bs-target="#modal-catalog-form">
-                <i class="fas fa-plus"></i> Nuevo Catálogo
-            </button>
+            <div class="header-actions">
+                <button type="button"
+                        class="btn-dark-blue-rectangle"
+                        data-action="create-catalog"
+                        data-modal-url="{% url 'core:catalog_modal_create' %}">
+                    <i class="fas fa-plus me-1"></i> NUEVO CATÁLOGO
+                </button>
+            </div>
         {% endif %}
     </div>
-    <!-- 2. Estadísticas -->
-    <div class="stats-row">
-        <div class="stat-card color-one" onclick="filterByStatus('all')" id="card-filter-all">
+
+    <!-- 2. Estadísticas con Filtros Rápidos y Opacidad Dinámica -->
+    <div class="stats-row" id="catalog-stats-row">
+        <div class="stat-card color-one" id="card-filter-all" data-filter="all">
             <div class="stat-left">
-                <h3>Total</h3>
-                <div class="number" id="stat-total"> {{ stats_total|default:"0" }}</div>
+                <h3>TOTAL</h3>
+                <div class="number" id="stat-total">{{ stats_total|default:"0" }}</div>
             </div>
             <i class="fas fa-book-open stat-icon"></i>
         </div>
-        <div class="stat-card color-two" onclick="filterByStatus('true')" id="card-filter-active">
-            <div class="stat-left"><h3>Activos</h3>
+
+        <div class="stat-card color-two opacity-low" id="card-filter-active" data-filter="true">
+            <div class="stat-left">
+                <h3>ACTIVOS</h3>
                 <div class="number" id="stat-active">{{ stats_active|default:"0" }}</div>
             </div>
             <i class="fas fa-check-circle stat-icon"></i>
         </div>
-        <div class="stat-card color-three" onclick="filterByStatus('false')" id="card-filter-inactive">
-            <div class="stat-left"><h3>Inactivos</h3>
+
+        <div class="stat-card color-three opacity-low" id="card-filter-inactive" data-filter="false">
+            <div class="stat-left">
+                <h3>INACTIVOS</h3>
                 <div class="number" id="stat-inactive">{{ stats_inactive|default:"0" }}</div>
             </div>
             <i class="fas fa-times-circle stat-icon"></i>
         </div>
     </div>
-    <!-- 3. Contenedor principal Tabla (AJAX) -->
+
+    <!-- 3. Contenedor de Tabla sin divs vacíos -->
     <div id="table-app">
         <div class="content-table">
-            <div class="table-controls">
-                <div class="search-box">
-                    <input type="text" id="table-search" class="input-field"
-                           placeholder="Buscar en la tabla">
+            <div class="table-controls toolbar-row mb-3">
+                <div class="toolbar-center"></div>
+                <div class="toolbar-right">
+                    <input type="text"
+                           name="q"
+                           id="table-search"
+                           class="table-search-input table-search-input--large"
+                           placeholder="Buscar catálogo por código o nombre...">
                 </div>
             </div>
-            <!-- 3.1 Zona de recarga AJAX (Solo tabla) -->
+
             <div id="table-content-wrapper">
                 {% include 'core/catalogs/partials/partial_catalog_table.html' %}
-            </div>
-            <div class="pagination-container" id="js-pagination">
-                <span class="pagination-info" id="page-info">Mostrando 0 a 0 registros de 0 registros</span>
-                <ul class="pagination-list">
-                    <li>
-                        <button id="btn-prev" class="page-btn"><i class="fas fa-chevron-left"></i></button>
-                    </li>
-                    <li>
-                        <span id="current-page-display" style="padding: 0 10px; font-weight: bold;">1</span>
-                    </li>
-                    <li>
-                        <button id="btn-next" class="page-btn"><i class="fas fa-chevron-right"></i></button>
-                    </li>
-                </ul>
             </div>
         </div>
     </div>
 
+    <div id="modal-root"></div>
 {% endblock %}
-{% block modals %}
-    {% include 'core/catalogs/modals/modal_catalog_form.html' %}
-    {% include 'core/catalogs/modals/modal_item_form.html' %}
-    {% include 'core/catalogs/modals/modal_item_list.html' %}
-{% endblock %}
+
 {% block extra_js %}
     <script src="{% static 'js/catalogs.js' %}"></script>
 {% endblock %}

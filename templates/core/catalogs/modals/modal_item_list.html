@@ -1,109 +1,118 @@
-<!-- templates/core/catalogs/modals/modal_item_list.html -->
+<div class="modal-overlay">
+    <div class="modal-container-xl">
+        <!-- HEADER -->
+        <div class="modal-header-medium">
+            <div class="header-content-group">
+                <div class="header-icon-circle">
+                    <i class="fa-solid fa-list-check"></i>
+                </div>
+                <h3 class="header-title">Ítems del Catálogo: {{ catalog.name }}</h3>
+            </div>
+            <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
 
-<div id="item-list-app" v-cloak>
-    <div class="modal-overlay" :class="{ 'hidden': !isVisible }" role="dialog">
+        <!-- BODY -->
+        <div class="modal-body modal-body-custom schedule-modal-body">
+            <!-- Barra superior del modal -->
+            <div class="modal-table-toolbar">
+                <input type="text"
+                       id="modal-item-search"
+                       class="table-search-input"
+                       placeholder="Buscar ítem por código o nombre...">
 
-        <!-- Usamos la misma clase que en personas, sin estilos inline que estorben -->
-        <div class="modal-container-medium animate-scale-in">
-
-            <!-- HEADER (Igual que Personas) -->
-            <div class="modal-header-medium modal-header-gradient">
-                <h3 class="modal-title text-white">
-                    <i class="fa-solid fa-list-check me-2"></i> Items de: [[ catalogName ]]
-                </h3>
-                <button type="button" class="btn-close-modal text-white-opacity" @click="closeModal">&times;</button>
+                {% if perms.core.add_catalogitem %}
+                    <button type="button"
+                            class="btn-dark-blue-rectangle"
+                            data-action="add-item"
+                            data-modal-url="{% url 'core:catalog_item_modal_create' catalog.id %}"
+                            data-catalog-id="{{ catalog.id }}">
+                        <i class="fa-solid fa-plus me-1"></i> NUEVO ÍTEM
+                    </button>
+                {% endif %}
             </div>
 
-            <!-- BODY (Con la clase custom para scroll y padding) -->
-            <div class="modal-body-content modal-body-custom"
-                 style="display: flex; flex-direction: column; height: 100%;">
-
-                <!-- CONTROLES -->
-                <div class="table-controls mb-3">
-                    <div class="search-box flex-grow-1" style="max-width: 300px;">
-                        <input type="text" v-model="searchQuery" class="input-field" placeholder="Buscar items..."
-                               @input="currentPage = 1">
-                    </div>
-                    {% if perms.core.add_catalogitem %}
-                        <button class="btn btn-create ms-3" @click="openCreateFromList">
-                            <i class="fas fa-plus"></i> Nuevo Item
-                        </button>
-                    {% endif %}
-                </div>
-
-                <!-- TABLA -->
-                <div class="table-container flex-grow-1" style="overflow-y: auto; min-height: 300px;">
-                    <table class="w-100">
+            <!-- Tabla de Ítems -->
+            <div class="modal-table-container">
+                <div class="table-scroll-top">
+                    <table class="managed-table modal-table" data-page-size="8">
                         <thead>
                         <tr>
-                            <th style="width: 20%;">Código</th>
-                            <th style="width: 40%;">Nombre</th>
-                            <th style="width: 20%;">Estado</th>
-                            {% if perms.core.change_catalogitem or perms.core.add_catalogitem %}
-                                <th style="width: 20%;" class="text-center">Acciones</th>
+                            <th class="width-20" data-field="code">Código</th>
+                            <th class="width-45" data-field="name">Nombre / Etiqueta</th>
+                            <th class="width-15 no-sort text-center">Estado</th>
+                            {% if perms.core.change_catalogitem or perms.core.delete_catalogitem %}
+                                <th class="actions width-20 no-sort text-center">Acciones</th>
                             {% endif %}
                         </tr>
                         </thead>
                         <tbody>
-                        <tr v-for="item in paginatedItems" :key="item.id">
-                            <td>[[ item.code ]]</td>
-                            <td>[[ item.name ]]</td>
-                            <td>
-                                    <span class="status-badge" :class="item.is_active ? 'active' : 'inactive'">
-                                        [[ item.is_active ? 'Activo' : 'Inactivo' ]]
-                                    </span>
-                            </td>
-                            {% if perms.core.change_catalogitem or perms.core.add_catalogitem %}
-                                <td class="text-center">
-                                    <div class="actions-wrapper">
-                                        {% if perms.core.change_catalogitem %}
-                                            <button class="btn-icon btn-views-action" @click="editItem(item.id)"
-                                                    title="Editar">
-                                                <i class="fas fa-pencil"></i>
-                                            </button>
-                                        {% endif %}
-                                        {% if perms.core.delete_catalogitem %}
-                                            <button class="btn-icon" @click="toggleItem(item)"
-                                                    :title="item.is_active ? 'Desactivar' : 'Activar'">
-                                                <i class="fas"
-                                                   :class="item.is_active ? 'fa-toggle-on text-success' : 'fa-toggle-off text-danger'"></i>
-                                            </button>
-                                        {% endif %}
-                                    </div>
+                        {% for item in items %}
+                            <tr data-status="{{ item.is_active|yesno:'true,false' }}">
+                                <td><span class="badge-ip-pill">{{ item.code }}</span></td>
+                                <td>
+                                    <strong>{{ item.name }}</strong>
+                                    {% if item.description %}
+                                        <br><small class="text-muted">{{ item.description }}</small>
+                                    {% endif %}
                                 </td>
-                            {% endif %}
-                        </tr>
+                                <td class="text-center">
+                                    {% if item.is_active %}
+                                        <span class="badge badge-green">Activo</span>
+                                    {% else %}
+                                        <span class="badge badge-red">Inactivo</span>
+                                    {% endif %}
+                                </td>
+                                {% if perms.core.change_catalogitem or perms.core.delete_catalogitem %}
+                                    <td class="actions">
+                                        <div class="actions-wrapper justify-content-center">
+                                            {% if perms.core.change_catalogitem %}
+                                                <button type="button"
+                                                        class="btn-blue-circle"
+                                                        data-action="edit-item"
+                                                        data-modal-url="{% url 'core:catalog_item_modal_update' catalog.id item.id %}"
+                                                        data-catalog-id="{{ catalog.id }}"
+                                                        title="Editar Ítem">
+                                                    <i class="fa-solid fa-pen-to-square"></i>
+                                                </button>
+                                            {% endif %}
+
+                                            {% if perms.core.delete_catalogitem %}
+                                                <button type="button"
+                                                        class="{% if item.is_active %}btn-red-circle{% else %}btn-green-circle{% endif %}"
+                                                        data-action="toggle-item"
+                                                        data-url="{% url 'core:catalog_item_toggle' item.id %}"
+                                                        data-name="{{ item.name }}"
+                                                        data-status="{{ item.is_active|yesno:'true,false' }}"
+                                                        data-catalog-id="{{ catalog.id }}"
+                                                        title="{{ item.is_active|yesno:'Desactivar,Activar' }}">
+                                                    <i class="fa-solid {% if item.is_active %}fa-toggle-off{% else %}fa-toggle-on{% endif %}"></i>
+                                                </button>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                {% endif %}
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center py-4 text-muted">
+                                    <i class="fa-solid fa-inbox fa-2x mb-2 opacity-50"></i>
+                                    <p class="mb-0">Este catálogo no tiene ítems registrados.</p>
+                                </td>
+                            </tr>
+                        {% endfor %}
                         </tbody>
                     </table>
-
-                    <!-- EMPTY STATES -->
-                    <div v-if="items.length === 0" class="no-results-content py-5">
-                        <i class="fas fa-inbox no-results-icon"></i>
-                        <p class="text-muted">No hay items registrados.</p>
-                    </div>
-                    <div v-if="items.length > 0 && paginatedItems.length === 0" class="no-results-content py-5">
-                        <i class="fas fa-search no-results-icon"></i>
-                        <p class="text-muted">No se encontraron coincidencias.</p>
-                    </div>
                 </div>
-
-                <!-- PAGINACIÓN -->
-                <div class="pagination-container mt-3" v-if="items.length > 0">
-                    <span class="pagination-info">[[ paginationLabel ]]</span>
-                    <ul class="pagination-list">
-                        <li>
-                            <button class="page-btn" :disabled="currentPage === 1" @click="prevPage"><i
-                                    class="fas fa-chevron-left"></i></button>
-                        </li>
-                        <li><span class="px-2 fw-bold">[[ currentPage ]]</span></li>
-                        <li>
-                            <button class="page-btn" :disabled="currentPage === totalPages" @click="nextPage"><i
-                                    class="fas fa-chevron-right"></i></button>
-                        </li>
-                    </ul>
-                </div>
-
             </div>
+        </div>
+
+        <!-- FOOTER -->
+        <div class="modal-footer-fixed">
+            <button type="button" class="btn-secondary-outline" onclick="closeModal()">
+                <i class="fa-solid fa-xmark me-1"></i> CERRAR
+            </button>
         </div>
     </div>
 </div>

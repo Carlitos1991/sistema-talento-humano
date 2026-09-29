@@ -24,19 +24,23 @@ urlpatterns = [
     # Perfil de Usuario
     path('profile/', views.ProfileView.as_view(), name='profile'),
 
-    # --- Catalogs ---
-    path('settings/catalogs/', views.CatalogListView.as_view(), name='catalog_list'),
-    path('settings/catalogs/create/', views.CatalogCreateView.as_view(), name='catalog_create'),
-    path('settings/catalogs/detail/<int:pk>/', views.catalog_detail_json, name='catalog_detail'),
-    path('settings/catalogs/update/<int:pk>/', views.CatalogUpdateView.as_view(), name='catalog_update'),
-    path('settings/catalogs/toggle/<int:pk>/', views.catalog_toggle_status, name='catalog_toggle'),
+    path('catalogs/', views.CatalogListView.as_view(), name='catalog_list'),
+    path('catalogs/modal/form/', views.CatalogModalFormView.as_view(), name='catalog_modal_create'),
+    path('catalogs/modal/form/<int:pk>/', views.CatalogModalFormView.as_view(), name='catalog_modal_update'),
+    path('catalogs/create/', views.CatalogCreateView.as_view(), name='catalog_create'),
+    path('catalogs/update/<int:pk>/', views.CatalogUpdateView.as_view(), name='catalog_update'),
+    path('catalogs/toggle/<int:pk>/', views.CatalogToggleStatusView.as_view(), name='catalog_toggle'),
 
-    # --- ITEMS ---
-    path('settings/items/list/<int:catalog_id>/', views.item_list_json, name='item_list'),
-    path('settings/items/create/', views.CatalogItemCreateView.as_view(), name='item_create'),
-    path('settings/items/detail/<int:pk>/', views.item_detail_json, name='item_detail'),
-    path('settings/items/update/<int:pk>/', views.CatalogItemUpdateView.as_view(), name='item_update'),
-    path('settings/items/toggle/<int:pk>/', views.item_toggle_status, name='item_toggle'),
+    # Ítems
+    path('catalogs/<int:catalog_id>/items/modal/', views.CatalogItemListModalView.as_view(),
+         name='catalog_items_modal_list'),
+    path('catalogs/<int:catalog_id>/items/form/', views.CatalogItemModalFormView.as_view(),
+         name='catalog_item_modal_create'),
+    path('catalogs/<int:catalog_id>/items/form/<int:pk>/', views.CatalogItemModalFormView.as_view(),
+         name='catalog_item_modal_update'),
+    path('catalogs/<int:catalog_id>/items/create/', views.CatalogItemCreateView.as_view(), name='catalog_item_create'),
+    path('catalogs/items/update/<int:pk>/', views.CatalogItemUpdateView.as_view(), name='catalog_item_update'),
+    path('catalogs/items/toggle/<int:pk>/', views.CatalogItemToggleStatusView.as_view(), name='catalog_item_toggle'),
 
     # --- Locations ---
     path('settings/locations/', views.LocationListView.as_view(), name='location_list'),

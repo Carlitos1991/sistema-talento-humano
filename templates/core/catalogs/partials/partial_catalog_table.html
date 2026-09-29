@@ -1,95 +1,91 @@
 {% load static %}
 <div class="table-container">
-    <table class="managed-table exportable-table"
-           data-title="Reporte de Nueva Tabla"
-           data-filename="Reporte_Nuevo"
-           data-page-size="10">
-        <thead>
-        <tr>
-            <th><i class="fa-solid fa-list-ol"></i></th>
-            <th><i class="fa-duotone fa-solid fa-layer-group"></i> Nombre</th>
-            <th><i class="fa-solid fa-toggle-off"></i> Estado</th>
-            {% if perms.core.add_catalogitem or perms.core.view_catalogitem or perms.core.change_catalog %}
-                <th><i class="fas fa-cogs"></i> Acciones</th>
-            {% endif %}
-        </tr>
-        </thead>
-        <tbody id="table-body">
-        {% for catalog in catalogs %}
-            <!-- ID ÚNICO PARA LA FILA: row-ID -->
-            <tr class="catalog-row" id="row-{{ catalog.id }}" data-status="{{ catalog.is_active|yesno:'true,false' }}">
-                <td>{{ forloop.counter }}</td> <!-- Esto se recalculará con JS al paginar -->
-
-                <!-- CLASE PARA ENCONTRAR EL NOMBRE -->
-                <td class="catalog-name-cell">{{ catalog.name }}</td>
-
-                <td>
-                    <!-- ID ÚNICO PARA EL BADGE -->
-                    <span id="badge-{{ catalog.id }}"
-                          class="status-badge {% if catalog.is_active %}active{% else %}inactive{% endif %}">
-                    {% if catalog.is_active %}Activo{% else %}Inactivo{% endif %}
-                </span>
-                </td>
+    <div class="table-scroll-top">
+        <table class="managed-table exportable-table"
+               data-title="Reporte de Catálogos Institucionales"
+               data-filename="Reporte_Catalogos"
+               data-page-size="10">
+            <thead>
+            <tr>
+                <th class="width-7 no-sort text-center"><i class="fa-solid fa-list-ol"></i></th>
+                <th class="width-20" data-field="code"><i class="fa-solid fa-barcode"></i> Código</th>
+                <th class="width-45" data-field="name"><i class="fa-solid fa-layer-group"></i> Nombre del Catálogo</th>
+                <th class="width-13 no-sort text-center"><i class="fa-solid fa-circle-dot"></i> Estado</th>
                 {% if perms.core.add_catalogitem or perms.core.view_catalogitem or perms.core.change_catalog %}
-                    <td>
-                        <div class="actions-wrapper">
-                            {% if perms.core.add_catalogitem %}
-                                <button type="button" class="btn-icon btn-success-action"
-                                        onclick="openCreateItem({{ catalog.id }}, '{{ catalog.name|escapejs }}')"
-                                        title="Agregar Item">
-                                    <i class="fas fa-plus"></i>
-                                </button>
-                            {% endif %}
-                            {% if perms.core.view_catalogitem %}
-                                <button class="btn-icon btn-list-action"
-                                        title="Listar Items"
-                                        onclick="openListItems({{ catalog.id }}, '{{ catalog.name|escapejs }}')">
-                                    <i class="fas fa-list"></i>
-                                </button>
-                            {% endif %}
-                            {% if perms.core.change_catalog %}
-                                <button type="button" class="btn-icon btn-views-action"
-                                        onclick="openEditCatalog({{ catalog.id }})"
-                                        title="Editar">
-                                    <i class="fas fa-pencil"></i>
-                                </button>
-                            {% endif %}
-                            {% if perms.core.change_catalog %}
-                                {% if catalog.is_active %}
-                                    <!-- ESTADO ACTIVO: Botón Rojo (Delete Action) -->
-                                    <button type="button"
-                                            class="btn-icon btn-delete-action"
-                                            onclick="toggleCatalogStatus(this, '{% url 'core:catalog_toggle' catalog.id %}', '{{ catalog.name|escapejs }}', {{ catalog.id }})"
-                                            title="Desactivar">
-                                        <i class="fas fa-power-off"></i>
-                                    </button>
-                                {% else %}
-                                    <!-- ESTADO INACTIVO: Botón Verde (Create Action) -->
-                                    <button type="button"
-                                            class="btn-icon btn-create-action"
-                                            onclick="toggleCatalogStatus(this, '{% url 'core:catalog_toggle' catalog.id %}', '{{ catalog.name|escapejs }}', {{ catalog.id }})"
-                                            title="Activar">
-                                        <i class="fas fa-toggle-on"></i>
-                                    </button>
-                                {% endif %}
-                            {% endif %}
-                        </div>
-                    </td>
+                    <th class="actions width-15 no-sort text-center"><i class="fas fa-cogs"></i> Acciones</th>
                 {% endif %}
             </tr>
-        {% endfor %}
-        </tbody>
-    </table>
-    <div class="no-results-overlay {% if catalogs %}hidden{% endif %}">
-        <div class="no-results-content empty-db-msg {% if not catalogs %}show{% else %}hidden{% endif %}">
-            <i class="fas fa-inbox no-results-icon"></i>
-            <p class="no-results-text">No hay catálogos registrados.</p>
-        </div>
+            </thead>
+            <tbody id="table-body">
+            {% for catalog in catalogs %}
+                <tr id="row-{{ catalog.id }}" data-status="{{ catalog.is_active|yesno:'true,false' }}">
+                    <td class="text-center font-monospace">{{ forloop.counter }}</td>
+                    <td><span class="badge-ip-pill">{{ catalog.code }}</span></td>
+                    <td><strong>{{ catalog.name }}</strong></td>
+                    <td class="text-center">
+                        <span id="badge-{{ catalog.id }}"
+                              class="badge {% if catalog.is_active %}badge-green{% else %}badge-red{% endif %}">
+                            {% if catalog.is_active %}Activo{% else %}Inactivo{% endif %}
+                        </span>
+                    </td>
+                    {% if perms.core.add_catalogitem or perms.core.view_catalogitem or perms.core.change_catalog %}
+                        <td class="actions text-center">
+                            <div class="actions-wrapper justify-content-center">
+                                {% if perms.core.add_catalogitem %}
+                                    <button type="button"
+                                            class="btn-green-circle"
+                                            onclick="openAjaxModal('{% url 'core:catalog_item_modal_create' catalog.id %}')"
+                                            title="Agregar Ítem">
+                                        <i class="fa-solid fa-plus"></i>
+                                    </button>
+                                {% endif %}
 
-        <!-- Mensaje 2: Búsqueda sin coincidencias -->
-        <div class="no-results-content hidden" id="no-results-placeholder">
-            <i class="fas fa-search no-results-icon"></i>
-            <p class="no-results-text">No se encontraron resultados.</p>
-        </div>
+                                {% if perms.core.view_catalogitem %}
+                                    <button type="button"
+                                            class="btn-dark-blue-circle"
+                                            onclick="openAjaxModal('{% url 'core:catalog_items_modal_list' catalog.id %}')"
+                                            title="Ver Ítems">
+                                        <i class="fa-solid fa-list-check"></i>
+                                    </button>
+                                {% endif %}
+
+                                {% if perms.core.change_catalog %}
+                                    <button type="button"
+                                            class="btn-blue-circle"
+                                            onclick="openAjaxModal('{% url 'core:catalog_modal_update' catalog.id %}')"
+                                            title="Editar Catálogo">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </button>
+
+                                    {% if catalog.is_active %}
+                                        <button type="button"
+                                                class="btn-red-circle"
+                                                onclick="toggleStatusAjax('{% url 'core:catalog_toggle' catalog.id %}', 'el catálogo {{ catalog.name|escapejs }}', true)"
+                                                title="Desactivar">
+                                            <i class="fa-solid fa-toggle-off"></i>
+                                        </button>
+                                    {% else %}
+                                        <button type="button"
+                                                class="btn-green-circle"
+                                                onclick="toggleStatusAjax('{% url 'core:catalog_toggle' catalog.id %}', 'el catálogo {{ catalog.name|escapejs }}', false)"
+                                                title="Activar">
+                                            <i class="fa-solid fa-toggle-on"></i>
+                                        </button>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        </td>
+                    {% endif %}
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center py-4 text-muted">
+                        <i class="fa-solid fa-inbox fa-2x mb-2 opacity-50"></i>
+                        <p class="mb-0">No hay catálogos registrados en el sistema.</p>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
