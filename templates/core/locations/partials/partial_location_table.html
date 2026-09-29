@@ -1,119 +1,124 @@
 {% load static %}
 <div class="table-container">
-    <input type="hidden" id="server-level-indicator" value="{{ current_display_level }}">
-    <table>
-        <thead>
-        <tr>
-            <th><i class="fa-solid fa-list-ol"></i></th>
-            <th><i class="fa-duotone fa-solid fa-layer-group"></i> Nombre</th>
-            <th><i class="fa-duotone fa-solid fa-sitemap"></i> Nivel</th>
-            <th><i class="fa-duotone fa-solid fa-indent"></i> Padre</th>
-            <th><i class="fa-solid fa-toggle-off"></i> Estado</th>
-            {% if perms.core.add_location or perms.core.change_location %}
-                <th><i class="fas fa-cogs"></i> Acciones</th>
-            {% endif %}
-        </tr>
-        </thead>
-        <tbody id="table-body">
-        {% for location in locations %}
-            <!-- ID ÚNICO PARA LA FILA: row-ID -->
-            <tr class="location-row" id="row-{{ location.id }}"
-                data-status="{{ location.is_active|yesno:'true,false' }}">
-                <td>{{ forloop.counter }} {{ page_obj.start_index|add:forloop.counter0 }}</td>
-                <td>
-                    {% if location.level < 4 %}
-                        <a href="#" class="link fw-bold text-primary"
-                           onclick="filterByParent({{ location.id }}); return false;"
-                           title="Ver dependencias de {{ location.name }}">
-                            {{ location.name }}
-                        </a>
-                    {% else %}
-                        <span>{{ location.name }}</span>
-                    {% endif %}
-                </td>
-                <td>
-                    <span class="status-badge general">{{ location.level_label }}</span>
-                </td>
-                <td>
-                    {% if location.parent %}
-                        {% if location.parent.parent_id %}
-                            <a href="#" class="link text-secondary"
-                               onclick="filterByParent({{ location.parent.parent_id }}); return false;"
-                               title="Subir a {{ location.parent.parent.name }}">
-                                <i class="fa-solid fa-turn-up fa-flip-horizontal"></i> {{ location.parent.name }}
-                            </a>
-                        {% else %}
-                            <a href="#" class="link text-secondary"
-                               onclick="filterByLevel('1'); return false;"
-                               title="Volver al listado de Países">
-                                <i class="fa-solid fa-turn-up fa-flip-horizontal"></i> {{ location.parent.name }}
-                            </a>
-                        {% endif %}
-                    {% else %}
-                        <span class="text-muted fst-italic">- Raíz -</span>
-                    {% endif %}
-                </td>
-                <td>
-                    <!-- ID ÚNICO PARA EL BADGE -->
-                    <span id="badge-{{ location.id }}"
-                          class="status-badge {% if location.is_active %}active{% else %}inactive{% endif %}">
-                    {% if location.is_active %}Activo{% else %}Inactivo{% endif %}
-                    </span>
-                </td>
+    <input type="hidden" id="server-level-indicator" value="{{ current_display_level|default:'1' }}">
+    <div class="table-scroll-top">
+        <table class="managed-table exportable-table"
+               data-title="Reporte de Ubicaciones Geograficas"
+               data-filename="Reporte_Ubicaciones"
+               data-page-size="10">
+            <thead>
+            <tr>
+                <th class="width-7 no-sort text-center"><i class="fa-solid fa-list-ol"></i></th>
+                <th class="width-35" data-field="name"><i class="fa-solid fa-layer-group"></i> Nombre</th>
+                <th class="width-15 no-sort text-center"><i class="fa-solid fa-sitemap"></i> Nivel</th>
+                <th class="width-20 no-sort"><i class="fa-solid fa-indent"></i> Depende De</th>
+                <th class="width-10 no-sort text-center"><i class="fa-solid fa-circle-dot"></i> Estado</th>
                 {% if perms.core.add_location or perms.core.change_location %}
-                    <td>
-                        <div class="actions-wrapper">
-                            {% if location.level < 4 and perms.core.add_location %}
-                                <button type="button" class="btn-icon btn-create-action"
-                                        onclick="openCreateChildLocation({{ location.id }})"
-                                        title="Agregar sub-ubicación">
-                                    <i class="fas fa-plus"></i>
-                                </button>
-                            {% endif %}
-                            {% if perms.core.change_location %}
-                                <button type="button" class="btn-icon btn-views-action"
-                                        onclick="openEditLocation({{ location.id }})"
-                                        title="Editar">
-                                    <i class="fas fa-pencil"></i>
-                                </button>
-                            {% endif %}
-                            <!-- Toggle Button con TODOS los datos necesarios -->
-                            {% if perms.core.change_location %}
-                                {% if location.is_active %}
-                                    <!-- ESTADO ACTIVO: Rojo -->
-                                    <button type="button"
-                                            class="btn-icon btn-delete-action"
-                                            onclick="toggleLocationStatus(this, '{% url 'core:location_toggle' location.id %}', '{{ location.name|escapejs }}')"
-                                            title="Desactivar">
-                                        <i class="fas fa-power-off"></i>
-                                    </button>
-                                {% else %}
-                                    <!-- ESTADO INACTIVO: Verde -->
-                                    <button type="button"
-                                            class="btn-icon btn-create-action"
-                                            onclick="toggleLocationStatus(this, '{% url 'core:location_toggle' location.id %}', '{{ location.name|escapejs }}')"
-                                            title="Activar">
-                                        <i class="fas fa-toggle-on"></i>
-                                    </button>
-                                {% endif %}
-                            {% endif %}
-                        </div>
-                    </td>
+                    <th class="actions width-13 no-sort text-center"><i class="fas fa-cogs"></i> Acciones</th>
                 {% endif %}
             </tr>
-        {% endfor %}
-        </tbody>
-    </table>
-    <div class="no-results-overlay {% if locations %}hidden{% endif %}">
-        <div class="no-results-content empty-db-msg {% if not locations %}show{% else %}hidden{% endif %}">
-            <i class="fas fa-inbox no-results-icon"></i>
-            <p class="no-results-text">No hay ubicaciones registradas.</p>
-        </div>
+            </thead>
+            <tbody id="table-body">
+            {% for location in locations %}
+                <tr id="row-{{ location.id }}" data-status="{{ location.is_active|yesno:'true,false' }}">
+                    <td class="text-center font-monospace">{{ forloop.counter }}</td>
+                    <td>
+                        {% if location.level < 4 %}
+                            <a href="javascript:void(0);"
+                               class="link fw-bold text-primary"
+                               data-action="filter-parent"
+                               data-parent-id="{{ location.id }}"
+                               title="Ver dependencias de {{ location.name }}">
+                                {{ location.name }}
+                            </a>
+                        {% else %}
+                            <strong>{{ location.name }}</strong>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        <span class="badge badge-gray font-monospace">{{ location.level_label }}</span>
+                    </td>
+                    <td>
+                        {% if location.parent %}
+                            {% if location.parent.parent_id %}
+                                <a href="javascript:void(0);"
+                                   class="link text-secondary"
+                                   data-action="filter-parent"
+                                   data-parent-id="{{ location.parent.parent_id }}"
+                                   title="Subir a {{ location.parent.parent.name }}">
+                                    <i class="fa-solid fa-turn-up fa-flip-horizontal me-1"></i>{{ location.parent.name }}
+                                </a>
+                            {% else %}
+                                <a href="javascript:void(0);"
+                                   class="link text-secondary"
+                                   data-action="filter-level"
+                                   data-level="1"
+                                   title="Volver al listado de Países">
+                                    <i class="fa-solid fa-turn-up fa-flip-horizontal me-1"></i>{{ location.parent.name }}
+                                </a>
+                            {% endif %}
+                        {% else %}
+                            <span class="text-muted fst-italic">- Raíz -</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        <span id="badge-{{ location.id }}"
+                              class="badge {% if location.is_active %}badge-green{% else %}badge-red{% endif %}">
+                            {% if location.is_active %}Activo{% else %}Inactivo{% endif %}
+                        </span>
+                    </td>
+                    {% if perms.core.add_location or perms.core.change_location %}
+                        <td class="actions text-center">
+                            <div class="actions-wrapper justify-content-center">
+                                <!-- Agregar Sub-Ubicación (Hijo) -->
+                                {% if location.level < 4 and perms.core.add_location %}
+                                    <button type="button"
+                                            class="btn-green-circle"
+                                            onclick="openAjaxModal('{% url 'core:location_create' %}?parent_id={{ location.id }}')"
+                                            title="Agregar sub-ubicación de {{ location.name }}">
+                                        <i class="fa-solid fa-plus"></i>
+                                    </button>
+                                {% endif %}
 
-        <!-- Mensaje 2: Búsqueda sin coincidencias -->
-        <div class="no-results-content hidden" id="no-results-placeholder">
-            <i class="fas fa-search no-results-icon"></i>
-            <p class="no-results-text">No se encontraron resultados.</p>
-        </div>
+                                <!-- Editar -->
+                                {% if perms.core.change_location %}
+                                    <button type="button"
+                                            class="btn-blue-circle"
+                                            onclick="openAjaxModal('{% url 'core:location_update' location.id %}')"
+                                            title="Editar Ubicación">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </button>
+
+                                    <!-- Alternar Estado -->
+                                    {% if location.is_active %}
+                                        <button type="button"
+                                                class="btn-red-circle"
+                                                onclick="toggleStatusAjax('{% url 'core:location_toggle' location.id %}', 'la ubicación {{ location.name|escapejs }}', true)"
+                                                title="Desactivar">
+                                            <i class="fa-solid fa-toggle-off"></i>
+                                        </button>
+                                    {% else %}
+                                        <button type="button"
+                                                class="btn-green-circle"
+                                                onclick="toggleStatusAjax('{% url 'core:location_toggle' location.id %}', 'la ubicación {{ location.name|escapejs }}', false)"
+                                                title="Activar">
+                                            <i class="fa-solid fa-toggle-on"></i>
+                                        </button>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        </td>
+                    {% endif %}
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center py-4 text-muted">
+                        <i class="fa-solid fa-inbox fa-2x mb-2 opacity-50"></i>
+                        <p class="mb-0">No hay ubicaciones registradas en este nivel.</p>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>

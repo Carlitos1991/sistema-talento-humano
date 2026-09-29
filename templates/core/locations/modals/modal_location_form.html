@@ -1,72 +1,95 @@
-<div id="location-create-app" v-cloak>
-    <div class="modal-overlay" :class="{ 'hidden': !isVisible }" id="location-modal-overlay">
-        <div class="modal-container">
+<div class="modal-overlay">
+    <div class="modal-container-medium">
+        <form id="locationForm" action="{{ action_url }}" method="post" autocomplete="off" class="modal-form-layout">
+            {% csrf_token %}
+            <input type="hidden" name="level" id="id_location_level" value="{{ current_level|default:'1' }}">
+            <input type="hidden" name="parent" id="id_location_parent" value="{{ parent_id|default:'' }}">
 
-            <!-- HEADER  -->
-            <div class="modal-header modal-header-gradient">
-                <h3 class="modal-title text-white">
-                    <i class="fa-solid fa-map-pin me-2"></i> [[ modalTitle ]]
-                </h3>
-                <button type="button" class="btn-close-modal text-white-opacity" @click="closeModal">
-                    &times;
+            <!-- HEADER -->
+            <div class="modal-header-medium">
+                <div class="header-content-group">
+                    <div class="header-icon-circle">
+                        <i class="fa-solid fa-location-dot"></i>
+                    </div>
+                    <h3 class="header-title">
+                        {% if is_edit %}Editar Ubicación: {{ location.name }}{% else %}
+                            {{ modal_title|default:'Nueva Ubicación' }}{% endif %}
+                    </h3>
+                </div>
+                <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
+                    <i class="fas fa-times"></i>
                 </button>
             </div>
 
-            <form @submit.prevent="submitLocation">
-
-                <!-- BODY con padding y estilo limpio -->
-                <div class="modal-body">
-                    {% csrf_token %}
+            <!-- BODY -->
+            <div class="modal-body modal-body-custom schedule-modal-body">
+                <div class="form-section-card">
+                    <div class="section-title">
+                        <i class="fa-solid fa-map-location-dot text-green"></i> Información Geográfica
+                    </div>
 
                     <!-- Nombre de la Ubicación -->
                     <div class="form-group">
-                        <label class="form-label required">Nombre de la Ubicación</label>
-                        <input 
-                            type="text" 
-                            v-model="form.name" 
-                            required 
-                            class="form-control"
-                            :class="{ 'is-invalid': errors.name }"
-                            :placeholder="'Ej: ' + (form.level === 1 ? 'Ecuador' : form.level === 2 ? 'Pichincha' : form.level === 3 ? 'Quito' : 'La Mariscal')">
-                        <div v-if="errors.name" class="invalid-feedback">
-                            [[ errors.name[0] ]]
-                        </div>
+                        <label class="form-label" for="id_location_name">Nombre de la Ubicación *</label>
+                        <input type="text"
+                               name="name"
+                               id="id_location_name"
+                               class="form-control"
+                               required
+                               placeholder="Ej: Loja"
+                               value="{% if is_edit %}{{ location.name }}{% endif %}">
+                        <div class="invalid-feedback" id="error-name"></div>
                     </div>
 
-                    <!-- Info Visual del Nivel y Padre (Solo Lectura) -->
+                    <!-- Datos informativos de jerarquía (solo lectura) -->
                     <div class="grid-2-cols mt-3">
                         <div class="form-group">
                             <label class="form-label">Nivel Jerárquico</label>
-                            <input 
-                                type="text" 
-                                :value="levelLabel" 
-                                readonly 
-                                class="form-control bg-light">
+                            <input type="text"
+                                   id="display_level_label"
+                                   class="form-control bg-readonly"
+                                   readonly
+                                   value="{{ level_label|default:'País' }}">
                         </div>
-                        <div class="form-group" v-if="form.parent">
-                            <label class="form-label">Pertenece a</label>
-                            <input 
-                                type="text" 
-                                :value="parentNameDisplay" 
-                                readonly 
-                                class="form-control bg-light">
+
+                        <div class="form-group">
+                            <label class="form-label">Depende de (Ubicación Padre)</label>
+                            <input type="text"
+                                   id="display_parent_name"
+                                   class="form-control bg-readonly"
+                                   readonly
+                                   value="{{ parent_name|default:'- Raíz -' }}">
                         </div>
                     </div>
-
-                    <!-- Campos Ocultos para Backend -->
-                    <input type="hidden" v-model="form.level">
-                    <input type="hidden" v-model="form.parent">
                 </div>
 
-                <!-- FOOTER -->
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-cancel" @click="closeModal">Cancelar</button>
-                    <button type="submit" class="btn btn-save">
-                        <i class="fas fa-save me-1"></i>
-                        [[ isEditing ? 'Actualizar' : 'Crear' ]] Ubicación
-                    </button>
+                <!-- Estado del Registro -->
+                <div class="form-section-card mt-3">
+                    <div class="form-group mb-0">
+                        <label class="form-label">Estado de la Ubicación</label>
+                        <input type="checkbox"
+                               name="is_active"
+                               id="id_location_is_active"
+                               class="switch-input switch-green"
+                               value="true"
+                               {% if not is_edit or location.is_active %}checked{% endif %}>
+                        <label class="switch-wrapper" for="id_location_is_active">
+                            <span class="switch-circle"></span>
+                            <span class="switch-text">Ubicación Activa</span>
+                        </label>
+                    </div>
                 </div>
-            </form>
-        </div>
+            </div>
+
+            <!-- FOOTER CON BOTONES INSTITUCIONALES AZUL OSCURO -->
+            <div class="modal-footer-fixed">
+                <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">
+                    <i class="fa-solid fa-xmark me-1"></i> CANCELAR
+                </button>
+                <button type="submit" class="btn-dark-blue-rectangle">
+                    <i class="fas fa-save me-1"></i> {% if is_edit %}ACTUALIZAR{% else %}GUARDAR{% endif %}
+                </button>
+            </div>
+        </form>
     </div>
 </div>

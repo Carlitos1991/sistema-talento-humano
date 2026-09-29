@@ -897,9 +897,9 @@ class LocationListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     def get_queryset(self):
         level = self.request.GET.get('level')
         parent_id = self.request.GET.get('parent_id')
-        query = self.request.GET.get('q')
+        query = (self.request.GET.get('q') or '').strip()
 
-        qs = Location.objects.all().order_by('name')
+        qs = Location.objects.all().select_related('parent').order_by('name')
 
         if parent_id:
             qs = qs.filter(parent_id=parent_id)
@@ -916,8 +916,6 @@ class LocationListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['form'] = LocationForm()
-
         base_stats = Location.objects.filter(is_active=True)
         context['stats_country'] = base_stats.filter(level=1).count()
         context['stats_province'] = base_stats.filter(level=2).count()
@@ -931,7 +929,7 @@ class LocationListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         if parent_id:
             try:
                 parent = Location.objects.get(pk=parent_id)
-                current_display_level = str(parent.level + 1)
+                current_display_level = str(min(parent.level + 1, 4))
             except Location.DoesNotExist:
                 pass
         elif level and level != 'all':
@@ -940,84 +938,167 @@ class LocationListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         context['current_display_level'] = current_display_level
         return context
 
-    def get(self, request, *args, **kwargs):
-        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            self.object_list = self.get_queryset()
-            context = self.get_context_data()
-            return render(request, 'core/locations/partials/partial_location_table.html', context)
-        return super().get(request, *args, **kwargs)
-
     def render_to_response(self, context, **response_kwargs):
-        if self.request.GET.get('format') == 'json' or self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            if self.request.GET.get('parent_id'):
-                data = list(self.object_list.values('id', 'name'))
-                return JsonResponse(data, safe=False)
+        # Compatible con refreshCurrentTable de main.js
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            html = render_to_string(
+                'core/locations/partials/partial_location_table.html',
+                context,
+                request=self.request
+            )
+            return JsonResponse({
+                'html': html,
+                'current_display_level': context.get('current_display_level', '1'),
+                'stats': get_location_stats_dict()
+            })
         return super().render_to_response(context, **response_kwargs)
 
 
-class LocationCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
-    model = Location
-    form_class = LocationForm
-    template_name = 'core/locations/modals/modal_location_form.html'
+class LocationCreateView(LoginRequiredMixin, PermissionRequiredMixin, View):
     permission_required = 'core.create_location'
-
-    def post(self, request, *args, **kwargs):
-        form = self.get_form()
-        if form.is_valid():
-            location = form.save()
-            stats = get_location_stats_dict()
-            return JsonResponse({
-                'success': True,
-                'message': 'Ubicación creada correctamente.',
-                'data': {'id': location.id, 'name': location.name, 'new_stats': stats}
-            })
-        else:
-            return JsonResponse({'success': False, 'errors': form.errors}, status=400)
-
-
-class LocationUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
-    model = Location
-    form_class = LocationForm
     template_name = 'core/locations/modals/modal_location_form.html'
-    permission_required = 'core.change_location'
+
+    def get(self, request, *args, **kwargs):
+        parent_id = request.GET.get('parent_id')
+        parent_obj = None
+        current_level = 1
+        level_map = {1: 'País', 2: 'Provincia', 3: 'Ciudad', 4: 'Parroquia'}
+
+        if parent_id and parent_id != 'null':
+            try:
+                parent_obj = Location.objects.filter(pk=parent_id).first()
+                if parent_obj:
+                    current_level = min(parent_obj.level + 1, 4)
+            except (ValueError, TypeError):
+                parent_obj = None
+
+        modal_title = f"Nuevo {level_map.get(current_level, 'Ubicación')}"
+        if parent_obj:
+            modal_title += f" de {parent_obj.name}"
+
+        context = {
+            'action_url': reverse('core:location_create'),
+            'is_edit': False,
+            'current_level': current_level,
+            'level_label': level_map.get(current_level, 'Ubicación'),
+            'parent_id': parent_obj.id if parent_obj else '',
+            'parent_name': parent_obj.name if parent_obj else '- Raíz -',
+            'modal_title': modal_title,
+        }
+
+        html = render_to_string(self.template_name, context, request=request)
+        return HttpResponse(html)
 
     def post(self, request, *args, **kwargs):
-        self.object = self.get_object()
-        form = self.get_form()
+        name = (request.POST.get('name') or '').strip().title()
+        level_raw = request.POST.get('level')
+        parent_id = request.POST.get('parent')
+        is_active = request.POST.get('is_active') in ['true', 'True', True, 'on', '1']
 
-        if form.is_valid():
-            location = form.save()
-            stats = get_location_stats_dict()
-            return JsonResponse({
-                'success': True,
-                'message': 'Ubicación actualizada correctamente.',
-                'data': {'id': location.id, 'name': location.name, 'new_stats': stats}
-            })
-        else:
-            return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+        errors = {}
+        if not name:
+            errors['name'] = ['El nombre de la ubicación es obligatorio.']
+
+        try:
+            level = int(level_raw) if level_raw else 1
+        except (ValueError, TypeError):
+            level = 1
+
+        parent_obj = None
+        if parent_id and parent_id != 'null' and parent_id.isdigit():
+            parent_obj = Location.objects.filter(pk=int(parent_id)).first()
+
+        # Validar duplicados en el mismo nivel y padre
+        qs_dup = Location.objects.filter(name__iexact=name, level=level, parent=parent_obj)
+        if qs_dup.exists():
+            errors['name'] = [f'Ya existe una ubicación con el nombre "{name}" en este nivel.']
+
+        if errors:
+            return JsonResponse({'success': False, 'errors': errors}, status=400)
+
+        Location.objects.create(
+            name=name,
+            level=level,
+            parent=parent_obj,
+            is_active=is_active,
+            created_by=request.user
+        )
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Ubicación registrada exitosamente.',
+            'new_stats': get_location_stats_dict()
+        })
 
 
-def location_detail_json(request, pk):
-    location = get_object_or_404(Location, pk=pk)
-    return JsonResponse({
-        'success': True,
-        'data': {
-            'id': location.id,
-            'name': location.name,
-            'level': location.level,
-            'parent': location.parent_id,
-            'parent_name': location.parent.name if location.parent else None
+class LocationUpdateView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'core.change_location'
+    template_name = 'core/locations/modals/modal_location_form.html'
+
+    def get(self, request, pk, *args, **kwargs):
+        location = get_object_or_404(Location, pk=pk)
+        level_map = {1: 'País', 2: 'Provincia', 3: 'Ciudad', 4: 'Parroquia'}
+
+        context = {
+            'location': location,
+            'action_url': reverse('core:location_update', args=[location.id]),
+            'is_edit': True,
+            'current_level': location.level,
+            'level_label': level_map.get(location.level, 'Ubicación'),
+            'parent_id': location.parent_id or '',
+            'parent_name': location.parent.name if location.parent else '- Raíz -',
+            'modal_title': f"Editar Ubicación: {location.name}",
         }
-    })
 
+        html = render_to_string(self.template_name, context, request=request)
+        return HttpResponse(html)
+
+    def post(self, request, pk, response=JsonResponse(
+        {'success': True, 'message': 'Ubicación actualizada exitosamente.', 'new_stats': get_location_stats_dict()}),
+             *args, **kwargs):
+        location = get_object_or_404(Location, pk=pk)
+        name = (request.POST.get('name') or '').strip().title()
+        is_active = request.POST.get('is_active') in ['true', 'True', True, 'on', '1']
+
+        errors = {}
+        if not name:
+            errors['name'] = ['El nombre de la ubicación es obligatorio.']
+
+        # Validar duplicados excluyendo la propia instancia
+        qs_dup = Location.objects.filter(
+            name__iexact=name,
+            level=location.level,
+            parent=location.parent
+        ).exclude(pk=location.pk)
+
+        if qs_dup.exists():
+            errors['name'] = [f'Ya existe otra ubicación con el nombre "{name}" en este nivel.']
+
+        if errors:
+            return JsonResponse({'success': False, 'errors': errors}, status=400)
+
+        location.name = name
+        location.is_active = is_active
+        location.updated_by = request.user
+        location.save()
+
+        return response
 
 @require_POST
 @permission_required('core.change_location', raise_exception=True)
 def location_toggle_status(request, pk):
+    """
+    Alterna el estado activo/inactivo de una ubicación geográfica y retorna
+    respuesta JSON compatible con toggleStatusAjax() de main.js.
+    """
     location = get_object_or_404(Location, pk=pk)
-    location.toggle_status()
+    location.is_active = not location.is_active
+    location.updated_by = request.user
+    location.save()
+
     status_label = "activada" if location.is_active else "desactivada"
     stats = get_location_stats_dict()
+
     return JsonResponse({
         'success': True,
         'message': f'La ubicación "{location.name}" ha sido {status_label} correctamente.',
@@ -1025,16 +1106,29 @@ def location_toggle_status(request, pk):
     })
 
 
-class LocationJsonView(View):
-    def get(self, request):
-        parent_id = request.GET.get('parent_id')
-        if parent_id:
-            locations = Location.objects.filter(parent_id=parent_id, is_active=True).order_by('name')
-        else:
-            locations = Location.objects.filter(level=1, is_active=True).order_by('name')
+# =====================================================================
+# 2. API JSON PARA SELECTORES EN CASCADA (PAÍS -> PROVINCIA -> CIUDAD)
+# =====================================================================
+class LocationJsonView(LoginRequiredMixin, View):
+    """
+    Retorna la lista de ubicaciones activas en formato JSON simple.
+    Soporta filtrado por 'parent_id' o por defecto los países (level=1).
+    Útil para selectores dependientes en formularios.
+    """
 
-        data = [{'id': loc.id, 'name': loc.name} for loc in locations]
-        return JsonResponse({'success': True, 'data': data})
+    def get(self, request, *args, **kwargs):
+        parent_id = request.GET.get('parent_id')
+
+        if parent_id:
+            qs = Location.objects.filter(parent_id=parent_id, is_active=True).order_by('name')
+        else:
+            qs = Location.objects.filter(level=1, is_active=True).order_by('name')
+
+        data = [{'id': loc.id, 'name': loc.name} for loc in qs]
+        return JsonResponse({
+            'success': True,
+            'data': data
+        })
 
 
 # =====================================================================
