@@ -148,10 +148,10 @@ class BiometricManager {
 
             const payload = {
                 target_device_id: targetDeviceId,
-                pin: btn.dataset.pin,
-                name: btn.dataset.name,
+                pin: btn.dataset.pin || '',
+                name: btn.dataset.name || '',
                 is_admin: isAdmin,
-                card: btn.dataset.card || '0',
+                card: btn.dataset.card || '',
                 password: btn.dataset.password || ''
             };
 
@@ -160,7 +160,7 @@ class BiometricManager {
 
             window.Swal.fire({
                 title: `¿Migrar a ${targetName}?`,
-                html: `Se encolará el usuario <b>${payload.name} (PIN: ${payload.pin})</b> con rol ${rolTexto} para transmitirse en el próximo latido ADMS.`,
+                html: `Se encolará el usuario <b>${payload.name} (PIN: ${payload.pin})</b> como ${rolTexto} para el próximo latido ADMS.`,
                 icon: 'question',
                 showCancelButton: true,
                 confirmButtonText: 'Sí, migrar',
@@ -182,7 +182,7 @@ class BiometricManager {
                             if (data.success) {
                                 window.Swal.fire({
                                     icon: 'success',
-                                    title: 'Comando ADMS Encolado',
+                                    title: 'Encolado con Éxito',
                                     text: data.message
                                 });
                             } else {
