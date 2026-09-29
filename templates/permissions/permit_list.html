@@ -162,8 +162,7 @@
                     <div class="page-input-wrapper">
                         <input type="number" class="page-input"
                                value="{{ page_obj.number|default:1 }}"
-                               min="1" max="{{ paginator.num_pages|default:1 }}"
-                               onchange="window.location.search = new URLSearchParams({...Object.fromEntries(new URLSearchParams(window.location.search)), page: this.value}).toString()">
+                               min="1" max="{{ paginator.num_pages|default:1 }}">
                         <span class="total-pages-badge">de {{ paginator.num_pages|default:1 }}</span>
                     </div>
                     <button type="button" class="page-btn page-next" title="Siguiente"
@@ -189,8 +188,6 @@
         </div>
     </div>
 
-    <!-- Contenedor Universal para Modales AJAX de main.js -->
-    <div id="modal-root"></div>
 {% endblock %}
 
 {% block extra_js %}

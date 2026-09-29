@@ -1001,6 +1001,8 @@ document.addEventListener('click', (e) => {
     const btn = e.target.closest('.page-btn');
     if (!btn) return;
 
+    if (document.getElementById('filtersForm')) return;
+
     const table = document.querySelector('.managed-table');
     if (!table || table.dataset.externalPagination !== 'true') return;
     if (btn.hasAttribute('disabled') || btn.classList.contains('disabled')) return;

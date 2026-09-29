@@ -83,6 +83,14 @@ async function getAllRowsFromServer(table) {
     if (listUrl) {
         const params = new URLSearchParams(window.location.search);
 
+        const permitFiltersForm = document.getElementById('filtersForm');
+        if (permitFiltersForm) {
+            new FormData(permitFiltersForm).forEach((value, key) => {
+                params.delete(key);
+                if (value) params.set(key, value);
+            });
+        }
+
         if (typeof currentFilters !== 'undefined') {
             if (currentFilters.q) params.set('q', currentFilters.q);
             if (currentFilters.status && currentFilters.status !== 'all') params.set('status', currentFilters.status);

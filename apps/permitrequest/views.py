@@ -150,7 +150,10 @@ def build_permit_admin_queryset(request):
     raw_document_numbers = (request.GET.get('document_numbers') or '').strip()
 
     if raw_document_numbers:
-        cedulas_list = [c.strip() for c in raw_document_numbers.split(',') if c.strip()]
+        if raw_document_numbers == 'session':
+            cedulas_list = request.session.get('permit_document_numbers', [])
+        else:
+            cedulas_list = [c.strip() for c in raw_document_numbers.split(',') if c.strip()]
         if cedulas_list:
             queryset = queryset.filter(employee__person__document_number__in=cedulas_list)
 
@@ -1995,10 +1998,12 @@ class ParsePermitIdentificationExcelView(LoginRequiredMixin, PermissionRequiredM
                     'message': 'No se encontraron cédulas válidas (9 a 13 dígitos) en el archivo.'
                 }, status=400)
 
+            request.session['permit_document_numbers'] = unique_identifications
+            request.session.modified = True
+
             return JsonResponse({
                 'success': True,
                 'count': len(unique_identifications),
-                'document_numbers': unique_identifications,
                 'message': f'Se cargaron {len(unique_identifications)} cédula(s) correctamente.'
             })
 

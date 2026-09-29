@@ -120,10 +120,86 @@
         const params = collectFilters();
         params.page = page;
 
-        if (typeof window.refreshCurrentTable === 'function') {
-            window.refreshCurrentTable(params);
-        }
+        fetchPermitTable(params);
     }
+
+    function fetchPermitTable(params) {
+        const query = new URLSearchParams(params);
+        fetch(`${window.location.pathname}?${query.toString()}`, {
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        })
+            .then(async response => {
+                if (!response.ok) throw new Error('No se pudo cargar la tabla de permisos.');
+                return response.json();
+            })
+            .then(data => {
+                const wrapper = document.getElementById('table-content-wrapper');
+                if (wrapper && data.html) {
+                    wrapper.innerHTML = data.html;
+                    const table = wrapper.querySelector('.managed-table');
+                    if (table && window.TableManager) new window.TableManager(table);
+                }
+                if (data.pagination) updatePermitPagination(data.pagination);
+            })
+            .catch(error => {
+                console.error('Error al filtrar permisos:', error);
+                if (window.showToast) window.showToast(error.message, 'error');
+            });
+    }
+
+    function updatePermitPagination(pagination) {
+        const container = document.querySelector('.pagination-container');
+        if (!container) return;
+
+        const totalPages = Math.max(1, pagination.total_pages || 1);
+        const page = pagination.page || 1;
+        const previousPage = Math.max(1, page - 1);
+        const nextPage = Math.min(totalPages, page + 1);
+        const hasPrevious = Boolean(pagination.has_previous);
+        const hasNext = Boolean(pagination.has_next);
+
+        container.innerHTML = `
+            <span class="pagination-info">Mostrando ${pagination.start_index || 0}-${pagination.end_index || 0} de ${pagination.total_count || 0}</span>
+            <div class="pagination-controls" style="${totalPages <= 1 ? 'visibility:hidden;' : ''}">
+                <button type="button" class="page-btn" data-page="1" ${hasPrevious ? '' : 'disabled'} title="Primera">
+                    <i class="fas fa-angle-double-left"></i>
+                </button>
+                <button type="button" class="page-btn" data-page="${previousPage}" ${hasPrevious ? '' : 'disabled'} title="Anterior">
+                    <i class="fas fa-angle-left"></i>
+                </button>
+                <div class="page-input-wrapper">
+                    <input type="number" class="page-input" value="${page}" min="1" max="${totalPages}">
+                    <span class="total-pages-badge">de ${totalPages}</span>
+                </div>
+                <button type="button" class="page-btn" data-page="${nextPage}" ${hasNext ? '' : 'disabled'} title="Siguiente">
+                    <i class="fas fa-angle-right"></i>
+                </button>
+                <button type="button" class="page-btn" data-page="${totalPages}" ${hasNext ? '' : 'disabled'} title="Última">
+                    <i class="fas fa-angle-double-right"></i>
+                </button>
+            </div>`;
+    }
+
+    document.addEventListener('click', event => {
+        const button = event.target.closest('.pagination-container .page-btn[data-page]');
+        if (!button || button.disabled) return;
+        applyPermitFilters(Number.parseInt(button.dataset.page, 10) || 1);
+    });
+
+    document.addEventListener('change', event => {
+        const input = event.target.closest('.pagination-container .page-input');
+        if (!input) return;
+        const page = Math.max(1, Math.min(Number.parseInt(input.value, 10) || 1, Number.parseInt(input.max, 10) || 1));
+        applyPermitFilters(page);
+    });
+
+    document.addEventListener('keydown', event => {
+        const input = event.target.closest('.pagination-container .page-input');
+        if (input && event.key === 'Enter') {
+            event.preventDefault();
+            input.dispatchEvent(new Event('change', {bubbles: true}));
+        }
+    });
 
     window.handlePermitSearch = function (e) {
         if (e) e.preventDefault();
@@ -596,7 +672,7 @@ function initIdentificationExcelUpload() {
                 if (data.success) {
                     const hiddenInput = document.getElementById('filter_document_numbers');
                     if (hiddenInput) {
-                        hiddenInput.value = data.document_numbers.join(',');
+                        hiddenInput.value = 'session';
                     }
 
                     const badgeBox = document.getElementById('identification-badge-container');
