@@ -31,7 +31,7 @@ from employee.models import InstitutionalData, Employee
 from institution.models import AdministrativeUnit
 from permitrequest.models import PermitRequest
 from schedule.models import ScheduleObservation, get_employee_schedule_for_date
-from .models import (BiometricDevice,BiometricLoad,AttendanceRegistry,OfflineAttendanceRegistry,BiometricCommand,)
+from .models import (BiometricDevice, BiometricLoad, AttendanceRegistry, OfflineAttendanceRegistry, BiometricCommand, )
 from .utils import test_connection, BiometricConnection
 
 try:
@@ -1659,37 +1659,42 @@ def generate_department_report_pdf(request):
 
 class BiometricModalUsersView(LoginRequiredMixin, View):
     """
-    Retorna el modal con el listado de usuarios del biométrico origen
-    y la lista de los otros biométricos activos como destino.
+    Retorna el modal con el listado de usuarios para migración vía ADMS
+    sin depender de sockets TCP directos a IPs remotas.
     """
 
     def get(self, request, pk):
         source_device = get_object_or_404(BiometricDevice, pk=pk)
 
-        # Conexión directa TCP para obtener usuarios en tiempo real
-        conn = BiometricConnection(source_device.ip_address, source_device.port, timeout=4)
-        users = []
-        connection_error = None
+        # Consultamos los empleados que tienen un ID biométrico asignado en el sistema
+        # Si tienes marcaciones previas en este biométrico, las filtramos; de lo contrario listamos los asignados
+        used_pins = AttendanceRegistry.objects.filter(
+            biometric_load__biometric=source_device
+        ).values_list('employee_id_bio', flat=True).distinct()
 
-        if conn.connect():
-            try:
-                zk_users = conn.conn.get_users()
-                for u in zk_users:
-                    users.append({
-                        'uid': u.uid,
-                        'user_id': str(u.user_id).strip(),
-                        'name': u.name.strip() if u.name else 'Sin Nombre',
-                        'privilege': u.privilege,
-                        'is_admin': (u.privilege in [14, 2, 3]),
-                        'card': getattr(u, 'card', 0),
-                        'password': getattr(u, 'password', '')
-                    })
-            except Exception as e:
-                connection_error = f"Error al extraer usuarios: {str(e)}"
-            finally:
-                conn.disconnect()
-        else:
-            connection_error = "No se pudo conectar vía red (TCP) al biométrico origen para leer sus usuarios."
+        # Si no hay marcaciones registradas aún, mostramos los empleados institucionales activos
+        inst_qs = InstitutionalData.objects.select_related('employee__person').filter(
+            biometric_id__isnull=False,
+            employee__is_active=True
+        )
+
+        if used_pins.exists():
+            # Priorizamos o marcamos los que han registrado en este reloj
+            pin_set = set(used_pins)
+            inst_qs = inst_qs.filter(Q(biometric_id__in=pin_set) | Q(employee__is_active=True))
+
+        users = []
+        for inst in inst_qs[:300]:  # Límite prudente para el modal
+            full_name = f"{inst.employee.person.first_name} {inst.employee.person.last_name}".strip()
+            users.append({
+                'uid': inst.id,
+                'user_id': str(inst.biometric_id).strip(),
+                'name': full_name or 'Sin Nombre',
+                'privilege': 0,
+                'is_admin': False,
+                'card': '0',
+                'password': ''
+            })
 
         # Biométricos destino disponibles (activos y distintos al actual)
         target_devices = BiometricDevice.objects.filter(is_active=True).exclude(pk=source_device.pk)
@@ -1698,7 +1703,7 @@ class BiometricModalUsersView(LoginRequiredMixin, View):
             'source_device': source_device,
             'users': sorted(users, key=lambda x: int(x['user_id']) if x['user_id'].isdigit() else x['user_id']),
             'target_devices': target_devices,
-            'connection_error': connection_error,
+            'connection_error': None,
         }, request=request)
         return HttpResponse(html)
 

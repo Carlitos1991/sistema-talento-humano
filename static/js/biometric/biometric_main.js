@@ -131,8 +131,11 @@ class BiometricManager {
             if (!btn) return;
 
             const row = btn.closest('tr');
-            const select = row.querySelector('.target-bio-select');
-            const targetDeviceId = select?.value;
+            const targetSelect = row.querySelector('.target-bio-select');
+            const roleSelect = row.querySelector('.role-select');
+
+            const targetDeviceId = targetSelect?.value;
+            const isAdmin = roleSelect?.value === 'true';
 
             if (!targetDeviceId) {
                 window.Swal.fire({
@@ -147,16 +150,17 @@ class BiometricManager {
                 target_device_id: targetDeviceId,
                 pin: btn.dataset.pin,
                 name: btn.dataset.name,
-                is_admin: btn.dataset.admin === 'true',
-                card: btn.dataset.card,
-                password: btn.dataset.password
+                is_admin: isAdmin,
+                card: btn.dataset.card || '0',
+                password: btn.dataset.password || ''
             };
 
-            const targetName = select.options[select.selectedIndex].text;
+            const targetName = targetSelect.options[targetSelect.selectedIndex].text;
+            const rolTexto = isAdmin ? '<b style="color:red">ADMINISTRADOR</b>' : '<b>USUARIO NORMAL</b>';
 
             window.Swal.fire({
                 title: `¿Migrar a ${targetName}?`,
-                html: `Se encolará el usuario <b>${payload.name} (PIN: ${payload.pin})</b> ${payload.is_admin ? '<b style="color:red">(Admin)</b>' : ''} para ser descargado vía ADMS.`,
+                html: `Se encolará el usuario <b>${payload.name} (PIN: ${payload.pin})</b> con rol ${rolTexto} para transmitirse en el próximo latido ADMS.`,
                 icon: 'question',
                 showCancelButton: true,
                 confirmButtonText: 'Sí, migrar',
@@ -178,7 +182,7 @@ class BiometricManager {
                             if (data.success) {
                                 window.Swal.fire({
                                     icon: 'success',
-                                    title: 'Encolado con Éxito',
+                                    title: 'Comando ADMS Encolado',
                                     text: data.message
                                 });
                             } else {
