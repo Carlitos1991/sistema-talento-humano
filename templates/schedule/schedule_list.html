@@ -1,56 +1,51 @@
 {% extends 'base.html' %}
 {% load static %}
+
 {% block title %}Horarios | SIGETH{% endblock %}
 
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/schedule.css' %}">
+{% endblock %}
+
 {% block content %}
-    <div id="schedule-app" v-cloak
-         data-total="{{ total_schedules|default:0 }}"
-         data-active="{{ active_schedules|default:0 }}"
-         data-inactive="{{ inactive_schedules|default:0 }}">
-        <!-- 1. Header -->
-        <div class="header-card">
-            <div>
-                <h1><i class="fa-solid fa-clock-rotate-left"></i> Gestión de Horarios</h1>
-                <p>Administre las jornadas laborales, turnos y parámetros de asistencia.</p>
-            </div>
-            <button type="button" class="btn-create" @click="openCreateModal">
-                <i class="fas fa-plus"></i> NUEVO HORARIO
-            </button>
+    <div class="header-card">
+        <div class="header-card-body">
+            <h1><i class="fa-solid fa-clock-rotate-left me-2"></i> Gestión de Horarios</h1>
+            <p>Administre las jornadas laborales, turnos y parámetros de asistencia institucional.</p>
         </div>
-        <!-- 2. Contenedor principal Tabla (AJAX) -->
-        <div class="table-app">
-            <div class="content-table">
-                <div class="table-controls">
-                    <div class="search-box">
-                        <input type="text"
-                               v-model="filters.name"
-                               @input="debouncedSearch"
-                               class="input-field"
-                               placeholder="Buscar por nombre de horario...">
-                    </div>
+        <button type="button" class="btn-blue-rectangle" id="btn-create-schedule">
+            <i class="fas fa-plus"></i> NUEVO HORARIO
+        </button>
+    </div>
+
+    <div id="table-app">
+        <div class="content-table">
+            <div class="table-controls toolbar-row">
+                <div class="toolbar-center"></div>
+                <div class="toolbar-right">
+                    <input type="text"
+                           class="table-search-input table-search-input--large"
+                           id="table-search"
+                           placeholder="Buscar por nombre o descripción de horario..."
+                           value="{{ query|default:'' }}">
                 </div>
-                <div id="table-content-wrapper">
-                    {% include 'schedule/partials/partial_schedule_table.html' %}
-                </div>
-                <div class="pagination-container" id="js-pagination">
-                    <span class="pagination-info" id="page-info">Mostrando 0 a 0 registros de 0 registros</span>
-                    <ul class="pagination-list">
-                        <li>
-                            <button id="btn-prev" class="page-btn"><i class="fas fa-chevron-left"></i></button>
-                        </li>
-                        <li>
-                            <span id="current-page-display" style="padding: 0 10px; font-weight: bold;">1</span>
-                        </li>
-                        <li>
-                            <button id="btn-next" class="page-btn"><i class="fas fa-chevron-right"></i></button>
-                        </li>
-                    </ul>
-                </div>
-                {% include 'schedule/modals/modal_schedule_form.html' %}
+            </div>
+            <div id="table-content-wrapper">
+                {% include 'schedule/partials/partial_schedule_table.html' %}
             </div>
         </div>
     </div>
+    <div id="modal-root"></div>
 {% endblock %}
+
 {% block extra_js %}
+    <script>
+        window.initialPagination = {
+            current_page: {% if page_obj %}{{ page_obj.number }}{% else %}1{% endif %},
+            total_pages: {% if page_obj %}{{ page_obj.paginator.num_pages }}{% else %}1{% endif %},
+            has_previous: {% if page_obj %}{{ page_obj.has_previous|lower }}{% else %}false{% endif %},
+            has_next: {% if page_obj %}{{ page_obj.has_next|lower }}{% else %}false{% endif %}
+        };
+    </script>
     <script src="{% static 'js/schedule.js' %}"></script>
 {% endblock %}

@@ -15,6 +15,18 @@ from employee.models import Employee
 from budget.models import BudgetLine
 from .models import EmployeeScheduleHistory
 
+from django.shortcuts import get_object_or_404
+from django.views.generic import ListView, View
+from django.http import JsonResponse, HttpResponse
+from django.template.loader import render_to_string
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.db import transaction
+from django.db.models import Q
+from datetime import date
+
+from .models import Schedule, ScheduleChangeHistory
+from .forms import ScheduleForm
+
 
 class ScheduleListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     model = Schedule
@@ -24,7 +36,32 @@ class ScheduleListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     paginate_by = 10
 
     def get_queryset(self):
-        return Schedule.objects.all().order_by('-created_at')
+        qs = Schedule.objects.all()
+
+        query = (self.request.GET.get('q') or '').strip()
+        if query:
+            qs = qs.filter(
+                Q(name__icontains=query) |
+                Q(description__icontains=query)
+            )
+
+        is_active = self.request.GET.get('is_active')
+        if is_active in ['true', 'True', True]:
+            qs = qs.filter(is_active=True)
+        elif is_active in ['false', 'False', False]:
+            qs = qs.filter(is_active=False)
+
+        sort_field = self.request.GET.get('sort_field', 'created_at')
+        sort_dir = self.request.GET.get('sort_dir', 'desc')
+        allowed_sort = {
+            'name': 'name',
+            'daily_hours': 'daily_hours',
+            'late_tolerance_minutes': 'late_tolerance_minutes',
+            'created_at': 'created_at',
+        }
+        order_col = allowed_sort.get(sort_field, 'created_at')
+        prefix = '-' if sort_dir == 'desc' else ''
+        return qs.order_by(f'{prefix}{order_col}')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -32,7 +69,52 @@ class ScheduleListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
         context['total_schedules'] = all_schedules.count()
         context['active_schedules'] = all_schedules.filter(is_active=True).count()
         context['inactive_schedules'] = all_schedules.filter(is_active=False).count()
+        context['query'] = (self.request.GET.get('q') or '').strip()
         return context
+
+    def render_to_response(self, context, **response_kwargs):
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            html = render_to_string(
+                'schedule/partials/partial_schedule_table.html',
+                context,
+                request=self.request
+            )
+            return JsonResponse({'html': html})
+        return super().render_to_response(context, **response_kwargs)
+
+
+class ScheduleModalFormView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """Retorna el formulario HTML modal para creación o edición."""
+    permission_required = 'schedule.change_schedule'
+
+    def get(self, request, pk=None):
+        if pk:
+            schedule = get_object_or_404(Schedule, pk=pk)
+            form = ScheduleForm(instance=schedule)
+            action_url = reverse('schedule:schedule_update', args=[pk])
+            is_edit = True
+        else:
+            schedule = None
+            form = ScheduleForm(initial={
+                'late_tolerance_minutes': 15,
+                'morning_start': '08:00',
+                'morning_end': '13:00',
+                'afternoon_start': '14:00',
+                'afternoon_end': '17:00',
+                'daily_hours': 8.00,
+                'monday': True, 'tuesday': True, 'wednesday': True,
+                'thursday': True, 'friday': True, 'is_active': True,
+            })
+            action_url = reverse('schedule:schedule_create')
+            is_edit = False
+
+        html = render_to_string('schedule/modals/modal_schedule_form.html', {
+            'form': form,
+            'schedule': schedule,
+            'action_url': action_url,
+            'is_edit': is_edit,
+        }, request=request)
+        return HttpResponse(html)
 
 
 class ScheduleCreateView(LoginRequiredMixin, PermissionRequiredMixin, View):
@@ -45,7 +127,7 @@ class ScheduleCreateView(LoginRequiredMixin, PermissionRequiredMixin, View):
                 instance = form.save(commit=False)
                 instance.created_by = request.user
                 instance.save()
-                # Si se proporcionó una fecha 'vigente_desde', crear entrada en historial
+
                 vdesde = form.cleaned_data.get('vigente_desde')
                 if vdesde:
                     ScheduleChangeHistory.objects.create(
@@ -63,7 +145,7 @@ class ScheduleCreateView(LoginRequiredMixin, PermissionRequiredMixin, View):
                         daily_hours=instance.daily_hours,
                         created_by=request.user
                     )
-            return JsonResponse({'success': True, 'message': 'Horario creado exitosamente'})
+            return JsonResponse({'success': True, 'message': 'Horario creado exitosamente.'})
         return JsonResponse({'success': False, 'errors': form.errors}, status=400)
 
 
@@ -74,38 +156,41 @@ class ScheduleUpdateView(LoginRequiredMixin, PermissionRequiredMixin, View):
         schedule = get_object_or_404(Schedule, pk=pk)
         form = ScheduleForm(request.POST, instance=schedule)
         if form.is_valid():
-            instance = form.save(commit=False)
-            instance.updated_by = request.user
-            instance.save()
-            # Si se proporcionó 'vigente_desde', registrar versión del horario
-            vdesde = form.cleaned_data.get('vigente_desde')
-            if vdesde:
-                ScheduleChangeHistory.objects.create(
-                    schedule=instance,
-                    effective_from=vdesde,
-                    morning_start=instance.morning_start,
-                    morning_end=instance.morning_end,
-                    morning_crosses_midnight=instance.morning_crosses_midnight,
-                    afternoon_start=instance.afternoon_start,
-                    afternoon_end=instance.afternoon_end,
-                    afternoon_crosses_midnight=instance.afternoon_crosses_midnight,
-                    monday=instance.monday, tuesday=instance.tuesday, wednesday=instance.wednesday,
-                    thursday=instance.thursday, friday=instance.friday, saturday=instance.saturday,
-                    sunday=instance.sunday, late_tolerance_minutes=instance.late_tolerance_minutes,
-                    daily_hours=instance.daily_hours,
-                    created_by=request.user
-                )
-            return JsonResponse({'success': True, 'message': 'Horario actualizado exitosamente'})
+            with transaction.atomic():
+                instance = form.save(commit=False)
+                instance.updated_by = request.user
+                instance.save()
+
+                vdesde = form.cleaned_data.get('vigente_desde')
+                if vdesde:
+                    ScheduleChangeHistory.objects.create(
+                        schedule=instance,
+                        effective_from=vdesde,
+                        morning_start=instance.morning_start,
+                        morning_end=instance.morning_end,
+                        morning_crosses_midnight=instance.morning_crosses_midnight,
+                        afternoon_start=instance.afternoon_start,
+                        afternoon_end=instance.afternoon_end,
+                        afternoon_crosses_midnight=instance.afternoon_crosses_midnight,
+                        monday=instance.monday, tuesday=instance.tuesday, wednesday=instance.wednesday,
+                        thursday=instance.thursday, friday=instance.friday, saturday=instance.saturday,
+                        sunday=instance.sunday, late_tolerance_minutes=instance.late_tolerance_minutes,
+                        daily_hours=instance.daily_hours,
+                        created_by=request.user
+                    )
+            return JsonResponse({'success': True, 'message': 'Horario actualizado exitosamente.'})
         return JsonResponse({'success': False, 'errors': form.errors}, status=400)
 
 
 class ScheduleHistoryAPIView(LoginRequiredMixin, View):
-    """Retorna el modal HTML con el historial de cambios de un horario."""
     def get(self, request, pk):
         schedule = get_object_or_404(Schedule, pk=pk)
-        histories = ScheduleChangeHistory.objects.filter(schedule=schedule).select_related('created_by').order_by('-effective_from')
-        html = render_to_string('schedule/modals/modal_schedule_history.html', {'histories': histories, 'schedule': schedule}, request=request)
-        from django.http import HttpResponse
+        histories = ScheduleChangeHistory.objects.filter(schedule=schedule).select_related('created_by').order_by(
+            '-effective_from')
+        html = render_to_string('schedule/modals/modal_schedule_history.html', {
+            'histories': histories,
+            'schedule': schedule
+        }, request=request)
         return HttpResponse(html)
 
 
@@ -134,22 +219,22 @@ class ScheduleDetailAPIView(View):
         return JsonResponse({'success': True, 'schedule': data})
 
 
-class ScheduleActivateView(View):
+class ScheduleActivateView(LoginRequiredMixin, View):
     def post(self, request, pk):
         instance = get_object_or_404(Schedule, pk=pk)
         instance.is_active = True
         instance.updated_by = request.user
         instance.save()
-        return JsonResponse({'success': True, 'message': 'Horario dado de ALTA correctamente'})
+        return JsonResponse({'success': True, 'message': 'Horario dado de alta correctamente.'})
 
 
-class ScheduleDeactivateView(View):
+class ScheduleDeactivateView(LoginRequiredMixin, View):
     def post(self, request, pk):
         instance = get_object_or_404(Schedule, pk=pk)
         instance.is_active = False
         instance.updated_by = request.user
         instance.save()
-        return JsonResponse({'success': True, 'message': 'Horario dado de BAJA correctamente'})
+        return JsonResponse({'success': True, 'message': 'Horario dado de baja correctamente.'})
 
 
 class ScheduleTablePartialView(LoginRequiredMixin, View):
@@ -157,7 +242,7 @@ class ScheduleTablePartialView(LoginRequiredMixin, View):
 
     def get(self, request):
         from django.core.paginator import Paginator
-        
+
         name = request.GET.get('name', '')
         is_active = request.GET.get('is_active', '')
         page_number = request.GET.get('page', 1)
@@ -214,22 +299,87 @@ class ObservationListView(LoginRequiredMixin, PermissionRequiredMixin, ListView)
     paginate_by = 10
 
     def get_queryset(self):
-        return ScheduleObservation.objects.all().order_by('-start_date')
+        qs = ScheduleObservation.objects.all()
+
+        query = (self.request.GET.get('q') or '').strip()
+        if query:
+            qs = qs.filter(
+                Q(name__icontains=query) |
+                Q(description__icontains=query)
+            )
+
+        is_holiday = self.request.GET.get('is_holiday')
+        if is_holiday in ['true', 'True', True]:
+            qs = qs.filter(is_holiday=True)
+        elif is_holiday in ['false', 'False', False]:
+            qs = qs.filter(is_holiday=False)
+
+        sort_field = self.request.GET.get('sort_field', 'start_date')
+        sort_dir = self.request.GET.get('sort_dir', 'desc')
+        allowed_sort = {
+            'name': 'name',
+            'start_date': 'start_date',
+            'end_date': 'end_date',
+            'created_at': 'created_at',
+        }
+        order_col = allowed_sort.get(sort_field, 'start_date')
+        prefix = '-' if sort_dir == 'desc' else ''
+        return qs.order_by(f'{prefix}{order_col}')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        qs = ScheduleObservation.objects.all()
-        # Datos iniciales para evitar el parpadeo "0"
-        context['total_obs'] = qs.count()
-        context['holiday_obs'] = qs.filter(is_holiday=True).count()
-        context['special_obs'] = qs.filter(is_holiday=False).count()
+        all_qs = ScheduleObservation.objects.all()
+        context['total_obs'] = all_qs.count()
+        context['holiday_obs'] = all_qs.filter(is_holiday=True).count()
+        context['special_obs'] = all_qs.filter(is_holiday=False).count()
+        context['query'] = (self.request.GET.get('q') or '').strip()
         return context
+
+    def render_to_response(self, context, **response_kwargs):
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            html = render_to_string(
+                'schedule/partials/partial_observation_table.html',
+                context,
+                request=self.request
+            )
+            return JsonResponse({'html': html})
+        return super().render_to_response(context, **response_kwargs)
+
+
+class ObservationModalFormView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """Retorna el formulario HTML modal para creación o edición de observaciones."""
+    permission_required = 'schedule.change_scheduleobservation'
+
+    def get(self, request, pk=None):
+        if pk:
+            observation = get_object_or_404(ScheduleObservation, pk=pk)
+            form = ScheduleObservationForm(instance=observation)
+            action_url = reverse('schedule:observation_update', args=[pk])
+            is_edit = True
+        else:
+            observation = None
+            form = ScheduleObservationForm(initial={
+                'start_date': date.today(),
+                'end_date': date.today(),
+                'is_holiday': True,
+                'is_active': True,
+            })
+            action_url = reverse('schedule:observation_create')
+            is_edit = False
+
+        html = render_to_string('schedule/modals/modal_observation_form.html', {
+            'form': form,
+            'observation': observation,
+            'action_url': action_url,
+            'is_edit': is_edit,
+        }, request=request)
+        return HttpResponse(html)
 
 
 class ObservationTablePartialView(LoginRequiredMixin, View):
     def get(self, request):
         from django.core.paginator import Paginator
-        
+
         name = request.GET.get('name', '')
         is_holiday = request.GET.get('is_holiday', '')
         page_number = request.GET.get('page', 1)
@@ -256,7 +406,7 @@ class ObservationTablePartialView(LoginRequiredMixin, View):
         html = render_to_string('schedule/partials/partial_observation_table.html', {
             'observations': page_obj.object_list
         }, request=request)
-        
+
         return JsonResponse({
             'table_html': html,
             'stats': stats,
@@ -371,7 +521,9 @@ class EmployeeScheduleAssignmentListView(LoginRequiredMixin, PermissionRequiredM
     paginate_by = 10
 
     def get_queryset(self):
-        qs = Employee.objects.filter(is_active=True).select_related('person', 'area', 'employment_status').prefetch_related(
+        qs = Employee.objects.filter(is_active=True).select_related(
+            'person', 'area', 'employment_status'
+        ).prefetch_related(
             Prefetch('current_budget_line', queryset=BudgetLine.objects.select_related('position_item'))
         )
 
@@ -388,7 +540,7 @@ class EmployeeScheduleAssignmentListView(LoginRequiredMixin, PermissionRequiredM
 
         sort_field = self.request.GET.get('sort_field', 'person__last_name')
         sort_dir = self.request.GET.get('sort_dir', 'asc')
-        
+
         allowed_sort_fields = {
             'person__last_name': 'person__last_name',
             'position_name': 'current_budget_line__position_item__name',
@@ -400,7 +552,7 @@ class EmployeeScheduleAssignmentListView(LoginRequiredMixin, PermissionRequiredM
             qs = qs.order_by(order, 'person__first_name')
         else:
             qs = qs.order_by('person__last_name', 'person__first_name')
-            
+
         return qs
 
     def get_context_data(self, **kwargs):
@@ -410,6 +562,16 @@ class EmployeeScheduleAssignmentListView(LoginRequiredMixin, PermissionRequiredM
         context['employees_data'] = [_get_employee_assignment_payload(emp) for emp in employees]
         context['query'] = (self.request.GET.get('q') or '').strip()
         return context
+
+    def render_to_response(self, context, **response_kwargs):
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            html = render_to_string(
+                'schedule/partials/partial_employee_assignment_table.html',
+                context,
+                request=self.request
+            )
+            return JsonResponse({'html': html})
+        return super().render_to_response(context, **response_kwargs)
 
 
 class EmployeeScheduleAssignmentTablePartialView(LoginRequiredMixin, PermissionRequiredMixin, View):
@@ -421,7 +583,8 @@ class EmployeeScheduleAssignmentTablePartialView(LoginRequiredMixin, PermissionR
         query = (request.GET.get('q') or '').strip()
         page_number = request.GET.get('page', 1)
 
-        qs = Employee.objects.filter(is_active=True).select_related('person', 'area', 'employment_status').prefetch_related(
+        qs = Employee.objects.filter(is_active=True).select_related('person', 'area',
+                                                                    'employment_status').prefetch_related(
             Prefetch('current_budget_line', queryset=BudgetLine.objects.select_related('position_item'))
         )
 
@@ -437,7 +600,7 @@ class EmployeeScheduleAssignmentTablePartialView(LoginRequiredMixin, PermissionR
 
         sort_field = self.request.GET.get('sort_field', 'person__last_name')
         sort_dir = self.request.GET.get('sort_dir', 'asc')
-        
+
         allowed_sort_fields = {
             'person__last_name': 'person__last_name',
             'position_name': 'current_budget_line__position_item__name',
@@ -476,8 +639,11 @@ class EmployeeScheduleHistoryAPIView(LoginRequiredMixin, PermissionRequiredMixin
     permission_required = 'schedule.view_schedule'
 
     def get(self, request, employee_id):
-        employee = get_object_or_404(Employee.objects.select_related('person', 'area', 'employment_status'), pk=employee_id)
-        histories = EmployeeScheduleHistory.objects.filter(employee=employee).select_related('schedule', 'created_by').order_by('-start_date', '-created_at')
+        employee = get_object_or_404(Employee.objects.select_related('person', 'area', 'employment_status'),
+                                     pk=employee_id)
+        histories = EmployeeScheduleHistory.objects.filter(employee=employee).select_related('schedule',
+                                                                                             'created_by').order_by(
+            '-start_date', '-created_at')
         current_row = _get_employee_current_schedule_row(employee)
         html = render_to_string('schedule/modals/modal_employee_schedule_history.html', {
             'employee': employee,
@@ -492,11 +658,12 @@ class EmployeeScheduleChangeModalView(LoginRequiredMixin, PermissionRequiredMixi
     permission_required = 'schedule.change_schedule'
 
     def get(self, request, employee_id):
-        employee = get_object_or_404(Employee.objects.select_related('person', 'area', 'employment_status'), pk=employee_id)
+        employee = get_object_or_404(Employee.objects.select_related('person', 'area', 'employment_status'),
+                                     pk=employee_id)
         schedules = Schedule.objects.filter(is_active=True).order_by('name')
         current_row = _get_employee_current_schedule_row(employee)
         modal_title = "Asignar Horario" if not current_row else "Cambiar Horario"
-        
+
         html = render_to_string('schedule/modals/modal_employee_schedule_form.html', {
             'employee': employee,
             'schedules': schedules,
@@ -528,10 +695,13 @@ class EmployeeScheduleAssignView(LoginRequiredMixin, PermissionRequiredMixin, Vi
             parsed_start = date.fromisoformat(start_date) if start_date else date.today()
             parsed_end = date.fromisoformat(end_date) if end_date else None
         except Exception:
-            return JsonResponse({'success': False, 'errors': {'start_date': ['Formato de fecha inválido.']}}, status=400)
+            return JsonResponse({'success': False, 'errors': {'start_date': ['Formato de fecha inválido.']}},
+                                status=400)
 
         if parsed_end and parsed_end < parsed_start:
-            return JsonResponse({'success': False, 'errors': {'end_date': ['La fecha hasta no puede ser menor a la fecha desde.']}}, status=400)
+            return JsonResponse(
+                {'success': False, 'errors': {'end_date': ['La fecha hasta no puede ser menor a la fecha desde.']}},
+                status=400)
 
         with transaction.atomic():
             EmployeeScheduleHistory.objects.create(

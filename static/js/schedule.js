@@ -1,370 +1,206 @@
-/* apps/schedule/static/js/schedule.js */
-const {createApp} = Vue;
+/**
+ * SIGETH - Módulo de Horarios (Schedule)
+ * Controlador Vanilla JavaScript para listado y modales AJAX dinámicos.
+ */
 
-const scheduleApp = createApp({
-    delimiters: ['[[', ']]'],
-    data() {
-        return {
-            loading: false,
-            showModal: false,
-            isEdit: false,
-            filters: {name: '', is_active: ''},
-            currentPage: 1,
-            pagination: {
-                current_page: 1,
-                total_pages: 1,
-                has_previous: false,
-                has_next: false,
-                total_count: 0,
-                start_index: 0,
-                end_index: 0
-            },
-            days: [
-                {key: 'monday', label: 'LUN'}, {key: 'tuesday', label: 'MAR'},
-                {key: 'wednesday', label: 'MIÉ'}, {key: 'thursday', label: 'JUE'},
-                {key: 'friday', label: 'VIE'}, {key: 'saturday', label: 'SÁB'},
-                {key: 'sunday', label: 'DOM'}
-            ],
-            // INICIALIZACIÓN SEGURA:
-            stats: {total: 0, active: 0, inactive: 0},
-            form: {
-                id: null, name: '', late_tolerance_minutes: 15, daily_hours: 0,
-                morning_start: '08:00', morning_end: '13:00', morning_crosses_midnight: false,
-                afternoon_start: '', afternoon_end: '', afternoon_crosses_midnight: false,
-                monday: true, tuesday: true, wednesday: true, thursday: true, friday: true,
-                saturday: false, sunday: false
-                , vigente_desde: ''
-            }
-        }
-    },
-    methods: {
-        // Cargar estadísticas desde los atributos data del HTML
-        loadInitialStats() {
-            const container = document.getElementById('schedule-app');
-            if (container) {
-                this.stats.total = parseInt(container.dataset.total) || 0;
-                this.stats.active = parseInt(container.dataset.active) || 0;
-                this.stats.inactive = parseInt(container.dataset.inactive) || 0;
-            }
-        },
-
-        autoCalculateHours() {
-            let totalHours = 0;
-            // Cálculo Primera Jornada
-            if (this.form.morning_start && this.form.morning_end) {
-                totalHours += this.calculateDiff(
-                    this.form.morning_start,
-                    this.form.morning_end,
-                    this.form.morning_crosses_midnight
-                );
-            }
-            // Cálculo Segunda Jornada (solo si tiene ambos valores)
-            if (this.form.afternoon_start && this.form.afternoon_end) {
-                totalHours += this.calculateDiff(
-                    this.form.afternoon_start,
-                    this.form.afternoon_end,
-                    this.form.afternoon_crosses_midnight
-                );
-            }
-            // Redondear a 2 decimales y evitar valores negativos
-            this.form.daily_hours = Math.max(0, parseFloat(totalHours.toFixed(2)));
-        },
-
-        calculateDiff(start, end, crossesMidnight) {
-            // Validar formato HH:mm
-            if (!start || !end) return 0;
-
-            const [h1, m1] = start.split(':').map(Number);
-            const [h2, m2] = end.split(':').map(Number);
-
-            let startDate = new Date(2000, 0, 1, h1, m1);
-            let endDate = new Date(2000, 0, 1, h2, m2);
-
-            if (crossesMidnight || endDate <= startDate) {
-                // Si cruza medianoche, sumamos un día
-                endDate.setDate(endDate.getDate() + 1);
-            }
-
-            const diffMs = endDate - startDate;
-            return diffMs / (1000 * 60 * 60); // Retorna horas decimales
-        },
-
-        async fetchTable() {
-            // IMPORTANTE: No limpiar this.stats aquí para evitar el parpadeo a 0
-            const params = new URLSearchParams(this.filters).toString();
-            try {
-                const response = await fetch(`/schedule/partial-table/?${params}`);
-                const data = await response.json();
-                document.getElementById('table-content-wrapper').innerHTML = data.table_html;
-
-                // Solo actualizar stats si el servidor los envía
-                if (data.stats) {
-                    this.stats = data.stats;
-                }
-            } catch (error) {
-                console.error("Error fetching table:", error);
-            }
-        },
-        openCreateModal() {
-            this.isEdit = false;
-            this.resetForm();
-            this.showModal = true;
-            this.autoCalculateHours(); // Calcular iniciales
-        },
-
-        async openEditModal(id) {
-            this.loading = true;
-            this.isEdit = true;
-            try {
-                const response = await fetch(`/schedule/detail/${id}/`);
-                const data = await response.json();
-
-                if (data.success) {
-                    // Llenamos el objeto form con los datos que vienen del servidor
-                    this.form = data.schedule;
-                    // mantener campo vigente_desde vacío al editar para que el usuario lo elija si corresponde
-                    this.form.vigente_desde = '';
-                    this.showModal = true;
-                    // Bloqueamos scroll del body
-                    document.body.classList.add('no-scroll');
-                }
-            } catch (error) {
-                Swal.fire('Error', 'No se pudo obtener la información del horario', 'error');
-            } finally {
-                this.loading = false;
-            }
-        },
-
-        resetForm() {
-            this.form = {
-                id: null, name: '', late_tolerance_minutes: 15, daily_hours: 0,
-                morning_start: '08:00', morning_end: '13:00', morning_crosses_midnight: false,
-                afternoon_start: '', afternoon_end: '', afternoon_crosses_midnight: false,
-                monday: true, tuesday: true, wednesday: true, thursday: true, friday: true,
-                saturday: false, sunday: false
-                , vigente_desde: ''
-            };
-        },
-
-        async openHistoryModal(id) {
-            try {
-                const response = await fetch(`/schedule/history/${id}/`);
-                if (!response.ok) throw new Error('No se pudo cargar el historial');
-                const data = await response.text();
-                // insertar modal HTML en el body y mostrar
-                const wrapper = document.createElement('div');
-                wrapper.innerHTML = data;
-                document.body.appendChild(wrapper);
-                // asumir que el modal tiene clase .modal-overlay y manejar cierre
-                const modal = wrapper.querySelector('.modal-overlay');
-                if (modal) {
-                        // delegación: cerrar al hacer click en el fondo o en cualquier elemento con .btn-close-modal
-                        modal.addEventListener('click', (e) => {
-                            if (e.target === modal) return wrapper.remove();
-                            if (e.target.closest && (e.target.closest('.btn-close-modal') || e.target.closest('.btn-cancel'))) return wrapper.remove();
-                        });
-                }
-            } catch (err) {
-                Swal.fire('Error', 'No se pudo cargar el historial de cambios', 'error');
-            }
-        },
-
-        autoCalculateHours() {
-            let totalHours = 0;
-            if (this.form.morning_start && this.form.morning_end) {
-                totalHours += this.calculateDiff(this.form.morning_start, this.form.morning_end, this.form.morning_crosses_midnight);
-            }
-            if (this.form.afternoon_start && this.form.afternoon_end) {
-                totalHours += this.calculateDiff(this.form.afternoon_start, this.form.afternoon_end, this.form.afternoon_crosses_midnight);
-            }
-            this.form.daily_hours = parseFloat(totalHours.toFixed(2));
-        },
-
-        calculateDiff(start, end, crossesMidnight) {
-            const [h1, m1] = start.split(':').map(Number);
-            const [h2, m2] = end.split(':').map(Number);
-            let startDate = new Date(2000, 0, 1, h1, m1);
-            let endDate = new Date(2000, 0, 1, h2, m2);
-            if (crossesMidnight) endDate.setDate(endDate.getDate() + 1);
-            const diffHours = (endDate - startDate) / (1000 * 60 * 60);
-            return diffHours > 0 ? diffHours : 0;
-        },
-
-        async saveSchedule() {
-            this.loading = true;
-            const formData = new FormData();
-
-            // Inyectamos todos los campos del objeto reactivo al FormData
-            Object.keys(this.form).forEach(key => {
-                if (this.form[key] !== null) formData.append(key, this.form[key]);
-            });
-
-            // URL DINÁMICA: Si isEdit es true, apunta a update, sino a create
-            const url = this.isEdit ? `/schedule/update/${this.form.id}/` : '/schedule/create/';
-
-            try {
-                const response = await fetch(url, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {'X-CSRFToken': getCookie('csrftoken')}
-                });
-                const result = await response.json();
-
-                if (response.ok && result.success) {
-                    this.showToast('success', result.message);
-                    this.closeModal();
-                    this.fetchTable();
-                } else {
-                    // Manejo de errores de validación de Django
-                    let errorMsg = "Revise los campos obligatorios";
-                    if (result.errors) {
-                        const firstField = Object.keys(result.errors)[0];
-                        errorMsg = `${firstField}: ${result.errors[firstField][0]}`;
-                    }
-                    Swal.fire('Atención', errorMsg, 'warning');
-                }
-            } catch (error) {
-                Swal.fire('Error', 'Error de comunicación con el servidor', 'error');
-            } finally {
-                this.loading = false;
-            }
-        },
-
-        async toggleStatus(id, currentStatus) {
-            const status = String(currentStatus) === 'true';
-            const action = status ? 'dar de BAJA' : 'dar de ALTA';
-            const color = currentStatus ? '#ef4444' : '#22c55e'; // Rojo o Verde
-
-            const result = await Swal.fire({
-                title: `¿Confirma ${action}?`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: status ? '#c64939' : '#0ba542',
-                confirmButtonText: 'Sí, confirmar'
-            });
-
-            if (result.isConfirmed) {
-                const url = status ? `/schedule/deactivate/${id}/` : `/schedule/activate/${id}/`;
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: {'X-CSRFToken': getCookie('csrftoken')}
-                });
-                if (response.ok) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Actualizado',
-                        toast: true,
-                        position: 'top-end',
-                        showConfirmButton: false,
-                        timer: 2000
-                    });
-                    this.fetchTable();
-                }
-            }
-        },
-
-        showToast(icon, title) {
-            Swal.fire({icon, title, toast: true, position: 'top-end', showConfirmButton: false, timer: 3000});
-        },
-
-        closeModal() {
-            this.showModal = false;
-        },
-        filterByStatus(status) {
-            this.filters.is_active = status;
-            this.fetchTable();
-        },
-
-        async fetchTable() {
-            // Construimos los parámetros de búsqueda
-            const params = new URLSearchParams({...this.filters, page: this.currentPage}).toString();
-            try {
-                const response = await fetch(`/schedule/partial-table/?${params}`);
-                const data = await response.json();
-
-                document.getElementById('table-content-wrapper').innerHTML = data.table_html;
-
-                // Solo actualizamos si el servidor envió stats nuevos
-                if (data.stats) {
-                    this.stats = data.stats;
-                }
-                
-                // Actualizar información de paginación
-                if (data.pagination) {
-                    this.pagination = data.pagination;
-                    this.updatePaginationUI();
-                }
-            } catch (error) {
-                console.error("Error fetching table:", error);
-            }
-        },
-
-        debouncedSearch() {
-            clearTimeout(this.searchTimer);
-            this.currentPage = 1; // Reset a página 1 al buscar
-            this.searchTimer = setTimeout(() => this.fetchTable(), 400);
-        },
-        
-        updatePaginationUI() {
-            const pageInfo = document.getElementById('page-info');
-            const currentPageDisplay = document.getElementById('current-page-display');
-            const btnPrev = document.getElementById('btn-prev');
-            const btnNext = document.getElementById('btn-next');
-
-            if (pageInfo) {
-                pageInfo.textContent = `Mostrando ${this.pagination.start_index} a ${this.pagination.end_index} registros de ${this.pagination.total_count} registros`;
-            }
-            if (currentPageDisplay) {
-                currentPageDisplay.textContent = this.pagination.current_page;
-            }
-            if (btnPrev) {
-                btnPrev.disabled = !this.pagination.has_previous;
-            }
-            if (btnNext) {
-                btnNext.disabled = !this.pagination.has_next;
-            }
-        },
-        
-        nextPage() {
-            if (this.pagination.has_next) {
-                this.currentPage++;
-                this.fetchTable();
-            }
-        },
-        
-        prevPage() {
-            if (this.pagination.has_previous) {
-                this.currentPage--;
-                this.fetchTable();
-            }
-        }
-    },
-    mounted() {
-        this.loadInitialStats();
-        this.fetchTable(); // Cargar tabla con paginación inicial
-        
-        // Configurar botones de paginación
-        const btnPrev = document.getElementById('btn-prev');
-        const btnNext = document.getElementById('btn-next');
-        
-        if (btnPrev) btnPrev.addEventListener('click', () => this.prevPage());
-        if (btnNext) btnNext.addEventListener('click', () => this.nextPage());
-    }
+document.addEventListener('DOMContentLoaded', () => {
+    const scheduleManager = new ScheduleManager();
+    scheduleManager.init();
 });
 
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
+class ScheduleManager {
+    constructor() {
+        this.tableWrapper = document.getElementById('table-content-wrapper');
+        this.searchInput = document.getElementById('table-search');
+        this.searchTimer = null;
+    }
+
+    init() {
+        this.bindSearch();
+        this.bindTableEvents();
+        this.bindCreateButton();
+        this.ensureTableManager();
+    }
+
+    /**
+     * Asegura la inicialización de TableManager sobre la tabla activa
+     */
+    ensureTableManager() {
+        const table = document.querySelector('.managed-table');
+        if (table && window.TableManager && !table._tableManager) {
+            new window.TableManager(table);
         }
     }
-    return cookieValue;
-}
 
-window.scheduleInstance = scheduleApp.mount('#schedule-app');
+    /**
+     * Búsqueda en servidor con debounce mediante refreshCurrentTable
+     */
+    bindSearch() {
+        if (!this.searchInput) return;
+
+        this.searchInput.addEventListener('input', (e) => {
+            clearTimeout(this.searchTimer);
+            this.searchTimer = setTimeout(() => {
+                const query = e.target.value.trim();
+                window.refreshCurrentTable({q: query, page: 1}, () => {
+                    this.ensureTableManager();
+                });
+            }, 300);
+        });
+    }
+
+    /**
+     * Abrir modal de creación vía openAjaxModal de main.js
+     */
+    bindCreateButton() {
+        const btnCreate = document.getElementById('btn-create-schedule');
+        if (btnCreate) {
+            btnCreate.addEventListener('click', () => {
+                window.openAjaxModal('/schedule/modal/form/', (root) => {
+                    this.setupModalEvents(root);
+                });
+            });
+        }
+    }
+
+    /**
+     * Delegación de clics sobre la tabla para editar, ver historial y dar de alta/baja
+     */
+    bindTableEvents() {
+        if (!this.tableWrapper) return;
+
+        this.tableWrapper.addEventListener('click', (event) => {
+            // 1. Editar Horario
+            const editBtn = event.target.closest('.js-btn-edit');
+            if (editBtn) {
+                event.preventDefault();
+                const scheduleId = editBtn.dataset.id;
+                window.openAjaxModal(`/schedule/modal/form/${scheduleId}/`, (root) => {
+                    this.setupModalEvents(root);
+                });
+                return;
+            }
+
+            // 2. Historial de Versiones
+            const historyBtn = event.target.closest('.js-btn-history');
+            if (historyBtn) {
+                event.preventDefault();
+                const scheduleId = historyBtn.dataset.id;
+                window.openAjaxModal(`/schedule/history/${scheduleId}/`);
+                return;
+            }
+
+            // 3. Activar / Desactivar (Toggle)
+            const toggleBtn = event.target.closest('.js-btn-toggle');
+            if (toggleBtn) {
+                event.preventDefault();
+                const url = toggleBtn.dataset.url;
+                const name = toggleBtn.dataset.name;
+                const currentStatus = toggleBtn.dataset.status === 'true';
+
+                window.toggleStatusAjax(url, `el horario "${name}"`, currentStatus, () => {
+                    window.refreshCurrentTable({}, () => {
+                        this.ensureTableManager();
+                    });
+                });
+            }
+        });
+    }
+
+    /**
+     * Configuración del formulario inyectado en modal-root
+     * @param {HTMLElement} modalRoot
+     */
+    setupModalEvents(modalRoot) {
+        const form = modalRoot.querySelector('#scheduleForm');
+        if (!form) return;
+
+        // Envío AJAX corporativo
+        form.addEventListener('submit', (e) => {
+            window.submitAjaxForm(e, () => {
+                window.closeModal();
+                window.refreshCurrentTable({}, () => {
+                    this.ensureTableManager();
+                });
+            });
+        });
+
+        // Matriz interactiva de días
+        const daysMatrix = modalRoot.querySelector('#daysMatrixContainer');
+        if (daysMatrix) {
+            daysMatrix.addEventListener('click', (e) => {
+                const item = e.target.closest('.day-item');
+                if (!item) return;
+
+                const checkbox = item.querySelector('input[type="checkbox"]');
+                if (checkbox) {
+                    checkbox.checked = !checkbox.checked;
+                    item.classList.toggle('active', checkbox.checked);
+                }
+            });
+        }
+
+        // Entradas de tiempo para recálculo automático
+        const timeInputs = form.querySelectorAll(
+            'input[name="morning_start"], input[name="morning_end"], input[name="morning_crosses_midnight"], ' +
+            'input[name="afternoon_start"], input[name="afternoon_end"], input[name="afternoon_crosses_midnight"]'
+        );
+
+        timeInputs.forEach((input) => {
+            input.addEventListener('change', () => this.calculateDailyHours(form));
+            input.addEventListener('input', () => this.calculateDailyHours(form));
+        });
+
+        this.calculateDailyHours(form);
+    }
+
+    /**
+     * Recálculo automático de horas en base a las dos jornadas
+     * @param {HTMLFormElement} form
+     */
+    calculateDailyHours(form) {
+        const morningStart = form.querySelector('input[name="morning_start"]')?.value;
+        const morningEnd = form.querySelector('input[name="morning_end"]')?.value;
+        const morningCrosses = form.querySelector('input[name="morning_crosses_midnight"]')?.checked;
+
+        const afternoonStart = form.querySelector('input[name="afternoon_start"]')?.value;
+        const afternoonEnd = form.querySelector('input[name="afternoon_end"]')?.value;
+        const afternoonCrosses = form.querySelector('input[name="afternoon_crosses_midnight"]')?.checked;
+
+        const dailyHoursInput = form.querySelector('#id_daily_hours') || form.querySelector('input[name="daily_hours"]');
+
+        let total = 0;
+        if (morningStart && morningEnd) {
+            total += this.calculateTimeDiff(morningStart, morningEnd, morningCrosses);
+        }
+        if (afternoonStart && afternoonEnd) {
+            total += this.calculateTimeDiff(afternoonStart, afternoonEnd, afternoonCrosses);
+        }
+
+        const calculated = Math.max(0, parseFloat(total.toFixed(2)));
+        if (dailyHoursInput) {
+            dailyHoursInput.value = calculated.toFixed(2);
+        }
+    }
+
+    /**
+     * Diferencia matemática entre horas HH:mm
+     */
+    calculateTimeDiff(start, end, crossesMidnight) {
+        if (!start || !end) return 0;
+
+        const [startHours, startMinutes] = start.split(':').map(Number);
+        const [endHours, endMinutes] = end.split(':').map(Number);
+
+        const startDate = new Date(2000, 0, 1, startHours, startMinutes);
+        let endDate = new Date(2000, 0, 1, endHours, endMinutes);
+
+        if (crossesMidnight || endDate <= startDate) {
+            endDate.setDate(endDate.getDate() + 1);
+        }
+
+        const diffMs = endDate - startDate;
+        const decimal = diffMs / (1000 * 60 * 60);
+        return decimal > 0 ? decimal : 0;
+    }
+}

@@ -1,81 +1,135 @@
 {% load static %}
 <div class="table-container">
-    <table>
-        <thead>
-        <tr>
-            <th><i class="fas fa-font header-icon"></i> Nombre</th>
-            <th><i class="fas fa-sun header-icon"></i> Primera Jornada</th>
-            <th><i class="fas fa-cloud-sun header-icon"></i> Segunda Jornada</th>
-            <th><i class="fas fa-clock header-icon"></i> Horas Diarias</th>
-            <th><i class="fas fa-hourglass-half header-icon"></i> Tolerancia</th>
-            <th><i class="fas fa-toggle-on header-icon"></i> Estado</th>
-            <th class="actions"><i class="fas fa-cogs header-icon"></i> Acciones</th>
-        </tr>
-        </thead>
-        <tbody>
-        {% for schedule in schedules %}
+    <div class="table-scroll-top">
+        <table class="managed-table exportable-table"
+               data-title="Reporte de Horarios Institucionales"
+               data-filename="Reporte_Horarios"
+               data-list-url="{% url 'schedule:schedule_list' %}"
+               data-external-pagination="true"
+               data-external-search="true"
+               data-page-size="10">
+            <thead>
             <tr>
-                <td>
-                    <strong>{{ schedule.name }}</strong>
-                    {% if schedule.description %}
-                        <br><small class="text-muted">{{ schedule.description|truncatechars:40 }}</small>
-                    {% endif %}
-                </td>
-                <td>
-                <span class="badge-time">
-                   <i class="fa-regular fa-clock"></i> {{ schedule.morning_start|time:"H:i" }} - {{ schedule.morning_end|time:"H:i" }}
-                    {% if schedule.morning_crosses_midnight %}
-                    {% endif %}
-                </span>
-                </td>
-                <td>
-                    {% if not schedule.is_continuous %}
-                        <span class="badge-time btn-success">
-                        <i class="fa-regular fa-clock"></i> {{ schedule.afternoon_start|time:"H:i" }} - {{ schedule.afternoon_end|time:"H:i" }}
-                            {% if schedule.afternoon_crosses_midnight %}
-                                <i class="fa-solid fa-moon text-warning" title="Cruza medianoche"></i>{% endif %}
-                    </span>
-                    {% else %}
-                        <span class="text-muted small">--- Continua ---</span>
-                    {% endif %}
-                </td>
-                <td><strong>{{ schedule.daily_hours }}</strong></td>
-                <td><strong>{{ schedule.late_tolerance_minutes }}</strong></td>
-                <td>
-                <span class="status-badge {% if schedule.is_active %}active{% else %}inactive{% endif %}">
-                    {{ schedule.is_active|yesno:"Activo,Inactivo" }}
-                </span>
-                </td>
-                <td class="actions">
-                    <div class="actions-wrapper">
-                        <button class="btn-views-action"
-                                onclick="scheduleInstance.openEditModal({{ schedule.id }})"
-                                title="Editar">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn-views-action" title="Historial de Cambios"
-                                onclick="scheduleInstance.openHistoryModal({{ schedule.id }})">
-                            <i class="fas fa-history"></i>
-                        </button>
-                        <button class="{% if schedule.is_active %}btn-delete-action{% else %}btn-create-action{% endif %}"
-                                onclick="scheduleInstance.toggleStatus({{ schedule.id }}, {{ schedule.is_active|yesno:'true,false' }})"
-                                title="{{ schedule.is_active|yesno:'Dar de Baja,Dar de Alta' }}">
+                <th class="width-25" data-field="name">Nombre / Descripción</th>
+                <th class="width-20 no-sort">Primera Jornada</th>
+                <th class="width-20 no-sort">Segunda Jornada</th>
+                <th class="width-12" data-field="daily_hours">Horas Diarias</th>
+                <th class="width-10" data-field="late_tolerance_minutes">Tolerancia</th>
+                <th class="width-10 no-sort text-center">Estado</th>
+                <th class="actions width-13 no-sort text-center">Acciones</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for schedule in schedules %}
+                <tr data-status="{{ schedule.is_active|yesno:'true,false' }}">
+                    <td>
+                        <strong>{{ schedule.name }}</strong>
+                        {% if schedule.description %}
+                            <br><small class="text-muted">{{ schedule.description|truncatechars:40 }}</small>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge-time">
+                            <i class="fa-regular fa-clock"></i> {{ schedule.morning_start|time:"H:i" }} - {{ schedule.morning_end|time:"H:i" }}
+                            {% if schedule.morning_crosses_midnight %}
+                                <i class="fa-solid fa-moon text-blue" title="Cruza medianoche"></i>
+                            {% endif %}
+                        </span>
+                    </td>
+                    <td>
+                        {% if not schedule.is_continuous %}
+                            <span class="badge-time badge-time-secondary">
+                                <i class="fa-regular fa-clock"></i> {{ schedule.afternoon_start|time:"H:i" }} - {{ schedule.afternoon_end|time:"H:i" }}
+                                {% if schedule.afternoon_crosses_midnight %}
+                                    <i class="fa-solid fa-moon text-yellow" title="Cruza medianoche"></i>
+                                {% endif %}
+                            </span>
+                        {% else %}
+                            <span class="text-muted small">--- Continua ---</span>
+                        {% endif %}
+                    </td>
+                    <td><strong>{{ schedule.daily_hours }} h</strong></td>
+                    <td><strong>{{ schedule.late_tolerance_minutes }} min</strong></td>
+                    <td class="text-center">
+                        {% if schedule.is_active %}
+                            <span class="badge badge-green">Activo</span>
+                        {% else %}
+                            <span class="badge badge-red">Inactivo</span>
+                        {% endif %}
+                    </td>
+                    <td class="actions">
+                        <div class="actions-wrapper justify-content-center">
+                            <button type="button"
+                                    class="btn-yellow-circle js-btn-edit"
+                                    data-id="{{ schedule.id }}"
+                                    title="Editar Horario">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
+                            <button type="button"
+                                    class="btn-dark-blue-circle js-btn-history"
+                                    data-id="{{ schedule.id }}"
+                                    title="Historial de Versiones">
+                                <i class="fa-solid fa-clock-rotate-left"></i>
+                            </button>
+                            <button type="button"
+                                    class="{% if schedule.is_active %}btn-red-circle{% else %}btn-green-circle{% endif %} js-btn-toggle"
+                                    data-url="
 
-                            <i class="fas {% if schedule.is_active %}fa-toggle-off{% else %}fa-toggle-on{% endif %}"></i>
-                        </button>
-                    </div>
-                </td>
-            </tr>
-        {% empty %}
-            <tr>
-                <td colspan="7">
-                    <div class="no-results-content">
-                        <i class="fas fa-calendar-times no-results-icon"></i>
-                        <p class="no-results-text">No se encontraron horarios registrados.</p>
-                    </div>
-                </td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+                                            {% if schedule.is_active %}{% url 'schedule:schedule_deactivate' schedule.id %}{% else %}{% url 'schedule:schedule_activate' schedule.id %}{% endif %}"
+                                    data-name="{{ schedule.name }}"
+                                    data-status="{{ schedule.is_active|yesno:'true,false' }}"
+                                    title="{{ schedule.is_active|yesno:'Dar de Baja,Dar de Alta' }}">
+                                <i class="fa-solid {% if schedule.is_active %}fa-toggle-off{% else %}fa-toggle-on{% endif %}"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center py-4 text-muted">
+                        <i class="fa-solid fa-inbox fa-2x mb-2 opacity-50"></i>
+                        <p class="mb-0">No hay horarios registrados</p>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
+
+{% if paginator.num_pages > 0 %}
+    <div id="js-pagination" class="pagination-container">
+        <span class="pagination-info">
+            Mostrando {{ page_obj.start_index|default:'0' }}-{{ page_obj.end_index|default:'0' }} de {{ paginator.count|default:'0' }}
+        </span>
+        <div class="pagination-controls">
+            <button type="button" class="page-btn {% if not page_obj.has_previous %}disabled{% endif %}"
+                    title="Primera" data-page="1" {% if not page_obj.has_previous %}disabled{% endif %}>
+                <i class="fas fa-angle-double-left"></i>
+            </button>
+            <button type="button" class="page-btn {% if not page_obj.has_previous %}disabled{% endif %}"
+                    title="Anterior"
+                    data-page="{% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% else %}1{% endif %}"
+                    {% if not page_obj.has_previous %}disabled{% endif %}>
+                <i class="fas fa-angle-left"></i>
+            </button>
+            <div class="page-input-wrapper">
+                <input type="number" class="page-input" value="{{ page_obj.number }}" readonly style="cursor: default;">
+                <span class="total-pages-badge">de {{ paginator.num_pages }}</span>
+            </div>
+            <button type="button" class="page-btn {% if not page_obj.has_next %}disabled{% endif %}"
+                    title="Siguiente"
+                    data-page="
+
+                            {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages }}{% endif %}"
+                    {% if not page_obj.has_next %}disabled{% endif %}>
+                <i class="fas fa-angle-right"></i>
+            </button>
+            <button type="button" class="page-btn {% if not page_obj.has_next %}disabled{% endif %}"
+                    title="Última" data-page="{{ paginator.num_pages }}"
+                    {% if not page_obj.has_next %}disabled{% endif %}>
+                <i class="fas fa-angle-double-right"></i>
+            </button>
+        </div>
+    </div>
+{% endif %}

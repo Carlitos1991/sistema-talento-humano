@@ -1,0 +1,116 @@
+{% load static %}
+<div class="modal-overlay">
+    <div class="modal-container-medium">
+        <form id="observationForm" action="{{ action_url }}" method="post" autocomplete="off" class="modal-form-layout">
+            {% csrf_token %}
+
+            <!-- 1. HEADER FIJO -->
+            <div class="modal-header-medium">
+                <div class="header-content-group">
+                    <div class="header-icon-circle">
+                        <i class="fa-solid fa-umbrella-beach"></i>
+                    </div>
+                    <h3 class="header-title">
+                        {% if is_edit %}Editar Evento: {{ observation.name }}{% else %}Nuevo Feriado u
+                            Observación{% endif %}
+                    </h3>
+                </div>
+                <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <!-- 2. BODY CON SCROLL INTERNO -->
+            <div class="modal-body modal-body-custom schedule-modal-body">
+                <!-- Sección 1: Información General -->
+                <div class="form-section-card">
+                    <div class="section-title">
+                        <i class="fa-solid fa-info-circle text-green"></i> Información General
+                    </div>
+                    <div class="grid-2-cols">
+                        <div class="form-group">
+                            <label class="form-label" for="{{ form.name.id_for_label }}">Nombre del Evento *</label>
+                            {{ form.name }}
+                            <div class="invalid-feedback" id="error-name"></div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="{{ form.is_holiday.id_for_label }}">Tipo de Registro
+                                *</label>
+                            <select name="is_holiday" id="{{ form.is_holiday.id_for_label }}" class="form-control"
+                                    required>
+                                <option value="true"
+                                        {% if form.is_holiday.value == True or form.is_holiday.value == 'true' or form.is_holiday.value == 'True' %}selected{% endif %}>
+                                    Feriado (No Laborable)
+                                </option>
+                                <option value="false"
+                                        {% if form.is_holiday.value == False or form.is_holiday.value == 'false' or form.is_holiday.value == 'False' %}selected{% endif %}>
+                                    Observación (Jornada Especial)
+                                </option>
+                            </select>
+                            <div class="invalid-feedback" id="error-is_holiday"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sección 2: Vigencia del Evento -->
+                <div class="form-section-card mt-3">
+                    <div class="section-title">
+                        <i class="fa-solid fa-calendar-alt text-green"></i> Vigencia del Evento
+                    </div>
+                    <div class="grid-2-cols">
+                        <div class="form-group">
+                            <label class="form-label" for="{{ form.start_date.id_for_label }}">Fecha de Inicio *</label>
+                            {{ form.start_date }}
+                            <div class="invalid-feedback" id="error-start_date"></div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="{{ form.end_date.id_for_label }}">Fecha de Fin *</label>
+                            {{ form.end_date }}
+                            <div class="invalid-feedback" id="error-end_date"></div>
+                        </div>
+                    </div>
+
+                    <div class="form-group mt-3 mb-0">
+                        <label class="form-label" for="{{ form.description.id_for_label }}">Descripción / Motivo</label>
+                        {{ form.description }}
+                        <div class="invalid-feedback" id="error-description"></div>
+                    </div>
+                </div>
+
+                <!-- Sección 3: Estado del Registro -->
+                <div class="form-section-card mt-3">
+                    <div class="form-group mb-0">
+                        <label class="form-label">Estado del Registro</label>
+                        <label class="switch-wrapper">
+                            {{ form.is_active }}
+                            <span class="switch-circle"></span>
+                            <span class="switch-text">Registro Activo</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Aviso Institucional Informativo -->
+                <div class="alert alert-info mt-3">
+                    <i class="fa-solid fa-circle-info"></i>
+                    <div>
+                        Este evento se aplicará de forma <strong>global</strong> para todos los cálculos y reportes de
+                        asistencia en el sistema.
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. FOOTER FIJO -->
+            <div class="modal-footer-fixed">
+                <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">
+                    <i class="fa-solid fa-xmark me-1"></i> CANCELAR
+                </button>
+                <button type="submit" class="btn-dark-blue-rectangle">
+                    <i class="fas fa-save me-1"></i> {% if is_edit %}ACTUALIZAR REGISTRO{% else %}GUARDAR
+                    REGISTRO{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

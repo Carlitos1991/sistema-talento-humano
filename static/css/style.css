@@ -2684,9 +2684,10 @@ table {
     margin-left: 5px;
 }
 
-th.no-sort, .no-sort {
-    text-align: center !important;
-    vertical-align: middle !important;
+th.no-sort,
+.no-sort {
+    cursor: default !important;
+    user-select: none;
 }
 
 /* Filtros globales reutilizables */

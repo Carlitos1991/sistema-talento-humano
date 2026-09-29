@@ -1,80 +1,88 @@
 {% extends 'base.html' %}
 {% load static %}
-{% block title %}Observaciones | SIGETH{% endblock %}
+
+{% block title %}Feriados y Observaciones | SIGETH{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/schedule.css' %}">
+{% endblock %}
 
 {% block content %}
-    <div id="observation-app" v-cloak
-         data-total="{{ total_obs|default:0 }}"
-         data-holiday="{{ holiday_obs|default:0 }}"
-         data-special="{{ special_obs|default:0 }}">
-
-        <div class="header-card">
-            <div>
-                <h1><i class="fa-solid fa-umbrella-beach"></i> Feriados y Observaciones</h1>
-                <p>Gestione los días no laborables o jornadas especiales de la institución.</p>
-            </div>
-            <button class="btn-create" @click="openCreateModal">
-                <i class="fas fa-plus"></i> NUEVO REGISTRO
-            </button>
+    <!-- 1. Encabezado Oficial -->
+    <div class="header-card">
+        <div class="header-card-body">
+            <h1><i class="fa-solid fa-umbrella-beach me-2"></i> Feriados y Observaciones</h1>
+            <p>Gestione los días no laborables o jornadas especiales de la institución.</p>
         </div>
-
-        <!-- Cards con efectos de opacidad similares a Horarios -->
-        <div class="stats-row">
-            <div class="stat-card color-one" @click="filterByStatus('')"
-                 :class="{'opacity-low': filters.is_holiday !== ''}">
-                <div class="stat-left"><h3>TOTAL</h3>
-                    <div class="number">[[ stats.total ]]</div>
-                </div>
-                <i class="fas fa-calendar-alt stat-icon"></i>
-            </div>
-            <div class="stat-card color-two" @click="filterByStatus('true')"
-                 :class="{'opacity-low': filters.is_holiday !== 'true'}">
-                <div class="stat-left"><h3>FERIADOS</h3>
-                    <div class="number">[[ stats.holiday ]]</div>
-                </div>
-                <i class="fas fa-sun stat-icon"></i>
-            </div>
-            <div class="stat-card color-four" @click="filterByStatus('false')"
-                 :class="{'opacity-low': filters.is_holiday !== 'false'}">
-                <div class="stat-left"><h3>OBSERVACIONES</h3>
-                    <div class="number">[[ stats.special ]]</div>
-                </div>
-                <i class="fas fa-star stat-icon"></i>
-            </div>
-        </div>
-
-        <div class="table-app mt-3">
-            <div class="content-table">
-                <div class="table-controls">
-                    <div class="search-box">
-                        <input type="text" v-model="filters.name" @input="debouncedSearch" class="input-field"
-                               placeholder="Buscar por nombre del evento...">
-                    </div>
-                </div>
-                <div id="table-content-wrapper">
-                    {% include 'schedule/partials/partial_observation_table.html' %}
-                </div>
-                <div class="pagination-container" id="js-pagination">
-                    <span class="pagination-info" id="page-info">Mostrando 0 a 0 registros de 0 registros</span>
-                    <ul class="pagination-list">
-                        <li>
-                            <button id="btn-prev" class="page-btn"><i class="fas fa-chevron-left"></i></button>
-                        </li>
-                        <li>
-                            <span id="current-page-display" style="padding: 0 10px; font-weight: bold;">1</span>
-                        </li>
-                        <li>
-                            <button id="btn-next" class="page-btn"><i class="fas fa-chevron-right"></i></button>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        {% include 'schedule/modals/modal_observation_modal.html' %}
+        <button type="button" class="btn-blue-rectangle" id="btn-create-observation">
+            <i class="fas fa-plus"></i> NUEVO REGISTRO
+        </button>
     </div>
+
+    <!-- 2. Estadísticas / Filtros Rápidos -->
+    <div class="stats-row" id="observation-stats-row">
+        <div class="stat-card color-one" id="card-filter-all" data-filter="">
+            <div class="stat-left">
+                <h3>TOTAL</h3>
+                <div class="number" id="stat-total">{{ total_obs|default:0 }}</div>
+            </div>
+            <i class="fas fa-calendar-alt stat-icon"></i>
+        </div>
+
+        <div class="stat-card color-two opacity-low" id="card-filter-holiday" data-filter="true">
+            <div class="stat-left">
+                <h3>FERIADOS</h3>
+                <div class="number" id="stat-holiday">{{ holiday_obs|default:0 }}</div>
+            </div>
+            <i class="fas fa-sun stat-icon"></i>
+        </div>
+
+        <div class="stat-card color-four opacity-low" id="card-filter-special" data-filter="false">
+            <div class="stat-left">
+                <h3>OBSERVACIONES</h3>
+                <div class="number" id="stat-special">{{ special_obs|default:0 }}</div>
+            </div>
+            <i class="fas fa-star stat-icon"></i>
+        </div>
+    </div>
+
+    <!-- 3. Contenedor de Tabla con Toolbar izquierda/derecha sin marcos extra -->
+    <div id="table-app">
+        <div class="content-table">
+            <div class="table-controls toolbar-row mb-3">
+
+                <div class="toolbar-center"></div>
+
+                <!-- Derecha: Buscador directo sin cajas centradas -->
+                <div class="toolbar-right">
+                    <input type="text"
+                           name="q"
+                           id="table-search"
+                           class="table-search-input table-search-input--large"
+                           placeholder="Buscar por nombre o detalle del evento..."
+                           value="{{ query|default:'' }}">
+                </div>
+            </div>
+
+            <!-- Inyección de la tabla parcial -->
+            <div id="table-content-wrapper">
+                {% include 'schedule/partials/partial_observation_table.html' %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Contenedor Universal para Modales de main.js -->
+    <div id="modal-root"></div>
 {% endblock %}
 
 {% block extra_js %}
+    <script>
+        window.initialPagination = {
+            current_page: {% if page_obj %}{{ page_obj.number }}{% else %}1{% endif %},
+            total_pages: {% if page_obj %}{{ page_obj.paginator.num_pages }}{% else %}1{% endif %},
+            has_previous: {% if page_obj %}{{ page_obj.has_previous|lower }}{% else %}false{% endif %},
+            has_next: {% if page_obj %}{{ page_obj.has_next|lower }}{% else %}false{% endif %}
+        };
+    </script>
     <script src="{% static 'js/observation.js' %}"></script>
 {% endblock %}

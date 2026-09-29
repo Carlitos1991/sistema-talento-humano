@@ -3,73 +3,94 @@ from .models import Schedule, ScheduleObservation, EmployeeScheduleHistory
 
 
 class ScheduleForm(forms.ModelForm):
-    vigente_desde = forms.DateField(required=False, widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}))
+    vigente_desde = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'})
+    )
+
     class Meta:
         model = Schedule
-        fields = '__all__'
-        exclude = ['created_by', 'updated_by', 'is_active']
+        fields = [
+            'name', 'description', 'late_tolerance_minutes', 'daily_hours',
+            'morning_start', 'morning_end', 'morning_crosses_midnight',
+            'afternoon_start', 'afternoon_end', 'afternoon_crosses_midnight',
+            'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
+            'is_active',
+        ]
         widgets = {
-            'morning_start': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control'}),
-            'morning_end': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control'}),
-            'afternoon_start': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control'}),
-            'afternoon_end': forms.TimeInput(attrs={'type': 'time', 'class': 'form-control'}),
+            'name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'EJ: JORNADA ORDINARIA 8H'
+            }),
+            'description': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Descripción breve del horario'
+            }),
+            'late_tolerance_minutes': forms.NumberInput(attrs={
+                'class': 'form-control with-icon',
+                'min': '0'
+            }),
+            'morning_start': forms.TimeInput(attrs={
+                'type': 'time',
+                'class': 'form-control'
+            }),
+            'morning_end': forms.TimeInput(attrs={
+                'type': 'time',
+                'class': 'form-control'
+            }),
+            'afternoon_start': forms.TimeInput(attrs={
+                'type': 'time',
+                'class': 'form-control'
+            }),
+            'afternoon_end': forms.TimeInput(attrs={
+                'type': 'time',
+                'class': 'form-control'
+            }),
+            'morning_crosses_midnight': forms.CheckboxInput(attrs={
+                'class': 'switch-input switch-blue'
+            }),
+            'afternoon_crosses_midnight': forms.CheckboxInput(attrs={
+                'class': 'switch-input switch-blue'
+            }),
+            'monday': forms.CheckboxInput(attrs={'class': 'hidden'}),
+            'tuesday': forms.CheckboxInput(attrs={'class': 'hidden'}),
+            'wednesday': forms.CheckboxInput(attrs={'class': 'hidden'}),
+            'thursday': forms.CheckboxInput(attrs={'class': 'hidden'}),
+            'friday': forms.CheckboxInput(attrs={'class': 'hidden'}),
+            'saturday': forms.CheckboxInput(attrs={'class': 'hidden'}),
+            'sunday': forms.CheckboxInput(attrs={'class': 'hidden'}),
+            'is_active': forms.CheckboxInput(attrs={
+                'class': 'switch-input switch-green'
+            }),
         }
-
-    def clean(self):
-        cleaned_data = super().clean()
-        m_start = cleaned_data.get('morning_start')
-        m_end = cleaned_data.get('morning_end')
-
-        if m_start and m_end and not cleaned_data.get('morning_crosses_midnight'):
-            if m_start >= m_end:
-                self.add_error('morning_end', 'La hora de fin debe ser posterior al inicio.')
-
-        # Validación de 'vigente_desde' respecto al historial del horario
-        vdesde = cleaned_data.get('vigente_desde')
-        if vdesde:
-            try:
-                from .models import ScheduleChangeHistory
-                if self.instance and self.instance.pk:
-                    last = ScheduleChangeHistory.objects.filter(schedule=self.instance).order_by('-effective_from').first()
-                    if last:
-                        min_date = last.effective_from
-                    else:
-                        # usar la fecha de creación del registro si no hay historial
-                        try:
-                            min_date = self.instance.created_at.date()
-                        except Exception:
-                            min_date = None
-                    if min_date and vdesde < min_date:
-                        self.add_error('vigente_desde', f'La fecha de cambio no puede ser anterior a {min_date.isoformat()}')
-            except Exception:
-                # Si ocurre algún error en validación servidor no bloqueará por fallo interno
-                pass
-
-        return cleaned_data
 
 
 class ScheduleObservationForm(forms.ModelForm):
     class Meta:
         model = ScheduleObservation
-        fields = [
-            'name', 'description', 'start_date', 'end_date',
-            'is_holiday', 'is_active'
-        ]
+        fields = ['name', 'is_holiday', 'start_date', 'end_date', 'description', 'is_active']
         widgets = {
-            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre del feriado/observación'}),
-            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Detalle'}),
-            'start_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
-            'end_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
-            'is_holiday': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'name': forms.TextInput(attrs={
+                'class': 'form-control uppercase-input',
+                'placeholder': 'Ej: FERIADO POR INDEPENDENCIA DE LOJA'
+            }),
+            'start_date': forms.DateInput(attrs={
+                'type': 'date',
+                'class': 'form-control'
+            }),
+            'end_date': forms.DateInput(attrs={
+                'type': 'date',
+                'class': 'form-control'
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 2,
+                'placeholder': 'Detalle adicional sobre el feriado u observación...'
+            }),
+            'is_active': forms.CheckboxInput(attrs={
+                'class': 'switch-input switch-green'
+            }),
         }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['start_date'].input_formats = ['%Y-%m-%d']
-        self.fields['end_date'].input_formats = ['%Y-%m-%d']
-        if not self.instance.pk:
-            self.initial['is_active'] = True
 
 
 class ScheduleSearchForm(forms.Form):
