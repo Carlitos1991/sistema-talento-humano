@@ -1723,9 +1723,6 @@ class BiometricModalUsersView(LoginRequiredMixin, View):
 
 @csrf_exempt
 def migrate_user_adms_ajax(request):
-    """
-    Encola el comando ADMS para crear/actualizar el usuario en el biométrico destino.
-    """
     if request.method != 'POST':
         return JsonResponse({'success': False, 'message': 'Método no permitido.'}, status=405)
 
@@ -1735,18 +1732,20 @@ def migrate_user_adms_ajax(request):
         pin = str(data.get('pin', '')).strip()
         name = str(data.get('name', '')).strip()
         is_admin = bool(data.get('is_admin', False))
-        password = str(data.get('password', '')).strip()
         card = str(data.get('card', '0')).strip()
+
+        # Si no tiene contraseña y es admin, asignamos una temporal por defecto (ej. 123456)
+        password = str(data.get('password', '')).strip()
+        if not password and is_admin:
+            password = '123456'
 
         if not target_device_id or not pin:
             return JsonResponse({'success': False, 'message': 'Faltan parámetros obligatorios.'}, status=400)
 
         target_device = get_object_or_404(BiometricDevice, pk=target_device_id, is_active=True)
-
-        # Pri: 14 = Administrador, 0 = Usuario Normal
         privilege = 14 if is_admin else 0
 
-        # Comando ADMS oficial para inyectar/actualizar datos de usuario
+        # Comando con contraseña inyectada
         command_text = f"DATA UPDATE USERINFO PIN={pin}\tName={name}\tPri={privilege}\tPasswd={password}\tCard={card}"
 
         BiometricCommand.objects.create(
@@ -1755,10 +1754,9 @@ def migrate_user_adms_ajax(request):
             status='PENDING'
         )
 
-        role_str = "Administrador" if is_admin else "Usuario Normal"
         return JsonResponse({
             'success': True,
-            'message': f"Comando de migración encolado para '{name or pin}' como {role_str} hacia {target_device.name}."
+            'message': f"Comando encolado. Contraseña temporal para {name} (PIN: {pin}): {password}"
         })
     except Exception as e:
         logger.error(f"Error encolando migración de usuario ADMS: {e}")
