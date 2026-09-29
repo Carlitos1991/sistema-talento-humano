@@ -1,223 +1,383 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Hoja Membretada{% endblock %}
+{% block title %}Configuración General y Hoja Membretada | SIGETH{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/core/letterhead.css' %}">
+    <link rel="stylesheet" href="{% static 'css/core/letterhead.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="content-wrapper letterhead-page">
-    <div class="header-card letterhead-hero">
-        <div>
-            <h1>Hoja Membretada</h1>
-            <p>Configura la información general del sistema y sube la imagen base que se dibuja en los reportes PDF.</p>
-        </div>
-        <div class="letterhead-meta">
-            {% if configuration %}
-                <span class="status-badge active">Vigencia: {{ configuration.effective_date }}</span>
-                <span class="status-badge active">Ciudad: {{ configuration.city }}</span>
-            {% else %}
-                <span class="status-badge inactive">Sin configuración vigente</span>
-            {% endif %}
-            <button type="button" id="btn-open-config-modal" class="btn-save btn-open-config-modal">
-                <i class="fa-solid fa-gear"></i> Actualizar Configuración General
-            </button>
-        </div>
-    </div>
-
-    <div class="letterhead-grid">
-        <div class="letterhead-card">
-            <h3>Vista previa actual</h3>
-            <div class="letterhead-preview-frame">
-                {% if configuration and configuration.letterhead %}
-                    <img id="currentLetterheadImage" src="{{ configuration.letterhead.url }}" alt="Hoja membretada actual">
-                {% else %}
-                    <div class="letterhead-empty">
-                        <i class="fa-solid fa-file-image"></i>
-                        <p>No hay una hoja membretada cargada.</p>
-                    </div>
-                {% endif %}
+    <div class="content-wrapper letterhead-page">
+        <!-- 1. Encabezado Oficial -->
+        <div class="header-card">
+            <div class="header-card-body">
+                <h1><i class="fa-solid fa-gears me-2"></i> Configuración General e Identidad</h1>
+                <p>Gestiona los parámetros institucionales, datos de autoridades y los archivos oficiales de identidad
+                    gráfica.</p>
             </div>
+            <div class="header-actions-group">
+                <button type="button" id="btn-open-config-modal" class="btn-dark-blue-rectangle">
+                    <i class="fa-solid fa-pen-to-square me-1"></i> EDITAR CONFIGURACIÓN GENERAL
+                </button>
+            </div>
+        </div>
 
-            <div class="logo-preview-block">
-                <p class="preview-title">Logo institucional actual</p>
-                <div class="logo-preview-frame">
-                    {% if configuration and configuration.logo %}
-                        <img src="{{ configuration.logo.url }}?v={{ configuration.updated_at|date:'U' }}" alt="Logo institucional actual">
+        <!-- 2. Grid de Visualización de Configuración -->
+        <div class="letterhead-dashboard-grid">
+            <!-- Columna Izquierda: Tarjeta de Datos Institucionales y Autoridades -->
+            <div class="detail-card">
+                <div class="detail-card-header">
+                    <h3><i class="fa-solid fa-landmark text-primary"></i> Información Institucional Vigente</h3>
+                    {% if configuration %}
+                        <span class="badge badge-green">Vigente</span>
                     {% else %}
-                        <div class="logo-preview-empty">
-                            <i class="fa-solid fa-image"></i>
-                            <p>No hay logo institucional cargado.</p>
+                        <span class="badge badge-red">Sin Configuración</span>
+                    {% endif %}
+                </div>
+
+                <div class="detail-card-body">
+                    {% if configuration %}
+                        <div class="info-data-grid">
+                            <div class="info-data-item full-width">
+                                <span class="info-label">Institución</span>
+                                <span class="info-value highlight">{{ configuration.institution_name }}</span>
+                            </div>
+                            <div class="info-data-item">
+                                <span class="info-label">RUC</span>
+                                <span class="info-value font-monospace">{{ configuration.institution_ruc|default:'No registrado' }}</span>
+                            </div>
+                            <div class="info-data-item">
+                                <span class="info-label">Ciudad</span>
+                                <span class="info-value">{{ configuration.city|default:'No registrada' }}</span>
+                            </div>
+                            <div class="info-data-item">
+                                <span class="info-label">Fecha de Vigencia</span>
+                                <span class="info-value">{{ configuration.effective_date|date:"d/m/Y"|default:'Inmediata' }}</span>
+                            </div>
+                            <div class="info-data-item">
+                                <span class="info-label">Teléfono</span>
+                                <span class="info-value">{{ configuration.institution_phone|default:'No registrado' }}</span>
+                            </div>
+                            <div class="info-data-item full-width">
+                                <span class="info-label">Correo Electrónico Oficial</span>
+                                <span class="info-value">{{ configuration.institution_email|default:'No registrado' }}</span>
+                            </div>
+                            <div class="info-data-item full-width">
+                                <span class="info-label">Dirección</span>
+                                <span class="info-value">{{ configuration.institution_address|default:'No registrada' }}</span>
+                            </div>
+                        </div>
+
+                        <div class="section-divider"></div>
+
+                        <h4 class="sub-section-title"><i class="fa-solid fa-user-tie text-primary"></i> Autoridades
+                            Suscriptoras</h4>
+                        <div class="info-data-grid">
+                            <div class="info-data-item">
+                                <span class="info-label">Máxima Autoridad</span>
+                                <span class="info-value">{{ configuration.max_authority_name|default:'No asignada' }}</span>
+                                <small class="info-subtext">{{ configuration.max_authority_position|default:'-' }}</small>
+                            </div>
+                            <div class="info-data-item">
+                                <span class="info-label">Autoridad de Talento Humano</span>
+                                <span class="info-value">{{ configuration.talento_humano_authority_name|default:'No asignada' }}</span>
+                                <small class="info-subtext">{{ configuration.talento_humano_authority_position|default:'-' }}</small>
+                            </div>
+                        </div>
+
+                        <div class="section-divider"></div>
+
+                        <h4 class="sub-section-title"><i class="fa-solid fa-traffic-light text-primary"></i> Parámetros
+                            de Semáforo</h4>
+                        <div class="semaphore-tags">
+                            <div class="semaphore-pill green">
+                                <i class="fa-solid fa-circle-check"></i>
+                                <span>A tiempo: hasta <strong>{{ configuration.sanction_green_days }} días</strong></span>
+                            </div>
+                            <div class="semaphore-pill yellow">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                                <span>En alerta: hasta <strong>{{ configuration.sanction_yellow_days }} días</strong></span>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="empty-state-notice">
+                            <i class="fa-solid fa-circle-info"></i>
+                            <p>No se ha registrado la configuración general del sistema. Presione el botón superior para
+                                ingresar los datos.</p>
                         </div>
                     {% endif %}
                 </div>
             </div>
-        </div>
 
-        <div class="letterhead-card">
-            <h3>Actualizar imagen</h3>
-            <form method="post" enctype="multipart/form-data" class="letterhead-form">
-                {% csrf_token %}
-                <input type="hidden" name="action_type" value="letterhead">
-                <label class="form-label" for="{{ form.letterhead.id_for_label }}">Seleccionar imagen (A4 recomendado)</label>
-                {{ form.letterhead }}
-                {% if form.letterhead.errors %}
-                    <div class="invalid-feedback d-block">{{ form.letterhead.errors|join:', ' }}</div>
-                {% endif %}
-                <small class="form-hint">Formatos permitidos: PNG, JPG, JPEG, WEBP.</small>
-
-                <div class="letterhead-preview-upload" id="uploadPreviewContainer" style="display:none;">
-                    <p class="preview-title">Vista previa de nueva imagen</p>
-                    <img id="uploadPreview" src="" alt="Preview de nueva membretada">
+            <!-- Columna Derecha: Vista previa de Logo y Hoja Membretada -->
+            <div class="detail-card">
+                <div class="detail-card-header">
+                    <h3><i class="fa-solid fa-image text-primary"></i> Identidad Gráfica Activa</h3>
                 </div>
 
-                <div class="letterhead-actions">
-                    <button type="submit" class="btn-save">
-                        <i class="fa-solid fa-floppy-disk"></i> Guardar Membretada
+                <div class="detail-card-body">
+                    <div class="graphic-identity-container">
+                        <!-- Preview Logo -->
+                        <div class="logo-box">
+                            <span class="box-title">Logo Institucional</span>
+                            <div class="logo-render-area">
+                                {% if configuration and configuration.logo %}
+                                    <img src="{{ configuration.logo.url }}?v={{ configuration.updated_at|date:'U' }}"
+                                         alt="Logo institucional">
+                                {% else %}
+                                    <div class="empty-render">
+                                        <i class="fa-solid fa-image"></i>
+                                        <span>Sin logo cargado</span>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Preview Membretada -->
+                        <div class="letterhead-box">
+                            <span class="box-title">Hoja Membretada (Fondo A4 para Reportes)</span>
+                            <div class="letterhead-render-area">
+                                {% if configuration and configuration.letterhead %}
+                                    <img src="{{ configuration.letterhead.url }}?v={{ configuration.updated_at|date:'U' }}"
+                                         alt="Hoja membretada">
+                                {% else %}
+                                    <div class="empty-render">
+                                        <i class="fa-solid fa-file-image"></i>
+                                        <span>Sin hoja membretada cargada</span>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Modal Unificado de Configuración General e Identidad Gráfica -->
+    <div id="configGeneralModal" class="modal-overlay {% if not config_form.errors %}hidden{% endif %}"
+         data-open-on-load="{% if config_form.errors %}1{% else %}0{% endif %}">
+        <div class="modal-container-xl">
+            <form method="post" enctype="multipart/form-data" class="modal-form-layout" autocomplete="off">
+                {% csrf_token %}
+                <input type="hidden" name="action_type" value="setup">
+
+                <!-- HEADER -->
+                <div class="modal-header-medium">
+                    <div class="header-content-group">
+                        <div class="header-icon-circle">
+                            <i class="fa-solid fa-gears"></i>
+                        </div>
+                        <h3 class="header-title">Configuración General e Identidad Gráfica</h3>
+                    </div>
+                    <button type="button" class="btn-close-circle js-close-config-modal" title="Cerrar">
+                        <i class="fas fa-times"></i>
                     </button>
-                    <a href="{% url 'sanctions:notification_type_list' %}" class="btn-cancel">
-                        <i class="fa-solid fa-pen-to-square"></i> Ir a Templates
-                    </a>
+                </div>
+
+                <!-- BODY CON SCROLL INTERNO -->
+                <div class="modal-body modal-body-custom schedule-modal-body">
+
+                    <!-- Sección 1: Datos de la Entidad -->
+                    <div class="form-section-card">
+                        <div class="section-title">
+                            <i class="fa-solid fa-landmark text-green"></i> Identificación Institucional
+                        </div>
+                        <div class="grid-2-cols">
+                            <div class="form-group">
+                                <label class="form-label" for="{{ config_form.institution_name.id_for_label }}">Nombre
+                                    de la Institución *</label>
+                                {{ config_form.institution_name }}
+                                {% if config_form.institution_name.errors %}
+                                    <div class="invalid-feedback d-block">{{ config_form.institution_name.errors|join:', ' }}</div>{% endif %}
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="{{ config_form.institution_ruc.id_for_label }}">RUC
+                                    Institucional *</label>
+                                {{ config_form.institution_ruc }}
+                                {% if config_form.institution_ruc.errors %}
+                                    <div class="invalid-feedback d-block">{{ config_form.institution_ruc.errors|join:', ' }}</div>{% endif %}
+                            </div>
+                        </div>
+
+                        <div class="grid-2-cols mt-3">
+                            <div class="form-group">
+                                <label class="form-label" for="{{ config_form.city.id_for_label }}">Ciudad Sede
+                                    *</label>
+                                {{ config_form.city }}
+                                {% if config_form.city.errors %}
+                                    <div class="invalid-feedback d-block">{{ config_form.city.errors|join:', ' }}</div>{% endif %}
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="{{ config_form.effective_date.id_for_label }}">Fecha de
+                                    Vigencia *</label>
+                                {{ config_form.effective_date }}
+                                {% if config_form.effective_date.errors %}
+                                    <div class="invalid-feedback d-block">{{ config_form.effective_date.errors|join:', ' }}</div>{% endif %}
+                            </div>
+                        </div>
+
+                        <div class="form-group mt-3 mb-0">
+                            <label class="form-label" for="{{ config_form.institution_address.id_for_label }}">Dirección
+                                Principal</label>
+                            {{ config_form.institution_address }}
+                            {% if config_form.institution_address.errors %}
+                                <div class="invalid-feedback d-block">{{ config_form.institution_address.errors|join:', ' }}</div>{% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Sección 2: Contacto y Parámetros -->
+                    <div class="form-section-card mt-3">
+                        <div class="section-title">
+                            <i class="fa-solid fa-address-book text-green"></i> Canales de Contacto y Alertas
+                        </div>
+                        <div class="grid-2-cols">
+                            <div class="form-group">
+                                <label class="form-label" for="{{ config_form.institution_phone.id_for_label }}">Teléfono
+                                    Institucional</label>
+                                {{ config_form.institution_phone }}
+                                {% if config_form.institution_phone.errors %}
+                                    <div class="invalid-feedback d-block">{{ config_form.institution_phone.errors|join:', ' }}</div>{% endif %}
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="{{ config_form.institution_email.id_for_label }}">Correo
+                                    Electrónico Institucional</label>
+                                {{ config_form.institution_email }}
+                                {% if config_form.institution_email.errors %}
+                                    <div class="invalid-feedback d-block">{{ config_form.institution_email.errors|join:', ' }}</div>{% endif %}
+                            </div>
+                        </div>
+
+                        <div class="grid-2-cols mt-3 mb-0">
+                            <div class="form-group">
+                                <label class="form-label" for="{{ config_form.sanction_green_days.id_for_label }}">Días
+                                    Semáforo Verde</label>
+                                {{ config_form.sanction_green_days }}
+                                <span class="form-hint">Días máximos en que un expediente se califica a tiempo.</span>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="{{ config_form.sanction_yellow_days.id_for_label }}">Días
+                                    Semáforo Amarillo</label>
+                                {{ config_form.sanction_yellow_days }}
+                                <span class="form-hint">Días en que un expediente entra en advertencia.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sección 3: Autoridades -->
+                    <div class="form-section-card mt-3">
+                        <div class="section-title">
+                            <i class="fa-solid fa-user-tie text-green"></i> Autoridades y Suscriptores
+                        </div>
+                        <div class="grid-2-cols">
+                            <div class="form-group">
+                                <label class="form-label" for="{{ config_form.max_authority_name.id_for_label }}">Máxima
+                                    Autoridad *</label>
+                                {{ config_form.max_authority_name }}
+                                {% if config_form.max_authority_name.errors %}
+                                    <div class="invalid-feedback d-block">{{ config_form.max_authority_name.errors|join:', ' }}</div>{% endif %}
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="{{ config_form.max_authority_position.id_for_label }}">Cargo
+                                    de la Máxima Autoridad *</label>
+                                {{ config_form.max_authority_position }}
+                                {% if config_form.max_authority_position.errors %}
+                                    <div class="invalid-feedback d-block">{{ config_form.max_authority_position.errors|join:', ' }}</div>{% endif %}
+                            </div>
+                        </div>
+
+                        <div class="grid-2-cols mt-3 mb-0">
+                            <div class="form-group">
+                                <label class="form-label"
+                                       for="{{ config_form.talento_humano_authority_name.id_for_label }}">Autoridad de
+                                    Talento Humano</label>
+                                {{ config_form.talento_humano_authority_name }}
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label"
+                                       for="{{ config_form.talento_humano_authority_position.id_for_label }}">Cargo
+                                    Autoridad Talento Humano</label>
+                                {{ config_form.talento_humano_authority_position }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sección 4: Archivos de Identidad Gráfica (Dropzones Personalizados) -->
+                    <div class="form-section-card mt-3">
+                        <div class="section-title">
+                            <i class="fa-solid fa-palette text-green"></i> Archivos de Identidad Gráfica
+                        </div>
+
+                        <div class="grid-2-cols">
+                            <!-- Dropzone Logo -->
+                            <div class="form-group">
+                                <label class="form-label">Logo Institucional</label>
+                                <div class="dropzone-file" id="dropzoneLogo">
+                                    <input type="file" name="logo" id="{{ config_form.logo.id_for_label }}"
+                                           accept="image/*" class="dropzone-input">
+                                    <div class="dropzone-placeholder {% if configuration and configuration.logo %}d-none{% endif %}"
+                                         id="placeholderLogo">
+                                        <i class="fa-solid fa-cloud-arrow-up dropzone-icon"></i>
+                                        <span class="dropzone-text">Arrastra el logo o <strong>haz clic aquí</strong></span>
+                                        <span class="dropzone-hint">PNG o JPG con fondo transparente</span>
+                                    </div>
+                                    <div class="dropzone-preview {% if not configuration or not configuration.logo %}d-none{% endif %}"
+                                         id="previewBoxLogo">
+                                        <img id="imgPreviewLogo" src="
+                                                {% if configuration and configuration.logo %}{{ configuration.logo.url }}?v={{ configuration.updated_at|date:'U' }}{% endif %}"
+                                             alt="Preview Logo">
+                                        <span class="dropzone-filename" id="filenameLogo">Logo actual</span>
+                                        <button type="button" class="btn-change-file" id="btnChangeLogo">Cambiar
+                                            archivo
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Dropzone Membretada -->
+                            <div class="form-group">
+                                <label class="form-label">Hoja Membretada (Fondo A4 de Reportes)</label>
+                                <div class="dropzone-file" id="dropzoneLetterhead">
+                                    <input type="file" name="letterhead" id="{{ form.letterhead.id_for_label }}"
+                                           accept="image/*" class="dropzone-input">
+                                    <div class="dropzone-placeholder {% if configuration and configuration.letterhead %}d-none{% endif %}"
+                                         id="placeholderLetterhead">
+                                        <i class="fa-solid fa-file-image dropzone-icon"></i>
+                                        <span class="dropzone-text">Arrastra la membretada o <strong>haz clic aquí</strong></span>
+                                        <span class="dropzone-hint">A4 vertical (2480 × 3508 px recomendado)</span>
+                                    </div>
+                                    <div class="dropzone-preview {% if not configuration or not configuration.letterhead %}d-none{% endif %}"
+                                         id="previewBoxLetterhead">
+                                        <img id="imgPreviewLetterhead" src="
+                                                {% if configuration and configuration.letterhead %}{{ configuration.letterhead.url }}?v={{ configuration.updated_at|date:'U' }}{% endif %}"
+                                             alt="Preview Membretada">
+                                        <span class="dropzone-filename" id="filenameLetterhead">Membretada actual</span>
+                                        <button type="button" class="btn-change-file" id="btnChangeLetterhead">Cambiar
+                                            archivo
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- FOOTER FIJO -->
+                <div class="modal-footer-fixed">
+                    <button type="button" class="btn-dark-blue-rectangle-outline js-close-config-modal">
+                        <i class="fa-solid fa-xmark me-1"></i> CANCELAR
+                    </button>
+                    <button type="submit" class="btn-dark-blue-rectangle">
+                        <i class="fa-solid fa-floppy-disk me-1"></i> GUARDAR CONFIGURACIÓN
+                    </button>
                 </div>
             </form>
         </div>
     </div>
-</div>
-
-<div id="configGeneralModal" class="letterhead-modal-overlay {% if not config_form.errors %}hidden{% endif %}" data-open-on-load="{% if config_form.errors %}1{% else %}0{% endif %}">
-    <div class="letterhead-modal-box">
-        <button type="button" class="btn-close-modal js-close-config-modal" title="Cerrar">
-            <i class="fas fa-times"></i>
-        </button>
-
-        <div class="modal-header-refined">
-            <div class="header-content-group">
-                <div class="header-icon-circle">
-                    <i class="fas fa-gear"></i>
-                </div>
-                <h2 class="header-title-main">Actualizar Configuración General</h2>
-            </div>
-        </div>
-
-        <form method="post" enctype="multipart/form-data" class="letterhead-form">
-            {% csrf_token %}
-            <input type="hidden" name="action_type" value="setup">
-
-            <div class="modal-body-scrolled">
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label" for="{{ config_form.institution_name.id_for_label }}">Institución</label>
-                        {{ config_form.institution_name }}
-                        {% if config_form.institution_name.errors %}<div class="invalid-feedback d-block">{{ config_form.institution_name.errors|join:', ' }}</div>{% endif %}
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label" for="{{ config_form.city.id_for_label }}">Ciudad</label>
-                        {{ config_form.city }}
-                        {% if config_form.city.errors %}<div class="invalid-feedback d-block">{{ config_form.city.errors|join:', ' }}</div>{% endif %}
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label" for="{{ config_form.effective_date.id_for_label }}">Vigencia</label>
-                        {{ config_form.effective_date }}
-                        {% if config_form.effective_date.errors %}<div class="invalid-feedback d-block">{{ config_form.effective_date.errors|join:', ' }}</div>{% endif %}
-                    </div>
-
-                    <div class="col-md-6">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label" for="{{ config_form.sanction_green_days.id_for_label }}">Días Semáforo Verde</label>
-                                {{ config_form.sanction_green_days }}
-                                {% if config_form.sanction_green_days.errors %}<div class="invalid-feedback d-block">{{ config_form.sanction_green_days.errors|join:', ' }}</div>{% endif %}
-                                <small class="form-hint">Hasta cuántos días el trámite se considera a tiempo.</small>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label" for="{{ config_form.sanction_yellow_days.id_for_label }}">Días Semáforo Amarillo</label>
-                                {{ config_form.sanction_yellow_days }}
-                                {% if config_form.sanction_yellow_days.errors %}<div class="invalid-feedback d-block">{{ config_form.sanction_yellow_days.errors|join:', ' }}</div>{% endif %}
-                                <small class="form-hint">Hasta cuántos días el trámite está en alerta.</small>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="form-label" for="{{ config_form.institution_ruc.id_for_label }}">RUC</label>
-                        {{ config_form.institution_ruc }}
-                        {% if config_form.institution_ruc.errors %}<div class="invalid-feedback d-block">{{ config_form.institution_ruc.errors|join:', ' }}</div>{% endif %}
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label" for="{{ config_form.institution_phone.id_for_label }}">Teléfono</label>
-                        {{ config_form.institution_phone }}
-                        {% if config_form.institution_phone.errors %}<div class="invalid-feedback d-block">{{ config_form.institution_phone.errors|join:', ' }}</div>{% endif %}
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label" for="{{ config_form.institution_email.id_for_label }}">Correo</label>
-                        {{ config_form.institution_email }}
-                        {% if config_form.institution_email.errors %}<div class="invalid-feedback d-block">{{ config_form.institution_email.errors|join:', ' }}</div>{% endif %}
-                    </div>
-
-                    <div class="col-12">
-                        <label class="form-label" for="{{ config_form.institution_address.id_for_label }}">Dirección</label>
-                        {{ config_form.institution_address }}
-                        {% if config_form.institution_address.errors %}<div class="invalid-feedback d-block">{{ config_form.institution_address.errors|join:', ' }}</div>{% endif %}
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label" for="{{ config_form.max_authority_name.id_for_label }}">Máxima autoridad</label>
-                        {{ config_form.max_authority_name }}
-                        {% if config_form.max_authority_name.errors %}<div class="invalid-feedback d-block">{{ config_form.max_authority_name.errors|join:', ' }}</div>{% endif %}
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label" for="{{ config_form.max_authority_position.id_for_label }}">Cargo máxima autoridad</label>
-                        {{ config_form.max_authority_position }}
-                        {% if config_form.max_authority_position.errors %}<div class="invalid-feedback d-block">{{ config_form.max_authority_position.errors|join:', ' }}</div>{% endif %}
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label" for="{{ config_form.talento_humano_authority_name.id_for_label }}">Autoridad TTHH (opcional)</label>
-                        {{ config_form.talento_humano_authority_name }}
-                        {% if config_form.talento_humano_authority_name.errors %}<div class="invalid-feedback d-block">{{ config_form.talento_humano_authority_name.errors|join:', ' }}</div>{% endif %}
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label" for="{{ config_form.talento_humano_authority_position.id_for_label }}">Cargo autoridad TTHH (opcional)</label>
-                        {{ config_form.talento_humano_authority_position }}
-                        {% if config_form.talento_humano_authority_position.errors %}<div class="invalid-feedback d-block">{{ config_form.talento_humano_authority_position.errors|join:', ' }}</div>{% endif %}
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label" for="{{ config_form.logo.id_for_label }}">Logo institucional (opcional)</label>
-                        {{ config_form.logo }}
-                        {% if config_form.logo.errors %}<div class="invalid-feedback d-block">{{ config_form.logo.errors|join:', ' }}</div>{% endif %}
-
-                        <div class="logo-preview-upload logo-config-preview" id="logoPreviewContainer">
-                            <p class="preview-title">Vista previa del logo</p>
-                            {% if configuration and configuration.logo %}
-                                <img id="logoPreview" src="{{ configuration.logo.url }}?v={{ configuration.updated_at|date:'U' }}" data-original-src="{{ configuration.logo.url }}?v={{ configuration.updated_at|date:'U' }}" alt="Vista previa del logo">
-                            {% else %}
-                                <div class="logo-preview-empty" id="logoPreviewEmpty">
-                                    <i class="fa-solid fa-image"></i>
-                                    <p>No hay logo institucional cargado.</p>
-                                </div>
-                                <img id="logoPreview" src="" data-original-src="" alt="Vista previa del logo" style="display:none;">
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="modal-footer-refined">
-                <button type="button" class="btn-cancel js-close-config-modal">
-                    <i class="fas fa-times"></i> Cancelar
-                </button>
-                <button type="submit" class="btn-save">
-                    <i class="fa-solid fa-gear"></i> Guardar Configuración General
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/core/letterhead.js' %}"></script>
+    <script src="{% static 'js/core/letterhead.js' %}"></script>
 {% endblock %}

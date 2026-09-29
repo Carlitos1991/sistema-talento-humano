@@ -1,94 +1,80 @@
-document.addEventListener('DOMContentLoaded', function () {
-    const configModal = document.getElementById('configGeneralModal');
-    const openConfigBtn = document.getElementById('btn-open-config-modal');
-    const closeConfigButtons = document.querySelectorAll('.js-close-config-modal');
+/**
+ * SIGETH - Manejo de Configuración General e Identidad Gráfica
+ * Vanilla JS: Modal interactivo y Drag & Drop con preview instantáneo.
+ */
 
-    if (configModal && openConfigBtn) {
-        openConfigBtn.addEventListener('click', function () {
-            configModal.classList.remove('hidden');
-            document.body.classList.add('modal-open');
+document.addEventListener('DOMContentLoaded', () => {
+    initConfigurationModal();
+    initDropzone('dropzoneLogo', 'placeholderLogo', 'previewBoxLogo', 'imgPreviewLogo', 'filenameLogo');
+    initDropzone('dropzoneLetterhead', 'placeholderLetterhead', 'previewBoxLetterhead', 'imgPreviewLetterhead', 'filenameLetterhead');
+});
+
+function initConfigurationModal() {
+    const modal = document.getElementById('configGeneralModal');
+    const openBtn = document.getElementById('btn-open-config-modal');
+    const closeBtns = document.querySelectorAll('.js-close-config-modal');
+
+    if (!modal) return;
+
+    if (openBtn) {
+        openBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            modal.classList.remove('hidden');
         });
-
-        closeConfigButtons.forEach((button) => {
-            button.addEventListener('click', function () {
-                configModal.classList.add('hidden');
-                document.body.classList.remove('modal-open');
-            });
-        });
-
-        configModal.addEventListener('click', function (event) {
-            if (event.target === configModal) {
-                configModal.classList.add('hidden');
-                document.body.classList.remove('modal-open');
-            }
-        });
-
-        document.addEventListener('keydown', function (event) {
-            if (event.key === 'Escape' && !configModal.classList.contains('hidden')) {
-                configModal.classList.add('hidden');
-                document.body.classList.remove('modal-open');
-            }
-        });
-
-        if (configModal.dataset.openOnLoad === '1') {
-            configModal.classList.remove('hidden');
-            document.body.classList.add('modal-open');
-        }
     }
 
-    const bindImagePreview = (inputSelector, previewContainerId, previewImageId, previewEmptyId) => {
-        const fileInput = document.querySelector(inputSelector);
-        const previewContainer = document.getElementById(previewContainerId);
-        const previewImage = document.getElementById(previewImageId);
-        const previewEmpty = previewEmptyId ? document.getElementById(previewEmptyId) : null;
+    closeBtns.forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            modal.classList.add('hidden');
+        });
+    });
 
-        if (!fileInput || !previewContainer || !previewImage) {
-            return;
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.classList.add('hidden');
         }
+    });
 
-        const originalSrc = previewImage.dataset.originalSrc || previewImage.getAttribute('src') || '';
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+            modal.classList.add('hidden');
+        }
+    });
+}
 
-        const showEmptyState = () => {
-            if (previewEmpty) {
-                previewEmpty.style.display = 'block';
-            }
-            previewImage.style.display = 'none';
-            previewImage.src = originalSrc;
-        };
+function initDropzone(dropzoneId, placeholderId, previewBoxId, imgPreviewId, filenameId) {
+    const dropzone = document.getElementById(dropzoneId);
+    if (!dropzone) return;
 
-        const showImage = (src) => {
-            if (previewEmpty) {
-                previewEmpty.style.display = 'none';
-            }
-            previewImage.style.display = 'block';
-            previewImage.src = src;
-        };
+    const input = dropzone.querySelector('input[type="file"]');
+    const placeholder = document.getElementById(placeholderId);
+    const previewBox = document.getElementById(previewBoxId);
+    const imgPreview = document.getElementById(imgPreviewId);
+    const filename = document.getElementById(filenameId);
 
-        fileInput.addEventListener('change', function (event) {
-            const [file] = event.target.files || [];
-            if (!file) {
-                if (originalSrc) {
-                    showImage(originalSrc);
-                } else {
-                    showEmptyState();
-                }
-                return;
-            }
+    if (!input || !placeholder || !previewBox || !imgPreview) return;
 
+    input.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (file) {
             const reader = new FileReader();
-            reader.onload = function (e) {
-                showImage(e.target.result);
+            reader.onload = (event) => {
+                imgPreview.src = event.target.result;
+                if (filename) filename.textContent = file.name;
+                placeholder.classList.add('d-none');
+                previewBox.classList.remove('d-none');
             };
             reader.readAsDataURL(file);
-        });
-
-        if (originalSrc) {
-            showImage(originalSrc);
-        } else {
-            showEmptyState();
         }
-    };
+    });
 
-    bindImagePreview('input[type="file"][name="letterhead"]', 'uploadPreviewContainer', 'uploadPreview');
-    bindImagePreview('input[type="file"][name="logo"]', 'logoPreviewContainer', 'logoPreview', 'logoPreviewEmpty');
-});
+    // Feedback visual al arrastrar archivos
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropzone.addEventListener(eventName, () => dropzone.classList.add('dragover'), false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropzone.addEventListener(eventName, () => dropzone.classList.remove('dragover'), false);
+    });
+}
