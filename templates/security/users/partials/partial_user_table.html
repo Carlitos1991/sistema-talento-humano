@@ -1,125 +1,166 @@
 {% load static %}
 <div class="table-container">
-    <table>
-        <thead>
-        <tr>
-            <th style="width: 3%;"><i class="fa-solid fa-list-ol"></i></th>
-            <th style="width: 22%;"><i class="far fa-user"></i>Empleado</th>
-            <th style="width: 15%;"><i class="far fa-envelope header-icon"></i> Email</th>
-            <th style="width: 8%;"><i class="fas fa-phone header-icon"></i> Teléfono</th>
-            <th style="width: 15%;"><i class="fas fa-building header-icon"></i> Rol de usuario</th>
-            <th style="width: 10%;"><i class="fas fa-toggle-on header-icon"></i> Estado</th>
-            {% if perms.core.change_user or perms.core.add_user %}
-                <th style="width: 15%;"><i class="fas fa-cogs header-icon"></i> Acciones</th>
-            {% endif %}
-        </tr>
-        </thead>
-        <tbody id="table-body">
-        {% for person in persons %}
-            <tr class="catalog-row" id="row-{{ person.id }}" data-status="{{ person.is_active|yesno:'true,false' }}">
-                <td>{{ forloop.counter }}</td>
-                <td>
-                    <div class="person-info">
-                        {% if person.photo %}
-                            <img src="{{ person.photo.url }}" alt="{{ person.first_name }}" class="person-avatar">
-                        {% else %}
-                            <div class="person-avatar-placeholder">
-                                {{ person.first_name|first }}{{ person.last_name|first }}
-                            </div>
-                        {% endif %}
-                        <div class="person-details">
-                            <h4>{{ person.first_name }} {{ person.last_name }}</h4>
-                            <p><i class="far fa-address-card"></i> {{ person.document_number|default:"S/N" }}</p>
-                        </div>
-                    </div>
-                </td>
-
-                <td>{{ person.email|default:"--" }}</td>
-                <td>{{ person.phone_number|default:"--" }}</td>
-                <td class="text-center">
-                    {% if person.user %}
-                        {% if person.user.groups.exists %}
-                            {% for group in person.user.groups.all %}
-                                <span class="status-badge status-badge-user-role">
-                                    {{ group.name }}
-                                </span>
-                            {% endfor %}
-                        {% else %}
-                            <span class="status-badge badge-neutral">SIN ROL</span>
-                        {% endif %}
-                    {% else %}
-                        <span class="status-badge status-badge-no-account">
-                            SIN CUENTA
-                        </span>
-                    {% endif %}
-                </td>
-                <td class="text-center">
-                    {% if person.user %}
-                        {% if person.user.is_active %}
-                            <span class="status-badge active">
-                <i class="fa-solid fa-check-circle me-1"></i> Activo
-                    </span>
-                        {% else %}
-                            <span class="status-badge inactive">
-                        <i class="fa-solid fa-ban me-1"></i> Inactivo
-                    </span>
-                        {% endif %}
-                    {% else %}
-                        <span class="status-badge status-badge-no-account">
-                            SIN CUENTA
-                        </span>
-                    {% endif %}
-                </td>
+    <div class="table-scroll-top">
+        <table class="managed-table exportable-table"
+               data-title="Reporte de Usuarios del Sistema"
+               data-filename="Reporte_Usuarios"
+               data-external-pagination="true"
+               data-external-search="true"
+               data-page-size="10">
+            <thead>
+            <tr>
+                <th class="width-7 no-sort text-center"><i class="fa-solid fa-list-ol"></i></th>
+                <th class="width-25" data-field="person__last_name"><i class="far fa-user"></i> Servidor / Empleado</th>
+                <th class="width-18" data-field="email"><i class="far fa-envelope"></i> Correo Electrónico</th>
+                <th class="width-12 no-sort"><i class="fas fa-phone"></i> Teléfono</th>
+                <th class="width-15 no-sort text-center"><i class="fas fa-building-shield"></i> Rol Asignado</th>
+                <th class="width-10 no-sort text-center"><i class="fas fa-circle-dot"></i> Estado</th>
                 {% if perms.core.change_user or perms.core.add_user %}
-                    <td class="actions">
-                        <div class="actions-wrapper">
-                            {% if perms.core.change_user or perms.core.add_user %}
-                                <button class="btn-fifth"
-                                        data-url="{% url 'security:user_create_credentials' person.pk %}"
-                                        data-name="{{ person.first_name }} {{ person.last_name }}"
-                                        title="Gestionar Usuario">
-                                    {% if person.user %}
-                                        <i class="fas fa-user-pen"></i>
-                                    {% else %}
-                                        <i class="fas fa-user-plus"></i>
-                                    {% endif %}
-                                </button>
-                            {% endif %}
-                            {% if person.user and perms.core.change_user %}
-                                {% if person.user.is_active %}
-                                    <button class="btn-red-circle"
-                                            onclick="toggleUserStatus('{{ person.id }}', '{{ person.first_name }}', true)"
-                                            title="Desactivar Acceso">
-                                        <i class="fas fa-power-off"></i>
-                                    </button>
-                                {% else %}
-                                    <button class="btn-green-circle"
-                                            onclick="toggleUserStatus('{{ person.id }}', '{{ person.first_name }}', false)"
-                                            title="Activar Acceso">
-                                        <i class="fas fa-toggle-on"></i>
-                                    </button>
-                                {% endif %}
-                            {% endif %}
-                        </div>
-                    </td>
+                    <th class="actions width-13 no-sort text-center"><i class="fas fa-cogs"></i> Acciones</th>
                 {% endif %}
             </tr>
-        {% endfor %}
-        </tbody>
-    </table>
-    <div id="pagination-metadata" class="hidden"
-         data-total="{{ page_obj.paginator.count }}"
-         data-page="{{ page_obj.number }}"
-         data-pages="{{ page_obj.paginator.num_pages }}"
-         data-start="{{ page_obj.start_index }}"
-         data-end="{{ page_obj.end_index }}"
-         data-has-next="{{ page_obj.has_next|yesno:'true,false' }}"
-         data-has-prev="{{ page_obj.has_previous|yesno:'true,false' }}">
-    </div>
-    <div class="no-results-overlay {% if persons %}hidden{% endif %}">
-        <div class="no-results-content hidden" id="no-results-placeholder">
-            <i class="fas fa-search no-results-icon"></i>
-            <p class="no-results-text">No se encontraron resultados.</p>
-        </div>
+            </thead>
+            <tbody id="table-body">
+            {% for person in persons %}
+                <tr id="row-{{ person.id }}" data-status="{{ person.user.is_active|default:False|yesno:'true,false' }}">
+                    <td class="text-center font-monospace">{{ page_obj.start_index|add:forloop.counter0 }}</td>
+                    <td>
+                        <div class="person-info">
+                            {% if person.photo %}
+                                <img src="{{ person.photo.url }}" alt="{{ person.first_name }}" class="person-avatar">
+                            {% else %}
+                                <div class="person-avatar-placeholder">
+                                    {{ person.first_name|first }}{{ person.last_name|first }}
+                                </div>
+                            {% endif %}
+                            <div class="person-details">
+                                <strong>{{ person.first_name }} {{ person.last_name }}</strong>
+                                <small class="text-muted d-block"><i
+                                        class="far fa-address-card"></i> {{ person.document_number|default:"S/N" }}
+                                </small>
+                            </div>
+                        </div>
+                    </td>
+
+                    <td>{{ person.email|default:"--" }}</td>
+                    <td>{{ person.phone_number|default:"--" }}</td>
+                    <td class="text-center">
+                        {% if person.user %}
+                            {% if person.user.groups.exists %}
+                                {% for group in person.user.groups.all %}
+                                    <span class="badge badge-gray">{{ group.name }}</span>
+                                {% endfor %}
+                            {% else %}
+                                <span class="badge badge-amber">Sin Rol</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="badge badge-red">Sin Cuenta</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if person.user %}
+                            {% if person.user.is_active %}
+                                <span class="badge badge-green">Activo</span>
+                            {% else %}
+                                <span class="badge badge-red">Inactivo</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="badge badge-gray">No Creado</span>
+                        {% endif %}
+                    </td>
+                    {% if perms.core.change_user or perms.core.add_user %}
+                        <td class="actions text-center">
+                            <div class="actions-wrapper justify-content-center">
+                                <!-- Gestionar Credenciales -->
+                                <button type="button"
+                                        class="btn-blue-circle"
+                                        onclick="openAjaxModal('{% url 'security:user_create_credentials' person.pk %}')"
+                                        title="{% if person.user %}Editar Credenciales{% else %}Crear Cuenta de Usuario{% endif %}">
+                                    <i class="fas {% if person.user %}fa-user-pen{% else %}fa-user-plus{% endif %}"></i>
+                                </button>
+
+                                <!-- Activar / Desactivar Acceso -->
+                                {% if person.user and perms.core.change_user %}
+                                    {% if person.user.is_active %}
+                                        <button type="button"
+                                                class="btn-red-circle"
+                                                onclick="toggleStatusAjax('{% url 'security:user_toggle_status' person.id %}', 'el usuario de {{ person.first_name|escapejs }}', true)"
+                                                title="Desactivar Acceso">
+                                            <i class="fas fa-power-off"></i>
+                                        </button>
+                                    {% else %}
+                                        <button type="button"
+                                                class="btn-green-circle"
+                                                onclick="toggleStatusAjax('{% url 'security:user_toggle_status' person.id %}', 'el usuario de {{ person.first_name|escapejs }}', false)"
+                                                title="Activar Acceso">
+                                            <i class="fas fa-toggle-on"></i>
+                                        </button>
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        </td>
+                    {% endif %}
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center py-4 text-muted">
+                        <div class="empty-state-container">
+                            <i class="fa-solid fa-inbox fa-2x mb-2 opacity-50"></i>
+                            <p class="mb-0">No se encontraron registros de usuarios o personal.</p>
+                        </div>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
+
+<!-- PAGINACIÓN ESTANDARIZADA IDÉNTICA A PERSON -->
+{% if paginator.num_pages > 0 %}
+    <div id="js-pagination" class="pagination-container">
+        <span class="pagination-info">
+            Mostrando {{ page_obj.start_index|default:"0" }}-{{ page_obj.end_index|default:"0" }} de {{ paginator.count|default:"0" }}
+        </span>
+        <div class="pagination-controls" {% if paginator.num_pages <= 1 %}style="visibility:hidden;"{% endif %}>
+            <!-- Primera -->
+            <button type="button" class="page-btn {% if not page_obj.has_previous %}disabled{% endif %}"
+                    title="Primera" data-page="1"
+                    {% if not page_obj.has_previous %}disabled{% endif %}>
+                <i class="fas fa-angle-double-left"></i>
+            </button>
+
+            <!-- Anterior -->
+            <button type="button" class="page-btn {% if not page_obj.has_previous %}disabled{% endif %}"
+                    title="Anterior"
+                    data-page="{% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% else %}1{% endif %}"
+                    {% if not page_obj.has_previous %}disabled{% endif %}>
+                <i class="fas fa-angle-left"></i>
+            </button>
+
+            <!-- Indicador -->
+            <div class="page-input-wrapper">
+                  <input type="number" class="page-input" value="{{ page_obj.number }}"
+                      min="1" max="{{ paginator.num_pages }}" data-total-pages="{{ paginator.num_pages }}"
+                      aria-label="Número de página">
+                <span class="total-pages-badge">de {{ paginator.num_pages }}</span>
+            </div>
+
+            <!-- Siguiente -->
+            <button type="button" class="page-btn {% if not page_obj.has_next %}disabled{% endif %}"
+                    title="Siguiente"
+                    data-page="
+                            {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages }}{% endif %}"
+                    {% if not page_obj.has_next %}disabled{% endif %}>
+                <i class="fas fa-angle-right"></i>
+            </button>
+
+            <!-- Última -->
+            <button type="button" class="page-btn {% if not page_obj.has_next %}disabled{% endif %}"
+                    title="Última" data-page="{{ paginator.num_pages }}"
+                    {% if not page_obj.has_next %}disabled{% endif %}>
+                <i class="fas fa-angle-double-right"></i>
+            </button>
+        </div>
+    </div>
+{% endif %}

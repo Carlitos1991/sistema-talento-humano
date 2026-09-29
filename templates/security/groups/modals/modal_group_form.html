@@ -1,11 +1,11 @@
-<form method="post" @submit.prevent="submitForm">
+<form method="post" id="groupRoleForm">
     {% csrf_token %}
     <div class="modal-header-medium"> <!-- Nota: Usar clase medium para más ancho -->
         <h3 class="modal-title">
             <i class="fa-solid fa-users-gear"></i>
-            <span v-text="isEditing ? 'Configurar Rol' : 'Nuevo Rol'"></span>
+            <span>Configurar Rol</span>
         </h3>
-        <button type="button" class="btn-close-modal" @click="closeModal">&times;</button>
+        <button type="button" class="btn-close-modal" onclick="closeModal()">&times;</button>
     </div>
 
     <div class="modal-body-content">
@@ -13,7 +13,7 @@
         <div class="form-group mb-4">
             <label class="form-label font-bold">Nombre del Rol</label>
             {{ form.name }}
-            <span class="text-error" v-if="errors.name" v-text="errors.name[0]"></span>
+            <div class="invalid-feedback"></div>
         </div>
 
         <h4 class="mb-3 text-primary border-bottom pb-2">Asignación de Permisos</h4>
@@ -47,7 +47,7 @@
     </div>
 
     <div class="modal-footer-medium">
-        <button type="button" class="btn-cancel" @click="closeModal">Cancelar</button>
+        <button type="button" class="btn-cancel" onclick="closeModal()">Cancelar</button>
         <button type="submit" class="btn-save">
             <i class="fa-solid fa-save"></i> Guardar Rol
         </button>

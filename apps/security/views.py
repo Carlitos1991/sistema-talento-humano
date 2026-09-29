@@ -10,10 +10,17 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.http import require_POST
 from django.views.generic import CreateView, View, ListView, UpdateView
 from person.models import Person
-from .forms import RoleForm, UserFilterForm, CredentialCreationForm, HelpMessageForm, HelpMessageReplyForm, HelpMessageSumillaForm, HelpMessageCloseForm
+from .forms import RoleForm, UserFilterForm, CredentialCreationForm, HelpMessageForm, HelpMessageReplyForm, \
+    HelpMessageSumillaForm, HelpMessageCloseForm
 from django.contrib.sessions.models import Session
+from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
 from .models import UserSession, HelpMessage
+from django.template.loader import render_to_string
+from django.http import HttpResponse, JsonResponse
+from django.urls import reverse
+from django.db.models import Q, Value
+from django.db.models.functions import Concat
 
 
 # --- 1. GESTIÓN DE USUARIOS (PERSONAS) ---
@@ -25,61 +32,56 @@ class UserListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     permission_required = 'person.view_person'
 
     def get_queryset(self):
-        # En la gestión de usuarios solo se listan personas activas.
-        qs = Person.objects.filter(is_active=True).select_related('user').prefetch_related('user__groups').order_by('last_name')
-        q = self.request.GET.get('q')
+        active_employment_statuses = ['EMPLEADO', 'TRABAJADOR', 'CONTRATADO', 'PROFESIONAL']
+
+        # Concatenamos nombres para permitir búsquedas directas tipo "Carlos Chacha" o "Chacha Carlos"
+        qs = Person.objects.filter(
+            employee_profile__is_active=True,
+            employee_profile__employment_status__code__in=active_employment_statuses,
+        ).select_related(
+            'user',
+            'employee_profile__employment_status',
+        ).prefetch_related('user__groups').annotate(
+            full_name_db=Concat('first_name', Value(' '), 'last_name'),
+            full_name_reverse=Concat('last_name', Value(' '), 'first_name'),
+        ).order_by('last_name', 'first_name')
+
+        q = (self.request.GET.get('q') or '').strip()
         if q:
-            qs = qs.filter(
-                Q(first_name__icontains=q) |
-                Q(last_name__icontains=q) |
-                Q(document_number__icontains=q)
-            )
-            # También permitir buscar por rol (nombre del Group)
-            qs = qs.filter(
-                Q(first_name__icontains=q) |
-                Q(last_name__icontains=q) |
-                Q(document_number__icontains=q) |
-                Q(user__groups__name__icontains=q)
-            )
+            terms = q.split()
+            for term in terms:
+                qs = qs.filter(
+                    Q(full_name_db__icontains=term) |
+                    Q(full_name_reverse__icontains=term) |
+                    Q(document_number__icontains=term) |
+                    Q(user__username__icontains=term)
+                )
 
-        cedula = self.request.GET.get('cedula')
-        first_name = self.request.GET.get('first_name')
-        last_name = self.request.GET.get('last_name')
-        role_id = self.request.GET.get('role')
-        status = self.request.GET.get('status')
+        # Filtros adicionales
+        role_id = (self.request.GET.get('role') or '').strip()
+        status = (self.request.GET.get('status') or '').strip()
 
-        if cedula:
-            qs = qs.filter(document_number__icontains=cedula)
-        if first_name:
-            qs = qs.filter(first_name__icontains=first_name)
-        if last_name:
-            qs = qs.filter(last_name__icontains=last_name)
-
-        if role_id:
-            qs = qs.filter(user__groups__id=role_id)
+        if role_id and role_id.isdigit():
+            qs = qs.filter(user__groups__id=int(role_id))
 
         if status == 'active':
-            qs = qs.filter(user__is_active=True)
+            qs = qs.filter(user__isnull=False, user__is_active=True)
         elif status == 'inactive':
             qs = qs.filter(user__isnull=False, user__is_active=False)
         elif status == 'no_account':
             qs = qs.filter(user__isnull=True)
 
-        # Evitar duplicados cuando se hace join con grupos
         return qs.distinct()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        User = get_user_model()
-
-        context['filter_form'] = UserFilterForm(self.request.GET)
-        context['creds_form'] = CredentialCreationForm()
-
-        all_persons = Person.objects.filter(is_active=True)
-        context['stats_total'] = all_persons.count()
-        context['stats_active'] = all_persons.filter(user__is_active=True).count()
-        context['stats_inactive'] = all_persons.filter(user__is_active=False).count()
-
+        from django.contrib.auth.models import Group
+        context['roles_list'] = Group.objects.all().order_by('name')
+        context['current_filters'] = {
+            'q': self.request.GET.get('q', ''),
+            'role': self.request.GET.get('role', ''),
+            'status': self.request.GET.get('status', ''),
+        }
         return context
 
     def get(self, request, *args, **kwargs):
@@ -146,15 +148,15 @@ class RoleCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
 
             return JsonResponse({'success': True, 'message': 'Rol creado correctamente.'})
         return JsonResponse({'success': False, 'errors': form.errors}, status=400)
-    
+
     def _add_can_admin_permissions(self, perm_ids):
         """Agrega automáticamente can_admin si se marcaron todos los permisos de un modelo"""
         from django.contrib.auth.models import Permission
         from django.contrib.contenttypes.models import ContentType
-        
+
         perm_ids = [int(pid) for pid in perm_ids]
         permissions = Permission.objects.filter(id__in=perm_ids).select_related('content_type')
-        
+
         # Agrupar permisos por content_type
         perms_by_model = {}
         for perm in permissions:
@@ -162,20 +164,20 @@ class RoleCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
             if ct_id not in perms_by_model:
                 perms_by_model[ct_id] = []
             perms_by_model[ct_id].append(perm.codename)
-        
+
         # Verificar si tienen los 4 permisos básicos y agregar can_admin
         for ct_id, codenames in perms_by_model.items():
             # Buscar el modelo name para construir los codenames correctos
             ct = ContentType.objects.get(id=ct_id)
             model_name = ct.model
-            
+
             expected_perms = [
                 f'view_{model_name}',
                 f'add_{model_name}',
                 f'change_{model_name}',
                 f'delete_{model_name}'
             ]
-            
+
             has_all = all(p in codenames for p in expected_perms)
             if has_all:
                 # Buscar el permiso can_admin para este content_type
@@ -185,7 +187,7 @@ class RoleCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView):
                 ).first()
                 if can_admin_perm and can_admin_perm.id not in perm_ids:
                     perm_ids.append(can_admin_perm.id)
-        
+
         return perm_ids
 
     def _set_dashboard_permission(self, role, dashboard_type):
@@ -259,7 +261,8 @@ class RoleUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
 
             # Preservar permisos can_admin que ya existían en el rol
             try:
-                existing_can_admin_ids = list(self.object.permissions.filter(codename='can_admin').values_list('id', flat=True))
+                existing_can_admin_ids = list(
+                    self.object.permissions.filter(codename='can_admin').values_list('id', flat=True))
             except Exception:
                 existing_can_admin_ids = []
 
@@ -276,15 +279,15 @@ class RoleUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
 
             return JsonResponse({'success': True, 'message': 'Rol actualizado correctamente.'})
         return JsonResponse({'success': False, 'errors': form.errors}, status=400)
-    
+
     def _add_can_admin_permissions(self, perm_ids):
         """Agrega automáticamente can_admin si se marcaron todos los permisos de un modelo"""
         from django.contrib.auth.models import Permission
         from django.contrib.contenttypes.models import ContentType
-        
+
         perm_ids = [int(pid) for pid in perm_ids]
         permissions = Permission.objects.filter(id__in=perm_ids).select_related('content_type')
-        
+
         # Agrupar permisos por content_type
         perms_by_model = {}
         for perm in permissions:
@@ -292,20 +295,20 @@ class RoleUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
             if ct_id not in perms_by_model:
                 perms_by_model[ct_id] = []
             perms_by_model[ct_id].append(perm.codename)
-        
+
         # Verificar si tienen los 4 permisos básicos y agregar can_admin
         for ct_id, codenames in perms_by_model.items():
             # Buscar el modelo name para construir los codenames correctos
             ct = ContentType.objects.get(id=ct_id)
             model_name = ct.model
-            
+
             expected_perms = [
                 f'view_{model_name}',
                 f'add_{model_name}',
                 f'change_{model_name}',
                 f'delete_{model_name}'
             ]
-            
+
             has_all = all(p in codenames for p in expected_perms)
             if has_all:
                 # Buscar el permiso can_admin para este content_type
@@ -315,7 +318,7 @@ class RoleUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
                 ).first()
                 if can_admin_perm and can_admin_perm.id not in perm_ids:
                     perm_ids.append(can_admin_perm.id)
-        
+
         return perm_ids
 
     def _set_dashboard_permission(self, role, dashboard_type):
@@ -367,55 +370,19 @@ class RoleUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
 # --- 3. GESTIÓN DE CREDENCIALES ---
 class CreateUserForPersonView(LoginRequiredMixin, PermissionRequiredMixin, View):
     permission_required = 'core.change_user'
-
-    def post(self, request, person_id):
-        from .forms import CredentialCreationForm
-
-        try:
-            form = CredentialCreationForm(person_id, request.POST)
-            if form.is_valid():
-                user_updated = form.save()
-                message_text = 'Credenciales generadas y asignadas.'
-                require_logout = False
-                
-                # Si el usuario cambia su propia contraseña y es válida, debe reiniciar sesión pero avisamos al frontend.
-                if user_updated and form.cleaned_data.get('password'):
-                    if request.user == user_updated:
-                        require_logout = True
-                        message_text = 'Contraseña actualizada. Deberá iniciar sesión nuevamente.'
-                        
-                return JsonResponse({'success': True, 'message': message_text, 'require_logout': require_logout})
-            return JsonResponse({'success': False, 'errors': form.errors}, status=400)
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
-            return JsonResponse({
-                'success': False,
-                'errors': {'__all__': [f'Error del servidor: {str(e)}']}
-            }, status=500)
+    template_name = 'security/users/modals/modal_create_credentials.html'
 
     def get(self, request, person_id):
         person = get_object_or_404(Person, pk=person_id)
-        user = person.user
-
-        data = {
-            'success': True,
-            'person_name': f"{person.first_name} {person.last_name}",
-            'has_user': False,
-            'form_data': {
-                'username': '',
-                'role': '',
-                'is_active': True,
-                'is_staff': False,
-                'custom_name': '',
-                'custom_position': ''
-            }
-        }
+        try:
+            user = person.user
+        except ObjectDoesNotExist:
+            user = None
+        is_editing = user is not None
 
         if user:
-            data['has_user'] = True
             group = user.groups.first()
-            data['form_data'] = {
+            initial_data = {
                 'username': user.username,
                 'role': group.id if group else '',
                 'is_active': user.is_active,
@@ -424,20 +391,64 @@ class CreateUserForPersonView(LoginRequiredMixin, PermissionRequiredMixin, View)
                 'custom_position': user.custom_position or user.get_default_signature_position(),
             }
         else:
-            # Sugerir la cédula como nombre de usuario para nuevos usuarios
-            username_suggestion = (person.document_number or '').strip()
-            data['form_data']['username'] = username_suggestion
-            data['form_data']['custom_name'] = person.full_name.upper()
-
             employee = getattr(person, 'employee_profile', None)
-            budget_line = employee.current_budget_line.select_related('position_item').first() if employee else None
-            data['form_data']['custom_position'] = (
-                (budget_line.position_item.name or '').upper()
-                if budget_line and budget_line.position_item
-                else ''
-            )
+            try:
+                budget_line = (
+                    employee.current_budget_line.select_related('position_item').first()
+                    if employee else None
+                )
+            except (AttributeError, ObjectDoesNotExist):
+                budget_line = None
+            initial_data = {
+                'username': (person.document_number or '').strip(),
+                'role': '',
+                'is_active': True,
+                'is_staff': False,
+                'custom_name': person.full_name.upper(),
+                'custom_position': (
+                        budget_line.position_item.name or '').upper() if budget_line and budget_line.position_item else '',
+            }
 
-        return JsonResponse(data)
+        form = CredentialCreationForm(person_id, initial=initial_data)
+
+        # RENDERIZADO OBLIGATORIO PARA openAjaxModal()
+        html = render_to_string(self.template_name, {
+            'person': person,
+            'is_editing': is_editing,
+            'creds_form': form,
+            'action_url': reverse('security:user_create_credentials', args=[person_id]),
+        }, request=request)
+        return HttpResponse(html)
+
+    def post(self, request, person_id):
+        from .forms import CredentialCreationForm
+        try:
+            form = CredentialCreationForm(person_id, request.POST)
+            if form.is_valid():
+                user_updated = form.save()
+                message_text = 'Credenciales guardadas y asignadas exitosamente.'
+                require_logout = False
+
+                if user_updated and form.cleaned_data.get('password'):
+                    if request.user == user_updated:
+                        require_logout = True
+                        message_text = 'Contraseña actualizada. Deberá iniciar sesión nuevamente.'
+
+                return JsonResponse({'success': True, 'message': message_text, 'require_logout': require_logout})
+            return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+        except Exception as e:
+            return JsonResponse({'success': False, 'errors': {'__all__': [f'Error del servidor: {str(e)}']}},
+                                status=500)
+
+
+class UserAdvancedSearchModalView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'person.view_person'
+    template_name = 'security/users/modals/modal_advanced_search.html'
+
+    def get(self, request):
+        form = UserFilterForm(request.GET)
+        html = render_to_string(self.template_name, {'filter_form': form}, request=request)
+        return HttpResponse(html)
 
 
 @method_decorator(require_POST, name='dispatch')
@@ -489,30 +500,31 @@ class UserControlListView(LoginRequiredMixin, PermissionRequiredMixin, ListView)
 
     def get_queryset(self):
         # Prefetch groups para evitar consultas N+1 al obtener roles
-        return get_user_model().objects.filter(last_login__isnull=False).prefetch_related('groups').order_by('-last_login')
+        return get_user_model().objects.filter(last_login__isnull=False).prefetch_related('groups').order_by(
+            '-last_login')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         from datetime import timedelta
         from django.db.models import Q
-        
+
         user_data = []
         SESSION_TIMEOUT_HOURS = 12
         timeout_threshold = timezone.now() - timedelta(hours=SESSION_TIMEOUT_HOURS)
-        
+
         # Obtener todas mis sesiones
         all_sessions = {obj.user_id: obj for obj in UserSession.objects.select_related('user').all()}
-        
+
         for user in self.get_queryset():
             last_session = all_sessions.get(user.id)
-            
+
             # Determinar si está en línea:
             # - Debe tener una sesión registrada
             # - La última actividad debe ser MAYOR o igual al threshold (dentro de 12 horas)
             is_online = False
             if last_session and last_session.last_activity:
                 is_online = last_session.last_activity >= timeout_threshold
-            
+
             user_data.append({
                 'user': user,
                 'is_online': is_online,
@@ -521,28 +533,28 @@ class UserControlListView(LoginRequiredMixin, PermissionRequiredMixin, ListView)
                 'device_info': last_session.user_agent if last_session else 'N/A',
                 'roles': ', '.join([g.name for g in user.groups.all()]) if hasattr(user, 'groups') else ''
             })
-            
+
         context['user_data'] = user_data
         return context
 
 
 class UpdateSessionInfoView(LoginRequiredMixin, View):
     """API para actualizar información del dispositivo en la sesión de usuario"""
-    
+
     def post(self, request):
         import json
-        
+
         try:
             data = json.loads(request.body)
             mac_address = data.get('mac_address', '')
             device_info = data.get('device_info', '')
-            
+
             # Actualizar la sesión actual del usuario con la información del dispositivo
             UserSession.objects.filter(user=request.user).update(
                 mac_address=mac_address[:17] if mac_address else None,  # Limitar a longitud de MAC
-                user_agent=device_info[:500] if device_info else None   # Limitar longitud
+                user_agent=device_info[:500] if device_info else None  # Limitar longitud
             )
-            
+
             return JsonResponse({'status': 'success'})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
@@ -673,9 +685,9 @@ class HelpMessageListView(LoginRequiredMixin, ListView):
             root.can_reply = (not is_closed) and (user.id in participants)
             root.can_sumilla = (not is_closed) and (root.direction == 'received') and (user.id in participants)
             root.can_initiator_attended_actions = (
-                root.status == HelpMessage.Status.ATTENDED
-                and root.sender_user_id == user.id
-                and root.last_message.recipient_user_id == user.id
+                    root.status == HelpMessage.Status.ATTENDED
+                    and root.sender_user_id == user.id
+                    and root.last_message.recipient_user_id == user.id
             )
             root.user_has_unread = any(
                 m.recipient_user_id == user.id and m.status == HelpMessage.Status.SENT
@@ -699,8 +711,10 @@ class HelpMessageListView(LoginRequiredMixin, ListView):
         context['close_form'] = HelpMessageCloseForm()
         context['active_tab'] = self.request.GET.get('tab', 'received')
         context['messages_total'] = own_messages.count()
-        context['messages_sent'] = own_messages.filter(sender_user=self.request.user, original_message__isnull=True).count()
-        context['messages_received'] = own_messages.filter(recipient_user=self.request.user, original_message__isnull=True).count()
+        context['messages_sent'] = own_messages.filter(sender_user=self.request.user,
+                                                       original_message__isnull=True).count()
+        context['messages_received'] = own_messages.filter(recipient_user=self.request.user,
+                                                           original_message__isnull=True).count()
         context['messages_unread'] = self._pending_turn_count(self.request.user)
         context['messages_read'] = HelpMessage.objects.filter(
             recipient_user=self.request.user,
@@ -744,7 +758,7 @@ class HelpMessageMarkReadView(LoginRequiredMixin, View):
             return JsonResponse({'success': False}, status=403)
 
         now = timezone.now()
-        
+
         # Marcar como leído los mensajes SENT pendientes
         unread_qs = HelpMessage.objects.filter(
             Q(id=root.id) | Q(original_message=root),
@@ -840,7 +854,7 @@ class HelpMessageMarkAttendedView(LoginRequiredMixin, View):
             return redirect('security:help_message_list')
 
         now = timezone.now()
-        
+
         # Crear el mensaje final de cierre como parte del hilo
         # Este mensaje será visto por el iniciador cuando abra el detalle
         final_message = HelpMessage.objects.create(
@@ -931,7 +945,8 @@ class HelpMessageFinalizeByInitiatorView(LoginRequiredMixin, View):
             Q(id=root.id) | Q(original_message=root)
         ).order_by('-created_at').first()
 
-        if thread_last and thread_last.status in [HelpMessage.Status.SENT, HelpMessage.Status.READ, HelpMessage.Status.ATTENDED]:
+        if thread_last and thread_last.status in [HelpMessage.Status.SENT, HelpMessage.Status.READ,
+                                                  HelpMessage.Status.ATTENDED]:
             thread_last.status = HelpMessage.Status.FINALIZED
             if not thread_last.read_at and thread_last.recipient_user_id == request.user.id:
                 thread_last.read_at = now

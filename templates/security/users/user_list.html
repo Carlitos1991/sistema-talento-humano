@@ -1,55 +1,102 @@
 {% extends 'base.html' %}
 {% load static %}
+
 {% block title %}Usuarios | SIGETH{% endblock %}
 
 {% block content %}
-    <!-- 1. Header -->
+    <!-- 1. Encabezado Oficial -->
     <div class="header-card">
-        <div>
-            <h1>Gestión de Usuarios</h1>
-            <p>Configuración de usuarios, roles y permisos del sistema.</p>
+        <div class="header-card-body">
+            <h1><i class="fa-solid fa-users-gear me-2"></i> Gestión de Usuarios</h1>
+            <p>Configuración de credenciales de acceso, roles y asignación de permisos del sistema.</p>
         </div>
     </div>
-    <!-- 2. Buscador  -->
 
-    <!-- 3. Contenedor principal Tabla (AJAX) -->
-    <div id="table-app">
-        <div class="content-table">
-            <div class="table-controls">
-                <button type="button" class="btn btn-search" onclick="window.searchActions.open()">
-                    <i class="fas fa-sliders-h"></i> Filtros Avanzados
-                </button>
-                <div class="search-box">
-                    <input type="text" id="table-search" class="input-field"
-                           placeholder="Buscar en la tabla">
+    <!-- 2. Contenedor de Tabla y Filtros -->
+    <div class="content-table">
+        <form id="userFilterForm" onsubmit="return false;" class="mb-3">
+            <div class="search-panel">
+                <!-- Fila Principal: Buscador + Botón de Filtros -->
+                <div class="d-flex align-items-center justify-content-center w-100"
+                     style="max-width: 820px; margin: 0 auto; gap: 12px;">
+                    <div class="flex-grow-1">
+                        <input type="text"
+                               name="q"
+                               id="table-search-user"
+                               class="form-control"
+                               style="height: 42px; font-size: 0.95rem; width: 100%; border-radius: 8px;"
+                               placeholder="Buscar por nombre, apellido, cédula o usuario..."
+                               value="{{ current_filters.q|default:'' }}"
+                               autocomplete="off">
+                    </div>
+                    <button type="button"
+                            class="btn-dark-blue-rectangle-outline flex-shrink-0"
+                            id="btn-toggle-advanced"
+                            style="height: 42px; padding: 0 1.25rem;"
+                            title="Filtros avanzados">
+                        <i class="fa-solid fa-sliders me-1"></i> Filtros
+                        <i class="fa-solid fa-chevron-down ms-1" id="icon-toggle-advanced"></i>
+                    </button>
+                </div>
+
+                <!-- Acordeón Desplegable: Únicamente Estado y Rol -->
+                <div id="advanced-search-container" class="w-100 hidden mt-3 pt-3 border-top">
+                    <div class="row g-3 justify-content-center">
+                        <div class="col-md-4">
+                            <label class="form-label small m-0 mb-1">Estado de Cuenta:</label>
+                            <select name="status" id="filter_status" class="input-field">
+                                <option value="">Todos los estados</option>
+                                <option value="active" {% if current_filters.status == 'active' %}selected{% endif %}>
+                                    Activos
+                                </option>
+                                <option value="inactive"
+                                        {% if current_filters.status == 'inactive' %}selected{% endif %}>Inactivos
+                                </option>
+                                <option value="no_account"
+                                        {% if current_filters.status == 'no_account' %}selected{% endif %}>Sin cuenta
+                                    asignada
+                                </option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small m-0 mb-1">Rol / Perfil Asignado:</label>
+                            <select name="role" id="filter_role" class="input-field">
+                                <option value="">Todos los roles</option>
+                                {% for role in roles_list %}
+                                    <option value="{{ role.id }}"
+                                            {% if current_filters.role == role.id|stringformat:"s" %}selected{% endif %}>
+                                        {{ role.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <!-- 3.1 Zona de recarga AJAX (Solo tabla) -->
-            <div id="table-content-wrapper">
-                {% include 'security/users/partials/partial_user_table.html' %}
+
+            <!-- Acciones Buscar / Limpiar -->
+            <div class="search-toolbar mt-3">
+                <div class="table-controls rubric-export-controls"></div>
+                <div class="search-filter-actions">
+                    <button type="submit" id="btn-submit-search" class="btn-dark-blue-rectangle">
+                        <i class="fas fa-search me-1"></i> Buscar
+                    </button>
+                    <button type="button" id="btn-clear-search" class="btn-dark-blue-rectangle-outline">
+                        <i class="fas fa-eraser me-1"></i> Limpiar
+                    </button>
+                </div>
+                <div></div>
             </div>
-            <div class="pagination-container" id="js-pagination">
-                <span class="pagination-info" id="page-info">Mostrando 0-0 de 0</span>
-                <ul class="pagination-list">
-                    <li>
-                        <button id="btn-prev" class="page-btn"><i class="fas fa-chevron-left"></i></button>
-                    </li>
-                    <li>
-                        <span id="current-page-display" style="padding: 0 10px; font-weight: bold;">1</span>
-                    </li>
-                    <li>
-                        <button id="btn-next" class="page-btn"><i class="fas fa-chevron-right"></i></button>
-                    </li>
-                </ul>
-            </div>
+        </form>
+
+        <!-- Zona de inyección de la tabla parcial -->
+        <div id="table-content-wrapper">
+            {% include 'security/users/partials/partial_user_table.html' %}
         </div>
     </div>
+
 {% endblock %}
-{% block modals %}
-    {% include 'security/users/modals/modal_create_credentials.html' %}
-    {% include 'security/users/modals/modal_advanced_search.html' %}
-{% endblock %}
+
 {% block extra_js %}
     <script src="{% static 'js/users.js' %}"></script>
-    <script src="{% static 'js/credentials.js' %}"></script>
 {% endblock %}

@@ -31,7 +31,7 @@ from employee.models import InstitutionalData, Employee
 from institution.models import AdministrativeUnit
 from permitrequest.models import PermitRequest
 from schedule.models import ScheduleObservation, get_employee_schedule_for_date
-from .models import BiometricDevice, BiometricLoad, AttendanceRegistry, OfflineAttendanceRegistry
+from .models import (BiometricDevice,BiometricLoad,AttendanceRegistry,OfflineAttendanceRegistry,BiometricCommand,)
 from .utils import test_connection, BiometricConnection
 
 try:
@@ -1651,3 +1651,136 @@ def generate_department_report_pdf(request):
         from xhtml2pdf import pisa
         pisa.CreatePDF(html, dest=response)
         return response
+
+
+# -------------------------------------------------------------
+# MIGRACIÓN DE USUARIOS ENTRE BIOMÉTRICOS & COMANDOS ADMS
+# -------------------------------------------------------------
+
+class BiometricModalUsersView(LoginRequiredMixin, View):
+    """
+    Retorna el modal con el listado de usuarios del biométrico origen
+    y la lista de los otros biométricos activos como destino.
+    """
+
+    def get(self, request, pk):
+        source_device = get_object_or_404(BiometricDevice, pk=pk)
+
+        # Conexión directa TCP para obtener usuarios en tiempo real
+        conn = BiometricConnection(source_device.ip_address, source_device.port, timeout=4)
+        users = []
+        connection_error = None
+
+        if conn.connect():
+            try:
+                zk_users = conn.conn.get_users()
+                for u in zk_users:
+                    users.append({
+                        'uid': u.uid,
+                        'user_id': str(u.user_id).strip(),
+                        'name': u.name.strip() if u.name else 'Sin Nombre',
+                        'privilege': u.privilege,
+                        'is_admin': (u.privilege in [14, 2, 3]),
+                        'card': getattr(u, 'card', 0),
+                        'password': getattr(u, 'password', '')
+                    })
+            except Exception as e:
+                connection_error = f"Error al extraer usuarios: {str(e)}"
+            finally:
+                conn.disconnect()
+        else:
+            connection_error = "No se pudo conectar vía red (TCP) al biométrico origen para leer sus usuarios."
+
+        # Biométricos destino disponibles (activos y distintos al actual)
+        target_devices = BiometricDevice.objects.filter(is_active=True).exclude(pk=source_device.pk)
+
+        html = render_to_string('biometric/modals/modal_biometric_users.html', {
+            'source_device': source_device,
+            'users': sorted(users, key=lambda x: int(x['user_id']) if x['user_id'].isdigit() else x['user_id']),
+            'target_devices': target_devices,
+            'connection_error': connection_error,
+        }, request=request)
+        return HttpResponse(html)
+
+
+@csrf_exempt
+def migrate_user_adms_ajax(request):
+    """
+    Encola el comando ADMS para crear/actualizar el usuario en el biométrico destino.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Método no permitido.'}, status=405)
+
+    try:
+        data = json.loads(request.body.decode('utf-8') or '{}')
+        target_device_id = data.get('target_device_id')
+        pin = str(data.get('pin', '')).strip()
+        name = str(data.get('name', '')).strip()
+        is_admin = bool(data.get('is_admin', False))
+        password = str(data.get('password', '')).strip()
+        card = str(data.get('card', '0')).strip()
+
+        if not target_device_id or not pin:
+            return JsonResponse({'success': False, 'message': 'Faltan parámetros obligatorios.'}, status=400)
+
+        target_device = get_object_or_404(BiometricDevice, pk=target_device_id, is_active=True)
+
+        # Pri: 14 = Administrador, 0 = Usuario Normal
+        privilege = 14 if is_admin else 0
+
+        # Comando ADMS oficial para inyectar/actualizar datos de usuario
+        command_text = f"DATA UPDATE USERINFO PIN={pin}\tName={name}\tPri={privilege}\tPasswd={password}\tCard={card}"
+
+        BiometricCommand.objects.create(
+            device=target_device,
+            command=command_text,
+            status='PENDING'
+        )
+
+        role_str = "Administrador" if is_admin else "Usuario Normal"
+        return JsonResponse({
+            'success': True,
+            'message': f"Comando de migración encolado para '{name or pin}' como {role_str} hacia {target_device.name}."
+        })
+    except Exception as e:
+        logger.error(f"Error encolando migración de usuario ADMS: {e}")
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+@csrf_exempt
+def adms_sync_time_command(request, pk):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Método no permitido'}, status=405)
+
+    try:
+        device = get_object_or_404(BiometricDevice, pk=pk)
+        data = json.loads(request.body.decode('utf-8') or '{}')
+        mode = data.get('mode', 'server')
+        target_time_str = data.get('new_time')
+        device = get_object_or_404(BiometricDevice, pk=pk)
+        data = json.loads(request.body.decode('utf-8') or '{}')
+        mode = data.get('mode', 'server')
+        target_time_str = data.get('new_time')
+
+        if mode == 'server' or not target_time_str:
+            now_dt = datetime.now()
+        else:
+            now_dt = datetime.strptime(target_time_str, '%Y-%m-%dT%H:%M')
+
+        # Comando ADMS oficial para configurar fecha y hora
+        cmd_time = now_dt.strftime('%Y-%m-%d %H:%M:%S')
+        command_text = f"SET OPTION DateTime={cmd_time}"
+
+        BiometricCommand.objects.create(
+            device=device,
+            command=command_text,
+            status='PENDING'
+        )
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Comando de hora ({cmd_time}) encolado vía ADMS para {device.name}.'
+        })
+    except Exception as e:
+        logger.error(f"Error en adms_sync_time_command: {e}")
+        return JsonResponse({'success': False, 'message': str(e)}, status=500)

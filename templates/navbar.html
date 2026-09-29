@@ -18,7 +18,6 @@
         <!-- 2. Usuario Dropdown -->
         <div class="user-dropdown-container">
 
-            <!-- JS Vanilla detecta el click en la clase 'user-trigger' -->
             <div class="user-trigger">
                 <div class="text-right hidden-mobile">
                     <span class="user-name">
@@ -46,27 +45,19 @@
                 <i class="fa-solid fa-chevron-down" style="font-size: 0.7rem; color: #94a3b8;"></i>
             </div>
 
-            <!-- IMPORTANTE: Agregada clase 'hidden' por defecto.
-                 Quitamos v-if y @mouseleave que eran de Vue. -->
             <div class="dropdown-menu hidden">
-
-                {% if request.user.person %}
-                    <a href="{% url 'employee:self_dashboard' %}" class="dropdown-item">
-                        <i class="fa-regular fa-user"></i> Ver Perfil
-                    </a>
-                {% else %}
-                    <a href="{% url 'employee:self_dashboard' %}" class="dropdown-item">
-                        <i class="fa-regular fa-user"></i> Ver Perfil
-                    </a>
-                {% endif %}
+                <a href="{% url 'employee:self_dashboard' %}" class="dropdown-item">
+                    <i class="fa-regular fa-user"></i> Ver Perfil
+                </a>
 
                 {% if perms.auth.dashboard_talento_humano %}
                     <a href="{% url 'core:dashboard' %}?view=jefe" class="dropdown-item">
-                        <i class="fa-regular fa-building"></i> Oficina
+                        <i class="fa-regular fa-building"></i> Ver Oficina
                     </a>
                 {% endif %}
 
-                <a href="#" class="dropdown-item" onclick="openChangePasswordModal(); return false;">
+                <a href="#" class="dropdown-item"
+                   onclick="openModal('changePasswordModal'); return false;">
                     <i class="fa-solid fa-key"></i> Cambiar Contraseña
                 </a>
 

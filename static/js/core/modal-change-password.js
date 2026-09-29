@@ -5,18 +5,9 @@ let __forceChangeRequired = false;
 function openChangePasswordModal() {
     const modal = document.getElementById('changePasswordModal');
     if (modal) {
-        modal.classList.remove('hidden');
-        // asegurar visibilidad si reglas CSS externas siguen ocultando el elemento
-        try {
-            modal.style.display = modal.style.display || 'flex';
-            modal.style.visibility = 'visible';
-            modal.style.zIndex = modal.style.zIndex || '2147483647';
-        } catch (e) { /* ignore */ }
+        window.openModal('changePasswordModal');
         const pw = document.getElementById('newPassword');
         if (pw) pw.focus();
-        // Cerrar el dropdown del navbar
-        const dropdown = document.querySelector('.dropdown-menu');
-        if (dropdown) dropdown.classList.add('hidden');
     }
 }
 
@@ -39,11 +30,13 @@ function closeChangePasswordModal(forceOverride = false) {
     }
     const modal = document.getElementById('changePasswordModal');
     if (modal) {
-        modal.classList.add('hidden');
-        // Limpiar formulario
-        document.getElementById('changePasswordForm').reset();
-        document.getElementById('passwordMatchMessage').style.display = 'none';
-        document.getElementById('submitChangePasswordBtn').disabled = true;
+        window.closeModal('changePasswordModal');
+        const form = document.getElementById('changePasswordForm');
+        const matchMessage = document.getElementById('passwordMatchMessage');
+        const submitButton = document.getElementById('submitChangePasswordBtn');
+        if (form) form.reset();
+        if (matchMessage) matchMessage.style.display = 'none';
+        if (submitButton) submitButton.disabled = true;
     }
 }
 
@@ -130,9 +123,18 @@ function updateSubmitButton() {
 
 // Validación en tiempo real
 document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('changePasswordForm');
     const newPasswordInput = document.getElementById('newPassword');
     const confirmPasswordInput = document.getElementById('confirmPassword');
     const submitBtn = document.getElementById('submitChangePasswordBtn');
+
+    if (form) {
+        form.addEventListener('submit', function (event) {
+            window.submitAjaxForm(event, () => {
+                closeChangePasswordModal(true);
+            });
+        });
+    }
 
     if (newPasswordInput) {
         newPasswordInput.addEventListener('input', function() {
@@ -284,63 +286,3 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 })();
 
-// Enviar formulario
-function submitChangePassword() {
-    const form = document.getElementById('changePasswordForm');
-    const newPassword = document.getElementById('newPassword').value;
-    const confirmPassword = document.getElementById('confirmPassword').value;
-
-    // Validación final
-    if (newPassword !== confirmPassword) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Las contraseñas no coinciden.',
-            confirmButtonText: 'OK'
-        });
-        return;
-    }
-
-    // Hacer petición AJAX
-    const formData = new FormData(form);
-    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-    
-    fetch('/change-password/', {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': csrfToken,
-            'X-Requested-With': 'XMLHttpRequest'
-        },
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            Swal.fire({
-                icon: 'success',
-                title: 'Éxito',
-                text: 'Tu contraseña ha sido cambiada correctamente.',
-                confirmButtonText: 'OK'
-            }).then(() => {
-                // Forzar cierre aunque había bloqueo obligatorio (se debe haber actualizado el flag en el servidor)
-                closeChangePasswordModal(true);
-            });
-        } else {
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: data.message || 'Ocurrió un error al cambiar la contraseña.',
-                confirmButtonText: 'OK'
-            });
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Error de conexión. Intenta de nuevo.',
-            confirmButtonText: 'OK'
-        });
-    });
-}

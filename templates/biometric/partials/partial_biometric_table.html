@@ -93,6 +93,14 @@
                                     title="Editar Configuración">
                                 <i class="fa-solid fa-pen-to-square"></i>
                             </button>
+                            <!-- 7. Gestionar / Migrar Usuarios -->
+                            <button type="button"
+                                    class="btn-icon btn-dark-blue-circle"
+                                    data-action="open-modal"
+                                    data-modal-url="{% url 'biometric:biometric_modal_users' device.id %}"
+                                    title="Ver Usuarios y Migrar">
+                                <i class="fa-solid fa-users"></i>
+                            </button>
                         </div>
                     </td>
                 </tr>

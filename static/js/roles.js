@@ -1,225 +1,144 @@
-/* static/js/roles.js */
-
 document.addEventListener('DOMContentLoaded', () => {
-    const {createApp, ref} = Vue;
-    const mountEl = document.getElementById('role-modal-app');
-
-    // =========================================================
-    // 1. APP VUE (Modal de Crear/Editar)
-    // =========================================================
-    if (mountEl) {
-        createApp({
-            delimiters: ['[[', ']]'],
-            setup() {
-                const isVisible = ref(false);
-                const isEditing = ref(false);
-                const currentId = ref(null);
-                const errors = ref({});
-                const formElementId = 'roleForm';
-
-                // --- AYUDANTES INTERNOS ---
-                const uncheckAll = () => {
-                    document.querySelectorAll('.perm-check').forEach(el => el.checked = false);
-                };
-
-                // --- GESTIÓN DE CHECKBOX ADMIN POR MODELO ---
-                const toggleAllPermsForModel = (event, modelId) => {
-                    const isChecked = event.target.checked;
-                    const row = event.target.closest('tr');
-                    if (row) {
-                        row.querySelectorAll('.custom-checkbox:not(.perm-admin-all)').forEach(cb => {
-                            cb.checked = isChecked;
-                        });
-                    }
-                };
-
-                // --- FUNCIONES UI ---
-                const applyTemplate = (type) => {
-                    uncheckAll();
-                    if (type === 'manager') {
-                        document.querySelectorAll('.perm-check').forEach(el => el.checked = true);
-                    } else if (type === 'creator') {
-                        document.querySelectorAll('.perm-view, .perm-add, .perm-change').forEach(el => el.checked = true);
-                    } else if (type === 'editor') {
-                        document.querySelectorAll('.perm-view, .perm-change').forEach(el => el.checked = true);
-                    } else if (type === 'read') {
-                        document.querySelectorAll('.perm-view').forEach(el => el.checked = true);
-                    }
-                };
-
-                const toggleModule = (tableIndex) => {
-                    const table = document.querySelector(`.module-table-${tableIndex}`);
-                    if (table) {
-                        const checkboxes = table.querySelectorAll('.perm-check');
-                        const allChecked = Array.from(checkboxes).every(c => c.checked);
-                        checkboxes.forEach(c => c.checked = !allChecked);
-                    }
-                };
-
-                // --- APERTURA ---
-                const openCreate = () => {
-                    isEditing.value = false;
-                    currentId.value = null;
-                    errors.value = {};
-                    const form = document.getElementById(formElementId);
-                    if (form) form.reset();
-                        uncheckAll();
-                        // Reset dashboard selection radios
-                        document.querySelectorAll('input[name="dashboard_type"]').forEach(r => r.checked = false);
-                    isVisible.value = true;
-                    document.body.classList.add('no-scroll');
-                };
-
-                const openEdit = async (id) => {
-                    isEditing.value = true;
-                    currentId.value = id;
-                    errors.value = {};
-                    const form = document.getElementById(formElementId);
-                    if (form) form.reset();
-                    uncheckAll();
-
-                    try {
-                        const response = await fetch(`/security/roles/update/${id}/`, {
-                            headers: {'X-Requested-With': 'XMLHttpRequest'}
-                        });
-                        const res = await response.json();
-
-                        if (res.success) {
-                            const nameInput = document.querySelector('[name="name"]');
-                            if (nameInput) nameInput.value = res.data.name;
-
-                            if (res.data.permissions) {
-                                res.data.permissions.forEach(permId => {
-                                    const chk = document.querySelector(`input[name="permissions[]"][value="${permId}"]`);
-                                    if (chk) chk.checked = true;
-                                });
-                            }
-                                // Si el endpoint devuelve el tipo de dashboard, marcar la opción
-                                if (res.data.dashboard_type) {
-                                    const dash = document.querySelector(`input[name="dashboard_type"][value="${res.data.dashboard_type}"]`);
-                                    if (dash) dash.checked = true;
-                                }
-                            isVisible.value = true;
-                            document.body.classList.add('no-scroll');
-                        }
-                    } catch (e) {
-                        console.error(e);
-                        if (window.Toast) window.Toast.fire({icon: 'error', title: 'Error al cargar rol'});
-                    }
-                };
-
-                const closeModal = () => {
-                    isVisible.value = false;
-                    document.body.classList.remove('no-scroll');
-                };
-
-                // --- GUARDAR ---
-                const submitRole = async () => {
-                    const formEl = document.getElementById(formElementId);
-                    const formData = new FormData(formEl);
-                    let url = '/security/roles/create/';
-                    if (isEditing.value) url = `/security/roles/update/${currentId.value}/`;
-
-                    try {
-                        const response = await fetch(url, {
-                            method: 'POST',
-                            body: formData,
-                            headers: {'X-CSRFToken': window.getCookie('csrftoken')}
-                        });
-                        const data = await response.json();
-
-                        if (data.success) {
-                            if (window.Toast) window.Toast.fire({icon: 'success', title: data.message});
-                            closeModal();
-                            // Recargar tabla automáticamente buscando de nuevo
-                            fetchRoles(document.getElementById('table-search')?.value || '');
-                        } else {
-                            errors.value = data.errors;
-                            if (window.Toast) window.Toast.fire({icon: 'warning', title: 'Revise el formulario'});
-                        }
-                    } catch (e) {
-                        console.error(e);
-                        if (window.Toast) window.Toast.fire({icon: 'error', title: 'Error al guardar'});
-                    }
-                };
-
-                // Exponer al scope global
-                window.roleActions = {openCreate, openEdit};
-
-                return {
-                    isVisible, isEditing, errors,
-                    closeModal, submitRole,
-                    applyTemplate, toggleModule, toggleAllPermsForModel
-                };
-            }
-        }).mount('#role-modal-app');
-    }
-
-    // =========================================================
-    // 2. LISTENERS DOM (Botones y Tabla)
-    // =========================================================
-
-    // Botón Nuevo Rol
-    const btnAdd = document.getElementById('btn-add-role');
-    if (btnAdd) {
-        btnAdd.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (window.roleActions) window.roleActions.openCreate();
-        });
-    }
-
-    // Delegación eventos Tabla (Editar)
-    const tableApp = document.getElementById('table-app');
-    if (tableApp) {
-        tableApp.addEventListener('click', (e) => {
-            const btnEdit = e.target.closest('.btn-edit-role');
-            if (btnEdit && btnEdit.dataset.url) {
-                const url = btnEdit.dataset.url;
-                const parts = url.split('/').filter(Boolean);
-                const id = parts[parts.length - 1];
-                if (window.roleActions) window.roleActions.openEdit(id);
-            }
-        });
-    }
-
-    // =========================================================
-    // 3. LÓGICA DE BÚSQUEDA (LO QUE FALTABA)
-    // =========================================================
-    const searchInput = document.getElementById('table-search');
+    const modal = document.getElementById('roleModalOverlay');
+    const form = document.getElementById('roleForm');
+    const title = document.getElementById('roleModalTitle');
     const tableContainer = document.getElementById('table-content-wrapper');
+    const searchInput = document.getElementById('table-search');
 
-    // Función Debounce para no saturar al escribir
-    function debounce(func, timeout = 300) {
-        let timer;
-        return (...args) => {
-            clearTimeout(timer);
-            timer = setTimeout(() => {
-                func.apply(this, args);
-            }, timeout);
-        };
-    }
+    if (!modal || !form) return;
 
-    // Función que hace la petición AJAX
+    const permissionCheckboxes = () => document.querySelectorAll('.perm-check');
+
+    window.closeRoleModal = () => {
+        window.closeModal('roleModalOverlay');
+        form.reset();
+        permissionCheckboxes().forEach(checkbox => {
+            checkbox.checked = false;
+        });
+    };
+
+    const openRoleModal = () => {
+        window.openModal('roleModalOverlay');
+    };
+
+    const resetDashboardType = () => {
+        document.querySelectorAll('input[name="dashboard_type"]').forEach(input => {
+            input.checked = false;
+        });
+    };
+
+    const openCreate = () => {
+        form.reset();
+        permissionCheckboxes().forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        resetDashboardType();
+        form.action = form.dataset.createUrl;
+        title.textContent = 'Crear Nuevo Perfil';
+        openRoleModal();
+    };
+
+    const openEdit = async (url) => {
+        try {
+            const response = await fetch(url, {
+                headers: {'X-Requested-With': 'XMLHttpRequest'}
+            });
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                throw new Error(data.message || 'No se pudo cargar el perfil.');
+            }
+
+            form.reset();
+            permissionCheckboxes().forEach(checkbox => {
+                checkbox.checked = data.data.permissions.includes(Number(checkbox.value));
+            });
+
+            const nameInput = form.querySelector('[name="name"]');
+            if (nameInput) nameInput.value = data.data.name || '';
+
+            resetDashboardType();
+            if (data.data.dashboard_type) {
+                const dashboardInput = form.querySelector(
+                    `[name="dashboard_type"][value="${data.data.dashboard_type}"]`
+                );
+                if (dashboardInput) dashboardInput.checked = true;
+            }
+
+            form.action = url;
+            title.textContent = 'Configurar Perfil de Acceso';
+            openRoleModal();
+        } catch (error) {
+            console.error('Error al cargar el perfil:', error);
+            showToast(error.message || 'No se pudo cargar el perfil.', 'error');
+        }
+    };
+
+    document.getElementById('btn-add-role')?.addEventListener('click', openCreate);
+
+    document.getElementById('table-app')?.addEventListener('click', event => {
+        const button = event.target.closest('.btn-edit-role[data-url]');
+        if (button) openEdit(button.dataset.url);
+    });
+
+    form.addEventListener('submit', event => {
+        window.submitAjaxForm(event, () => {
+            closeRoleModal();
+            fetchRoles(searchInput?.value || '');
+        });
+    });
+
+    document.querySelectorAll('[data-permission-template]').forEach(input => {
+        input.addEventListener('change', () => {
+            permissionCheckboxes().forEach(checkbox => {
+                checkbox.checked = false;
+            });
+
+            const selectors = {
+                manager: '.perm-check',
+                creator: '.perm-view, .perm-add, .perm-change',
+                editor: '.perm-view, .perm-change',
+                read: '.perm-view'
+            };
+            document.querySelectorAll(selectors[input.dataset.permissionTemplate] || '')
+                .forEach(checkbox => checkbox.checked = true);
+        });
+    });
+
+    document.addEventListener('click', event => {
+        const button = event.target.closest('[data-toggle-module]');
+        if (!button) return;
+
+        const table = document.querySelector(`.module-table-${button.dataset.toggleModule}`);
+        if (!table) return;
+
+        const checkboxes = table.querySelectorAll('.perm-check');
+        const allChecked = [...checkboxes].every(checkbox => checkbox.checked);
+        checkboxes.forEach(checkbox => checkbox.checked = !allChecked);
+    });
+
+    document.addEventListener('change', event => {
+        const checkbox = event.target.closest('[data-toggle-model]');
+        if (!checkbox) return;
+
+        const row = checkbox.closest('tr');
+        row?.querySelectorAll('.custom-checkbox:not(.perm-admin-all)')
+            .forEach(item => item.checked = checkbox.checked);
+    });
+
     function fetchRoles(query) {
-        // Usamos la URL actual (que es RoleListView) y le pasamos ?q=
         const url = `${window.location.pathname}?q=${encodeURIComponent(query)}`;
-
-        fetch(url, {
-            headers: {'X-Requested-With': 'XMLHttpRequest'}
-        })
+        fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
             .then(response => response.text())
             .then(html => {
-                if (tableContainer) {
-                    tableContainer.innerHTML = html;
-                }
+                if (tableContainer) tableContainer.innerHTML = html;
             })
-            .catch(err => console.error("Error en búsqueda:", err));
+            .catch(error => console.error('Error en búsqueda:', error));
     }
 
-    // Listener del Input
-    if (searchInput) {
-        searchInput.addEventListener('input', debounce((e) => {
-            fetchRoles(e.target.value);
-        }, 500));
-    }
+    let searchTimeout;
+    searchInput?.addEventListener('input', event => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => fetchRoles(event.target.value), 300);
+    });
 });

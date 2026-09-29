@@ -46,4 +46,8 @@ urlpatterns = [
     path('reports/monthly-pdf/', views.generate_monthly_report_pdf, name='generate_monthly_pdf'),
     path('reports/specific-pdf/', views.generate_specific_report_pdf, name='generate_specific_pdf'),
     path('reports/department-pdf/', views.generate_department_report_pdf, name='generate_department_pdf'),
+    # Migración de Usuarios y Hora ADMS
+    path('modal/users/<int:pk>/', views.BiometricModalUsersView.as_view(), name='biometric_modal_users'),
+    path('migrate-user-adms/', views.migrate_user_adms_ajax, name='biometric_migrate_user_adms'),
+    path('adms-time/<int:pk>/', views.adms_sync_time_command, name='adms_sync_time_command'),
 ]

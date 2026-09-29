@@ -1,17 +1,18 @@
-<div id="role-modal-app" v-cloak>
-    <div class="modal-overlay" :class="{ 'hidden': !isVisible }" role="dialog">
+<div id="role-modal-app">
+    <div id="roleModalOverlay" class="modal-overlay hidden" role="dialog">
         <div class="modal-container-medium animate-scale-in" style="max-width: 1250px; width: 95%;">
 
-            <form @submit.prevent="submitRole" id="roleForm">
+            <form id="roleForm" method="post" action="{% url 'security:role_create' %}"
+                data-create-url="{% url 'security:role_create' %}">
                 {% csrf_token %}
 
                 <!-- HEADER -->
                 <div class="modal-header-medium modal-header-gradient">
                     <h3 class="modal-title text-white">
                         <i class="fa-solid fa-user-lock me-2"></i>
-                        <span v-text="isEditing ? 'Configurar Perfil de Acceso' : 'Crear Nuevo Perfil'"></span>
+                        <span id="roleModalTitle">Crear Nuevo Perfil</span>
                     </h3>
-                    <button type="button" class="btn-close-modal text-white-opacity" @click="closeModal">&times;
+                    <button type="button" class="btn-close-modal text-white-opacity" onclick="closeRoleModal()">&times;
                     </button>
                 </div>
 
@@ -25,9 +26,7 @@
                             <input type="text" name="name" class="input-field uppercase-input"
                                    placeholder="EJ: ANALISTA_TTHH" autocomplete="off"
                                    oninput="this.value = this.value.toUpperCase()" required>
-                            <div class="error-message-container" v-if="errors.name">
-                                <span class="text-error" v-for="err in errors.name">[[ err ]]</span>
-                            </div>
+                            <div class="invalid-feedback"></div>
                         </div>
                     </div>
 
@@ -36,19 +35,19 @@
                         <span class="template-label"><i class="fa-solid fa-wand-magic-sparkles"></i> Plantillas Rápidas:</span>
                         <div class="template-options">
                             <label class="template-chip manager">
-                                <input type="radio" name="template" @change="applyTemplate('manager')">
+                                <input type="radio" name="template" data-permission-template="manager">
                                 <span><i class="fa-solid fa-user-gear"></i> Administrar</span>
                             </label>
                             <label class="template-chip creator">
-                                <input type="radio" name="template" @change="applyTemplate('creator')">
+                                <input type="radio" name="template" data-permission-template="creator">
                                 <span><i class="fa-solid fa-file-circle-plus"></i> Ver/Crear/Editar</span>
                             </label>
                             <label class="template-chip editor">
-                                <input type="radio" name="template" @change="applyTemplate('editor')">
+                                <input type="radio" name="template" data-permission-template="editor">
                                 <span><i class="fa-solid fa-pen-to-square"></i> Ver/Editar</span>
                             </label>
                             <label class="template-chip read">
-                                <input type="radio" name="template" @change="applyTemplate('read')">
+                                <input type="radio" name="template" data-permission-template="read">
                                 <span><i class="fa-solid fa-eye"></i> Solo Lectura</span>
                             </label>
                         </div>
@@ -97,8 +96,8 @@
                                                 <i class="fa-solid fa-layer-group"></i>
                                                 <span class="font-bold">{{ module_name }}</span>
                                             </div>
-                                            <button type="button" class="btn-toggle-all"
-                                                    @click="toggleModule('{{ forloop.counter }}')">
+                                                <button type="button" class="btn-toggle-all"
+                                                    data-toggle-module="{{ forloop.counter }}">
                                                 <i class="fa-solid fa-check-double"></i> Marcar Todo
                                             </button>
                                         </div>
@@ -163,11 +162,11 @@
                                                             <input type="checkbox" name="permissions[]"
                                                                 value="{{ model.perms.admin.id }}"
                                                                 class="custom-checkbox perm-check perm-admin-all"
-                                                                @change="toggleAllPermsForModel($event, '{{ model.perms.view.content_type_id }}')">
+                                                                data-toggle-model="{{ model.perms.view.content_type_id }}">
                                                             {% else %}
                                                             <input type="checkbox" 
                                                                 class="custom-checkbox perm-check perm-admin-all"
-                                                                @change="toggleAllPermsForModel($event, '{{ model.perms.view.content_type_id }}')">
+                                                                data-toggle-model="{{ model.perms.view.content_type_id }}">
                                                             {% endif %}
                                                         </td>
                                                         </td>
@@ -193,7 +192,7 @@
 
                 <!-- FOOTER -->
                 <div class="modal-footer-medium modal-footer-spaced">
-                    <button type="button" class="btn-cancel" @click="closeModal">Cancelar</button>
+                    <button type="button" class="btn-cancel" onclick="closeRoleModal()">Cancelar</button>
                     <button type="submit" class="btn-save shadow-md">
                         <i class="fa-solid fa-floppy-disk"></i> Guardar Perfil
                     </button>

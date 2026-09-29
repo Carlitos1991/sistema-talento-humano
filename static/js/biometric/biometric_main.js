@@ -88,18 +88,116 @@ class BiometricManager {
      */
     setupInjectedModal(modalRoot) {
         const form = modalRoot.querySelector('form');
-        if (!form) return;
 
-        // Si es el modal de sincronizar hora, enlazar la lectura en paralelo
-        if (form.id === 'biometricTimeForm') {
+        // Modal de hora
+        if (form && form.id === 'biometricTimeForm') {
             this.setupTimeModalListeners(modalRoot);
         }
 
-        // Envío AJAX genérico para cualquier formulario que se inyecte
-        form.addEventListener('submit', (e) => {
-            window.submitAjaxForm(e, () => {
-                window.closeModal();
-                window.refreshCurrentTable({}, () => this.ensureTableManager());
+        // Modal de Usuarios y Migración
+        const userFilterInput = modalRoot.querySelector('#modal-user-filter');
+        if (userFilterInput) {
+            this.setupUsersModalListeners(modalRoot);
+        }
+
+        if (form) {
+            form.addEventListener('submit', (e) => {
+                window.submitAjaxForm(e, () => {
+                    window.closeModal();
+                    window.refreshCurrentTable({}, () => this.ensureTableManager());
+                });
+            });
+        }
+    }
+
+    setupUsersModalListeners(modalRoot) {
+        const filterInput = modalRoot.querySelector('#modal-user-filter');
+        const rows = modalRoot.querySelectorAll('.user-row');
+
+        // Filtro en vivo en el modal
+        filterInput?.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase().trim();
+            rows.forEach(row => {
+                const pin = row.dataset.pin || '';
+                const name = row.dataset.name || '';
+                const match = pin.includes(query) || name.includes(query);
+                row.style.display = match ? '' : 'none';
+            });
+        });
+
+        // Botón Migrar por fila
+        modalRoot.addEventListener('click', (e) => {
+            const btn = e.target.closest('.btn-migrate-user');
+            if (!btn) return;
+
+            const row = btn.closest('tr');
+            const select = row.querySelector('.target-bio-select');
+            const targetDeviceId = select?.value;
+
+            if (!targetDeviceId) {
+                window.Swal.fire({
+                    icon: 'warning',
+                    title: 'Selecciona un destino',
+                    text: 'Debes elegir el biométrico al cual deseas migrar este usuario.'
+                });
+                return;
+            }
+
+            const payload = {
+                target_device_id: targetDeviceId,
+                pin: btn.dataset.pin,
+                name: btn.dataset.name,
+                is_admin: btn.dataset.admin === 'true',
+                card: btn.dataset.card,
+                password: btn.dataset.password
+            };
+
+            const targetName = select.options[select.selectedIndex].text;
+
+            window.Swal.fire({
+                title: `¿Migrar a ${targetName}?`,
+                html: `Se encolará el usuario <b>${payload.name} (PIN: ${payload.pin})</b> ${payload.is_admin ? '<b style="color:red">(Admin)</b>' : ''} para ser descargado vía ADMS.`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, migrar',
+                cancelButtonText: 'Cancelar'
+            }).then((res) => {
+                if (res.isConfirmed) {
+                    btn.disabled = true;
+                    fetch('/biometric/migrate-user-adms/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': window.getCSRF ? window.getCSRF() : ''
+                        },
+                        body: JSON.stringify(payload)
+                    })
+                        .then(r => r.json())
+                        .then(data => {
+                            btn.disabled = false;
+                            if (data.success) {
+                                window.Swal.fire({
+                                    icon: 'success',
+                                    title: 'Encolado con Éxito',
+                                    text: data.message
+                                });
+                            } else {
+                                window.Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error',
+                                    text: data.message || 'No se pudo migrar el usuario.'
+                                });
+                            }
+                        })
+                        .catch(() => {
+                            btn.disabled = false;
+                            window.Swal.fire({
+                                icon: 'error',
+                                title: 'Error de red',
+                                text: 'No se pudo comunicar con el servidor.'
+                            });
+                        });
+                }
             });
         });
     }
