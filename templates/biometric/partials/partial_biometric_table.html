@@ -10,13 +10,12 @@
                data-page-size="10">
             <thead>
             <tr>
-                <th class="width-20" data-field="name"><i class="fas fa-font"></i> Nombre</th>
-                <th class="width-13" data-field="ip_address"><i class="fas fa-network-wired"></i> Dirección IP</th>
+                <th class="width-15" data-field="name"><i class="fas fa-font"></i> Nombre</th>
+                <th class="width-12" data-field="ip_address"><i class="fas fa-network-wired"></i> Dirección IP</th>
                 <th class="width-12" data-field="serial_number"><i class="fas fa-barcode"></i> N° Serie</th>
                 <th class="width-12" data-field="model_name"><i class="fas fa-microchip"></i> Modelo</th>
-                <th class="width-18" data-field="location"><i class="fas fa-location-dot"></i> Ubicación</th>
                 <th class="width-10 no-sort text-center"><i class="fas fa-circle-dot"></i> Estado</th>
-                <th class="actions width-15 no-sort text-center"><i class="fas fa-cogs"></i> Acciones</th>
+                <th class="actions width-25 no-sort text-center"><i class="fas fa-cogs"></i> Acciones</th>
             </tr>
             </thead>
             <tbody>
@@ -24,11 +23,10 @@
                 <tr data-status="{{ device.is_active|yesno:'true,false' }}">
                     <td><strong>{{ device.name }}</strong></td>
                     <td>
-                        <span class="badge-ip-pill">{{ device.ip_address }}:{{ device.port }}</span>
+                        <span class="badge-ip-pill">{{ device.ip_address }}</span>
                     </td>
                     <td>{{ device.serial_number|default:'—' }}</td>
                     <td>{{ device.model_name|default:'—' }}</td>
-                    <td><span class="text-muted small">{{ device.location|default:'No especificada' }}</span></td>
                     <td class="text-center">
                         {% if device.is_active %}
                             <span class="badge badge-green">Activo</span>
@@ -40,7 +38,7 @@
                         <div class="actions-wrapper justify-content-center">
                             <!-- 1. Probar Conexión -->
                             <button type="button"
-                                    class="btn-icon btn-dark-blue-circle"
+                                    class="btn-dark-blue-circle"
                                     data-action="test-connection"
                                     data-device-id="{{ device.id }}"
                                     data-device-name="{{ device.name }}"
@@ -50,7 +48,7 @@
 
                             <!-- 2. Actualizar Hora -->
                             <button type="button"
-                                    class="btn-icon btn-blue-circle"
+                                    class="btn-blue-circle"
                                     data-action="open-modal"
                                     data-modal-url="{% url 'biometric:biometric_modal_time' device.id %}"
                                     title="Actualizar Hora">
@@ -59,7 +57,7 @@
 
                             <!-- 3. Subir USB -->
                             <button type="button"
-                                    class="btn-icon btn-gray-circle"
+                                    class="btn-gray-circle"
                                     data-action="open-modal"
                                     data-modal-url="{% url 'biometric:biometric_modal_upload' device.id %}"
                                     title="Subir Marcaciones USB">
@@ -68,7 +66,7 @@
 
                             <!-- 4. Descarga Directa -->
                             <button type="button"
-                                    class="btn-icon btn-green-circle"
+                                    class="btn-green-circle"
                                     data-action="direct-sync"
                                     data-device-id="{{ device.id }}"
                                     data-device-name="{{ device.name }}"
@@ -78,7 +76,7 @@
 
                             <!-- 5. Comando ADMS -->
                             <button type="button"
-                                    class="btn-icon btn-blue-circle"
+                                    class="btn-blue-circle"
                                     data-action="open-modal"
                                     data-modal-url="{% url 'biometric:biometric_modal_adms' device.id %}"
                                     title="Enviar Comando ADMS">
@@ -87,7 +85,7 @@
 
                             <!-- 6. Editar -->
                             <button type="button"
-                                    class="btn-icon btn-yellow-circle"
+                                    class="btn-yellow-circle"
                                     data-action="open-modal"
                                     data-modal-url="{% url 'biometric:biometric_modal_update' device.id %}"
                                     title="Editar Configuración">
@@ -95,7 +93,7 @@
                             </button>
                             <!-- 7. Gestionar / Migrar Usuarios -->
                             <button type="button"
-                                    class="btn-icon btn-dark-blue-circle"
+                                    class="btn-dark-blue-circle"
                                     data-action="open-modal"
                                     data-modal-url="{% url 'biometric:biometric_modal_users' device.id %}"
                                     title="Ver Usuarios y Migrar">
