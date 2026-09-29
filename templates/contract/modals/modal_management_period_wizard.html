@@ -1,48 +1,56 @@
 {% load static %}
-<div v-if="showWizard" class="modal-overlay" v-cloak>
-    <div class="modal-container-xl">
+<div id="wizardModalOverlay" class="modal-overlay hidden" role="dialog" aria-modal="true">
+    <div class="modal-container-xl animate-scale-in">
         <!-- HEADER -->
         <div class="modal-header-medium modal-header-gradient">
             <div class="header-content-group">
                 <div class="header-icon-circle"><i class="fas fa-file-signature"></i></div>
-                <h3 class="modal-title text-white mb-0">
-                    [[ isEdit ? 'Editar Gestión' : 'Nuevo Inicio de Gestión' ]]
+                <h3 class="modal-title text-white mb-0" id="wizard-modal-title">
+                    Nuevo Inicio de Gestión
                 </h3>
             </div>
 
             <!-- STEPPER -->
             <div class="wizard-stepper-container ms-auto me-5">
-                <div class="wizard-step" :class="{'active': step === 1, 'completed': step > 1}">
+                <div class="wizard-step active" id="step-indicator-1">
                     <div class="step-number">1</div>
                     <span class="step-label">MODALIDAD</span>
                 </div>
-                <div class="wizard-step" :class="{'active': step === 2, 'completed': step > 2}">
+                <div class="wizard-step" id="step-indicator-2">
                     <div class="step-number">2</div>
                     <span class="step-label">EMPLEADO</span>
                 </div>
-                <div class="wizard-step" :class="{'active': step === 3, 'completed': step > 3}">
+                <div class="wizard-step" id="step-indicator-3">
                     <div class="step-number">3</div>
                     <span class="step-label">DATOS</span>
                 </div>
             </div>
-            <button type="button" class="btn-close-modal text-white-opacity" @click="closeWizard">&times;</button>
+            <button type="button" class="btn-close-circle" id="btn-close-wizard-top">&times;</button>
         </div>
 
-        <form id="wizardForm" @submit.prevent="saveManagementPeriod">
+        <form id="wizardForm">
             {% csrf_token %}
+            <input type="hidden" id="wizard_employee_id" name="employee" value="">
+            <input type="hidden" id="wizard_contract_type_id" name="contract_type" value="">
+            <input type="hidden" id="wizard_budget_line_id" name="budget_line" value="">
+            <input type="hidden" id="wizard_administrative_unit_id" name="administrative_unit" value="">
+
             <div class="modal-body-content modal-body-custom">
 
                 <!-- PASO 1: MODALIDAD -->
-                <div v-if="step === 1" class="animate__animated animate__fadeIn">
-                    <div style="max-height: 55vh; overflow-y: auto; padding-right: 10px;">
+                <div id="wizard-step-1" class="wizard-step-pane">
+                    <div class="period-regime-scroll-box">
                         {% for regime in regimes %}
                             <div class="form-section-card mb-3">
                                 <h6 class="section-title"><i class="fas fa-briefcase"></i> Régimen: {{ regime.name }}
                                 </h6>
                                 <div class="contract-cards-grid">
                                     {% for type in regime.active_contract_types %}
-                                        <div class="contract-type-card"
-                                            @click="selectContractType({{ type.id }}, '{{ type.name }}', '{{ type.code }}', '{{ type.contract_type_category }}')">
+                                        <div class="contract-type-card js-select-contract-type"
+                                             data-id="{{ type.id }}"
+                                             data-name="{{ type.name }}"
+                                             data-code="{{ type.code }}"
+                                             data-category="{{ type.contract_type_category }}">
                                             <i class="fas {% if type.contract_type_category == 'CONTRATO' %}fa-file-contract{% else %}fa-user-check{% endif %}"></i>
                                             <span>{{ type.name }}</span>
                                         </div>
@@ -53,86 +61,68 @@
                     </div>
                 </div>
 
-                <!-- PASO 2: BUSCADOR -->
-                <div v-if="step === 2" class="animate__animated animate__fadeIn">
+                <!-- PASO 2: BUSCADOR DE CÉDULA -->
+                <div id="wizard-step-2" class="wizard-step-pane hidden">
                     <div class="form-section-card py-5 text-center">
                         <div class="avatar-placeholder-md mx-auto mb-4"><i class="fas fa-id-card-alt fa-2x"></i></div>
                         <h4 class="font-weight-800">Validación de Identidad</h4>
-                        <p class="text-muted mb-4">
-                            [[ selectedContractType.code === 'SERVICIOS_PROFESIONALES'
-                                ? 'Ingrese la cédula para validar al empleado.'
-                                : (selectedContractType.category === 'ACCION_PERSONAL'
-                                    ? 'Ingrese la cédula para continuar con la Acción de Personal.'
-                                    : 'Ingrese la cédula para heredar la partida presupuestaria.') ]]
+                        <p class="text-muted mb-4" id="wizard-identity-prompt-text">
+                            Ingrese la cédula para validar al empleado y heredar su partida.
                         </p>
                         <div class="search-box mx-auto" style="max-width: 450px;">
-
-                            <input type="text" v-model="searchDoc" class="form-control with-icon"
-                                   placeholder="Cédula..." @keyup.enter="validateEmployee">
-                            <button type="button" class="btn-search" @click="validateEmployee" :disabled="loading">
-                                <i v-if="loading" class="fas fa-spinner fa-spin"></i><span v-else>VALIDAR</span>
+                            <input type="text" id="wizard-search-doc-input" class="form-control with-icon"
+                                   placeholder="Cédula..." autocomplete="off">
+                            <button type="button" class="btn-search" id="btn-validate-employee">
+                                <span>VALIDAR</span>
                             </button>
                         </div>
                     </div>
                 </div>
 
                 <!-- PASO 3: DATOS FINALES -->
-                <div v-if="step === 3" class="animate__animated animate__fadeIn">
+                <div id="wizard-step-3" class="wizard-step-pane hidden">
 
                     <!-- BANNER EMPLEADO + PARTIDA -->
                     <div class="inherited-info-card">
                         <div class="d-flex align-items-center w-100">
-                            <img :src="selectedEmployee.photo || '{% static 'img/avatar-placeholder.png' %}'"
-                                 class="person-avatar me-3">
+                            <img id="wizard-display-photo" src="{% static 'img/avatar-placeholder.png' %}"
+                                 class="person-avatar me-3" alt="Foto">
                             <div class="employee-main-data">
-                                <h4 class="mb-1 text-white font-weight-800">[[ selectedEmployee.full_name ]]</h4>
-                                <span class="status-badge general">[[ selectedContractType.name ]]</span>
+                                <h4 class="mb-1 text-white font-weight-800" id="wizard-display-employee-name">-</h4>
+                                <span class="status-badge general" id="wizard-display-contract-name">-</span>
                             </div>
-                            <div class="budget-inherited-box ms-auto" v-if="selectedEmployee.budget_line">
+                            <div class="budget-inherited-box ms-auto" id="wizard-budget-inherited-container">
                                 <small class="text-white-opacity">PARTIDA HEREDADA</small>
-                                <strong class="text-accent">[[ selectedEmployee.budget_line.number ]]</strong>
-                                <span class="d-block small text-white-opacity">[[ selectedEmployee.budget_line.position ]]</span>
-                            </div>
-                            <div class="budget-inherited-box ms-auto" v-else>
-                                <small class="text-white-opacity">MODO MANUAL</small>
-                                <strong class="text-accent">SIN PARTIDA</strong>
-                                <span class="d-block small text-white-opacity">SERVICIOS PROFESIONALES</span>
+                                <strong class="text-accent" id="wizard-display-budget-number">-</strong>
+                                <span class="d-block small text-white-opacity"
+                                      id="wizard-display-budget-position">-</span>
                             </div>
                         </div>
                     </div>
 
-                    <div class="form-section-card mt-4" v-if="selectedContractType.code === 'SERVICIOS_PROFESIONALES' && selectedContractType.category !== 'ACCION_PERSONAL'">
+                    <!-- SECCIÓN MANUAL PARA SERVICIOS PROFESIONALES -->
+                    <div class="form-section-card mt-4 hidden" id="wizard-manual-compensation-section">
                         <h6 class="section-title"><i class="fas fa-pen"></i> Cargo y Remuneración (Manual)</h6>
                         <div class="grid-2-cols">
                             <div class="form-group">
                                 <label class="form-label">Cargo</label>
-                                <input type="text" v-model="form.manual_position" class="input-field uppercase-input" placeholder="Ej: ASESOR PROFESIONAL">
+                                <input type="text" id="wizard_manual_position" name="manual_position"
+                                       class="input-field uppercase-input" placeholder="Ej: ASESOR PROFESIONAL">
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Remuneración</label>
-                                <input type="number" min="0" step="0.01" v-model="form.manual_remuneration" class="input-field" placeholder="Ej: 1200.00">
+                                <input type="number" min="0" step="0.01" id="wizard_manual_remuneration"
+                                       name="manual_remuneration" class="input-field" placeholder="Ej: 1200.00">
                             </div>
                         </div>
                     </div>
 
-                    <template v-if="selectedContractType.category === 'ACCION_PERSONAL'">
+                    <!-- CAMPOS EXCLUSIVOS DE ACCIÓN DE PERSONAL -->
+                    <div id="wizard-action-specific-fields" class="hidden">
                         <div class="form-section-card mt-4">
-                            <h6 class="section-title"><i class="fas fa-sitemap"></i> Unidad Administrativa de Destino</h6>
-                            <div class="unit-dynamic-grid">
-                                <div v-for="(level, index) in unitLevels" :key="index" class="unit-level-box">
-                                    <label>
-                                        [[ index === 0 ? 'Dirección / Unidad Raíz' : 'Sub-dependencia Nivel ' + (index + 1)]]
-                                    </label>
-                                    <select v-model="level.selectedId"
-                                            @change="handleUnitChange(index)"
-                                            class="input-field">
-                                        <option :value="null">-- Seleccione una opción --</option>
-                                        <option v-for="opt in level.options" :key="opt.id" :value="opt.id">
-                                            [[ opt.name.toUpperCase() ]]
-                                        </option>
-                                    </select>
-                                </div>
-                            </div>
+                            <h6 class="section-title"><i class="fas fa-sitemap"></i> Unidad Administrativa de Destino
+                            </h6>
+                            <div class="unit-dynamic-grid" id="wizard-action-unit-levels-container"></div>
                         </div>
 
                         <div class="form-section-card mt-4">
@@ -140,92 +130,81 @@
                             <div class="grid-3-cols">
                                 <div class="form-group">
                                     <label class="form-label">Fecha de Elaboración</label>
-                                    <input type="date" v-model="form.elaboration_date" class="form-control">
+                                    <input type="date" id="wizard_action_elaboration_date" name="elaboration_date"
+                                           class="form-control">
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label">Rige Desde</label>
-                                    <input type="date" v-model="form.start_date" class="form-control">
+                                    <input type="date" id="wizard_action_start_date" name="start_date"
+                                           class="form-control">
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label">Rige Hasta (Opcional)</label>
-                                    <input type="date" v-model="form.end_date" class="form-control">
+                                    <input type="date" id="wizard_action_end_date" name="end_date" class="form-control">
                                 </div>
                             </div>
                         </div>
 
                         <div class="form-section-card mt-3">
-                            <h5 class="section-title">
-                                <i class="fa-solid fa-comment-dots"></i> MOTIVACIÓN Y EXPLICACIÓN
+                            <h5 class="section-title"><i class="fa-solid fa-comment-dots"></i> MOTIVACIÓN Y EXPLICACIÓN
                             </h5>
                             <div class="form-group">
                                 <label class="form-label">Motivación</label>
-                                <input type="text" v-model="form.action_motivation" class="input-field uppercase-input" placeholder="Ej: NOMBRA A...">
+                                <input type="text" id="wizard_action_motivation" name="action_motivation"
+                                       class="input-field uppercase-input" placeholder="Ej: NOMBRA A...">
                                 <p class="form-hint">Breve motivo de la acción de personal.</p>
                             </div>
                             <div class="form-group mt-3">
                                 <label class="form-label">Explicación</label>
-                                <textarea v-model="form.action_explanation" class="input-field" rows="5"
+                                <textarea id="wizard_action_explanation" name="action_explanation" class="input-field"
+                                          rows="5"
                                           placeholder="Descripción detallada de la acción de personal"></textarea>
                                 <p class="form-hint">Descripción detallada de la acción.</p>
                             </div>
                         </div>
-                    </template>
+                    </div>
 
-                    <template v-else>
-                        <!-- SECCIÓN: UNIDAD ADMINISTRATIVA POR NIVELES -->
+                    <!-- CAMPOS ESTÁNDAR PARA CONTRATOS -->
+                    <div id="wizard-contract-specific-fields">
                         <div class="form-section-card mt-4">
                             <h6 class="section-title"><i class="fas fa-sitemap"></i> Estructura Organizacional</h6>
-                            <div class="unit-dynamic-grid">
-                                <div v-for="(level, index) in unitLevels" :key="index" class="unit-level-box">
-                                    <label>
-                                        [[ index === 0 ? 'Dirección / Unidad Raíz' : 'Sub-dependencia Nivel ' + (index + 1)]]
-                                    </label>
-                                    <select v-model="level.selectedId"
-                                            @change="handleUnitChange(index)"
-                                            class="input-field">
-                                        <option :value="null">-- Seleccione una opción --</option>
-                                        <option v-for="opt in level.options" :key="opt.id" :value="opt.id">
-                                            [[ opt.name.toUpperCase() ]]
-                                        </option>
-                                    </select>
-                                </div>
-                            </div>
+                            <div class="unit-dynamic-grid" id="wizard-contract-unit-levels-container"></div>
                             <div class="form-group mt-3">
                                 <label class="form-label d-flex align-items-center">
-                                    <input type="checkbox" v-model="form.is_boss" class="me-2">
+                                    <input type="checkbox" id="wizard_is_boss" name="is_boss" value="1" class="me-2">
                                     Marcar como jefe inmediato de la unidad seleccionada
                                 </label>
-                                <small class="form-hint">Si marca esto, el empleado será asignado como jefe inmediato de la unidad seleccionada.</small>
+                                <small class="form-hint">Si marca esto, el empleado será asignado como jefe inmediato de
+                                    la unidad seleccionada.</small>
                             </div>
                             <div class="grid-2-cols mt-4">
                                 <div class="form-group">
                                     <label class="form-label">Memo Necesidad</label>
-                                    <input type="text" v-model="form.institutional_need_memo"
-                                           class="input-field uppercase-input">
+                                    <input type="text" id="wizard_institutional_need_memo"
+                                           name="institutional_need_memo" class="input-field uppercase-input">
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label">Certificación Presup.</label>
-                                    <input type="text" v-model="form.budget_certification"
+                                    <input type="text" id="wizard_budget_certification" name="budget_certification"
                                            class="input-field uppercase-input">
                                 </div>
                             </div>
                         </div>
 
-                        <!-- SECCIÓN: VIGENCIA Y JORNADA -->
                         <div class="form-section-card">
                             <h6 class="section-title"><i class="fas fa-calendar-alt"></i> Vigencia y Jornada</h6>
                             <div class="grid-3-cols">
                                 <div class="form-group">
                                     <label class="form-label">Fecha Inicio</label>
-                                    <input type="date" v-model="form.start_date" class="form-control">
+                                    <input type="date" id="wizard_start_date" name="start_date" class="form-control">
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label">Fecha Fin (Opcional)</label>
-                                    <input type="date" v-model="form.end_date" class="form-control">
+                                    <input type="date" id="wizard_end_date" name="end_date" class="form-control">
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label">Horario Institucional</label>
-                                    <select v-model="form.schedule" class="input-field">
+                                    <select id="wizard_schedule" name="schedule" class="input-field">
                                         <option value="">Seleccione...</option>
                                         {% for sch in schedules %}
                                             <option value="{{ sch.id }}">{{ sch.name }}</option>
@@ -236,12 +215,13 @@
                             <div class="grid-2-cols mt-3">
                                 <div class="form-group">
                                     <label class="form-label">Lugar de Trabajo</label>
-                                    <input type="text" v-model="form.workplace" class="input-field uppercase-input"
-                                           placeholder="Ej: Piso 2">
+                                    <input type="text" id="wizard_workplace" name="workplace"
+                                           class="input-field uppercase-input" placeholder="Ej: Piso 2">
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label">Número de Documento / Acción</label>
-                                    <input type="text" value="ML-DTH-AAAA-00012026" class="input-field bg-readonly" readonly>
+                                    <input type="text" value="ML-DTH-AAAA-00012026" class="input-field bg-readonly"
+                                           readonly>
                                     <small class="form-hint">El código secuencial se generará al guardar.</small>
                                 </div>
                             </div>
@@ -249,20 +229,19 @@
 
                         <div class="form-section-card">
                             <h6 class="section-title"><i class="fas fa-tasks"></i> Funciones</h6>
-                            <textarea v-model="form.job_functions" class="input-field" rows="2"
+                            <textarea id="wizard_job_functions" name="job_functions" class="input-field" rows="2"
                                       placeholder="Describa las actividades..."></textarea>
                         </div>
-                    </template>
+                    </div>
+
                 </div>
             </div>
 
             <div class="modal-footer-medium modal-footer-spaced">
-                <button type="button" v-if="step > 1" class="btn-cancel" @click="step--">ANTERIOR</button>
-                <button type="button" v-if="step === 1" class="btn-cancel" @click="closeWizard">CANCELAR</button>
-                <button type="submit" v-if="step === 3" class="btn-save"
-                        :disabled="loading || !form.administrative_unit">
-                    <i v-if="loading" class="fas fa-spinner fa-spin"></i>
-                    <i v-else class="fas fa-check-double"></i> FINALIZAR GESTIÓN
+                <button type="button" class="btn-cancel" id="btn-wizard-prev">ANTERIOR</button>
+                <button type="button" class="btn-cancel" id="btn-wizard-cancel">CANCELAR</button>
+                <button type="submit" class="btn-save hidden" id="btn-wizard-submit">
+                    <i class="fas fa-check-double"></i> FINALIZAR GESTIÓN
                 </button>
             </div>
         </form>

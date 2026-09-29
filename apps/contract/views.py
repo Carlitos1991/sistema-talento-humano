@@ -5,7 +5,8 @@ import os
 import re
 from pathlib import Path
 from datetime import datetime, timedelta
-
+import re
+import openpyxl
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -900,39 +901,6 @@ class ManagementPeriodPrintView(LoginRequiredMixin, PermissionRequiredMixin, Vie
             return HttpResponse('Error al generar el PDF del contrato', status=500)
 
 
-class ManagementPeriodListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
-    model = ManagementPeriod
-    template_name = 'contract/management_period_list.html'
-    permission_required = 'contract.view_managementperiod'
-    context_object_name = 'periods'
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        qs = ManagementPeriod.objects.filter(is_active=True)
-
-        # Estadísticas dinámicas: realizar en una sola agregación para reducir consultas
-        aggs = qs.aggregate(
-            total_active=Count('id'),
-            count_losep=Count('id', filter=Q(contract_type__labor_regime__code='LOSEP')),
-            count_ct=Count('id', filter=Q(contract_type__labor_regime__code='CT'))
-        )
-        context['total_active'] = aggs.get('total_active', 0)
-        context['count_losep'] = aggs.get('count_losep', 0)
-        context['count_ct'] = aggs.get('count_ct', 0)
-
-        context['regimes'] = LaborRegime.objects.filter(is_active=True).prefetch_related(
-            Prefetch(
-                'contract_types',
-                queryset=ContractType.objects.filter(is_active=True).order_by('name'),
-                to_attr='active_contract_types'
-            )
-        )
-        context['schedules'] = Schedule.objects.filter(is_active=True)
-        context['units'] = AdministrativeUnit.objects.filter(is_active=True)
-
-        return context
-
-
 class ManagementPeriodNotificationListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     model = ManagementPeriod
     template_name = 'contract/management_period_notification_list.html'
@@ -1100,15 +1068,39 @@ class GetAvailableBudgetLinesAPIView(LoginRequiredMixin, View):
         return JsonResponse({'success': True, 'lines': data})
 
 
-class ManagementPeriodTablePartialView(LoginRequiredMixin, View):
-    def get(self, request):
-        # 1. Filtros
-        q = request.GET.get('q', '').strip()
-        regime_code_filter = request.GET.get('regime_code', '').strip()
-        unit_id = request.GET.get('unit', '')
-        status_code = request.GET.get('status_code', '')
+class JSONResponseMixin:
+    """
+    Mixin para manejar respuestas AJAX en ListViews (identico a permisos).
+    Si es AJAX, renderiza solo la tabla parcial y la devuelve en JSON.
+    """
 
-        # 2. QuerySet REALMENTE Optimizado
+    def render_to_response(self, context, **response_kwargs):
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            html = render_to_string(self.partial_template_name, context, request=self.request)
+            page_obj = context.get('page_obj')
+            paginator = context.get('paginator')
+            pagination_data = {
+                'start_index': page_obj.start_index() if page_obj and paginator and paginator.count else 0,
+                'end_index': page_obj.end_index() if page_obj and paginator and paginator.count else 0,
+                'total_count': paginator.count if paginator else 0,
+                'page': page_obj.number if page_obj else 1,
+                'total_pages': paginator.num_pages if paginator else 1,
+                'has_previous': bool(page_obj and page_obj.has_previous()),
+                'has_next': bool(page_obj and page_obj.has_next()),
+            }
+            return JsonResponse({'success': True, 'html': html, 'pagination': pagination_data})
+        return super().render_to_response(context, **response_kwargs)
+
+
+class ManagementPeriodListView(LoginRequiredMixin, PermissionRequiredMixin, JSONResponseMixin, ListView):
+    model = ManagementPeriod
+    template_name = 'contract/management_period_list.html'
+    partial_template_name = 'contract/partials/partial_management_period_table.html'
+    permission_required = 'contract.view_managementperiod'
+    context_object_name = 'periods'
+    paginate_by = 10
+
+    def get_queryset(self):
         queryset = ManagementPeriod.objects.select_related(
             'employee__person',
             'budget_line__position_item',
@@ -1117,63 +1109,71 @@ class ManagementPeriodTablePartialView(LoginRequiredMixin, View):
             'status'
         ).prefetch_related('history_set').order_by('-created_at')
 
-        # 3. Filtros (Igual que antes pero sin evaluar el queryset todavía)
+        # 1. Filtros por Query Parameters
+        q = (self.request.GET.get('q') or '').strip()
+        regime_code = (self.request.GET.get('regime_code') or '').strip()
+        unit_id = (self.request.GET.get('unit') or '').strip()
+        status_code = (self.request.GET.get('status_code') or '').strip()
+        date_from = (self.request.GET.get('date_from') or '').strip()
+        date_to = (self.request.GET.get('date_to') or '').strip()
+        raw_document_numbers = (self.request.GET.get('document_numbers') or '').strip()
+
+        if raw_document_numbers:
+            cedulas = [c.strip() for c in raw_document_numbers.split(',') if c.strip()]
+            if cedulas:
+                queryset = queryset.filter(employee__person__document_number__in=cedulas)
+
         if q:
-            queryset = queryset.filter(
-                Q(employee__person__first_name__icontains=q) |
-                Q(employee__person__last_name__icontains=q) |
-                Q(employee__person__document_number__icontains=q) |
-                Q(document_number__icontains=q) |
-                Q(manual_position__icontains=q)
-            )
-        if regime_code_filter:
-            queryset = queryset.filter(contract_type__labor_regime__code=regime_code_filter)
+            tokens = [t for t in q.split() if t]
+            for token in tokens:
+                queryset = queryset.filter(
+                    Q(employee__person__first_name__icontains=token) |
+                    Q(employee__person__last_name__icontains=token) |
+                    Q(employee__person__document_number__icontains=token) |
+                    Q(document_number__icontains=token) |
+                    Q(manual_position__icontains=token) |
+                    Q(budget_line__position_item__name__icontains=token)
+                )
+
+        if regime_code:
+            queryset = queryset.filter(contract_type__labor_regime__code=regime_code)
+
         if unit_id:
             queryset = queryset.filter(administrative_unit_id=unit_id)
+
         if status_code:
             queryset = queryset.filter(status__code=status_code)
 
-        # 4. Paginación de Servidor (Aquí es donde ocurre la magia)
-        from django.core.paginator import Paginator, EmptyPage
-        page = int(request.GET.get('page', 1))
-        page_size = 10  # Mostrar 10 registros por página (consistente con otras tablas)
+        if date_from:
+            queryset = queryset.filter(start_date__gte=date_from)
 
-        paginator = Paginator(queryset, page_size)
-        try:
-            page_obj = paginator.page(page)
-        except EmptyPage:
-            page_obj = paginator.page(1)
+        if date_to:
+            queryset = queryset.filter(start_date__lte=date_to)
 
-        # 5. Renderizado (Solo procesará 50 filas, no 6450)
-        html = render_to_string(
-            'contract/partials/partial_management_period_table.html',
-            {'periods': page_obj},
-            request=request
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['regimes'] = LaborRegime.objects.filter(is_active=True).prefetch_related(
+            Prefetch(
+                'contract_types',
+                queryset=ContractType.objects.filter(is_active=True).order_by('name'),
+                to_attr='active_contract_types'
+            )
         )
+        context['schedules'] = Schedule.objects.filter(is_active=True)
+        context['units'] = AdministrativeUnit.objects.filter(is_active=True).order_by('name')
 
-        # 6. Estadísticas Dinámicas para las tarjetas superiores
-        regimes_stats = LaborRegime.objects.filter(is_active=True).annotate(
-            count=Count('contract_types__management_periods',
-                        filter=Q(contract_types__management_periods__is_active=True))
-        ).values('code', 'name', 'count')
-        total_active = ManagementPeriod.objects.filter(is_active=True).count()
-
-        return JsonResponse({
-            'success': True,
-            'table_html': html,
-            'stats': {
-                'total': total_active,
-                'regimes': list(regimes_stats)
-            },
-            'pagination': {
-                'total': paginator.count,
-                'page': page_obj.number,
-                'has_next': page_obj.has_next(),
-                'has_prev': page_obj.has_previous(),
-                'start': page_obj.start_index(),
-                'end': page_obj.end_index(),
-            }
-        })
+        context['current_filters'] = {
+            'q': (self.request.GET.get('q') or '').strip(),
+            'unit': (self.request.GET.get('unit') or '').strip(),
+            'regime_code': (self.request.GET.get('regime_code') or '').strip(),
+            'status_code': (self.request.GET.get('status_code') or '').strip(),
+            'date_from': (self.request.GET.get('date_from') or '').strip(),
+            'date_to': (self.request.GET.get('date_to') or '').strip(),
+            'document_numbers': (self.request.GET.get('document_numbers') or '').strip(),
+        }
+        return context
 
 
 class ManagementPeriodTerminateView(LoginRequiredMixin, PermissionRequiredMixin, View):
@@ -1637,3 +1637,59 @@ class ManagementPeriodDeleteDocView(LoginRequiredMixin, View):
             return JsonResponse({'success': False, 'message': 'No hay documento para eliminar.'})
         except Exception as e:
             return JsonResponse({'success': False, 'message': str(e)}, status=500)
+
+
+class ParseManagementPeriodIdentificationExcelView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """
+    Lee un archivo Excel con numeros de cedula y retorna una lista unica sanitizada en JSON.
+    Límite estricto de 1 MB.
+    """
+    permission_required = 'contract.view_managementperiod'
+
+    def post(self, request, *args, **kwargs):
+        excel_file = request.FILES.get('identification_file')
+        if not excel_file:
+            return JsonResponse({'success': False, 'message': 'No se proporciono ningun archivo Excel.'}, status=400)
+
+        # Validacion de tamano: maximo 1 MB
+        max_file_size = 1 * 1024 * 1024
+        if excel_file.size > max_file_size:
+            return JsonResponse({'success': False, 'message': 'El archivo supera el limite maximo permitido de 1 MB.'},
+                                status=400)
+
+        if not (excel_file.name.endswith('.xlsx') or excel_file.name.endswith('.xls')):
+            return JsonResponse({'success': False, 'message': 'El archivo debe tener formato .xlsx o .xls.'},
+                                status=400)
+
+        try:
+            workbook = openpyxl.load_workbook(excel_file, read_only=True, data_only=True)
+            first_sheet = workbook.active
+            identifications = []
+
+            for row in first_sheet.iter_rows(values_only=True):
+                if not row:
+                    continue
+                for cell_value in row:
+                    if cell_value is not None:
+                        clean_val = re.sub(r'[^0-9]', '', str(cell_value).strip())
+                        if 9 <= len(clean_val) <= 13:
+                            identifications.append(clean_val)
+
+            workbook.close()
+            unique_identifications = list(dict.fromkeys(identifications))
+
+            if not unique_identifications:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'No se encontraron cedulas validas (9 a 13 digitos) en el archivo.'
+                }, status=400)
+
+            return JsonResponse({
+                'success': True,
+                'count': len(unique_identifications),
+                'document_numbers': unique_identifications,
+                'message': f'Se cargaron {len(unique_identifications)} cedula(s) correctamente.'
+            })
+
+        except Exception as exc:
+            return JsonResponse({'success': False, 'message': f'Error al procesar el archivo: {str(exc)}'}, status=500)

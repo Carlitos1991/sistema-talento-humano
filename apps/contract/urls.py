@@ -4,7 +4,7 @@ from . import views
 app_name = 'contract'
 
 urlpatterns = [
-    # Régimen Laboral
+    # --- Régimen Laboral ---
     path('regimes/', views.LaborRegimeListView.as_view(), name='regime_list'),
     path('regimes/create/', views.LaborRegimeCreateView.as_view(), name='regime_create'),
     path('regimes/detail/<int:pk>/', views.LaborRegimeDetailAPIView.as_view(), name='regime_detail_api'),
@@ -12,16 +12,17 @@ urlpatterns = [
     path('regimes/toggle-status/<int:pk>/', views.LaborRegimeToggleStatusView.as_view(), name='regime_toggle_status'),
     path('regimes/partial-table/', views.LaborRegimeTablePartialView.as_view(), name='regime_partial_table'),
 
-    # Tipos de Contrato (Anidado)
+    # --- Tipos de Contrato (Anidado) ---
     path('regimes/<int:regime_id>/contract-types/', views.ContractTypeListView.as_view(), name='contract_type_list'),
     path('contract-types/create/', views.ContractTypeCreateView.as_view(), name='contract_type_create'),
     path('contract-types/toggle-status/<int:pk>/', views.ContractTypeToggleStatusView.as_view(),
          name='contract_type_toggle_status'),
     path('contract-types/update/<int:pk>/', views.ContractTypeUpdateView.as_view(), name='contract_type_update'),
+
+    # --- Plantillas Contractuales ---
     path('templates/create/<int:contract_type_id>/', views.ContractTemplateEditorCreateView.as_view(),
          name='template_editor_create'),
-    path('templates/editor/<int:pk>/', views.ContractTemplateEditorDetailView.as_view(),
-         name='template_editor_detail'),
+    path('templates/editor/<int:pk>/', views.ContractTemplateEditorDetailView.as_view(), name='template_editor_detail'),
     path('templates/<int:template_id>/sections/create/', views.ContractTemplateSectionCreateAjaxView.as_view(),
          name='template_section_create'),
     path('templates/sections/<int:section_id>/update/', views.ContractTemplateSectionUpdateAjaxView.as_view(),
@@ -35,22 +36,29 @@ urlpatterns = [
     path('templates/action-editor/options/', views.ContractTemplateEditorOptionsAPIView.as_view(),
          name='template_action_editor_options'),
 
-    # Inicios de Gestión
+    # --- Inicios de Gestión (Patrón Híbrido Permisos) ---
     path('periods/', views.ManagementPeriodListView.as_view(), name='period_list'),
-     path('periods/notifications/', views.ManagementPeriodNotificationListView.as_view(), name='period_notification_list'),
-    path('periods/partial-table/', views.ManagementPeriodTablePartialView.as_view(), name='period_partial_table'),
+    path('periods/partial-table/', views.ManagementPeriodListView.as_view(), name='period_partial_table'),
+    path('periods/notifications/', views.ManagementPeriodNotificationListView.as_view(),
+         name='period_notification_list'),
     path('periods/create/', views.ManagementPeriodCreateView.as_view(), name='period_create'),
 
-    # APIs de búsqueda para el formulario
-    path('api/validate-employee/<str:doc_number>/', views.ValidateEmployeeAPIView.as_view(),
-         name='api_validate_employee'),
-    path('api/budget-lines/<int:unit_id>/', views.GetAvailableBudgetLinesAPIView.as_view(), name='api_budget_lines'),
-    path('periods/terminate/<int:pk>/', views.ManagementPeriodTerminateView.as_view(), name='period_terminate'),
-    path('periods/sign/<int:pk>/', views.ManagementPeriodSignView.as_view(), name='period_sign'),
+    # --- Uploader Masivo de Cédulas (Excel) ---
+    path('periods/parse-identifications/', views.ParseManagementPeriodIdentificationExcelView.as_view(),
+         name='period_parse_identifications'),
+
+    # --- Operaciones de Gestión Laboral ---
     path('periods/detail/<int:pk>/', views.ManagementPeriodDetailAPIView.as_view(), name='period_detail_api'),
+    path('periods/sign/<int:pk>/', views.ManagementPeriodSignView.as_view(), name='period_sign'),
+    path('periods/terminate/<int:pk>/', views.ManagementPeriodTerminateView.as_view(), name='period_terminate'),
     path('periods/update-partial/<int:pk>/', views.ManagementPeriodPartialUpdateView.as_view(),
          name='period_update_partial'),
     path('periods/upload-doc/<int:pk>/', views.ManagementPeriodUploadDocView.as_view(), name='period_upload_doc'),
     path('periods/delete-doc/<int:pk>/', views.ManagementPeriodDeleteDocView.as_view(), name='period_delete_doc'),
-     path('periods/print/<int:pk>/', views.ManagementPeriodPrintView.as_view(), name='period_print'),
+    path('periods/print/<int:pk>/', views.ManagementPeriodPrintView.as_view(), name='period_print'),
+
+    # --- APIs de Validación ---
+    path('api/validate-employee/<str:doc_number>/', views.ValidateEmployeeAPIView.as_view(),
+         name='api_validate_employee'),
+    path('api/budget-lines/<int:unit_id>/', views.GetAvailableBudgetLinesAPIView.as_view(), name='api_budget_lines'),
 ]

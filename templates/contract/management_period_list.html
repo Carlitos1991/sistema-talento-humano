@@ -1,86 +1,194 @@
 {% extends 'base.html' %}
 {% load static %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/management_period.css' %}">
+{% endblock %}
+
 {% block title %}Inicios de Gestión | SIGETH{% endblock %}
 
 {% block content %}
-    <div id="period-app" v-cloak>
-        <!-- Header -->
-        <div class="header-card">
-            <div>
-                <h1><i class="fa-solid fa-file-signature"></i> Inicios de Gestión</h1>
-                <p>Control de contratos y acciones de personal del talento humano institucional.</p>
-            </div>
-            <button class="btn-create" @click="startWizard">
-                <i class="fas fa-plus"></i> NUEVO INICIO
-            </button>
+    <div class="header-card">
+        <div>
+            <h1><i class="fa-solid fa-file-signature"></i> Inicios de Gestión</h1>
+            <p>Control de contratos y acciones de personal del talento humano institucional.</p>
         </div>
+        <button type="button" class="btn-blue-rectangle" id="btn-open-wizard">
+            <i class="fas fa-plus"></i> NUEVO INICIO
+        </button>
+    </div>
 
-        <!-- Tabla de Inicios -->
-        <div id="table-app">
-            <div class="content-table">
-                <div class="table-controls">
-                    <div class="search-box">
-                        <input type="text" id="table-search-input" name="contract_search"
-                               class="form-control with-icon"
-                               placeholder="Buscar por cédula o nombre..."
-                               v-model="searchTerm" autocomplete="off" autocapitalize="off" autocorrect="off"
-                               spellcheck="false">
-                        <button type="submit" class="search-btn">
-                            <i class="fas fa-search"></i>
+    <div id="table-app">
+        <div class="content-table">
+
+            <form id="filtersForm" onsubmit="handlePeriodSearch(event)" class="mb-3">
+                <input type="hidden" id="filter_document_numbers" name="document_numbers"
+                       value="{{ current_filters.document_numbers|default:'' }}">
+
+                <div class="search-panel">
+                    <div class="permit-integrated-search-grid">
+
+                        <div class="permit-excel-uploader-column">
+                            <div id="identification-badge-container" class="permit-excel-left-badge"
+                                 style="display: none;">
+                                <span class="badge badge-green" id="identification-count-badge">
+                                    <i class="fa-solid fa-users me-1"></i>
+                                    <span id="identification-count-text">0 cédula(s)</span>
+                                </span>
+                                <button type="button" class="btn-clear-identification-tag"
+                                        onclick="clearLoadedIdentifications()" title="Eliminar filtro">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                            </div>
+
+                            <label class="form-label text-center">EXCEL CÉDULAS</label>
+
+                            <input type="file" id="identification_excel_input" accept=".xlsx, .xls" class="hidden">
+
+                            <label for="identification_excel_input" class="permit-excel-dropzone"
+                                   id="permit-excel-dropzone-label">
+                                <span id="permit-excel-icon-box">
+                                    <i class="fa-solid fa-file-excel permit-excel-main-icon"></i>
+                                </span>
+                            </label>
+
+                            <span class="permit-file-helper-text">
+                                <i class="fa-solid fa-paperclip me-1"></i> Max: 1 MB
+                            </span>
+                        </div>
+
+                        <div class="permit-filter-input-cell">
+                            <input type="text" id="table-search-input" name="q"
+                                   class="form-control"
+                                   placeholder="Cédula, Nombres o Documento"
+                                   value="{{ current_filters.q|default:'' }}">
+                        </div>
+                        <div class="permit-filter-input-cell">
+                            <input type="date" id="filter_date_from" name="date_from"
+                                   class="form-control"
+                                   value="{{ current_filters.date_from|default:'' }}"
+                                   placeholder="Vigencia Desde">
+                        </div>
+                        <div class="permit-filter-input-cell">
+                            <input type="date" id="filter_date_to" name="date_to"
+                                   class="form-control"
+                                   value="{{ current_filters.date_to|default:'' }}"
+                                   placeholder="Vigencia Hasta">
+                        </div>
+
+                        <div class="permit-filter-input-cell">
+                            <select id="filter_unit" name="unit" class="input-field select2">
+                                <option value="">Todas las dependencias</option>
+                                {% for unit in units %}
+                                    <option value="{{ unit.id }}"
+                                            {% if current_filters.unit == unit.id|stringformat:"s" %}selected{% endif %}>
+                                        {{ unit.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="permit-filter-input-cell">
+                            <select id="filter_regime" name="regime_code" class="input-field select2">
+                                <option value="">Todos los regímenes</option>
+                                {% for regime in regimes %}
+                                    <option value="{{ regime.code }}"
+                                            {% if current_filters.regime_code == regime.code %}selected{% endif %}>
+                                        {{ regime.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="permit-filter-input-cell">
+                            <select id="filter_status" name="status_code" class="input-field select2">
+                                <option value="">Cualquier estado</option>
+                                <option value="SIN_FIRMAR"
+                                        {% if current_filters.status_code == 'SIN_FIRMAR' %}selected{% endif %}>Sin
+                                    Firmar
+                                </option>
+                                <option value="FIRMADO"
+                                        {% if current_filters.status_code == 'FIRMADO' %}selected{% endif %}>Firmado /
+                                    Legalizado
+                                </option>
+                                <option value="FINALIZADO"
+                                        {% if current_filters.status_code == 'FINALIZADO' %}selected{% endif %}>
+                                    Finalizado
+                                </option>
+                            </select>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="search-toolbar">
+                    <div class="table-controls person-filter-controls rubric-export-controls"></div>
+                    <div class="search-filter-actions">
+                        <button type="submit" class="btn-blue-rectangle">
+                            <i class="fas fa-search me-1"></i> BUSCAR
+                        </button>
+                        <button type="button" class="btn-blue-rectangle-outline" onclick="clearPeriodFilters()">
+                            <i class="fas fa-eraser me-1"></i> LIMPIAR
                         </button>
                     </div>
-                    <button type="button" class="btn-search btn-secondary-search ms-2" @click="openSearchModal">
-                        <i class="fas fa-filter"></i> Búsqueda Avanzada
-                    </button>
+                    <div></div>
                 </div>
+            </form>
 
-                <div id="table-content-wrapper">
-                    {% include 'contract/partials/partial_management_period_table.html' %}
-                </div>
+            <div id="table-content-wrapper">
+                {% include 'contract/partials/partial_management_period_table.html' %}
             </div>
 
+            <!-- Paginación idéntica a Permisos -->
             <div class="pagination-container">
-                <div id="page-info" class="pagination-info">Mostrando [[ pagination.start ]]-[[ pagination.end ]] de [[
-                    totalRows ]] registros
-                </div>
-                <div class="pagination-controls">
-                    <button class="page-btn" @click="prevPage" :disabled="loading || currentPage === 1">
+                <span class="pagination-info">
+                    Mostrando {{ page_obj.start_index|default:"0" }}-{{ page_obj.end_index|default:"0" }} de {{ paginator.count|default:"0" }}
+                </span>
+                <div class="pagination-controls" {% if paginator.num_pages <= 1 %}style="visibility:hidden;"{% endif %}>
+                    <button type="button" class="page-btn page-first" title="Primera"
+                            {% if not page_obj.has_previous %}disabled{% endif %}
+                            data-page="1">
+                        <i class="fas fa-angle-double-left"></i>
+                    </button>
+                    <button type="button" class="page-btn page-prev" title="Anterior"
+                            {% if not page_obj.has_previous %}disabled{% endif %}
+                            data-page="
+                                    {% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% else %}1{% endif %}">
                         <i class="fas fa-angle-left"></i>
                     </button>
-
                     <div class="page-input-wrapper">
-                        <input type="number" class="page-input" v-model.number="currentPage"
-                               @change="fetchTable(isAdvancedSearch)">
-                        <span class="total-pages-badge">de [[ Math.ceil(totalRows / pageSize) || 1 ]]</span>
+                        <input type="number" class="page-input"
+                               value="{{ page_obj.number|default:1 }}"
+                               min="1" max="{{ paginator.num_pages|default:1 }}"
+                               onchange="applyPeriodPagination(this.value)">
+                        <span class="total-pages-badge">de {{ paginator.num_pages|default:1 }}</span>
                     </div>
-
-                    <button class="page-btn" @click="nextPage"
-                            :disabled="loading || (currentPage * pageSize >= totalRows)">
+                    <button type="button" class="page-btn page-next" title="Siguiente"
+                            {% if not page_obj.has_next %}disabled{% endif %}
+                            data-page="
+                                    {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages|default:1 }}{% endif %}">
                         <i class="fas fa-angle-right"></i>
+                    </button>
+                    <button type="button" class="page-btn page-last" title="Última"
+                            {% if not page_obj.has_next %}disabled{% endif %}
+                            data-page="{{ paginator.num_pages|default:1 }}">
+                        <i class="fas fa-angle-double-right"></i>
                     </button>
                 </div>
             </div>
+
         </div>
-
-
-        {% include 'contract/modals/modal_management_period_advanced_search.html' %}
-        {% include 'contract/modals/modal_management_period_wizard.html' %}
-        {% include 'contract/modals/modal_management_period_detail.html' %}
-
     </div>
+
+    {% include 'contract/modals/modal_management_period_wizard.html' %}
+    {% include 'contract/modals/modal_management_period_detail.html' %}
 {% endblock %}
 
 {% block extra_js %}
-    <script src="{% static 'js/management_period.js' %}"></script>
     <script>
-        /**
-         * Pasamos los horarios de la base de datos (Django)
-         * a una variable global que el archivo .js pueda leer
-         */
         window.allSchedules = [
             {% for s in schedules %}
                 {id: {{ s.id }}, name: "{{ s.name }}"},
             {% endfor %}
         ];
     </script>
+    <script src="{% static 'js/management_period.js' %}"></script>
 {% endblock %}

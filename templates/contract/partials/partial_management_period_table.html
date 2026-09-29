@@ -1,174 +1,119 @@
 {% load static %}
 <div class="table-container">
-    <table class="table managed-table exportable-table table-hover"
-           data-title="Inicios de Gestión"
-           data-external-pagination="true"
-           data-external-search="true">
-        <thead>
-        <tr>
-            <th data-field="employee"><i class="fas fa-user-tie header-icon"></i> Empleado / Documento</th>
-            <th data-field="budget_line"><i class="fas fa-briefcase header-icon"></i> Cargo y Partida</th>
-            <th data-field="unit"><i class="fas fa-sitemap header-icon"></i> Dependencia</th>
-            <th data-field="contract_type"><i class="fas fa-file-contract header-icon"></i> Tipo de Contrato</th>
-            <th data-field="start_date"><i class="fas fa-calendar-alt header-icon"></i> Vigencia</th>
-            <th data-field="status"><i class="fas fa-toggle-on header-icon"></i> Estado</th>
-            <th class="actions no-sort" data-field="actions"><i class="fas fa-cogs header-icon"></i> Acciones</th>
-        </tr>
-        </thead>
-        <tbody id="management-table-body">
-        {% for period in periods.object_list %}
-            <tr class="period-row">
-                <td>
-                    <div class="person-info">
-                        {% if period.employee.person.photo %}
-                            <img src="{{ period.employee.person.photo.url }}" class="person-avatar" alt="Foto">
-                        {% else %}
-                            <div class="person-avatar-placeholder">
-                                {{ period.employee.person.first_name|first }}{{ period.employee.person.last_name|first }}
-                            </div>
-                        {% endif %}
-                        <div class="person-details">
-                            <h4>{{ period.employee.person.full_name }}</h4>
-                            <p><i class="fas fa-id-card mr-1"></i> {{ period.employee.person.document_number }}</p>
-                        </div>
-                    </div>
-                </td>
-                <td>
-                    <div class="font-weight-700 text-primary">{{ period.list_display_position }}</div>
-                    {% if period.budget_line %}
-                        <small class="text-muted">
-                            Partida:
-                            {% if period.budget_line.number_individual %}
-                                {{ period.budget_line.number_individual }}
+    <div class="table-scroll-top">
+        <table id="managementPeriodTable"
+               class="managed-table exportable-table"
+               data-title="Inicios de Gestión"
+               data-filename="Inicios_Gestion"
+               data-list-url="{% url 'contract:period_list' %}"
+               data-external-pagination="true"
+               data-external-search="true">
+            <thead>
+            <tr>
+                <th data-field="employee" class="width-25">Empleado</th>
+                <th data-field="budget_line" class="width-20">Cargo y Partida</th>
+                <th data-field="unit" class="width-17">Dependencia</th>
+                <th data-field="contract_type" class="width-13">Modalidad</th>
+                <th data-field="start_date" class="width-12">Vigencia</th>
+                <th data-field="status" class="width-10 text-center">Estado</th>
+                <th class="width-13 actions text-center no-sort" data-field="actions">Acciones</th>
+            </tr>
+            </thead>
+            <tbody id="management-table-body">
+            {% for period in periods %}
+                <tr class="period-row">
+                    <td>
+                        <div class="person-info">
+                            {% if period.employee.person.photo %}
+                                <img src="{{ period.employee.person.photo.url }}" class="person-avatar" alt="Foto">
                             {% else %}
-                                {{ period.budget_line.code }}
+                                <div class="person-avatar-placeholder">
+                                    {{ period.employee.person.first_name|first }}{{ period.employee.person.last_name|first }}
+                                </div>
                             {% endif %}
+                            <div class="person-details">
+                                <h4>{{ period.employee.person.full_name }}</h4>
+                                <p><i class="fas fa-id-card me-1"></i> {{ period.employee.person.document_number }}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="bold text-blue">{{ period.list_display_position }}</div>
+                        {% if period.budget_line %}
+                            <small class="text-muted d-block">
+                                Partida: {{ period.budget_line.number_individual|default:period.budget_line.code }}
+                            </small>
+                        {% endif %}
+                        <small class="text-muted d-block">
+                            Remuneración: {% if period.list_display_remuneration is not None %}$
+                            {{ period.list_display_remuneration }}{% else %}-{% endif %}
                         </small>
-                        <br>
-                    {% endif %}
-                    <small class="text-muted">
-                        Remuneración:
-                        {% if period.list_display_remuneration is not None %}
-                            $ {{ period.list_display_remuneration }}
-                        {% else %}
-                            -
-                        {% endif %}
-                    </small>
-                </td>
-                <td><span class="small font-weight-600">{{ period.administrative_unit.name }}</span></td>
-                <td>
-                    <span class="status-badge general">{{ period.contract_type.name }}</span><br>
-                    <small class="text-muted italic">{{ period.contract_type.labor_regime.name }}</small>
-                </td>
-                <td>
-                    <div class="vigencia-box">
-                        <span><strong>Inicio:</strong> {{ period.start_date|date:"d/m/Y" }}</span>
-                        <span><strong>Fin:</strong> {% if period.end_date %}{{ period.end_date|date:"d/m/Y" }}{% else %}
-                            Indefinido{% endif %}</span>
-                    </div>
-                </td>
-                <td>
-                        <span class="status-badge {% if period.status.code == 'SIN_FIRMAR' %}sin-firmar{% elif period.status.code == 'FIRMADO' %}firmado{% else %}general{% endif %}">
-                            {{ period.status.name }}
-                        </span>
-                </td>
-                <td class="actions">
-                    <div class="actions-wrapper">
-                        {% if period.contract_type.contract_type_category == 'CONTRATO' %}
-                            <button class="btn-success-action " data-id="{{ period.id }}" data-action="print"
-                                    title="Imprimir Contrato">
-                                <i class="fas fa-print"></i>
-                                <span class="ml-1"></span>
-                            </button>
-                        {% else %}
-                            <button class="btn-success-action" data-id="{{ period.id }}" data-action="print"
-                                    title="Imprimir Acción de Personal">
-                                <i class="fas fa-print"></i>
-                                <span class="ml-1"></span>
-                            </button>
-                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="small bold">{{ period.administrative_unit.name|default:'N/A' }}</span>
+                    </td>
+                    <td>
+                        <span class="badge badge-blue">{{ period.contract_type.name }}</span>
+                        <div class="small text-muted italic mt-1">{{ period.contract_type.labor_regime.name }}</div>
+                    </td>
+                    <td>
+                        <div class="small">
+                            <div><strong>Inicio:</strong> {{ period.start_date|date:"d/m/Y" }}</div>
+                            <div><strong>Fin:</strong>
+                                {% if period.end_date %}{{ period.end_date|date:"d/m/Y" }}{% else %}
+                                    Indefinido{% endif %}</div>
+                        </div>
+                    </td>
+                    <td class="text-center">
                         {% if period.status.code == 'SIN_FIRMAR' %}
-                            <button class="btn-create-action" data-id="{{ period.id }}" data-action="sign"
-                                    data-contract-category="{{ period.contract_type.contract_type_category }}"
-                                    title="{% if period.contract_type.contract_type_category == 'ACCION_PERSONAL' %}Legalizar Acción{% else %}Legalizar Contrato{% endif %}">
-                                <i class="fas fa-file-signature"></i>
-                            </button>
+                            <span class="badge badge-amber">{{ period.status.name }}</span>
+                        {% elif period.status.code == 'FIRMADO' %}
+                            <span class="badge badge-green">{{ period.status.name }}</span>
+                        {% else %}
+                            <span class="badge badge-gray">{{ period.status.name }}</span>
                         {% endif %}
-                        <button class="btn-list-action" data-id="{{ period.id }}" data-action="view" title="Expediente">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                        {% if period.status.code != 'FINALIZADO' and period.status.code == 'FIRMADO' %}
-                            <button class="btn-delete-action"
-                                    data-id="{{ period.id }}"
-                                    data-action="terminate"
-                                    title="Finalizar Gestión">
-                                <i class="fas fa-user-slash"></i>
+                    </td>
+                    <td class="actions text-center">
+                        <div class="actions-wrapper">
+                            <button type="button" class="btn-dark-blue-circle" data-id="{{ period.id }}"
+                                    data-action="print" title="Imprimir Documento">
+                                <i class="fas fa-print"></i>
                             </button>
-                        {% endif %}
-                    </div>
-                </td>
-            </tr>
-        {% empty %}
-            <tr class="server-empty-state">
-                <td colspan="7">
-                    <div class="empty-state-container">
-                        <i class="fas fa-database empty-state-icon"></i>
-                        <p class="empty-state-text">No se encontraron registros en la Base de Datos.</p>
-                    </div>
-                </td>
-            </tr>
-        {% endfor %}
 
-        <!-- FILA DE ESTADO VACÍO (MANEJADA POR JS) -->
-        <tr id="frontend-no-results" class="hidden">
-            <td colspan="7">
-                <div class="empty-state-container">
-                    <i class="fas fa-search-minus empty-state-icon"></i>
-                    <p class="empty-state-text">No existen registros con el filtro aplicado en esta lista.</p>
-                    <button class="btn-search btn-secondary-search mt-2" data-action="advanced-search-empty">
-                        <i class="fas fa-database"></i> Intentar Búsqueda en toda la BD
-                    </button>
-                </div>
-            </td>
-        </tr>
-        </tbody>
-    </table>
-</div>
-<div id="pagination-metadata" class="hidden"
-     data-total="{{ periods.paginator.count }}"
-     data-page="{{ periods.number }}"
-     data-pages="{{ periods.paginator.num_pages }}"
-     data-start="{{ periods.start_index }}"
-     data-end="{{ periods.end_index }}"
-     data-has-next="{{ periods.has_next|yesno:'true,false' }}"
-     data-has-prev="{{ periods.has_previous|yesno:'true,false' }}">
-</div>
+                            {% if period.status.code == 'SIN_FIRMAR' %}
+                                <button type="button" class="btn-green-circle" data-id="{{ period.id }}"
+                                        data-action="sign"
+                                        data-contract-category="{{ period.contract_type.contract_type_category }}"
+                                        title="Legalizar Documento">
+                                    <i class="fas fa-file-signature"></i>
+                                </button>
+                            {% endif %}
 
-<script>
-    // Inicializar TableManager en tablas inyectadas por AJAX: reintenta hasta 2s
-    (function () {
-        const tblSelector = '#table-content-wrapper .managed-table';
-        const maxAttempts = 40; // 40 * 50ms = 2000ms
-        let attempts = 0;
-        const iv = setInterval(() => {
-            attempts += 1;
-            const tbl = document.querySelector(tblSelector);
-            if (tbl && tbl._tableManager) {
-                clearInterval(iv);
-                return;
-            }
-            if (typeof TableManager === 'function' && tbl) {
-                try {
-                    new TableManager(tbl);
-                } catch (e) {
-                    console.warn('TableManager init error', e);
-                }
-                clearInterval(iv);
-                return;
-            }
-            if (attempts >= maxAttempts) {
-                clearInterval(iv);
-            }
-        }, 50);
-    })();
-</script>
+                            <button type="button" class="btn-blue-circle" data-id="{{ period.id }}" data-action="view"
+                                    title="Ver Expediente">
+                                <i class="fas fa-eye"></i>
+                            </button>
+
+                            {% if period.status.code == 'FIRMADO' %}
+                                <button type="button" class="btn-red-circle" data-id="{{ period.id }}"
+                                        data-action="terminate" title="Finalizar Gestión">
+                                    <i class="fas fa-user-slash"></i>
+                                </button>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="7">
+                        <div class="empty-state-container">
+                            <i class="fas fa-database empty-state-icon"></i>
+                            <p class="empty-state-text">No se encontraron registros de gestión laboral.</p>
+                        </div>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
