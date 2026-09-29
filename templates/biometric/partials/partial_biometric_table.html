@@ -1,92 +1,146 @@
 {% load static %}
 <div class="table-container">
-    <table class="custom-table biometric-table">
-        <colgroup>
-            <col style="width:15%">
-            <col style="width:12%">
-            <col style="width:9%">
-            <col style="width:9%">
-            <col style="width:16%">
-            <col style="width:12%">
-            <col style="width:25%">
-        </colgroup>
-        <thead>
-        <tr>
-            <th data-field="name" onclick="sortBiometricTable(this)" class="sortable-header">Nombre <span class="sort-arrow">⇅</span></th>
-            <th data-field="ip_address" onclick="sortBiometricTable(this)" class="sortable-header">IP <span class="sort-arrow">⇅</span></th>
-            <th data-field="serial_number" onclick="sortBiometricTable(this)" class="sortable-header">  N° Serie <span class="sort-arrow">⇅</span></th>
-            <th data-field="model_name" onclick="sortBiometricTable(this)" class="sortable-header">  Modelo <span class="sort-arrow">⇅</span></th>
-            <th data-field="location" onclick="sortBiometricTable(this)" class="sortable-header"> Ubicación <span class="sort-arrow">⇅</span></th>
-            <th data-field="is_active" onclick="sortBiometricTable(this)" class="sortable-header"> Estado <span class="sort-arrow">⇅</span></th>
-            <th><i class="fas fa-bars header-icon"></i> Acciones</th>
-        </tr>
-        </thead>
-        <tbody>
-        {% for device in devices %}
+    <div class="table-scroll-top">
+        <table class="managed-table exportable-table"
+               data-title="Reporte de Dispositivos Biometricos"
+               data-filename="Reporte_Biometricos"
+               data-list-url="{% url 'biometric:biometric_list' %}"
+               data-external-pagination="true"
+               data-external-search="true"
+               data-page-size="10">
+            <thead>
             <tr>
-                <td class="device-name-cell">{{ device.name }}</td>
-                <td>
-                    <span class="pill pill-ip">{{ device.ip_address }}</span>
-                </td>
-                <td>{{ device.serial_number|default:'—' }}</td>
-                <td>{{ device.model_name|default:'—' }}</td>
-                <td class="device-secondary-info">{{ device.location }}</td>
-                <td>
-                    {% if device.is_active %}
-                        <span class="status-pill status-pill-active">
-                            <i class="fa-solid fa-circle-check"></i> Activo
-                        </span>
-                    {% else %}
-                        <span class="status-pill status-pill-inactive">
-                             <i class="fa-solid fa-circle-xmark"></i> Inactivo
-                        </span>
-                    {% endif %}
-                </td>
-                <td class="actions-cell">
-                    <div class="actions-wrapper">
-                        <!-- Botón Probar Conexión (Gris/Azul) -->
-                        <button onclick="window.biometricVM.handleTestConnection({{ device.id }})"
-                                class="btn-list-action"
-                                title="Probar Conexión">
-                            <i class="fa-solid fa-satellite-dish"></i>
-                        </button>
-                        <button onclick="window.biometricVM.openModalTime({{ device.id }})"
-                                class="btn-list-action"
-                                style="background: linear-gradient(to right, #4f46e5, #3730a3);"
-                                title="Actualizar Hora">
-                            <i class="fa-solid fa-clock"></i>
-                        </button>
-                        <button onclick="window.biometricVM.openModalUpload({{ device.id }}, '{{ device.name }}')"
-                                class="btn-list-action"
-                                style="background: linear-gradient(to right, #475569, #1e293b);"
-                                title="Subir Archivo USB">
-                            <i class="fa-brands fa-usb"></i>
-                        </button>
-                        <button onclick="window.biometricVM.handleLoadAttendance({{ device.id }}, '{{ device.name }}')"
-                                class="btn-success-action"
-                                title="Descargar Marcaciones">
-                            <i class="fa-solid fa-cloud-arrow-down"></i>
-                        </button>
-                        <button onclick="window.biometricVM.openModalAdms({{ device.id }}, '{{ device.name }}', '{{ device.ip_address }}')"
-                                class="btn-list-action"
-                                style="background: linear-gradient(to right, #0ea5e9, #0369a1);"
-                                title="Bajar marcaciones ADMS">
-                            <i class="fa-solid fa-database"></i>
-                        </button>
-                        <!-- Botón Editar (Amarillo) -->
-                        <button onclick="window.biometricVM.openModalEdit({{ device.id }})"
-                                class="btn-views-action"
-                                title="Editar">
-                            <i class="fa-solid fa-pen-to-square"></i>
-                        </button>
-                    </div>
-                </td>
+                <th class="width-20" data-field="name"><i class="fas fa-font"></i> Nombre</th>
+                <th class="width-13" data-field="ip_address"><i class="fas fa-network-wired"></i> Dirección IP</th>
+                <th class="width-12" data-field="serial_number"><i class="fas fa-barcode"></i> N° Serie</th>
+                <th class="width-12" data-field="model_name"><i class="fas fa-microchip"></i> Modelo</th>
+                <th class="width-18" data-field="location"><i class="fas fa-location-dot"></i> Ubicación</th>
+                <th class="width-10 no-sort text-center"><i class="fas fa-circle-dot"></i> Estado</th>
+                <th class="actions width-15 no-sort text-center"><i class="fas fa-cogs"></i> Acciones</th>
             </tr>
-        {% empty %}
-            <tr>
-                <td colspan="7" class="text-center">No hay dispositivos registrados.</td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+            {% for device in devices %}
+                <tr data-status="{{ device.is_active|yesno:'true,false' }}">
+                    <td><strong>{{ device.name }}</strong></td>
+                    <td>
+                        <span class="badge-ip-pill">{{ device.ip_address }}:{{ device.port }}</span>
+                    </td>
+                    <td>{{ device.serial_number|default:'—' }}</td>
+                    <td>{{ device.model_name|default:'—' }}</td>
+                    <td><span class="text-muted small">{{ device.location|default:'No especificada' }}</span></td>
+                    <td class="text-center">
+                        {% if device.is_active %}
+                            <span class="badge badge-green">Activo</span>
+                        {% else %}
+                            <span class="badge badge-red">Inactivo</span>
+                        {% endif %}
+                    </td>
+                    <td class="actions">
+                        <div class="actions-wrapper justify-content-center">
+                            <!-- 1. Probar Conexión -->
+                            <button type="button"
+                                    class="btn-icon btn-dark-blue-circle"
+                                    data-action="test-connection"
+                                    data-device-id="{{ device.id }}"
+                                    data-device-name="{{ device.name }}"
+                                    title="Probar Conexión">
+                                <i class="fa-solid fa-satellite-dish"></i>
+                            </button>
+
+                            <!-- 2. Actualizar Hora -->
+                            <button type="button"
+                                    class="btn-icon btn-blue-circle"
+                                    data-action="open-modal"
+                                    data-modal-url="{% url 'biometric:biometric_modal_time' device.id %}"
+                                    title="Actualizar Hora">
+                                <i class="fa-solid fa-clock"></i>
+                            </button>
+
+                            <!-- 3. Subir USB -->
+                            <button type="button"
+                                    class="btn-icon btn-gray-circle"
+                                    data-action="open-modal"
+                                    data-modal-url="{% url 'biometric:biometric_modal_upload' device.id %}"
+                                    title="Subir Marcaciones USB">
+                                <i class="fa-brands fa-usb"></i>
+                            </button>
+
+                            <!-- 4. Descarga Directa -->
+                            <button type="button"
+                                    class="btn-icon btn-green-circle"
+                                    data-action="direct-sync"
+                                    data-device-id="{{ device.id }}"
+                                    data-device-name="{{ device.name }}"
+                                    title="Descargar Marcaciones Directas">
+                                <i class="fa-solid fa-cloud-arrow-down"></i>
+                            </button>
+
+                            <!-- 5. Comando ADMS -->
+                            <button type="button"
+                                    class="btn-icon btn-blue-circle"
+                                    data-action="open-modal"
+                                    data-modal-url="{% url 'biometric:biometric_modal_adms' device.id %}"
+                                    title="Enviar Comando ADMS">
+                                <i class="fa-solid fa-database"></i>
+                            </button>
+
+                            <!-- 6. Editar -->
+                            <button type="button"
+                                    class="btn-icon btn-yellow-circle"
+                                    data-action="open-modal"
+                                    data-modal-url="{% url 'biometric:biometric_modal_update' device.id %}"
+                                    title="Editar Configuración">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center py-4 text-muted">
+                        <i class="fa-solid fa-inbox fa-2x mb-2 opacity-50"></i>
+                        <p class="mb-0">No hay dispositivos biométricos registrados.</p>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
+
+{% if page_obj and page_obj.paginator.num_pages > 0 %}
+    <div id="js-pagination" class="pagination-container">
+        <span class="pagination-info">
+            Mostrando {{ page_obj.start_index|default:'0' }}-{{ page_obj.end_index|default:'0' }} de {{ page_obj.paginator.count|default:'0' }}
+        </span>
+        <div class="pagination-controls">
+            <button type="button" class="page-btn {% if not page_obj.has_previous %}disabled{% endif %}"
+                    title="Primera" data-page="1" {% if not page_obj.has_previous %}disabled{% endif %}>
+                <i class="fas fa-angle-double-left"></i>
+            </button>
+            <button type="button" class="page-btn {% if not page_obj.has_previous %}disabled{% endif %}"
+                    title="Anterior"
+                    data-page="{% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% else %}1{% endif %}"
+                    {% if not page_obj.has_previous %}disabled{% endif %}>
+                <i class="fas fa-angle-left"></i>
+            </button>
+            <div class="page-input-wrapper">
+                <input type="number" class="page-input" value="{{ page_obj.number }}" readonly style="cursor: default;">
+                <span class="total-pages-badge">de {{ page_obj.paginator.num_pages }}</span>
+            </div>
+            <button type="button" class="page-btn {% if not page_obj.has_next %}disabled{% endif %}"
+                    title="Siguiente"
+                    data-page="
+                            {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ page_obj.paginator.num_pages }}{% endif %}"
+                    {% if not page_obj.has_next %}disabled{% endif %}>
+                <i class="fas fa-angle-right"></i>
+            </button>
+            <button type="button" class="page-btn {% if not page_obj.has_next %}disabled{% endif %}"
+                    title="Última" data-page="{{ page_obj.paginator.num_pages }}"
+                    {% if not page_obj.has_next %}disabled{% endif %}>
+                <i class="fas fa-angle-double-right"></i>
+            </button>
+        </div>
+    </div>
+{% endif %}

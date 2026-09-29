@@ -1,31 +1,49 @@
-<div v-if="showAdmsModal" class="modal-overlay" @click.self="closeAdmsModal">
-    <div class="modal-container-medium" style="max-width: 420px;">
-        <div class="modal-header-gradient" style="background: linear-gradient(to right, #4f46e5, #3730a3);">
-            <div class="header-content-group">
-                <div class="header-icon-circle"><i class="fa-solid fa-database"></i></div>
-                <h3 class="header-title-main">Bajar marcaciones ADMS</h3>
+<div class="modal-overlay">
+    <div class="modal-container-medium">
+        <form id="biometricAdmsForm" action="/biometric/adms-download/{{ device.id }}/" method="post"
+              class="modal-form-layout">
+            {% csrf_token %}
+
+            <div class="modal-header-medium">
+                <div class="header-content-group">
+                    <div class="header-icon-circle">
+                        <i class="fa-solid fa-database"></i>
+                    </div>
+                    <h3 class="header-title">Comando ADMS: {{ device.name }}</h3>
+                </div>
+                <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
-            <button @click="closeAdmsModal" class="btn-close-modal-refined">&times;</button>
-        </div>
-        <div class="modal-body-custom">
-            <div class="swal-connection-box" style="margin-top:0; border-left: 4px solid #4f46e5;">
-                <p class="mb-1"><strong>Dispositivo:</strong> [[ admsDevice.name ]]</p>
-                <p class="mb-0"><strong>IP:</strong> [[ admsDevice.ip_address ]]</p>
+
+            <div class="modal-body modal-body-custom schedule-modal-body">
+                <div class="form-section-card">
+                    <div class="section-title">
+                        <i class="fa-solid fa-terminal text-green"></i> Parámetros de Descarga Remota
+                    </div>
+                    <p class="small text-muted">
+                        Esta acción encola la instrucción <code>DATA QUERY ATTLOG</code> para que el dispositivo
+                        transmita sus registros en el próximo latido (heartbeat).
+                    </p>
+                    <div class="grid-2-cols">
+                        <div class="form-group">
+                            <label class="form-label" for="adms_start">Fecha Desde</label>
+                            <input type="date" name="start_date" id="adms_start" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="adms_end">Fecha Hasta</label>
+                            <input type="date" name="end_date" id="adms_end" class="form-control">
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="form-group mt-3">
-                <label class="form-label"><i class="fa-solid fa-calendar-plus me-1"></i> Fecha Desde:</label>
-                <input type="date" v-model="admsForm.start" class="form-control">
+
+            <div class="modal-footer-fixed">
+                <button type="button" class="btn-secondary-outline" onclick="closeModal()">Cancelar</button>
+                <button type="submit" class="btn-blue-rectangle">
+                    <i class="fa-solid fa-paper-plane me-1"></i> ENVIAR COMANDO
+                </button>
             </div>
-            <div class="form-group mt-3">
-                <label class="form-label"><i class="fa-solid fa-calendar-minus me-1"></i> Fecha Hasta (opcional):</label>
-                <input type="date" v-model="admsForm.end" class="form-control">
-            </div>
-        </div>
-        <div class="modal-footer-fixed">
-            <button @click="closeAdmsModal" class="btn-cancel">Cancelar</button>
-            <button @click="downloadAdmsAttendance" class="btn-save" style="background: #4f46e5;" :disabled="!admsForm.start">
-                <i class="fa-solid fa-cloud-arrow-down"></i> Descargar
-            </button>
-        </div>
+        </form>
     </div>
 </div>

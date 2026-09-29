@@ -1,107 +1,66 @@
-<div v-if="showTimeModal" class="modal-overlay" @click.self="closeTimeModal">
-    <div class="modal-container-medium time-modal-container">
-        <!-- Header con gradiente azul -->
-        <div class="time-modal-header">
-            <div class="time-modal-header-content">
-                <div class="time-modal-icon">
-                    <i class="fa-solid fa-clock fa-xl"></i>
-                </div>
-                <div>
-                    <h3 class="time-modal-title">Sincronización de Hora</h3>
-                    <p class="time-modal-subtitle">[[ timeData.name ]]</p>
-                </div>
-            </div>
-            <button @click="closeTimeModal" class="btn-close-modal-refined" style="color: white;">&times;</button>
-        </div>
+<div class="modal-overlay">
+    <div class="modal-container-medium">
+        <form id="biometricTimeForm" action="/biometric/update-device-time/{{ device.id }}/" method="post"
+              class="modal-form-layout">
+            {% csrf_token %}
 
-        <div class="time-modal-body">
-            <!-- Comparación de horas con diseño moderno -->
-            <div class="time-comparison-grid">
-                <!-- Hora del Dispositivo -->
-                <div class="time-card-device">
-                    <div class="time-card-header">
-                        <i class="fa-solid fa-fingerprint time-card-icon-device"></i>
-                        <span class="time-card-label-device">Biométrico</span>
+            <div class="modal-header-medium">
+                <div class="header-content-group">
+                    <div class="header-icon-circle">
+                        <i class="fa-solid fa-clock"></i>
                     </div>
-                    <div v-if="!timeData.device_time.includes('Error')" class="time-card-time">
-                        [[ timeData.device_time.split(' ')[1] ]]
-                    </div>
-                    <div v-else class="time-card-error">
-                        <i class="fa-solid fa-triangle-exclamation"></i> Sin conexión
-                    </div>
-                    <div v-if="!timeData.device_time.includes('Error')" class="time-card-date">
-                        [[ timeData.device_time.split(' ')[0] ]]
-                    </div>
+                    <h3 class="header-title">Sincronizar Hora: {{ device.name }}</h3>
                 </div>
-
-                <!-- Hora del Servidor -->
-                <div class="time-card-server">
-                    <div class="time-card-header">
-                        <i class="fa-solid fa-server time-card-icon-server"></i>
-                        <span class="time-card-label-server">Servidor</span>
-                    </div>
-                    <div class="time-card-time-server">
-                        [[ timeData.server_time.split(' ')[1] ]]
-                    </div>
-                    <div class="time-card-date-server">
-                        [[ timeData.server_time.split(' ')[0] ]]
-                    </div>
-                </div>
+                <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
 
-            <!-- Opciones de sincronización -->
-            <div class="time-sync-options">
-                <h6 class="time-sync-title">
-                    <i class="fa-solid fa-gear"></i> Opciones de Sincronización
-                </h6>
-                
-                <!-- Opción: Sincronizar con servidor -->
-                <label class="time-radio-option" :class="{'selected': timeForm.mode === 'server'}" @click="timeForm.mode = 'server'">
-                    <input type="radio" v-model="timeForm.mode" value="server">
-                    <div class="time-radio-content">
-                        <div class="time-radio-label">
-                            <i class="fa-solid fa-cloud-arrow-down"></i> Sincronizar con servidor
+            <div class="modal-body modal-body-custom schedule-modal-body">
+                <div class="form-section-card">
+                    <div class="grid-2-cols text-center">
+                        <div class="p-2 bg-light rounded border">
+                            <span class="label-muted">HORA DEL SERVIDOR</span>
+                            <h4 id="display-server-time" class="text-primary mb-0 font-monospace"><i
+                                    class="fas fa-spinner fa-spin"></i></h4>
                         </div>
-                        <div class="time-radio-description">
-                            Establece automáticamente la hora del servidor en el dispositivo
+                        <div class="p-2 bg-light rounded border">
+                            <span class="label-muted">HORA ACTUAL DEL RELOJ</span>
+                            <h4 id="display-device-time" class="text-green mb-0 font-monospace"><i
+                                    class="fas fa-spinner fa-spin"></i></h4>
                         </div>
                     </div>
-                </label>
+                </div>
 
-                <!-- Opción: Hora personalizada -->
-                <label class="time-radio-option" :class="{'selected': timeForm.mode === 'custom'}" @click="timeForm.mode = 'custom'">
-                    <input type="radio" v-model="timeForm.mode" value="custom">
-                    <div class="time-radio-content">
-                        <div class="time-radio-label">
-                            <i class="fa-solid fa-pen-to-square"></i> Hora personalizada
-                        </div>
-                        <div class="time-radio-description">
-                            Define manualmente la fecha y hora que deseas establecer
-                        </div>
+                <div class="form-section-card mt-3">
+                    <div class="section-title">
+                        <i class="fa-solid fa-gear text-green"></i> Modo de Sincronización
                     </div>
-                </label>
+                    <div class="form-group">
+                        <label class="d-flex align-items-center gap-2 cursor-pointer mb-2">
+                            <input type="radio" name="mode" value="server" class="custom-radio" checked
+                                   id="radio-mode-server">
+                            <span class="fw-bold">Igualar inmediatamente con la hora del servidor</span>
+                        </label>
+                        <label class="d-flex align-items-center gap-2 cursor-pointer">
+                            <input type="radio" name="mode" value="manual" class="custom-radio" id="radio-mode-manual">
+                            <span>Ingresar fecha y hora manualmente</span>
+                        </label>
+                    </div>
 
-                <!-- Input de Fecha (Solo si es personalizado) -->
-                <div v-if="timeForm.mode === 'custom'" class="time-custom-input-wrapper">
-                    <label class="time-custom-label">
-                        <i class="fa-regular fa-calendar"></i> Fecha y Hora:
-                    </label>
-                    <input type="datetime-local" 
-                           v-model="timeForm.custom_time" 
-                           class="time-custom-input">
+                    <div class="form-group mt-2 hidden" id="manual-time-group">
+                        <label class="form-label" for="manual_new_time">Fecha y Hora Manual *</label>
+                        <input type="datetime-local" name="new_time" id="manual_new_time" class="form-control">
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Footer con botones -->
-        <div class="time-modal-footer">
-            <button @click="closeTimeModal" class="time-btn-cancel">
-                <i class="fa-solid fa-xmark"></i> Cancelar
-            </button>
-            <button @click="saveTime" :disabled="isSavingTime" class="time-btn-update">
-                <i :class="isSavingTime ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-clock-rotate-left'"></i>
-                [[ isSavingTime ? 'Actualizando...' : 'Actualizar Hora' ]]
-            </button>
-        </div>
+            <div class="modal-footer-fixed">
+                <button type="button" class="btn-secondary-outline" onclick="closeModal()">Cancelar</button>
+                <button type="submit" class="btn-blue-rectangle">
+                    <i class="fa-solid fa-clock-rotate-left me-1"></i> APLICAR HORA
+                </button>
+            </div>
+        </form>
     </div>
 </div>

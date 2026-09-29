@@ -4,32 +4,35 @@ import json
 import logging
 import mimetypes
 import os
+from collections import defaultdict
 from datetime import datetime, date, timedelta
 from datetime import time as dtime
 from decimal import Decimal
 from uuid import UUID
 
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.db import transaction, models
+from django.db.models import Q
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string, get_template
+from django.urls import reverse
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
 from django.utils.decorators import method_decorator
 from django.utils.timezone import make_aware
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_http_methods
-from django.views.generic import View, ListView
-from django.urls import reverse
-from django.views.generic import TemplateView
+from django.views.generic import View, ListView, TemplateView
 
+from core.models import SystemConfiguration
+from employee.models import InstitutionalData, Employee
+from institution.models import AdministrativeUnit
+from permitrequest.models import PermitRequest
+from schedule.models import ScheduleObservation, get_employee_schedule_for_date
 from .models import BiometricDevice, BiometricLoad, AttendanceRegistry, OfflineAttendanceRegistry
 from .utils import test_connection, BiometricConnection
-from permitrequest.models import PermitRequest
-from schedule.models import ScheduleObservation
-from core.models import SystemConfiguration
-from django.db.models import Q
-from employee.models import InstitutionalData
 
 try:
     from weasyprint import HTML, CSS
@@ -38,13 +41,20 @@ except Exception:
     CSS = None
 
 logger = logging.getLogger(__name__)
+
 ENABLE_SHIFT_COLLAPSE = False
-# Configuración minutos maximo entre picadas
-DEDUPE_WINDOW_MINUTES = 3  # 3 minutos no acepta duplicados dentro de los primeros 3 minutos
-IN_TOLERANCE_SECONDS = 60  # 1 minuto de tolerancia para in
-OUT_MAX_SECONDS = 90 * 60  # 30 minutos para aceptar out antes del evento si no hay after
-IN_MAX_SECONDS = 60 * 60 * 2  # 2 horas máximo para emparejar despues en in
-CROSS_SHIFT_THRESHOLD = 60  # umbral en segundos para decidir entre salida vs ingreso cercano
+DEDUPE_WINDOW_MINUTES = 3
+IN_TOLERANCE_SECONDS = 60
+OUT_MAX_SECONDS = 90 * 60
+IN_MAX_SECONDS = 60 * 60 * 2
+CROSS_SHIFT_THRESHOLD = 60
+
+
+def _resolve_user_employee(user):
+    """Obtiene la instancia de Employee asociada al usuario actual."""
+    if hasattr(user, 'employee'):
+        return user.employee
+    return Employee.objects.filter(person__user=user).first()
 
 
 def _p_dt(p):
@@ -56,7 +66,6 @@ def select_in_candidate(candidates, ev_dt, prev_ev_dt=None, next_ev_dt=None):
         return None
     before = [p for p in candidates if _p_dt(p) <= ev_dt]
     if before:
-        # elegir el anterior más cercano (máxima dt)
         return max(before, key=lambda p: (_p_dt(p) - ev_dt).total_seconds())
     after = [p for p in candidates if _p_dt(p) > ev_dt]
     if not after:
@@ -76,11 +85,9 @@ def select_out_candidate(candidates, ev_dt, prev_ev_dt=None, next_ev_dt=None):
     if not candidates:
         return None
 
-    # 1. Candidatos posteriores al horario de salida
     after = [p for p in candidates if _p_dt(p) >= ev_dt]
     if after:
         best_after = min(after, key=lambda p: (_p_dt(p) - ev_dt).total_seconds())
-        # Si está más cerca del siguiente evento (ej. entrada tarde de la tarde), no tomarla como salida
         if next_ev_dt:
             diff_curr = abs((_p_dt(best_after) - ev_dt).total_seconds())
             diff_next = abs((_p_dt(best_after) - next_ev_dt).total_seconds())
@@ -88,11 +95,9 @@ def select_out_candidate(candidates, ev_dt, prev_ev_dt=None, next_ev_dt=None):
                 return None
         return best_after
 
-    # 2. Candidatos anteriores al horario de salida (salida anticipada)
     before = [p for p in candidates if _p_dt(p) < ev_dt]
     if before:
         best_before = max(before, key=lambda p: _p_dt(p))
-        # Validar que no esté más cerca del inicio de jornada
         if prev_ev_dt:
             diff_prev = abs((_p_dt(best_before) - prev_ev_dt).total_seconds())
             diff_curr = abs((ev_dt - _p_dt(best_before)).total_seconds())
@@ -104,9 +109,6 @@ def select_out_candidate(candidates, ev_dt, prev_ev_dt=None, next_ev_dt=None):
 
 
 def resolve_cross_shift(punch, prev_ev_dt=None, next_ev_dt=None):
-    """Decide si un `punch` que cae entre dos eventos pertenece al evento previo o al siguiente
-    según la cercanía y el umbral `CROSS_SHIFT_THRESHOLD`. Devuelve 'prev', 'next' o None.
-    """
     try:
         p_dt = _p_dt(punch)
     except Exception:
@@ -118,12 +120,10 @@ def resolve_cross_shift(punch, prev_ev_dt=None, next_ev_dt=None):
             return 'prev'
         if diff_next <= CROSS_SHIFT_THRESHOLD and diff_next < diff_prev:
             return 'next'
-        # si ninguno está dentro del umbral, devolver None para que la selección use demas reglas
     return None
 
 
 def build_attendance_summary_for_employee(calendar_data_local, year_local, month_local, employee_obj, debug_flag=False):
-    """Helper reutilizable para calcular inconsistencias, dias sin marcar y minutos de atraso"""
     inconsistencias = 0
     dias_sin_marcar = 0
     minutos_atraso = 0
@@ -137,7 +137,6 @@ def build_attendance_summary_for_employee(calendar_data_local, year_local, month
             events_skipped = day_obj_local.get('events_skipped', [])
 
             expected = sum(1 for ev in events if ev.get('label') not in events_skipped)
-            # Usar set de labels para evitar doble conteo si el mismo punch aparece duplicado
             matched_labels = set()
             for p in day_obj_local.get('punches', []):
                 if p.get('assigned') and p.get('matched_event'):
@@ -198,19 +197,16 @@ def build_attendance_summary_for_employee(calendar_data_local, year_local, month
                             if not is_inside_permit:
                                 minutos_atraso += int(diff_seconds // 60)
 
-    return {'inconsistencias': inconsistencias, 'dias_sin_marcar': dias_sin_marcar,
-            'minutos_atraso': minutos_atraso}
+    return {
+        'inconsistencias': inconsistencias,
+        'dias_sin_marcar': dias_sin_marcar,
+        'minutos_atraso': minutos_atraso
+    }
 
 
 def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, month_local, employee_obj,
                                               debug_flag=False, schedule_lookup_fn=None, deduplicate=True,
                                               show_observations=True):
-    """Anota calendar_data con eventos esperados y empareja marcaciones usando la misma logica del reporte mensual."""
-    try:
-        from schedule.models import get_employee_schedule_for_date
-    except Exception:
-        get_employee_schedule_for_date = None
-
     _lookup = schedule_lookup_fn or get_employee_schedule_for_date
 
     for week_local in calendar_data_local:
@@ -223,7 +219,6 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
 
             cur_date = date(year_local, month_local, int(d))
             is_workday = cur_date.weekday() < 5
-            is_holiday = day_obj_local.get('is_holiday', False)
             schedule = None
             if _lookup:
                 try:
@@ -253,7 +248,6 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
                     events.append({'label': 'J2_out', 'type': 'out', 'dt': ev_dt})
 
             permits_day = day_obj_local.get('permits', []) or []
-
             events_active = []
             events_skipped = []
 
@@ -283,14 +277,12 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
                     elif ev['type'] == 'out':
                         valid_permits = [p for p in permits_day if p.get('start_time') and p.get('end_time')]
                         valid_permits.sort(key=lambda x: x['start_time'], reverse=True)
-
                         adjusted_time = ev['dt']
 
                         for perm in valid_permits:
                             ps = perm.get('start_time')
                             pe = perm.get('end_time')
                             current_out_time = adjusted_time.time()
-
                             if (ps <= current_out_time <= pe) or (pe == current_out_time):
                                 adjusted_time = datetime.combine(adjusted_time.date(), ps)
 
@@ -326,7 +318,6 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
                 key=lambda x: x.get('dt_norm') or x.get('dt')
             )]
 
-            # Control dinámico según el switch 'deduplicate'
             last_p_dt = datetime.min
             for p in punches_sorted:
                 p['is_duplicate'] = False
@@ -392,7 +383,7 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
                 best['assigned'] = True
 
                 row_class = ''
-                if show_observations and is_workday and not is_holiday:
+                if show_observations and is_workday and not day_obj_local.get('is_holiday', False):
                     try:
                         best_dt = best.get('dt_norm') or best.get('dt')
                         if ev['type'] == 'in' and best_dt:
@@ -425,9 +416,11 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
             expected_slots = sum(1 for ev in events if ev.get('label') not in skipped_labels)
             assigned_slots = sum(
                 1 for p in annotated if p.get('assigned') and p.get('matched_event') not in skipped_labels)
+            today = date.today()
+            is_past_or_today = cur_date <= today
             is_holiday = day_obj_local.get('is_holiday', False)
-            no_marks = raw_cnt == 0 and not is_holiday and cur_date.weekday() < 5 and expected_slots > 0
-            missing_slots = expected_slots > assigned_slots
+            no_marks = raw_cnt == 0 and not is_holiday and cur_date.weekday() < 5 and expected_slots > 0 and is_past_or_today
+            missing_slots = expected_slots > assigned_slots and is_past_or_today
             day_obj_local['expected_cnt'] = expected_slots
             day_obj_local['matched_cnt'] = assigned_slots
             day_obj_local['extra_cnt'] = max(0, raw_cnt - expected_slots)
@@ -447,8 +440,6 @@ def annotate_attendance_calendar_for_employee(calendar_data_local, year_local, m
 
 
 class OfflineAttendanceAccessView(View):
-    """Simple redirector to the offline attendance page."""
-
     def get(self, request, *args, **kwargs):
         try:
             url = reverse('biometric:offline_attendance')
@@ -479,7 +470,7 @@ class OfflineAttendanceView(TemplateView):
             ctx['offline_page_url'] = reverse('biometric:offline_attendance')
         except Exception:
             ctx['offline_page_url'] = '/biometric/offline-attendance/'
-        # Employee info fallbacks
+
         try:
             name = request.user.get_full_name() or request.user.username
         except Exception:
@@ -490,7 +481,6 @@ class OfflineAttendanceView(TemplateView):
         except Exception:
             doc = ''
         ctx['offline_employee_document'] = doc
-        # permission to sync depends on authentication
         ctx['offline_can_sync'] = request.user.is_authenticated
         return ctx
 
@@ -519,8 +509,8 @@ const CACHE_NAME = 'sigeth-offline-attendance-v1';
 const PRECACHE_URLS = [
   '/biometric/offline-attendance/',
   '/biometric/offline-attendance/manifest.webmanifest',
-    '/static/js/biometric/offline_attendance.js',
-    '/static/css/biometric_offline_attendance.css',
+  '/static/js/biometric/offline_attendance.js',
+  '/static/css/biometric_offline_attendance.css',
   '/static/img/logo.png',
   '/static/img/favicon.png'
 ];
@@ -684,7 +674,11 @@ def offline_attendance_sync(request):
     }, status=http_status)
 
 
-class BiometricListView(ListView):
+# -------------------------------------------------------------
+# GESTIÓN DE BIOMÉTRICOS (LISTADO Y MODALES AJAX)
+# -------------------------------------------------------------
+
+class BiometricListView(LoginRequiredMixin, ListView):
     model = BiometricDevice
     template_name = 'biometric/biometric_list.html'
     context_object_name = 'devices'
@@ -692,17 +686,19 @@ class BiometricListView(ListView):
 
     def get_queryset(self):
         qs = BiometricDevice.objects.all()
-        q = self.request.GET.get('q')
+        q = (self.request.GET.get('q') or '').strip()
         if q:
-            qs = qs.filter(models.Q(name__icontains=q) | models.Q(ip_address__icontains=q))
+            qs = qs.filter(
+                models.Q(name__icontains=q) |
+                models.Q(ip_address__icontains=q) |
+                models.Q(location__icontains=q)
+            )
 
-        status = self.request.GET.get('status')
-        if status == 'active':
+        show_inactive = self.request.GET.get('show_inactive')
+        if show_inactive not in ['true', 'True', True, '1']:
             qs = qs.filter(is_active=True)
-        elif status == 'inactive':
-            qs = qs.filter(is_active=False)
-        # Ordenamiento via GET params similar a PersonListView
-        sort_field = self.request.GET.get('sort_field')
+
+        sort_field = self.request.GET.get('sort_field', 'name')
         sort_dir = self.request.GET.get('sort_dir', 'asc')
         allowed = {
             'name': 'name',
@@ -710,86 +706,145 @@ class BiometricListView(ListView):
             'serial_number': 'serial_number',
             'model_name': 'model_name',
             'location': 'location',
-            'is_active': 'is_active'
+            'is_active': 'is_active',
         }
         if sort_field in allowed:
             field = allowed[sort_field]
-            if sort_dir == 'desc':
-                field = '-' + field
-            qs = qs.order_by(field)
+            prefix = '-' if sort_dir == 'desc' else ''
+            qs = qs.order_by(f'{prefix}{field}')
+        else:
+            qs = qs.order_by('name')
         return qs
 
-    def get(self, request, *args, **kwargs):
-        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            qs = self.get_queryset()
-            # paginar resultados para AJAX
-            from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-            page = request.GET.get('page', 1)
-            paginator = Paginator(qs, self.paginate_by)
-            try:
-                page_obj = paginator.page(page)
-            except PageNotAnInteger:
-                page_obj = paginator.page(1)
-            except EmptyPage:
-                page_obj = paginator.page(paginator.num_pages)
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        all_devs = BiometricDevice.objects.all()
+        context['total_devices'] = all_devs.count()
+        context['active_devices'] = all_devs.filter(is_active=True).count()
+        context['inactive_devices'] = all_devs.filter(is_active=False).count()
+        context['query'] = (self.request.GET.get('q') or '').strip()
+        return context
 
-            html = render_to_string('biometric/partials/partial_biometric_table.html', {
-                'devices': page_obj.object_list
-            }, request=request)
+    def render_to_response(self, context, **response_kwargs):
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            html = render_to_string(
+                'biometric/partials/partial_biometric_table.html',
+                context,
+                request=self.request
+            )
+            return JsonResponse({'html': html})
+        return super().render_to_response(context, **response_kwargs)
 
-            all_devs = BiometricDevice.objects.all()
-            return JsonResponse({
-                'html': html,
-                'stats': {
-                    'total': all_devs.count(),
-                    'active': all_devs.filter(is_active=True).count(),
-                    'inactive': all_devs.filter(is_active=False).count()
-                },
-                'pagination': {
-                    'label': f"Mostrando {page_obj.start_index()}-{page_obj.end_index()} de {paginator.count}" if paginator.count > 0 else "Mostrando 0-0 de 0",
-                    'current_page': page_obj.number,
-                    'num_pages': paginator.num_pages,
-                    'has_next': page_obj.has_next(),
-                    'has_previous': page_obj.has_previous()
-                }
-            })
-        return super().get(request, *args, **kwargs)
+
+class BiometricModalFormView(LoginRequiredMixin, View):
+    """Retorna el formulario modal para crear o editar un biométrico."""
+
+    def get(self, request, pk=None):
+        if pk:
+            device = get_object_or_404(BiometricDevice, pk=pk)
+            is_edit = True
+        else:
+            device = None
+            is_edit = False
+
+        html = render_to_string('biometric/modals/modal_biometric_form.html', {
+            'device': device,
+            'is_edit': is_edit,
+            'action_url': reverse('biometric:biometric_save_ajax'),
+        }, request=request)
+        return HttpResponse(html)
+
+
+class BiometricModalTimeView(LoginRequiredMixin, View):
+    """Retorna el modal para sincronizar la hora del biométrico."""
+
+    def get(self, request, pk):
+        device = get_object_or_404(BiometricDevice, pk=pk)
+        html = render_to_string('biometric/modals/modal_biometric_time.html', {
+            'device': device,
+        }, request=request)
+        return HttpResponse(html)
+
+
+class BiometricModalUploadView(LoginRequiredMixin, View):
+    """Retorna el modal para cargar marcaciones desde memoria USB."""
+
+    def get(self, request, pk):
+        device = get_object_or_404(BiometricDevice, pk=pk)
+        html = render_to_string('biometric/modals/modal_biometric_upload.html', {
+            'device': device,
+        }, request=request)
+        return HttpResponse(html)
+
+
+class BiometricModalAdmsView(LoginRequiredMixin, View):
+    """Retorna el modal para enviar comandos ADMS remotos."""
+
+    def get(self, request, pk):
+        device = get_object_or_404(BiometricDevice, pk=pk)
+        html = render_to_string('biometric/modals/modal_biometric_adms.html', {
+            'device': device,
+        }, request=request)
+        return HttpResponse(html)
 
 
 @csrf_exempt
 def save_biometric_ajax(request):
-    """Crea o actualiza biométricos"""
+    """Crea o actualiza biométricos con respuesta compatible con submitAjaxForm."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Método no permitido.'}, status=405)
+
     try:
         device_id = request.POST.get('id')
-        is_active = request.POST.get('is_active') == 'true'
-        data = {
-            'name': request.POST.get('name'),
-            'ip_address': request.POST.get('ip_address'),
-            'port': request.POST.get('port', 4370),
-            'is_active': is_active,
-            'location': request.POST.get('location'),
-            'serial_number': request.POST.get('serial_number', ''),
-            'model_name': request.POST.get('model_name', ''),
-            'updated_by': request.user
-        }
+        is_active = request.POST.get('is_active') in ['true', 'True', True, 'on', '1']
+
+        name = (request.POST.get('name') or '').strip()
+        ip_address = (request.POST.get('ip_address') or '').strip()
+        location = (request.POST.get('location') or '').strip()
+        port = int(request.POST.get('port') or 4370)
+        serial_number = (request.POST.get('serial_number') or '').strip()
+        model_name = (request.POST.get('model_name') or '').strip()
+
+        errors = {}
+        if not name:
+            errors['name'] = ['El nombre del dispositivo es obligatorio.']
+        if not ip_address:
+            errors['ip_address'] = ['La dirección IP es obligatoria.']
+        if not location:
+            errors['location'] = ['La ubicación es obligatoria.']
+
+        if errors:
+            return JsonResponse({'success': False, 'errors': errors}, status=400)
+
         if device_id and device_id != 'null':
-            # 👇 Cambiamos update por obtención y guardado manual
-            device = BiometricDevice.objects.get(id=device_id)
-            device.name = request.POST.get('name')
-            device.ip_address = request.POST.get('ip_address')
-            device.serial_number = request.POST.get('serial_number')
-            device.model_name = request.POST.get('model_name')
-            device.location = request.POST.get('location')
-            device.is_active = request.POST.get('is_active') == 'true'
+            device = get_object_or_404(BiometricDevice, id=device_id)
+            device.name = name
+            device.ip_address = ip_address
+            device.port = port
+            device.location = location
+            device.serial_number = serial_number
+            device.model_name = model_name
+            device.is_active = is_active
+            device.updated_by = request.user
             device.save()
-            msg = "Dispositivo actualizado."
+            msg = "Dispositivo biométrico actualizado exitosamente."
         else:
-            data['created_by'] = request.user
-            BiometricDevice.objects.create(**data)
-            msg = "Dispositivo registrado."
-        return JsonResponse({'status': 'success', 'message': msg})
+            BiometricDevice.objects.create(
+                name=name,
+                ip_address=ip_address,
+                port=port,
+                location=location,
+                serial_number=serial_number,
+                model_name=model_name,
+                is_active=is_active,
+                created_by=request.user
+            )
+            msg = "Dispositivo biométrico registrado exitosamente."
+
+        return JsonResponse({'success': True, 'message': msg})
     except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+        logger.error(f"Error guardando biométrico: {e}")
+        return JsonResponse({'success': False, 'message': str(e)}, status=400)
 
 
 @csrf_exempt
@@ -797,7 +852,9 @@ def load_attendance_ajax(request, pk):
     device = get_object_or_404(BiometricDevice, pk=pk)
     connection = BiometricConnection(device.ip_address, device.port)
     if not connection.connect():
-        return JsonResponse({'status': 'error', 'message': 'Fallo de conexión'}, status=400)
+        return JsonResponse(
+            {'success': False, 'status': 'error', 'message': 'No se pudo conectar con el dispositivo biométrico.'},
+            status=400)
 
     try:
         raw_records = connection.get_attendance()
@@ -808,10 +865,7 @@ def load_attendance_ajax(request, pk):
                 user_id = str(rec.user_id).strip().lstrip('0')
                 inst = InstitutionalData.objects.filter(biometric_id=user_id).first()
                 if inst:
-                    # El dispositivo devuelve hora local naive, usarla directamente sin conversiones
                     registry_datetime = rec.timestamp
-
-                    # Si por alguna razón viene con tzinfo, removerlo para mantener la hora local
                     if hasattr(registry_datetime, 'tzinfo') and registry_datetime.tzinfo is not None:
                         registry_datetime = registry_datetime.replace(tzinfo=None)
 
@@ -827,9 +881,11 @@ def load_attendance_ajax(request, pk):
             load_entry.num_records = saved_count
             load_entry.save()
         connection.disconnect()
-        return JsonResponse({'status': 'success', 'message': f'Sincronizados {saved_count} registros.'})
+        return JsonResponse(
+            {'success': True, 'status': 'success', 'message': f'Sincronizados {saved_count} registros correctamente.'})
     except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+        logger.error(f"Error descargando asistencia directa: {e}")
+        return JsonResponse({'success': False, 'status': 'error', 'message': str(e)}, status=500)
 
 
 @csrf_exempt
@@ -865,7 +921,7 @@ def test_connection_ajax(request, pk):
 @csrf_exempt
 def get_biometric_time_ajax(request, pk):
     device = get_object_or_404(BiometricDevice, pk=pk)
-    server_time = datetime.now()  # USE_TZ=False, usar datetime.now() para hora local
+    server_time = datetime.now()
     device_time_str = "Error: No se pudo conectar"
 
     bio = BiometricConnection(device.ip_address, device.port)
@@ -876,7 +932,8 @@ def get_biometric_time_ajax(request, pk):
         bio.disconnect()
 
     return JsonResponse({
-        'success': True, 'device_name': device.name,
+        'success': True,
+        'device_name': device.name,
         'server_time': server_time.strftime('%Y-%m-%d %H:%M:%S'),
         'device_time': device_time_str
     })
@@ -884,23 +941,28 @@ def get_biometric_time_ajax(request, pk):
 
 @csrf_exempt
 def update_biometric_time_ajax(request, pk):
-    if request.method != 'POST': return JsonResponse({'status': 'error'}, status=405)
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Método no permitido.'}, status=405)
+
     device = get_object_or_404(BiometricDevice, pk=pk)
     mode = request.POST.get('mode')
     new_time_str = request.POST.get('new_time')
 
     if mode == 'server':
-        target_time = datetime.now()  # USE_TZ=False, hora local naive directa
+        target_time = datetime.now()
     else:
-        target_time = datetime.strptime(new_time_str, '%Y-%m-%dT%H:%M')
+        try:
+            target_time = datetime.strptime(new_time_str, '%Y-%m-%dT%H:%M')
+        except Exception:
+            return JsonResponse({'success': False, 'message': 'Formato de fecha u hora no válido.'}, status=400)
 
     bio = BiometricConnection(device.ip_address, device.port)
     if bio.connect():
         success = bio.set_time(target_time)
         bio.disconnect()
         if success:
-            return JsonResponse({'status': 'success', 'message': 'Hora actualizada.'})
-    return JsonResponse({'status': 'error', 'message': 'Fallo al establecer hora.'}, status=400)
+            return JsonResponse({'success': True, 'message': 'Hora del biométrico actualizada exitosamente.'})
+    return JsonResponse({'success': False, 'message': 'Fallo de conexión al establecer la hora.'}, status=400)
 
 
 @csrf_exempt
@@ -914,12 +976,15 @@ def upload_biometric_file_ajax(request, pk):
             saved_count = 0
             with transaction.atomic():
                 manual_load = BiometricLoad.objects.create(
-                    biometric=device, load_type="MANUAL_USB",
-                    reason=f"Archivo: {file.name}", created_by=request.user
+                    biometric=device,
+                    load_type="MANUAL_USB",
+                    reason=f"Archivo: {file.name}",
+                    created_by=request.user
                 )
                 for line in lines:
                     parts = line.strip().split('\t')
-                    if len(parts) < 2: continue
+                    if len(parts) < 2:
+                        continue
                     user_pin = parts[0].strip().lstrip('0')
                     try:
                         naive_date = datetime.strptime(parts[1].strip(), '%Y-%m-%d %H:%M:%S')
@@ -928,24 +993,83 @@ def upload_biometric_file_ajax(request, pk):
                         if inst_data and not AttendanceRegistry.objects.filter(employee=inst_data.employee,
                                                                                registry_date=reg_date).exists():
                             AttendanceRegistry.objects.create(
-                                employee=inst_data.employee, biometric_load=manual_load,
-                                employee_id_bio=user_pin, registry_date=reg_date
+                                employee=inst_data.employee,
+                                biometric_load=manual_load,
+                                employee_id_bio=user_pin,
+                                registry_date=reg_date
                             )
                             saved_count += 1
-                    except:
+                    except Exception:
                         continue
                 manual_load.num_records = saved_count
                 manual_load.save()
-            return JsonResponse({'status': 'success', 'message': f'Cargados {saved_count} registros.'})
+            return JsonResponse({'success': True, 'message': f'Se cargaron {saved_count} marcaciones correctamente.'})
         except Exception as e:
-            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
-    return JsonResponse({'status': 'error', 'message': 'Archivo requerido.'}, status=400)
+            logger.error(f"Error procesando archivo USB: {e}")
+            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+    return JsonResponse({'success': False, 'message': 'Debe seleccionar un archivo válido.'}, status=400)
+
+
+# -------------------------------------------------------------
+# REPORTES Y RECEPTORES
+# -------------------------------------------------------------
+
+@method_decorator(csrf_exempt, name='dispatch')
+class ADMSReceiverView(View):
+    def get(self, request):
+        return HttpResponse("OK\nC:99:ATTLOG", content_type="text/plain")
+
+    def post(self, request):
+        from .adms_views import adms_receive_attendance
+        return adms_receive_attendance(request)
+
+
+class EmployeeReportListView(LoginRequiredMixin, ListView):
+    model = InstitutionalData
+    template_name = 'biometric/employee_report_list.html'
+    context_object_name = 'employees'
+    paginate_by = 10
+
+    def get_queryset(self):
+        qs = InstitutionalData.objects.select_related(
+            'employee__person'
+        ).filter(
+            biometric_id__isnull=False,
+            employee__is_active=True
+        ).order_by('employee__person__last_name', 'employee__person__first_name')
+
+        raw_query = (self.request.GET.get('q') or self.request.GET.get('name') or self.request.GET.get(
+            'dni') or '').strip()
+
+        if raw_query:
+            words = raw_query.split()
+            combined_q = Q()
+            for word in words:
+                word_q = (
+                        Q(employee__person__first_name__icontains=word) |
+                        Q(employee__person__last_name__icontains=word) |
+                        Q(employee__person__document_number__icontains=word) |
+                        Q(biometric_id__icontains=word)
+                )
+                combined_q &= word_q
+            qs = qs.filter(combined_q)
+
+        return qs
+
+    def get(self, request, *args, **kwargs):
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            self.object_list = self.get_queryset()
+            html = render_to_string('biometric/partials/partial_report_employee_table.html', {
+                'employees': self.object_list
+            }, request=request)
+            return JsonResponse({'html': html, 'count': self.object_list.count()})
+        return super().get(request, *args, **kwargs)
 
 
 def generate_monthly_report_pdf(request):
     emp_id = request.GET.get('emp_id')
     month = int(request.GET.get('month', 1))
-    year = int(request.GET.get('year', 2026))
+    year = int(request.GET.get('year', date.today().year))
 
     show_summary = request.GET.get('show_summary', '1') == '1'
     show_observations = request.GET.get('show_observations', '1') == '1'
@@ -994,7 +1118,6 @@ def generate_monthly_report_pdf(request):
     month_start = date(year, month, 1)
     month_end = date(year, month, calendar.monthrange(year, month)[1])
 
-    # Carga de Permisos Aprobados
     permits_qs = PermitRequest.objects.filter(employee_id=emp_id, status='APPROVED').filter(
         Q(start_date__lte=month_end, end_date__gte=month_start) |
         Q(start_date__range=(month_start, month_end)) |
@@ -1053,7 +1176,6 @@ def generate_monthly_report_pdf(request):
             permits_map[d].append(entry)
             cur = cur + timedelta(days=1)
 
-    # Carga de Feriados y Observaciones
     holidays_qs = ScheduleObservation.objects.filter(is_active=True, is_holiday=True, start_date__lte=month_end,
                                                      end_date__gte=month_start)
     holidays_map = {}
@@ -1100,7 +1222,6 @@ def generate_monthly_report_pdf(request):
             cur_date = date(year, month, int(d))
             is_workday = cur_date.weekday() < 5
 
-            # Si deduplicate está activo, evaluamos jornadas solo con las picadas válidas
             if deduplicate:
                 day_punches = [p for p in day_obj.get('punches', []) if p.get('assigned')]
             else:
@@ -1225,8 +1346,6 @@ def generate_monthly_report_pdf(request):
                     else:
                         p['selected_slot'] = ''
 
-                # AQUÍ ESTÁ EL CAMBIO CLAVE:
-                # Si deduplicate es True, filtramos para que SOLO viajen las picadas que tienen asignado su slot de jornada
                 if deduplicate:
                     final_list = [p for p in day_obj.get('punches', []) if p.get('assigned') and p.get('selected_slot')]
                 else:
@@ -1242,7 +1361,6 @@ def generate_monthly_report_pdf(request):
                 day_obj['day_label'] = f"{int(d):02d} de {months_es_local[month]}"
             except Exception:
                 day_obj['day_label'] = str(d)
-                day_obj['day_label'] = str(d)
 
     config = SystemConfiguration.get_current()
     letterhead_data = None
@@ -1250,10 +1368,7 @@ def generate_monthly_report_pdf(request):
 
     if not no_letterhead and config and getattr(config, 'letterhead', None):
         try:
-            # 1. Intentar leer directo desde el path del sistema de archivos
             file_path = getattr(config.letterhead, 'path', None)
-
-            # Si no tiene .path o no existe, armar la ruta con MEDIA_ROOT
             if not file_path or not os.path.exists(file_path):
                 from django.conf import settings
                 file_path = os.path.join(settings.MEDIA_ROOT, str(config.letterhead))
@@ -1265,7 +1380,6 @@ def generate_monthly_report_pdf(request):
                     encoded = base64.b64encode(f.read()).decode('ascii')
                     letterhead_data = f"data:{mime};base64,{encoded}"
             else:
-                # Fallback: intentar por URL absoluta si el archivo físico no fue hallado
                 letterhead_data = request.build_absolute_uri(config.letterhead.url)
         except Exception as e:
             logger.error(f"Error cargando membrete: {e}")
@@ -1292,8 +1406,7 @@ def generate_monthly_report_pdf(request):
 
     if HTML:
         base_url = request.build_absolute_uri('/')
-        pdf = HTML(string=html, base_url=base_url).write_pdf(
-            stylesheets=[CSS(string='@page { size: A4; margin: 0.8cm }')])
+        pdf = HTML(string=html, base_url=base_url).write_pdf()
         response = HttpResponse(pdf, content_type='application/pdf')
         response['Content-Disposition'] = 'inline; filename="reporte_mensual.pdf"'
         return response
@@ -1304,68 +1417,7 @@ def generate_monthly_report_pdf(request):
         return response
 
 
-# Receptor ADMS unificado
-@method_decorator(csrf_exempt, name='dispatch')
-class ADMSReceiverView(View):
-    def get(self, request):
-        return HttpResponse("OK\nC:99:ATTLOG", content_type="text/plain")
-
-    def post(self, request):
-        # Esta lógica se delegó a adms_views.py para mantener limpieza
-        from .adms_views import adms_receive_attendance
-        return adms_receive_attendance(request)
-
-
-class EmployeeReportListView(ListView):
-    model = InstitutionalData
-    template_name = 'biometric/employee_report_list.html'
-    context_object_name = 'employees'
-    paginate_by = 10
-
-    def get_queryset(self):
-        # Base de empleados activos con identificador biométrico
-        qs = InstitutionalData.objects.select_related(
-            'employee__person'
-        ).filter(
-            biometric_id__isnull=False,
-            employee__is_active=True
-        ).order_by('employee__person__last_name', 'employee__person__first_name')
-
-        # Parámetro unificado 'q', con fallback a 'name' y 'dni'
-        raw_query = self.request.GET.get('q') or self.request.GET.get('name') or self.request.GET.get('dni') or ''
-        raw_query = raw_query.strip()
-
-        if raw_query:
-            # Separar el término por palabras para búsquedas combinadas (ej: "Juan Perez")
-            words = raw_query.split()
-            combined_q = Q()
-
-            for word in words:
-                # Cada palabra debe coincidir en nombres, apellidos o en el número de documento
-                word_q = (
-                        Q(employee__person__first_name__icontains=word) |
-                        Q(employee__person__last_name__icontains=word) |
-                        Q(employee__person__document_number__icontains=word) |
-                        Q(biometric_id__icontains=word)
-                )
-                combined_q &= word_q
-
-            qs = qs.filter(combined_q)
-
-        return qs
-
-    def get(self, request, *args, **kwargs):
-        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            self.object_list = self.get_queryset()
-            html = render_to_string('biometric/partials/partial_report_employee_table.html', {
-                'employees': self.object_list
-            }, request=request)
-            return JsonResponse({'html': html, 'count': self.object_list.count()})
-        return super().get(request, *args, **kwargs)
-
-
 def generate_specific_report_pdf(request):
-    """Genera un reporte PDF basado en un rango de fechas personalizado."""
     employee_id = request.GET.get('emp_id')
     start_str = request.GET.get('start')
     end_str = request.GET.get('end')
@@ -1373,13 +1425,11 @@ def generate_specific_report_pdf(request):
     if not all([employee_id, start_str, end_str]):
         return HttpResponse("Parámetros incompletos", status=400)
 
-    # Convertir strings a objetos date
     start_date = datetime.strptime(start_str, '%Y-%m-%d').date()
     end_date = datetime.strptime(end_str, '%Y-%m-%d').date()
 
     institutional_info = get_object_or_404(InstitutionalData, employee_id=employee_id)
 
-    # Obtener marcaciones en el rango (usando __date para comparar solo la parte de fecha)
     punches = AttendanceRegistry.objects.filter(
         employee_id=employee_id,
         registry_date__date__range=[start_date, end_date]
@@ -1413,9 +1463,6 @@ def generate_specific_report_pdf(request):
         return response
 
 
-from collections import defaultdict
-
-
 def generate_department_report_pdf(request):
     unit_id = request.GET.get('unit_id')
     month = int(request.GET.get('month', 1))
@@ -1423,8 +1470,6 @@ def generate_department_report_pdf(request):
     debug_punches = request.GET.get('debug_punches') == '1'
     if not unit_id:
         return HttpResponse('unit_id requerido', status=400)
-
-    from institution.models import AdministrativeUnit
 
     def collect_unit_ids(root_id):
         ids = set()
@@ -1434,7 +1479,8 @@ def generate_department_report_pdf(request):
             ids.add(cur)
             children = AdministrativeUnit.objects.filter(parent_id=cur, is_active=True).values_list('id', flat=True)
             for c in children:
-                if c not in ids: stack.append(c)
+                if c not in ids:
+                    stack.append(c)
         return list(ids)
 
     try:
@@ -1444,7 +1490,6 @@ def generate_department_report_pdf(request):
 
     unit_ids = collect_unit_ids(unit_id)
 
-    # 1. Traer empleados
     inst_qs = InstitutionalData.objects.select_related(
         'employee__person', 'employee__area'
     ).prefetch_related(
@@ -1460,7 +1505,6 @@ def generate_department_report_pdf(request):
     month_start = date(year, month, 1)
     month_end = date(year, month, calendar.monthrange(year, month)[1])
 
-    # 2. MEGA OPTIMIZACIÓN: Diccionarios con llaves NORMALIZADAS (string)
     all_punches = AttendanceRegistry.objects.filter(
         employee_id__in=emp_ids, registry_date__year=year, registry_date__month=month
     ).select_related('biometric_load__biometric')
@@ -1542,16 +1586,10 @@ def generate_department_report_pdf(request):
             holidays_map[h_cur.day] = obs.name
             h_cur += timedelta(days=1)
 
-    try:
-        from schedule.models import get_employee_schedule_for_date
-    except Exception:
-        get_employee_schedule_for_date = None
-
     results_by_unit = {}
     for inst in inst_qs:
         emp_id_str = str(inst.employee_id)
 
-        # Régimen laboral
         periods = list(inst.employee.management_periods.all())
         active_period = next((p for p in periods if p.status.code.upper() in ['ACTIVO', 'ACT']),
                              periods[0] if periods else None)
@@ -1572,22 +1610,19 @@ def generate_department_report_pdf(request):
                 week_list.append(day_data)
             calendar_data.append(week_list)
 
-        # Anotar y calcular
         annotate_attendance_calendar_for_employee(
             calendar_data, year, month, inst.employee, debug_punches,
             schedule_lookup_fn=get_employee_schedule_for_date,
         )
         summary_emp = build_attendance_summary_for_employee(calendar_data, year, month, inst.employee, debug_punches)
 
-        sched_ref = get_employee_schedule_for_date(inst.employee,
-                                                   month_start) if get_employee_schedule_for_date else None
+        sched_ref = get_employee_schedule_for_date(inst.employee, month_start)
         tolerance = sched_ref.late_tolerance_minutes if sched_ref else 0
 
         minutos_atraso = summary_emp.get('minutos_atraso', 0)
         inconsistencias = summary_emp.get('inconsistencias', 0)
         dias_sin_marcar = summary_emp.get('dias_sin_marcar', 0)
 
-        # --- FILTRO DE EXCEPCIONES ---
         if inconsistencias > 0 or dias_sin_marcar > 0 or minutos_atraso > tolerance:
             unit_name = inst.employee.area.name if inst.employee.area else 'Sin Unidad'
             results_by_unit.setdefault(unit_name, []).append({
@@ -1599,7 +1634,6 @@ def generate_department_report_pdf(request):
                 'tolerancia': tolerance,
             })
 
-    # Ordenar y Generar PDF
     grouped_results = sorted(list(results_by_unit.items()), key=lambda x: x[0].lower())
     template = get_template('biometric/reports/pdf_attendance_by_unit.html')
     html = template.render(

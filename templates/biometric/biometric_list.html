@@ -1,99 +1,76 @@
 {% extends 'base.html' %}
 {% load static %}
+
 {% block title %}Biométricos | SIGETH{% endblock %}
+
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/payroll.css' %}">
-    <link rel="stylesheet" href="{% static 'css/biometric.css' %}">
+    <link rel="stylesheet" href="{% static 'css/schedule.css' %}">
 {% endblock %}
+
 {% block content %}
-    <div id="biometric-app" v-cloak>
-        <!-- 1. Header -->
-        <div class="header-card">
-            <div>
-                <h1>Gestión de Biométricos</h1>
-                <p>Administra los dispositivos biométricos del sistema.</p>
-            </div>
-            <div style="display:flex; gap:12px; flex-wrap:wrap;">
-                <a href="{% url 'biometric:offline_attendance' %}" class="btn-create" style="text-decoration:none; display:inline-flex; align-items:center; gap:8px;">
-                    <i class="fa-solid fa-fingerprint"></i> Asistencia Offline
-                </a>
-                <button type="button" @click="openModalCreate" class="btn-create">
-                    <i class="fa-solid fa-plus"></i> Nuevo Biométrico
-                </button>
-            </div>
+    <!-- 1. Encabezado Oficial -->
+    <div class="header-card">
+        <div class="header-card-body">
+            <h1><i class="fa-solid fa-fingerprint me-2"></i> Gestión de Biométricos</h1>
+            <p>Administra los dispositivos de marcación física y parámetros de conexión institucional.</p>
         </div>
-        <!-- 2. Mostrar Inactivos (toggle) - centrado como Estructura Organizacional -->
-        <div class="table-controls managed-table" style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; width: 100%; gap: 1rem; margin-bottom:12px;">
-            <div></div>
-            <div style="display:flex; justify-content: center;">
-                <input class="toggle-status-red-input" type="checkbox" id="toggleInactiveBiometrics"
-                       onchange="toggleInactiveBiometrics(this.checked)">
-
-                <label class="toggle-status-red-wrapper" for="toggleInactiveBiometrics">
-                    <div class="toggle-status-red-circle"></div>
-                    <span class="modern-toggle-text">Mostrar Biométricos Inactivos</span>
-                </label>
-            </div>
-            <div class="search-box" style="margin-left: auto; justify-self: flex-end; width: 100%; max-width: 420px;">
-                <input type="text" v-model="searchQuery" @input="search"
-                       placeholder="Buscar por nombre o IP...">
-            </div>
+        <div class="header-actions-group">
+            <a href="{% url 'biometric:offline_attendance' %}" class="btn-white-rectangle" title="Asistencia Offline">
+                <i class="fa-solid fa-wifi-slash text-blue me-1"></i> Asistencia Offline
+            </a>
+            <!-- Desacoplado: ya no depende de id ni de clases CSS para abrir el modal -->
+            <button type="button" class="btn-blue-rectangle" data-action="open-modal"
+                    data-modal-url="{% url 'biometric:biometric_modal_create' %}">
+                <i class="fa-solid fa-plus me-1"></i> NUEVO BIOMÉTRICO
+            </button>
         </div>
+    </div>
 
-        <!-- 3. Contenedor principal Tabla (AJAX) -->
-            <div class="content-table">
-            <!-- 3.1 Zona de recarga AJAX (Solo tabla) -->
+    <!-- 2. Contenedor de Tabla -->
+    <div id="table-app">
+        <div class="content-table">
+            <div class="table-controls toolbar-row mb-3">
+
+                <!-- Centro: Switch universal de inactivos -->
+                <div class="toolbar-center">
+                    <input class="switch-input switch-red" type="checkbox" id="show_inactive" name="show_inactive"
+                           {% if request.GET.show_inactive == 'true' or request.GET.show_inactive == '1' %}checked{% endif %}>
+                    <label class="switch-wrapper" for="show_inactive">
+                        <span class="switch-circle"></span>
+                        <span class="switch-text">Mostrar Biométricos Inactivos</span>
+                    </label>
+                </div>
+
+                <!-- Derecha: Buscador directo -->
+                <div class="toolbar-right">
+                    <input type="text"
+                           name="q"
+                           id="table-search"
+                           class="table-search-input table-search-input--large"
+                           placeholder="Buscar por nombre, IP o ubicación..."
+                           value="{{ query|default:'' }}">
+                </div>
+            </div>
+
+            <!-- Inyección de la tabla parcial -->
             <div id="table-content-wrapper">
                 {% include 'biometric/partials/partial_biometric_table.html' %}
             </div>
-            <!-- Modal de Creación/Edición -->
-            <div id="modal-container">
-                <!-- Modal de CRUD (Nombre/IP) -->
-                {% include 'biometric/modals/modal_biometric_form.html' %}
-
-                <!-- Modal de Actualizar Hora -->
-                {% include 'biometric/modals/modal_biometric_time.html' %}
-
-                <!-- Modal de Carga USB -->
-                {% include 'biometric/modals/modal_biometric_upload.html' %}
-
-                <!-- Modal ADMS -->
-                {% include 'biometric/modals/modal_biometric_adms.html' %}
-            </div>
-
-            <div class="pagination-container" id="js-pagination"
-                 data-current-page="{{ page_obj.number|default:1 }}"
-                 data-num-pages="{{ paginator.num_pages|default:1 }}">
-                <span id="val-pagination-label" class="hidden">
-                    Mostrando {{ page_obj.start_index|default:"0" }}-{{ page_obj.end_index|default:"0" }} de {{ paginator.count|default:"0" }}
-                </span>
-                <span class="pagination-info">[[ pagination.label ]]</span>
-                <div class="pagination-controls" style="visibility:visible; display:flex; gap:8px; align-items:center;">
-                    <button class="page-btn" title="Primera" onclick="changePage(1)">
-                        <i class="fas fa-angle-double-left"></i>
-                    </button>
-                    <button class="page-btn" title="Anterior" onclick="changePage(parseInt(document.getElementById('js-pagination').dataset.currentPage || '1') - 1)">
-                        <i class="fas fa-angle-left"></i>
-                    </button>
-                    <div class="page-input-wrapper">
-                        <input type="number" class="page-input" id="biometric-page-input"
-                               value="{{ page_obj.number|default:1 }}" min="1" max="{{ paginator.num_pages|default:1 }}"
-                               onchange="changePage(parseInt(this.value)||1)"
-                               onkeypress="if(event.key==='Enter') changePage(parseInt(this.value)||1)">
-                        <span class="total-pages-badge">de <span id="biometric-total-pages">{{ paginator.num_pages|default:1 }}</span></span>
-                    </div>
-                    <button class="page-btn" title="Siguiente" onclick="changePage(parseInt(document.getElementById('js-pagination').dataset.currentPage || '1') + 1)">
-                        <i class="fas fa-angle-right"></i>
-                    </button>
-                    <button class="page-btn" title="Última" onclick="changePage(parseInt(document.getElementById('js-pagination').dataset.numPages || '1'))">
-                        <i class="fas fa-angle-double-right"></i>
-                    </button>
-                </div>
-            </div>
         </div>
     </div>
+
+    <!-- Contenedor Único y Obligatorio para modales dinámicos de main.js -->
+    <div id="modal-root"></div>
 {% endblock %}
+
 {% block extra_js %}
-    <script src="{% static 'js/biometric/biometric_api.js' %}"></script>
+    <script>
+        window.initialPagination = {
+            current_page: {% if page_obj %}{{ page_obj.number }}{% else %}1{% endif %},
+            total_pages: {% if page_obj %}{{ page_obj.paginator.num_pages }}{% else %}1{% endif %},
+            has_previous: {% if page_obj %}{{ page_obj.has_previous|lower }}{% else %}false{% endif %},
+            has_next: {% if page_obj %}{{ page_obj.has_next|lower }}{% else %}false{% endif %}
+        };
+    </script>
     <script src="{% static 'js/biometric/biometric_main.js' %}"></script>
 {% endblock %}

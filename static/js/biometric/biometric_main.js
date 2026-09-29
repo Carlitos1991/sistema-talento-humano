@@ -1,746 +1,223 @@
-const {createApp} = Vue;
+/**
+ * SIGETH - Módulo de Biométricos
+ * Controlador Vanilla JavaScript desacoplado de clases CSS mediante data-actions.
+ */
 
-// Guardamos la instancia en una constante
-const biometricApp = createApp({
-    delimiters: ['[[', ']]'],
-    data() {
-        return {
-            showModal: false,
-            modalTitle: 'Nuevo Biométrico',
-            searchQuery: '',
-            showUploadModal: false,
-            isUploading: false,
-            selectedDeviceId: null,
-            selectedDeviceName: '',
-            uploadForm: {file: null},
-            showTimeModal: false,
-            isSavingTime: false,
-            timeData: {name: '', server_time: '', device_time: ''},
-            timeForm: {id: null, mode: 'server', custom_time: ''},
-            currentStatus: 'all',
-            stats: {total: 0, active: 0, inactive: 0},
-            pagination: {
-                label: 'Mostrando 0-0 de 0'
-            },
-            sort_field: '',
-            sort_dir: 'asc',
-            isSaving: false,
-            form: {
-                id: null,
-                name: '',
-                ip_address: '',
-                port: 4370,
-                location: '',
-                is_active: true
-            },
-            showAdmsModal: false,
-            admsDevice: {id: null, name: '', ip_address: ''},
-            admsForm: {start: '', end: ''},
-            isDownloadingAdms: false
-        }
-    },
-    methods: {
-        openModalUpload(id, name) {
-            this.selectedDeviceId = id;
-            this.selectedDeviceName = name;
-            this.uploadForm.file = null;
-            this.showUploadModal = true;
-        },
-        openModalAdms(id, name, ip_address) {
-            this.admsDevice = {id, name, ip_address};
-            this.admsForm = {start: '', end: ''};
-            this.showAdmsModal = true;
-        },
-        closeAdmsModal() {
-            this.showAdmsModal = false;
-        },
-        async downloadAdmsAttendance() {
-            if (!this.admsForm.start) {
-                this.notifyError('Debe seleccionar la fecha desde.');
-                return;
-            }
-            this.isDownloadingAdms = true;
-            const start = this.admsForm.start;
-            const end = this.admsForm.end;
-            let startTime = `${start} 00:01:00`;
-            let endTime = end ? `${end} 23:59:00` : `${start} 23:59:00`;
-            try {
-                Swal.fire({
-                    title: 'Descargando marcaciones ADMS...',
-                    text: 'Espere mientras se consulta el dispositivo.',
-                    allowOutsideClick: false,
-                    showConfirmButton: false,
-                    didOpen: () => {
-                        Swal.showLoading();
-                    }
-                });
-                const response = await fetch(`/biometric/adms-download/${this.admsDevice.id}/`, {
-                    method: 'POST',
-                    headers: {'X-CSRFToken': this.getCsrfToken(), 'Content-Type': 'application/json'},
-                    body: JSON.stringify({start_time: startTime, end_time: endTime})
-                });
-                const data = await response.json();
-                Swal.close();
-                if (response.ok && data.status === 'success') {
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Descarga exitosa!',
-                        text: data.message || 'Marcaciones descargadas correctamente.',
-                        confirmButtonText: 'Aceptar',
-                        customClass: {confirmButton: 'btn-swal-confirm-green-centered'},
-                        buttonsStyling: false
-                    });
-                } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: data.message || 'No se pudo descargar las marcaciones.',
-                        confirmButtonText: 'Cerrar',
-                        customClass: {confirmButton: 'btn-swal-confirm-red-centered'},
-                        buttonsStyling: false
-                    });
-                }
-                this.showAdmsModal = false;
-            } catch (e) {
-                Swal.close();
-                this.notifyError('Error técnico al descargar marcaciones.');
-            } finally {
-                this.isDownloadingAdms = false;
-            }
-        },
-
-        onFileSelected(event) {
-            this.uploadForm.file = event.target.files[0];
-        },
-
-        async processUpload() {
-            this.isUploading = true;
-            const fd = new FormData();
-            fd.append('file', this.uploadForm.file);
-
-            try {
-                const response = await fetch(`/biometric/upload-file/${this.selectedDeviceId}/`, {
-                    method: 'POST',
-                    body: fd
-                });
-                const result = await response.json();
-
-                if (result.status === 'success') {
-                    Swal.fire({
-                        title: 'Carga Completada',
-                        text: result.message,
-                        icon: 'success',
-                        confirmButtonText: 'Entendido',
-                        customClass: {confirmButton: 'btn-swal-confirm-green-centered'},
-                        buttonsStyling: false
-                    });
-                    this.showUploadModal = false;
-                    await this.search(); // Actualizar estadísticas
-                } else {
-                    this.notifyError(result.message);
-                }
-            } catch (e) {
-                this.notifyError('Error técnico al subir el archivo');
-            } finally {
-                this.isUploading = false;
-            }
-        },
-        closeUploadModal() {
-            this.showUploadModal = false;
-        },
-        async search() {
-            try {
-                const pageEl = document.getElementById('js-pagination');
-                const currentPage = pageEl ? parseInt(pageEl.dataset.currentPage || '1') : 1;
-                const data = await BiometricService.getTable(this.searchQuery, this.currentStatus, currentPage, this.sort_field, this.sort_dir);
-
-                // 1. Actualizar Tabla
-                document.getElementById('table-content-wrapper').innerHTML = data.html;
-                initBiometricHorizontalScroll();
-
-                // 2. Actualizar Estadísticas dinámicamente
-                if (data.stats) this.stats = data.stats;
-
-                // 3. Actualizar Paginación
-                if (data.pagination) {
-                    this.pagination.label = data.pagination.label;
-                    const pageEl2 = document.getElementById('js-pagination');
-                    if (pageEl2) {
-                        pageEl2.dataset.currentPage = data.pagination.current_page || 1;
-                        pageEl2.dataset.numPages = data.pagination.num_pages || 1;
-                    }
-                    document.getElementById('current-page-display').innerText = data.pagination.current_page || 1;
-                    const pageInput = document.getElementById('biometric-page-input');
-                    if (pageInput) {
-                        pageInput.value = data.pagination.current_page || 1;
-                        pageInput.max = data.pagination.num_pages || 1;
-                    }
-                    const totalPagesEl = document.getElementById('biometric-total-pages');
-                    if (totalPagesEl) totalPagesEl.innerText = data.pagination.num_pages || 1;
-                }
-            } catch (error) {
-                console.error(error);
-            }
-        },
-        async filterByStatus(status) {
-            this.currentStatus = status;
-            const pageEl = document.getElementById('js-pagination');
-            if (pageEl) pageEl.dataset.currentPage = 1;
-            await this.search();
-        },
-        // Sort handler similar a person_list
-        async applySort(field) {
-            if (this.sort_field === field) {
-                this.sort_dir = this.sort_dir === 'asc' ? 'desc' : 'asc';
-            } else {
-                this.sort_field = field;
-                this.sort_dir = 'asc';
-            }
-            const pageEl = document.getElementById('js-pagination');
-            if (pageEl) pageEl.dataset.currentPage = 1;
-            await this.search();
-        },
-        async openModalEdit(id) {
-            this.modalTitle = 'Editar Biométrico';
-            try {
-                const response = await fetch(`/biometric/get-data/${id}/`);
-                const data = await response.json();
-                if (data.success) {
-                    // Ahora data.biometric incluye is_active correctamente
-                    this.form = {...data.biometric};
-                    this.showModal = true;
-                }
-            } catch (error) {
-                this.notifyError('Error al obtener datos');
-            }
-        },
-        async openModalTime(id) {
-            // Mostrar loading sin botones
-            Swal.fire({
-                title: 'Consultando tiempos...',
-                text: 'Conectando con el dispositivo...',
-                allowOutsideClick: false,
-                showConfirmButton: false,
-                showCancelButton: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
-            });
-
-            try {
-                const response = await fetch(`/biometric/get-device-time/${id}/`);
-
-                const data = await response.json();
-
-                // Si la respuesta no es exitosa, mostrar error
-                if (!response.ok || !data.success) {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error de Conexión',
-                        text: data.message || 'No se pudo comunicar con el servidor.',
-                        confirmButtonText: 'Aceptar',
-                        showCancelButton: false,
-                        buttonsStyling: false,
-                        customClass: {
-                            confirmButton: 'btn-swal-confirm-red-centered',
-                            actions: 'swal-actions-centered'
-                        }
-                    });
-                    return;
-                }
-
-                // Verificar si hubo error de conexión con el dispositivo
-                if (data.device_time && data.device_time.includes('Error')) {
-                    // Cerrar el loading
-                    Swal.close();
-
-                    // Mostrar advertencia
-                    await Swal.fire({
-                        icon: 'warning',
-                        title: 'Sin Conexión al Dispositivo',
-                        text: 'No se pudo leer la hora del dispositivo. Verifique que esté encendido y accesible en la red.',
-                        confirmButtonText: 'Aceptar',
-                        showCancelButton: false,
-                        buttonsStyling: false,
-                        customClass: {
-                            confirmButton: 'btn-swal-confirm-red-centered',
-                            actions: 'swal-actions-centered'
-                        }
-                    });
-                    return; // No abrir el modal si no hay conexión
-                }
-
-                // Si todo está bien, cerrar loading y abrir modal
-                Swal.close();
-
-                // Preparar datos del formulario
-                this.timeData = {
-                    name: data.device_name,
-                    server_time: data.server_time,
-                    device_time: data.device_time
-                };
-                this.timeForm = {
-                    id: id,
-                    mode: 'server',
-                    custom_time: data.server_time.replace(' ', 'T').substring(0, 16)
-                };
-
-                // Abrir el modal
-                this.showTimeModal = true;
-
-            } catch (e) {
-                console.error('Error en openModalTime:', e);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error de Conexión',
-                    text: 'No se pudo comunicar con el servidor. Verifique la conexión de red.',
-                    confirmButtonText: 'Aceptar',
-                    showCancelButton: false,
-                    buttonsStyling: false,
-                    customClass: {
-                        confirmButton: 'btn-swal-confirm-red-centered',
-                        actions: 'swal-actions-centered'
-                    }
-                });
-            }
-        },
-
-        async saveTime() {
-            this.isSavingTime = true;
-            const fd = new FormData();
-            fd.append('mode', this.timeForm.mode);
-            fd.append('new_time', this.timeForm.custom_time);
-
-            
-
-            try {
-                const response = await fetch(`/biometric/update-device-time/${this.timeForm.id}/`, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': this.getCsrfToken()
-                    },
-                    body: fd
-                });
-
-                const result = await response.json();
-
-                if (response.ok && result.status === 'success') {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Éxito',
-                        text: result.message,
-                        confirmButtonText: 'Aceptar'
-                    });
-                    this.showTimeModal = false;
-                    // Recargar la tabla para reflejar cambios
-                    await this.search();
-                } else {
-                    // Mostrar mensaje de error del servidor
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: result.message || 'Error al actualizar la hora',
-                        confirmButtonText: 'Aceptar'
-                    });
-                }
-            } catch (e) {
-                console.error('Error en saveTime:', e);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error de Conexión',
-                    text: 'No se pudo comunicar con el servidor. Verifique la conexión.',
-                    confirmButtonText: 'Aceptar'
-                });
-            } finally {
-                this.isSavingTime = false;
-            }
-        },
-
-        closeTimeModal() {
-            this.showTimeModal = false;
-        },
-        openModalCreate() {
-            this.modalTitle = 'Registrar Nuevo Biométrico';
-            this.resetForm();
-            this.showModal = true;
-        },
-
-        closeModal() {
-            this.showModal = false;
-        },
-
-        async saveDevice() {
-            this.isSaving = true;
-            try {
-                // Creamos un FormData manual para asegurar que el ID viaje
-                const formData = new FormData();
-                formData.append('id', this.form.id || ''); // Aquí aseguramos el ID
-                formData.append('name', this.form.name);
-                formData.append('ip_address', this.form.ip_address);
-                formData.append('port', this.form.port);
-                formData.append('location', this.form.location);
-                formData.append('serial_number', this.form.serial_number || '');
-                formData.append('model_name', this.form.model_name || '');
-                formData.append('is_active', this.form.is_active);
-
-                // Enviamos el FormData al servicio
-                const response = await fetch('/biometric/save-ajax/', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': this.getCsrfToken()
-                    },
-                    body: formData
-                });
-
-                const result = await response.json();
-
-                if (result.status === 'success') {
-                    this.notifySuccess(result.message);
-                    this.closeModal();
-                    await this.search();
-                } else {
-                    this.notifyError(result.message);
-                }
-            } catch (error) {
-                this.notifyError('Error al guardar: ' + error);
-            } finally {
-                this.isSaving = false;
-            }
-        },
-        async handleTestConnection(id) {
-            // 1. ESTADO DE CARGA: Limpio, sin botones, solo spinner
-            Swal.fire({
-                title: 'Probando comunicación',
-                text: 'Intentando conectar con el dispositivo...',
-                allowOutsideClick: false,
-                showConfirmButton: false, // <--- DESACTIVA BOTÓN OK
-                showCancelButton: false,  // <--- DESACTIVA BOTÓN CANCEL
-                didOpen: () => {
-                    Swal.showLoading(); // Muestra el spinner
-                }
-            });
-
-            try {
-                const res = await BiometricService.testConnection(id);
-
-                if (res.success) {
-                    // 2. ESTADO DE ÉXITO: Solo un botón "Cerrar" centrado
-                    Swal.fire({
-                        title: '<span style="color: #334155; font-weight: 800; font-size: 1.6rem;">¡Conexión Exitosa!</span>',
-                        icon: 'success',
-                        iconColor: '#10b981',
-                        html: `
-                    <div class="swal-connection-box">
-                        <div class="swal-connection-header">
-                            <i class="fa-solid fa-circle-check"></i>
-                            <span>Conexión establecida con éxito</span>
-                        </div>
-                        <div class="swal-connection-details">
-                            <div class="swal-connection-item"><strong>Dispositivo:</strong> ${res.device_info.deviceName || '---'}</div>
-                            <div class="swal-connection-item"><strong>Plataforma:</strong> ${res.device_info.platform || '---'}</div>
-                            <div class="swal-connection-item"><strong>Número de Serie:</strong> ${res.device_info.serialNumber || '---'}</div>
-                            <div class="swal-connection-item"><strong>Versión Firmware:</strong> ${res.device_info.firmware || '---'}</div>
-                            <div class="swal-connection-item"><strong>Usuarios Registrados:</strong> ${res.device_info.userCount || '0'}</div>
-                        </div>
-                    </div>
-                `,
-                        showConfirmButton: true,
-                        confirmButtonText: 'Cerrar',
-                        showCancelButton: false,
-                        showDenyButton: false,
-                        showCloseButton: false,
-                        allowOutsideClick: true,
-                        buttonsStyling: false,
-                        customClass: {
-                            confirmButton: 'btn-swal-confirm-green-centered',
-                            actions: 'swal-actions-centered'
-                        }
-                    });
-                    await this.search();
-                } else {
-                    // 3. ESTADO DE ERROR: Solo un botón "Aceptar" centrado
-                    Swal.fire({
-                        title: '<span style="color: #334155; font-weight: 800;">Fallo de Conexión</span>',
-                        icon: 'error',
-                        text: res.error_details || res.message,
-                        showConfirmButton: true,
-                        confirmButtonText: 'Aceptar',
-                        showCancelButton: false,
-                        showDenyButton: false,
-                        showCloseButton: false,
-                        allowOutsideClick: true,
-                        buttonsStyling: false,
-                        customClass: {
-                            confirmButton: 'btn-swal-confirm-red-centered',
-                            actions: 'swal-actions-centered'
-                        }
-                    });
-                }
-            } catch (error) {
-                this.notifyError('Error de red al intentar la conexión');
-            }
-        },
-        async handleLoadAttendance(id, name) {
-            // 1. MODAL DE CONFIRMACIÓN (Estilo púrpura solicitado)
-            const result = await Swal.fire({
-                title: '¿Cargar marcaciones?',
-                html: `
-            <p style="color: #64748b; font-size: 0.95rem; margin-bottom: 10px;">Se cargarán todas las marcaciones del dispositivo:</p>
-            <p style="font-weight: 800; color: #1e293b; text-transform: uppercase;">${name}</p>
-            <p style="color: #64748b; font-size: 0.95rem; margin-top: 15px;">Solo se guardarán las marcaciones de empleados con identificador biométrico registrado.</p>
-        `,
-                icon: 'question',
-                iconColor: '#7e22ce',
-                showCancelButton: true,
-                confirmButtonText: '<i class="fa-solid fa-download"></i> Cargar Marcaciones',
-                cancelButtonText: 'Cancelar',
-                buttonsStyling: false,
-                customClass: {
-                    confirmButton: 'btn-swal-confirm-purple-centered', // Clase para botón púrpura
-                    cancelButton: 'btn-swal-cancel-gray'
-                }
-            });
-
-            if (result.isConfirmed) {
-                // 2. MOSTRAR LOADING SIN BOTONES
-                Swal.fire({
-                    title: 'Sincronizando...',
-                    text: 'Conectando y descargando datos, espere por favor.',
-                    allowOutsideClick: false,
-                    showConfirmButton: false,
-                    showCancelButton: false,
-                    didOpen: () => {
-                        Swal.showLoading();
-                    }
-                });
-
-                try {
-                    // Llamada al endpoint de Python que creamos en views.py
-                    const response = await fetch(`/biometric/load-attendance/${id}/`, {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRFToken': BiometricService.getCsrfToken()
-                        }
-                    });
-
-                    const data = await response.json();
-
-                    if (response.ok && data.status === 'success') {
-                        // 3. ÉXITO
-                        Swal.fire({
-                            icon: 'success',
-                            title: '¡Sincronización Exitosa!',
-                            text: data.message,
-                            confirmButtonText: 'Aceptar',
-                            customClass: {
-                                confirmButton: 'btn-swal-confirm-green-centered'
-                            },
-                            buttonsStyling: false
-                        });
-                        await this.search(); // Refrescar tabla y contadores
-                    } else {
-                        // 4. ERROR O INFO (No hay registros)
-                        Swal.fire({
-                            icon: data.status === 'info' ? 'info' : 'error',
-                            title: data.status === 'info' ? 'Sin registros' : 'Error',
-                            text: data.message,
-                            confirmButtonText: 'Cerrar',
-                            customClass: {
-                                confirmButton: 'btn-swal-confirm-red-centered'
-                            },
-                            buttonsStyling: false
-                        });
-                    }
-                } catch (error) {
-                    console.error(error);
-                    this.notifyError('Error de red al intentar sincronizar marcaciones');
-                }
-            }
-        },
-
-        resetForm() {
-            this.form = {id: null, name: '', ip_address: '', port: 4370, location: '', is_active: true};
-        },
-
-        getCsrfToken() {
-            return document.cookie.split('; ')
-                .find(row => row.startsWith('csrftoken='))
-                ?.split('=')[1];
-        },
-
-        notifySuccess(msg) {
-            Swal.fire({
-                icon: 'success',
-                title: msg,
-                toast: true,
-                position: 'top-end',
-                showConfirmButton: false,
-                timer: 3000
-            });
-        },
-
-        notifyError(msg) {
-            Swal.fire({icon: 'error', title: 'Error', text: msg});
-        }
-    },
-    mounted() {
-        // 1. Leer estadísticas iniciales desde los spans ocultos de Django
-        const total = parseInt(document.getElementById('val-total')?.innerText || 0);
-        const active = parseInt(document.getElementById('val-active')?.innerText || 0);
-        const inactive = parseInt(document.getElementById('val-inactive')?.innerText || 0);
-
-        // 2. Asignar al estado de Vue
-        this.stats.total = total;
-        this.stats.active = active;
-        this.stats.inactive = inactive;
-
-        // 3. Leer la etiqueta de paginación inicial
-        const initialLabel = document.getElementById('val-pagination-label')?.innerText;
-        if (initialLabel) {
-            this.pagination.label = initialLabel.trim();
-        }
-        // Alinear estado inicial del toggle if present
-        const toggle = document.getElementById('toggleInactiveBiometrics');
-        if (toggle) toggle.checked = this.currentStatus === 'inactive';
-        const label = document.querySelector('label[for="toggleInactiveBiometrics"]');
-        if (label && toggle) {
-            if (toggle.checked) label.classList.add('modern-toggle-green');
-            else label.classList.remove('modern-toggle-green');
-        }
-        initBiometricHorizontalScroll();
-    }
+document.addEventListener('DOMContentLoaded', () => {
+    const biometricManager = new BiometricManager();
+    biometricManager.init();
 });
 
-// MONTAR Y EXPONER GLOBALMENTE
-window.biometricVM = biometricApp.mount('#biometric-app');
-
-// Funciones globales para el paginador y toggle usadas desde los botones HTML
-function biometricPrevPage() {
-    const pageEl = document.getElementById('js-pagination');
-    if (!pageEl) return;
-    let cur = parseInt(pageEl.dataset.currentPage || '1');
-    if (cur > 1) {
-        pageEl.dataset.currentPage = cur - 1;
-        biometricVM.search();
-    }
-}
-
-function biometricNextPage() {
-    const pageEl = document.getElementById('js-pagination');
-    if (!pageEl) return;
-    let cur = parseInt(pageEl.dataset.currentPage || '1');
-    const num = parseInt(pageEl.dataset.numPages || '1');
-    if (cur < num) {
-        pageEl.dataset.currentPage = cur + 1;
-        biometricVM.search();
-    }
-}
-
-function toggleInactiveBiometrics(checked) {
-    if (!window.biometricVM) return;
-    window.biometricVM.currentStatus = checked ? 'inactive' : 'all';
-    // Toggle visual class on the label to match other lists
-    const label = document.querySelector('label[for="toggleInactiveBiometrics"]');
-    if (label) {
-        if (checked) label.classList.add('modern-toggle-green');
-        else label.classList.remove('modern-toggle-green');
-    }
-    // reset to first page
-    const pageEl = document.getElementById('js-pagination');
-    if (pageEl) { pageEl.dataset.currentPage = 1; }
-    window.biometricVM.search();
-}
-
-// Flechas de scroll horizontal como en person_list (ir al final / volver al inicio)
-function initBiometricHorizontalScroll() {
-    const tableContainer = document.querySelector('.table-container');
-    if (!tableContainer) return;
-
-    const table = tableContainer.querySelector('table');
-    if (!table) return;
-
-    tableContainer.classList.add('table-container-has-scroll-helper');
-
-    let helperGroup = tableContainer.querySelector('.table-scroll-helper-group');
-    if (!helperGroup) {
-        helperGroup = document.createElement('div');
-        helperGroup.className = 'table-scroll-helper-group';
-
-        const startButton = document.createElement('button');
-        startButton.type = 'button';
-        startButton.className = 'table-scroll-nav-button table-scroll-nav-start';
-        startButton.setAttribute('aria-label', 'Ir al inicio de la tabla');
-        startButton.title = 'Ir al inicio de la tabla';
-        startButton.innerHTML = '<i class="fas fa-angles-left"></i>';
-
-        const endButton = document.createElement('button');
-        endButton.type = 'button';
-        endButton.className = 'table-scroll-nav-button table-scroll-nav-end';
-        endButton.setAttribute('aria-label', 'Ir al final de la tabla');
-        endButton.title = 'Ir al final de la tabla';
-        endButton.innerHTML = '<i class="fas fa-angles-right"></i>';
-
-        helperGroup.appendChild(startButton);
-        helperGroup.appendChild(endButton);
-        tableContainer.appendChild(helperGroup);
+class BiometricManager {
+    constructor() {
+        this.searchInput = document.getElementById('table-search');
+        this.searchTimer = null;
     }
 
-    const updateScrollIndicator = () => {
-        const hasHorizontalScroll = tableContainer.scrollWidth > tableContainer.clientWidth;
-        const atStart = tableContainer.scrollLeft <= 4;
-        const atEnd = tableContainer.scrollLeft + tableContainer.clientWidth >= tableContainer.scrollWidth - 4;
+    init() {
+        this.bindSearch();
+        this.bindActionDelegation();
+        this.ensureTableManager();
+    }
 
-        const startButton = tableContainer.querySelector('.table-scroll-nav-start');
-        const endButton = tableContainer.querySelector('.table-scroll-nav-end');
+    ensureTableManager() {
+        const table = document.querySelector('.managed-table');
+        if (table && window.TableManager && !table._tableManager) {
+            new window.TableManager(table);
+        }
+    }
 
-        tableContainer.classList.toggle('table-scroll-helper-force-visible', hasHorizontalScroll);
-        tableContainer.classList.toggle('table-scroll-helper-at-end', hasHorizontalScroll && atEnd && !atStart);
+    bindSearch() {
+        if (!this.searchInput) return;
 
-        if (startButton) {
-            startButton.style.display = hasHorizontalScroll && atEnd ? 'inline-flex' : 'none';
-            if (!startButton.dataset.bound) {
-                startButton.addEventListener('click', () => {
-                    tableContainer.scrollTo({left: 0, behavior: 'smooth'});
+        this.searchInput.addEventListener('input', (e) => {
+            clearTimeout(this.searchTimer);
+            this.searchTimer = setTimeout(() => {
+                const query = e.target.value.trim();
+                window.refreshCurrentTable({q: query, page: 1}, () => {
+                    this.ensureTableManager();
                 });
-                startButton.dataset.bound = '1';
+            }, 300);
+        });
+    }
+
+    /**
+     * Delegación global de acciones desacoplada de clases CSS
+     */
+    bindActionDelegation() {
+        document.addEventListener('click', (event) => {
+            const actionBtn = event.target.closest('[data-action]');
+            if (!actionBtn) return;
+
+            const action = actionBtn.dataset.action;
+
+            // 1. Apertura genérica de modales por URL
+            if (action === 'open-modal') {
+                event.preventDefault();
+                const url = actionBtn.dataset.modalUrl;
+                if (!url) return;
+
+                window.openAjaxModal(url, (root) => {
+                    this.setupInjectedModal(root);
+                });
+                return;
             }
+
+            // 2. Probar Conexión
+            if (action === 'test-connection') {
+                event.preventDefault();
+                const deviceId = actionBtn.dataset.deviceId;
+                const deviceName = actionBtn.dataset.deviceName || 'Dispositivo';
+                this.testConnection(deviceId, deviceName);
+                return;
+            }
+
+            // 3. Descarga Directa
+            if (action === 'direct-sync') {
+                event.preventDefault();
+                const deviceId = actionBtn.dataset.deviceId;
+                const deviceName = actionBtn.dataset.deviceName || 'Dispositivo';
+                this.loadAttendanceDirect(deviceId, deviceName);
+            }
+        });
+    }
+
+    /**
+     * Configuración de formularios inyectados en modal-root
+     * @param {HTMLElement} modalRoot
+     */
+    setupInjectedModal(modalRoot) {
+        const form = modalRoot.querySelector('form');
+        if (!form) return;
+
+        // Si es el modal de sincronizar hora, enlazar la lectura en paralelo
+        if (form.id === 'biometricTimeForm') {
+            this.setupTimeModalListeners(modalRoot);
         }
 
-        if (endButton) {
-            endButton.style.display = hasHorizontalScroll && !atEnd ? 'inline-flex' : 'none';
-            if (!endButton.dataset.bound) {
-                endButton.addEventListener('click', () => {
-                    tableContainer.scrollTo({left: tableContainer.scrollWidth, behavior: 'smooth'});
-                });
-                endButton.dataset.bound = '1';
-            }
-        }
-    };
-
-    if (!tableContainer.dataset.scrollBound) {
-        tableContainer.addEventListener('scroll', updateScrollIndicator);
-        window.addEventListener('resize', updateScrollIndicator);
-        tableContainer.dataset.scrollBound = '1';
+        // Envío AJAX genérico para cualquier formulario que se inyecte
+        form.addEventListener('submit', (e) => {
+            window.submitAjaxForm(e, () => {
+                window.closeModal();
+                window.refreshCurrentTable({}, () => this.ensureTableManager());
+            });
+        });
     }
 
-    updateScrollIndicator();
-}
+    /**
+     * Listeners específicos para el modal de hora
+     */
+    setupTimeModalListeners(modalRoot) {
+        const form = modalRoot.querySelector('#biometricTimeForm');
+        const displayServer = modalRoot.querySelector('#display-server-time');
+        const displayDevice = modalRoot.querySelector('#display-device-time');
+        const radioManual = modalRoot.querySelector('#radio-mode-manual');
+        const radioServer = modalRoot.querySelector('#radio-mode-server');
+        const manualGroup = modalRoot.querySelector('#manual-time-group');
+        const manualInput = modalRoot.querySelector('#manual_new_time');
 
-// Sort handler called from TH elements
-function sortBiometricTable(th) {
-    const field = th.dataset.field;
-    if (!field) return;
-    if (!window.biometricVM) return;
-    window.biometricVM.applySort(field);
-}
+        // Extraer id del action del formulario
+        const match = form.action.match(/\/(\d+)\/$/);
+        const deviceId = match ? match[1] : null;
 
-// changePage function similar to person_list (direct navigation)
-function changePage(page) {
-    const pageEl = document.getElementById('js-pagination');
-    if (!pageEl) return;
-    const numPages = parseInt(pageEl.dataset.numPages || '1');
-    let p = parseInt(page) || 1;
-    p = Math.max(1, Math.min(p, numPages));
-    pageEl.dataset.currentPage = p;
-    window.biometricVM.search();
+        if (deviceId) {
+            fetch(`/biometric/get-device-time/${deviceId}/`)
+                .then(res => res.json())
+                .then(data => {
+                    if (displayServer) displayServer.textContent = data.server_time || 'Error';
+                    if (displayDevice) displayDevice.textContent = data.device_time || 'Error de lectura';
+                })
+                .catch(() => {
+                    if (displayServer) displayServer.textContent = 'Error';
+                    if (displayDevice) displayDevice.textContent = 'Sin conexión';
+                });
+        }
+
+        if (radioManual && radioServer && manualGroup) {
+            radioManual.addEventListener('change', () => {
+                manualGroup.classList.remove('hidden');
+                if (manualInput) manualInput.required = true;
+            });
+            radioServer.addEventListener('change', () => {
+                manualGroup.classList.add('hidden');
+                if (manualInput) manualInput.required = false;
+            });
+        }
+    }
+
+    testConnection(deviceId, deviceName) {
+        window.showToast(`Probando conexión con ${deviceName}...`, 'info');
+
+        fetch(`/biometric/test-connection/${deviceId}/`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    window.Swal.fire({
+                        icon: 'success',
+                        title: 'Conexión Exitosa',
+                        html: `Dispositivo: <b>${deviceName}</b><br>Respuesta correcta del hardware.`
+                    });
+                    window.refreshCurrentTable({}, () => this.ensureTableManager());
+                } else {
+                    window.Swal.fire({
+                        icon: 'error',
+                        title: 'Fallo de Conexión',
+                        text: data.message || 'No se pudo comunicar con la IP asignada.'
+                    });
+                }
+            })
+            .catch(() => {
+                window.Swal.fire({
+                    icon: 'error',
+                    title: 'Error de Red',
+                    text: 'Ocurrió un problema de comunicación con el servidor.'
+                });
+            });
+    }
+
+    loadAttendanceDirect(deviceId, deviceName) {
+        window.Swal.fire({
+            title: `¿Descargar marcaciones directas?`,
+            text: `Se consultarán los registros en ${deviceName}.`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, descargar',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.showToast('Descargando marcaciones...', 'info');
+
+                fetch(`/biometric/load-attendance/${deviceId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': window.getCSRF ? window.getCSRF() : '',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.status === 'success' || data.success) {
+                            window.Swal.fire({
+                                icon: 'success',
+                                title: 'Descarga Completada',
+                                text: data.message
+                            });
+                        } else {
+                            window.Swal.fire({
+                                icon: 'error',
+                                title: 'Error al Descargar',
+                                text: data.message || 'No se pudo completar la descarga.'
+                            });
+                        }
+                    })
+                    .catch(() => {
+                        window.Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Error de comunicación con el biométrico.'
+                        });
+                    });
+            }
+        });
+    }
 }
