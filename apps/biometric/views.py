@@ -1659,49 +1659,62 @@ def generate_department_report_pdf(request):
 
 class BiometricModalUsersView(LoginRequiredMixin, View):
     """
-    Retorna el modal con el listado de usuarios para migración vía ADMS
-    sin depender de sockets TCP directos a IPs remotas.
+    Retorna el modal con el listado de usuarios asociados al biométrico
+    y permite buscar/filtrar a cualquier funcionario institucional para migrarlo vía ADMS.
     """
 
     def get(self, request, pk):
         source_device = get_object_or_404(BiometricDevice, pk=pk)
 
-        # Consultamos los empleados que tienen un ID biométrico asignado en el sistema
-        # Si tienes marcaciones previas en este biométrico, las filtramos; de lo contrario listamos los asignados
-        used_pins = AttendanceRegistry.objects.filter(
-            biometric_load__biometric=source_device
-        ).values_list('employee_id_bio', flat=True).distinct()
+        # 1. Obtener los PINs que han registrado asistencia histórica en este dispositivo
+        device_pins = set(
+            AttendanceRegistry.objects.filter(
+                biometric_load__biometric=source_device
+            ).values_list('employee_id_bio', flat=True).distinct()
+        )
 
-        # Si no hay marcaciones registradas aún, mostramos los empleados institucionales activos
-        inst_qs = InstitutionalData.objects.select_related('employee__person').filter(
+        # 2. Consultar empleados institucionales con ID biométrico asignado
+        inst_qs = InstitutionalData.objects.select_related(
+            'employee__person', 'employee__area'
+        ).filter(
             biometric_id__isnull=False,
             employee__is_active=True
         )
 
-        if used_pins.exists():
-            # Priorizamos o marcamos los que han registrado en este reloj
-            pin_set = set(used_pins)
-            inst_qs = inst_qs.filter(Q(biometric_id__in=pin_set) | Q(employee__is_active=True))
-
         users = []
-        for inst in inst_qs[:300]:  # Límite prudente para el modal
-            full_name = f"{inst.employee.person.first_name} {inst.employee.person.last_name}".strip()
-            users.append({
-                'uid': inst.id,
-                'user_id': str(inst.biometric_id).strip(),
-                'name': full_name or 'Sin Nombre',
-                'privilege': 0,
-                'is_admin': False,
-                'card': '0',
-                'password': ''
-            })
+        # Si el biométrico ya tiene marcaciones, listamos los que pertenecen a él
+        if device_pins:
+            device_users_qs = inst_qs.filter(biometric_id__in=device_pins)
+            # Si hay menos de 50 o queremos incluir al usuario actual si no ha marcado:
+            for inst in device_users_qs:
+                full_name = f"{inst.employee.person.last_name} {inst.employee.person.first_name}".strip()
+                users.append({
+                    'uid': inst.id,
+                    'user_id': str(inst.biometric_id).strip(),
+                    'name': full_name or 'Sin Nombre',
+                    'area': inst.employee.area.name if inst.employee.area else '',
+                    'is_local': True
+                })
+
+        # 3. Si no hay marcaciones previas en este biométrico (o para asegurar que estés tú):
+        # Traemos todos los empleados activos sin cortar a 300
+        if not users:
+            for inst in inst_qs.order_by('employee__person__last_name', 'employee__person__first_name'):
+                full_name = f"{inst.employee.person.last_name} {inst.employee.person.first_name}".strip()
+                users.append({
+                    'uid': inst.id,
+                    'user_id': str(inst.biometric_id).strip(),
+                    'name': full_name or 'Sin Nombre',
+                    'area': inst.employee.area.name if inst.employee.area else '',
+                    'is_local': False
+                })
 
         # Biométricos destino disponibles (activos y distintos al actual)
         target_devices = BiometricDevice.objects.filter(is_active=True).exclude(pk=source_device.pk)
 
         html = render_to_string('biometric/modals/modal_biometric_users.html', {
             'source_device': source_device,
-            'users': sorted(users, key=lambda x: int(x['user_id']) if x['user_id'].isdigit() else x['user_id']),
+            'users': users,
             'target_devices': target_devices,
             'connection_error': None,
         }, request=request)
