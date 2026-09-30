@@ -10,6 +10,7 @@ urlpatterns = [
     path('login/', views.CustomLoginView.as_view(), name='login'),
     path('forgot-password/', views.ForgotPasswordView.as_view(), name='forgot_password'),
     path('change-password/', views.ChangePasswordView.as_view(), name='change_password'),
+    path('sync-keycloak-password/', views.SyncKeycloakPasswordView.as_view(), name='sync_keycloak_password'),
     path('create-user/', views.CreateUserFromLoginView.as_view(), name='create_user_from_login'),
     path('oidc/', include('mozilla_django_oidc.urls')),
     path('logout/', auth_views.LogoutView.as_view(next_page='/'), name='logout'),

@@ -1,8 +1,8 @@
 import logging
 from urllib.parse import urlencode
 
-from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth import views as auth_views, get_user_model
 from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
@@ -16,10 +16,10 @@ from django.template.loader import render_to_string
 from django.urls import reverse_lazy, reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
-from django.views.generic import View, TemplateView, ListView, CreateView, UpdateView
+from django.views.generic import View, TemplateView, ListView, UpdateView
 
 from .forms import (
-    CatalogForm, CatalogItemForm, LocationForm, SystemLetterheadForm,
+    SystemLetterheadForm,
     SystemConfigurationSetupForm, UserProfileForm
 )
 from .models import Catalog, CatalogItem, Location, SystemConfiguration, User
@@ -176,61 +176,65 @@ class ForgotPasswordView(TemplateView):
         })
 
 
+# Servicio o helper que verifica si existe en Keycloak
+def check_user_in_keycloak(username):
+    try:
+        from core.keycloak_service import KeycloakAdminService  # o tu servicio existente
+        kc = KeycloakAdminService()
+        return kc.get_user_by_username(username) is not None
+    except Exception:
+        return False
+
+
 class ChangePasswordView(LoginRequiredMixin, View):
-    def post(self, request, *args, **kwargs):
-        current_password = request.POST.get('current_password') or ''
-        new_password = request.POST.get('new_password') or ''
-        confirm_password = request.POST.get('confirm_password') or ''
+    def post(self, request):
+        user = request.user
+        new_password = request.POST.get('new_password')
+        confirm_password = request.POST.get('confirm_password')
 
-        if not current_password or not new_password or not confirm_password:
-            return JsonResponse({'status': 'error', 'message': 'Debe completar todos los campos.'})
+        if not new_password or new_password != confirm_password:
+            return JsonResponse({'success': False, 'message': 'Las contraseñas no coinciden.'}, status=400)
 
-        if new_password != confirm_password:
-            return JsonResponse({'status': 'error', 'message': 'La nueva contraseña y su confirmación no coinciden.'})
+        if len(new_password) < 8:
+            return JsonResponse({'success': False, 'message': 'La contraseña debe tener al menos 8 caracteres.'},
+                                status=400)
 
-        if new_password == current_password:
-            return JsonResponse(
-                {'status': 'error', 'message': 'La nueva contraseña debe ser distinta a la actual.'})
+        # 1. Cambiar contraseña en Django
+        user.set_password(new_password)
+        user.save()
+        update_session_auth_hash(request, user)
 
-        from django.contrib.auth.password_validation import validate_password
-        from django.core.exceptions import ValidationError as DjangoValidationError
+        # 2. Intentar crear o actualizar en Keycloak si aplica
         try:
-            validate_password(new_password, user=request.user)
-        except DjangoValidationError as e:
-            return JsonResponse({'status': 'error', 'message': ' '.join(e.messages)})
+            from core.keycloak_service import KeycloakAdminService
+            kc = KeycloakAdminService()
+            kc.set_user_password(user.username, new_password)
+        except Exception as e:
+            logger.warning(f"No se pudo sincronizar clave en Keycloak para {user.username}: {e}")
 
-        person = _safe_related(request.user, 'person', None)
-        document_number = getattr(person, 'document_number', None)
-        if not document_number:
-            return JsonResponse({
-                'status': 'error',
-                'message': 'Su usuario no está vinculado a una persona con cédula registrada.'
-            })
+        # 3. Liberar forzado de cambio
+        if 'force_change_on_login' in request.session:
+            del request.session['force_change_on_login']
 
-        from .keycloak_service import change_password_by_document
-        result = change_password_by_document(
-            document_number=document_number,
-            current_password=current_password,
-            username=request.user.username,
-            new_password=new_password,
-        )
+        return JsonResponse({
+            'success': True,
+            'message': 'Contraseña actualizada y sincronizada correctamente.'
+        })
 
-        if result.get('status') == 'invalid_current_password':
-            return JsonResponse({'status': 'error', 'message': 'La contraseña actual no es correcta.'})
-        if result.get('status') == 'not_found':
-            return JsonResponse({
-                'status': 'error',
-                'message': 'No existe una cuenta en Keycloak asociada a su usuario. Contacte a Talento Humano.'
-            })
-        if result.get('status') == 'error':
-            return JsonResponse({
-                'status': 'error', 'message': 'No se pudo actualizar la contraseña en este momento. Intente más tarde.'
-            })
 
-        request.user.set_unusable_password()
-        request.user.save(update_fields=['password'])
+class SyncKeycloakPasswordView(LoginRequiredMixin, View):
+    """
+    Si el usuario ya está en Keycloak, solo confirma y retira el flag
+    sin obligarlo a crear una contraseña nueva.
+    """
 
-        return JsonResponse({'status': 'success', 'message': 'Contraseña actualizada correctamente.'})
+    def post(self, request):
+        if 'force_change_on_login' in request.session:
+            del request.session['force_change_on_login']
+            request.session.modified = True
+
+        messages.success(request, 'Cuenta vinculada exitosamente con el sistema institucional.')
+        return redirect('dashboard')
 
 
 class CreateUserFromLoginView(TemplateView):
@@ -1083,6 +1087,7 @@ class LocationUpdateView(LoginRequiredMixin, PermissionRequiredMixin, View):
         location.save()
 
         return response
+
 
 @require_POST
 @permission_required('core.change_location', raise_exception=True)
