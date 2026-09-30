@@ -1,66 +1,129 @@
 <div class="modal-overlay">
-    <div class="modal-container-medium">
+    <div class="modal-container-medium time-modal-container">
         <form id="biometricTimeForm" action="/biometric/update-device-time/{{ device.id }}/" method="post"
-              class="modal-form-layout">
+              onsubmit="submitAjaxForm(event)">
             {% csrf_token %}
 
-            <div class="modal-header-medium">
-                <div class="header-content-group">
-                    <div class="header-icon-circle">
-                        <i class="fa-solid fa-clock"></i>
+            <!-- Header con gradiente institucional -->
+            <div class="time-modal-header">
+                <div class="time-modal-header-content">
+                    <div class="time-modal-icon">
+                        <i class="fa-solid fa-clock fa-xl text-white"></i>
                     </div>
-                    <h3 class="header-title">Sincronizar Hora: {{ device.name }}</h3>
+                    <div>
+                        <h3 class="time-modal-title">Sincronizar Hora</h3>
+                        <p class="time-modal-subtitle">{{ device.name }}
+                            &bull; {{ device.ip_address }}:{{ device.port }}</p>
+                    </div>
                 </div>
                 <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
-                    <i class="fas fa-times"></i>
+                    <i class="fas fa-times text-white"></i>
                 </button>
             </div>
 
-            <div class="modal-body modal-body-custom schedule-modal-body">
-                <div class="form-section-card">
-                    <div class="grid-2-cols text-center">
-                        <div class="p-2 bg-light rounded border">
-                            <span class="label-muted">HORA DEL SERVIDOR</span>
-                            <h4 id="display-server-time" class="text-primary mb-0 font-monospace"><i
-                                    class="fas fa-spinner fa-spin"></i></h4>
+            <div class="modal-body-custom time-modal-body">
+                <!-- Comparativa de Relojes -->
+                <div class="time-comparison-grid">
+                    <!-- Hora del Reloj / Biométrico -->
+                    <div class="time-card-device">
+                        <div class="time-card-header">
+                            <i class="fa-solid fa-microchip time-card-icon-device"></i>
+                            <span class="time-card-label-device">Hora del Reloj</span>
                         </div>
-                        <div class="p-2 bg-light rounded border">
-                            <span class="label-muted">HORA ACTUAL DEL RELOJ</span>
-                            <h4 id="display-device-time" class="text-green mb-0 font-monospace"><i
-                                    class="fas fa-spinner fa-spin"></i></h4>
+                        <div id="display-device-time" class="time-card-time">
+                            <i class="fas fa-spinner fa-spin"></i>
                         </div>
+                        <div class="time-card-date">Dispositivo biométrico</div>
+                    </div>
+
+                    <!-- Hora del Servidor -->
+                    <div class="time-card-server">
+                        <div class="time-card-header">
+                            <i class="fa-solid fa-server time-card-icon-server"></i>
+                            <span class="time-card-label-server">Hora del Servidor</span>
+                        </div>
+                        <div id="display-server-time" class="time-card-time-server">
+                            <i class="fas fa-spinner fa-spin"></i>
+                        </div>
+                        <div class="time-card-date-server">Referencia institucional</div>
                     </div>
                 </div>
 
-                <div class="form-section-card mt-3">
-                    <div class="section-title">
-                        <i class="fa-solid fa-gear text-green"></i> Modo de Sincronización
-                    </div>
-                    <div class="form-group">
-                        <label class="d-flex align-items-center gap-2 cursor-pointer mb-2">
-                            <input type="radio" name="mode" value="server" class="custom-radio" checked
-                                   id="radio-mode-server">
-                            <span class="fw-bold">Igualar inmediatamente con la hora del servidor</span>
-                        </label>
-                        <label class="d-flex align-items-center gap-2 cursor-pointer">
-                            <input type="radio" name="mode" value="manual" class="custom-radio" id="radio-mode-manual">
-                            <span>Ingresar fecha y hora manualmente</span>
-                        </label>
+                <!-- Opciones de sincronización -->
+                <div class="time-sync-options">
+                    <div class="time-sync-title">
+                        <i class="fa-solid fa-sliders text-primary me-1"></i> Modo de Sincronización
                     </div>
 
-                    <div class="form-group mt-2 hidden" id="manual-time-group">
-                        <label class="form-label" for="manual_new_time">Fecha y Hora Manual *</label>
-                        <input type="datetime-local" name="new_time" id="manual_new_time" class="form-control">
+                    <!-- Opción Automática -->
+                    <label class="time-radio-option selected" id="label-mode-server">
+                        <input type="radio" name="mode" value="server" id="radio-mode-server" checked
+                               onchange="toggleTimeMode(this.value)">
+                        <div class="time-radio-content">
+                            <div class="time-radio-label">
+                                <i class="fa-solid fa-wand-magic-sparkles me-1"></i> Igualar con la hora del servidor
+                            </div>
+                            <div class="time-radio-description">
+                                Ajusta de forma exacta los segundos, minutos y horas del biométrico al reloj central.
+                            </div>
+                        </div>
+                    </label>
+
+                    <!-- Opción Manual -->
+                    <label class="time-radio-option" id="label-mode-manual">
+                        <input type="radio" name="mode" value="manual" id="radio-mode-manual"
+                               onchange="toggleTimeMode(this.value)">
+                        <div class="time-radio-content">
+                            <div class="time-radio-label">
+                                <i class="fa-regular fa-clock me-1"></i> Establecer manualmente
+                            </div>
+                            <div class="time-radio-description">
+                                Permite especificar una fecha y hora personalizada para pruebas o correcciones
+                                específicas.
+                            </div>
+                        </div>
+                    </label>
+
+                    <!-- Input condicional -->
+                    <div class="time-custom-input-wrapper hidden" id="manual-time-group">
+                        <label class="time-custom-label" for="manual_new_time">Fecha y hora personalizada *</label>
+                        <input type="datetime-local" name="new_time" id="manual_new_time" class="time-custom-input">
                     </div>
                 </div>
             </div>
 
-            <div class="modal-footer-fixed">
-                <button type="button" class="btn-secondary-outline" onclick="closeModal()">Cancelar</button>
-                <button type="submit" class="btn-blue-rectangle">
-                    <i class="fa-solid fa-clock-rotate-left me-1"></i> APLICAR HORA
+            <!-- Footer unificado -->
+            <div class="time-modal-footer">
+                <button type="button" class="time-btn-cancel" onclick="closeModal()">Cancelar</button>
+                <button type="submit" class="time-btn-update">
+                    <i class="fa-solid fa-rotate me-1"></i> APLICAR HORA
                 </button>
             </div>
         </form>
     </div>
 </div>
+
+<script>
+    function toggleTimeMode(mode) {
+        const manualGroup = document.getElementById('manual-time-group');
+        const labelServer = document.getElementById('label-mode-server');
+        const labelManual = document.getElementById('label-mode-manual');
+        const manualInput = document.getElementById('manual_new_time');
+
+        if (mode === 'manual') {
+            manualGroup?.classList.remove('hidden');
+            labelManual?.classList.add('selected');
+            labelServer?.classList.remove('selected');
+            if (manualInput && !manualInput.value) {
+                // Precarga con hora local actual
+                const now = new Date();
+                now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+                manualInput.value = now.toISOString().slice(0, 16);
+            }
+        } else {
+            manualGroup?.classList.add('hidden');
+            labelServer?.classList.add('selected');
+            labelManual?.classList.remove('selected');
+        }
+    }
+</script>
