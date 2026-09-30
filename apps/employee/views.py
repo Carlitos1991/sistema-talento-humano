@@ -329,27 +329,42 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
         # Partida presupuestaria
         try:
             if employee:
-                current = BudgetLine.objects.filter(current_employee=employee).first()
+                current = BudgetLine.objects.filter(current_employee=employee).select_related('position_item',
+                                                                                              'category_item').first()
+                current_assignment = BudgetAssignmentHistory.objects.filter(
+                    employee=employee,
+                    budget_line=current,
+                    unassignment_date__isnull=True
+                ).order_by('-assignment_date', '-id').first() if current else None
+
                 context['current_partida'] = {
                     'code': current.number_individual,
                     'budget': current.code,
                     'name': (current.position_item.name if current.position_item else '') or str(current),
                     'remuneration': str(current.remuneration) if current.remuneration is not None else '—',
-                    'category': (current.category_item.name if getattr(current, 'category_item', None) else '')
+                    'category': (current.category_item.name if getattr(current, 'category_item', None) else ''),
+                    'start_date': current_assignment.assignment_date if current_assignment and getattr(
+                        current_assignment, 'assignment_date', None) else getattr(current, 'assignment_date', None),
                 } if current else None
 
-                assignments = BudgetAssignmentHistory.objects.filter(employee=employee).select_related('budget_line')
+                assignments = BudgetAssignmentHistory.objects.filter(employee=employee).select_related('budget_line',
+                                                                                                       'budget_line__position_item').order_by(
+                    '-assignment_date', '-id')
                 context['partida_history'] = [{
                     'partida_code': a.budget_line.number_individual or a.budget_line.code,
                     'position_name': (a.budget_line.position_item.name if a.budget_line.position_item else ''),
                     'remuneration': str(a.budget_line.remuneration),
                     'partida_name': str(a.budget_line),
-                    'code': a.budget_line.code
+                    'code': a.budget_line.code,
+                    'category': getattr(getattr(a.budget_line, 'category_item', None), 'name', ''),
+                    'start_date': getattr(a, 'assignment_date', None) or getattr(a, 'start_date', None),
+                    'end_date': getattr(a, 'unassignment_date', None) or getattr(a, 'end_date', None),
                 } for a in assignments]
             else:
                 context['current_partida'] = None
                 context['partida_history'] = []
-        except Exception:
+        except Exception as e:
+            logger.error(f"Error cargando partidas presupuestarias: {e}")
             context['current_partida'] = None
             context['partida_history'] = []
 

@@ -1,23 +1,534 @@
-/* 
-   Employee Wizard Custom Styles 
-   Separated from main style.css to prevent conflicts and ensure modularity.
-*/
+/* ==========================================================================
+   SIGETH - EXPEDIENTE DIGITAL WIZARD STYLES (OFICIAL VANILLA CSS)
+   ========================================================================== */
 
-/* =========================================
-   INSTITUTIONAL DATA STYLES (Orange Theme)
-   ========================================= */
-.text-orange {
-    color: #f97316 !important;
+/* 1. Control de Visibilidad de Pestañas */
+.wizard-tab-pane {
+    display: none !important;
 }
 
-.text-orange-title {
-    color: #ea580c !important;
+.wizard-tab-pane.active {
+    display: block !important;
 }
 
-.border-orange {
-    border-color: #fed7aa !important;
+/* ==========================================================================
+   2. CONTENEDOR DE PESTAÑAS (ACCIONES Y MÓDULOS)
+   ========================================================================== */
+.employee-detail-buttons-container {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 1.25rem 1.5rem;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    margin-top: 1.25rem;
+    margin-bottom: 1.5rem;
 }
 
+.buttons-section-title {
+    font-size: 0.98rem;
+    font-weight: 700;
+    color: #1e3a8a;
+    margin: 0 0 1rem 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.module-grid-premium {
+    display: flex;
+    gap: 0.65rem;
+    overflow-x: auto;
+    padding-bottom: 0.4rem;
+    scrollbar-width: thin;
+}
+
+.module-grid-premium::-webkit-scrollbar {
+    height: 6px;
+}
+
+.module-grid-premium::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+}
+
+/* Botón individual de módulo */
+.employee-detail-button {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 96px;
+    padding: 0.9rem 0.6rem 0.75rem 0.6rem;
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    text-align: center;
+    flex-shrink: 0;
+    user-select: none;
+}
+
+.employee-detail-button:hover {
+    border-color: #cbd5e1;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.08);
+}
+
+.employee-detail-button.active {
+    border-color: #1e40af !important;
+    background: #ffffff;
+    box-shadow: 0 0 0 2px rgba(30, 64, 175, 0.2), 0 4px 10px rgba(30, 64, 175, 0.08);
+}
+
+/* Ícono cuadrado redondeado con fondo de color */
+.employee-detail-button-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.15rem;
+    margin-bottom: 0.5rem;
+    color: #ffffff;
+    transition: transform 0.2s ease;
+}
+
+.employee-detail-button:hover .employee-detail-button-icon {
+    transform: scale(1.08);
+}
+
+.employee-detail-button-label {
+    font-size: 0.73rem;
+    font-weight: 600;
+    color: #334155;
+    line-height: 1.25;
+}
+
+/* ==========================================================================
+   3. COLORES OFICIALES POR MÓDULO (CLASES EXACTAS)
+   ========================================================================== */
+.employee-detail-button-personal .employee-detail-button-icon {
+    background: #2563eb;
+}
+
+/* Azul */
+.employee-detail-button-curriculum .employee-detail-button-icon {
+    background: #eab308;
+}
+
+/* Amarillo */
+.employee-detail-button-institutional .employee-detail-button-icon {
+    background: #f97316;
+}
+
+/* Naranja */
+.employee-detail-button-economic .employee-detail-button-icon {
+    background: #06b6d4;
+}
+
+/* Cian */
+.employee-detail-button-budget .employee-detail-button-icon {
+    background: #10b981;
+}
+
+/* Esmeralda */
+.employee-detail-button-history .employee-detail-button-icon {
+    background: #78350f;
+}
+
+/* Café */
+.employee-detail-button-permissions .employee-detail-button-icon {
+    background: #e11d48;
+}
+
+/* Rosa */
+.employee-detail-button-actions .employee-detail-button-icon {
+    background: #9333ea;
+}
+
+/* Púrpura */
+.employee-detail-button-sanctions .employee-detail-button-icon {
+    background: #475569;
+}
+
+/* Pizarra */
+.employee-detail-button-vacations .employee-detail-button-icon {
+    background: #f59e0b;
+}
+
+/* Ámbar */
+.employee-detail-button-payments .employee-detail-button-icon {
+    background: #16a34a;
+}
+
+/* Verde */
+.employee-detail-button-schedule .employee-detail-button-icon {
+    background: #7c3aed;
+}
+
+/* Violeta */
+.employee-detail-button-telework .employee-detail-button-icon {
+    background: #0284c7;
+}
+
+/* Azul Cielo */
+
+/* Mini-check superior de completado */
+.mini-check {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 18px;
+    height: 18px;
+    background-color: #ffffff;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    color: transparent;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.mini-check.visible {
+    background-color: #10b981;
+    border-color: #10b981;
+    color: #ffffff;
+}
+
+/* ==========================================================================
+   4. HEADER DE PERFIL (FOTO CON UN SOLO MARGEN Y EFECTO PROYECCIÓN 2s)
+   ========================================================================== */
+.profile-header-container {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 2rem;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.04);
+    margin-bottom: 1.5rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: visible; /* Permite que la proyección del hover no se corte */
+}
+
+.profile-center-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 1.75rem;
+    position: relative;
+}
+
+.profile-photo-form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 5;
+}
+
+/* Marco Único de la Foto (Sin doble margen interno) */
+.profile-avatar-wrapper {
+    width: 110px;
+    height: 110px;
+    border-radius: 24px;
+    border: 2.5px solid #3b82f6;
+    background: #ffffff;
+    padding: 0; /* Eliminado doble margen */
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(59, 130, 246, 0.12);
+    position: relative;
+    /* Transición normal rápida al retirar el cursor */
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.3s ease;
+    transition-delay: 0s;
+}
+
+.profile-avatar-img {
+    width: 100%;
+    height: 100%;
+    border-radius: 21.5px; /* Se adapta exactamente al borde único sin dejar borde blanco doble */
+    object-fit: cover;
+    display: block;
+}
+
+.profile-avatar-empty {
+    background: #f8fafc;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Efecto Proyección Agrandada tras 2 segundos de hover */
+.profile-avatar-wrapper:hover {
+    transform: scale(2.8);
+    z-index: 999;
+    box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35), 0 0 0 3px #ffffff, 0 0 0 5px #3b82f6;
+    /* Retardo de 2 segundos exactos para activarse */
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.35s ease;
+    transition-delay: 2s;
+}
+
+.profile-text-content {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+/* Pastilla ACTIVO idéntica al diseño */
+.status-badge-pill.active {
+    display: inline-block;
+    background: #dcfce7;
+    color: #15803d;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 2px 14px;
+    border-radius: 9999px;
+    letter-spacing: 0.025em;
+    text-transform: uppercase;
+}
+
+.profile-name-title {
+    font-size: 1.55rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0.25rem 0 0.35rem 0;
+    letter-spacing: -0.01em;
+}
+
+.profile-id-subtitle {
+    font-size: 0.95rem;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.profile-id-subtitle i {
+    color: #64748b;
+}
+
+/* ==========================================================================
+   5. GRILLA DE 2 FILAS CON 3 COLUMNAS EXACTAS
+   ========================================================================== */
+.grid-three-columns {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.25rem;
+}
+
+@media (max-width: 1024px) {
+    .grid-three-columns {
+        grid-template-columns: 1fr;
+    }
+}
+
+.info-box-styled {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 1.25rem 1.4rem;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
+    min-height: 145px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
+/* Bordes laterales izquierdos idénticos a la imagen */
+.personal-border {
+    border-left: 4px solid #3b82f6;
+}
+
+/* Azul */
+.additional-border {
+    border-left: 4px solid #16a34a;
+}
+
+/* Verde */
+.orange-border {
+    border-left: 4px solid #f97316;
+}
+
+/* Naranja */
+.contact-border {
+    border-left: 4px solid #0d9488;
+}
+
+/* Turquesa */
+.medical-border {
+    border-left: 4px solid #10b981;
+}
+
+/* Esmeralda */
+.emergency-border {
+    border-left: 4px solid #ea580c;
+}
+
+/* Naranja rojizo */
+
+/* Título de cada tarjeta */
+.info-box-styled .section-title {
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: #475569;
+    text-transform: uppercase;
+    margin: 0 0 1rem 0;
+    letter-spacing: 0.04em;
+    display: flex;
+    align-items: center;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.personal-border .section-title i {
+    color: #3b82f6;
+}
+
+.additional-border .section-title i {
+    color: #16a34a;
+}
+
+.orange-border .section-title i {
+    color: #f97316;
+}
+
+.contact-border .section-title i {
+    color: #0d9488;
+}
+
+.medical-border .section-title i {
+    color: #10b981;
+}
+
+.emergency-border .section-title i {
+    color: #ea580c;
+}
+
+/* Filas de clave / valor */
+.info-data-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.45rem 0;
+    font-size: 0.85rem;
+}
+
+.info-data-row.align-start {
+    align-items: flex-start;
+}
+
+.info-data-row label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #64748b;
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    flex-shrink: 0;
+}
+
+.info-data-row .value-text {
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: #0f172a;
+    text-align: right;
+}
+
+.info-data-row .value-text.bold {
+    font-weight: 700;
+}
+
+/* Pastillas NO / SÍ en información médica */
+.badge-pill-status {
+    display: inline-block;
+    padding: 3px 14px;
+    border-radius: 9999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.badge-pill-status.no {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.badge-pill-status.yes {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+/* ==========================================================================
+   6. TARJETAS GRANDES (CURRICULUM / DATOS ECONÓMICOS)
+   ========================================================================== */
+.card-large {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 1.25rem;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.card-header-flex {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.stat-inner-container {
+    text-align: center;
+    padding: 1.25rem 0;
+}
+
+.stat-number {
+    font-size: 1.85rem;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.1;
+    margin-bottom: 0.25rem;
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+}
+
+.buttons-centered {
+    display: flex;
+    justify-content: center;
+    margin-top: auto;
+    padding-top: 0.5rem;
+}
+
+.yellow-border {
+    border-left: 4px solid #eab308;
+}
+
+.blue-light-border {
+    border-left: 4px solid #3b82f6;
+}
+
+/* ==========================================================================
+   7. PANELES INSTITUCIONAL Y HORARIOS
+   ========================================================================== */
 .institutional-container {
     padding: 1.5rem;
     background: white;
@@ -37,10 +548,6 @@
     font-weight: bold;
     font-size: 0.85rem;
     flex-shrink: 0;
-}
-
-.institutional-container .hierarchy-arrow {
-    padding-left: 10px;
 }
 
 .institutional-container .hierarchy-item {
@@ -72,856 +579,6 @@
     text-overflow: ellipsis;
 }
 
-/* Ensure content doesn't wrap on small widths; allow truncation */
-.hierarchy-item-content {
-    min-width: 0; /* allow flex children to shrink */
-}
-
-/* Info Cards with Orange Border */
-.institutional-info-card {
-    padding: 1rem;
-    background: #fffbeb;
-    border-radius: 8px;
-    border: 1px solid #fde68a;
-    border-left: 4px solid #f97316;
-    height: 100%;
-}
-
-.institutional-info-card .info-label {
-    display: block;
-    text-transform: uppercase;
-    color: #78716c;
-    font-weight: 700;
-    font-size: 0.7rem;
-    margin-bottom: 0.5rem;
-    letter-spacing: 0.5px;
-}
-
-.institutional-info-card .info-value {
-    font-weight: 600;
-    font-size: 1.1rem;
-    color: #1e293b;
-}
-
-/* =========================================
-   BUTTON STYLES REFINEMENT
-   ========================================= */
-/* Main action button (Edit/Actualizar) - Yellow/Gold style matching reference */
-.btn-edit-action {
-    background: #fbbf24;
-    color: #1e293b !important;
-    border: 2px solid #f59e0b;
-    border-radius: 8px;
-    padding: 8px 20px;
-    font-size: 0.85rem;
-    font-weight: 700;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
-    transition: all 0.2s ease;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    text-decoration: none;
-}
-
-.btn-edit-action:hover {
-    background: #f59e0b;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(245, 158, 11, 0.3);
-}
-
-.btn-edit-action i {
-    font-size: 0.9rem;
-}
-
-/* =========================================
-   HEADER CONTAINER FOR INSTITUTIONAL TAB
-   ========================================= */
-.institutional-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1.25rem;
-    border-radius: 12px;
-    margin-bottom: 1rem;
-    background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
-    border-left: 4px solid #f97316;
-}
-
-.institutional-header-content h4 {
-    color: #ea580c;
-    margin-bottom: 0.5rem;
-    font-size: 1.25rem;
-}
-
-.institutional-header-content p {
-    color: #78716c;
-    margin-bottom: 0;
-    font-size: 0.85rem;
-}
-
-.btn-institutional-action {
-    background: #fbbf24;
-    color: #1e293b;
-    border: 1px solid #f59e0b;
-    border-radius: 6px;
-    padding: 6px 14px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    cursor: pointer;
-    white-space: nowrap;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    transition: all 0.2s ease;
-    flex-shrink: 0;
-}
-
-.btn-institutional-action:hover {
-    background: #f59e0b;
-    transform: translateY(-1px);
-    box-shadow: 0 3px 6px rgba(245, 158, 11, 0.3);
-}
-
-.btn-institutional-action i {
-    font-size: 0.75rem;
-}
-
-/* Ensure institutional header button doesn't expand to full width and is properly aligned */
-.institutional-header .btn-institutional-action {
-    margin-left: auto;
-    align-self: center;
-    flex: 0 0 auto;
-    max-width: 240px;
-    padding: 8px 16px;
-    border-radius: 8px;
-    background: linear-gradient(90deg, #f97316 0%, #ea580c 100%);
-    color: #fff;
-    border: none;
-    box-shadow: 0 6px 18px rgba(234, 88, 12, 0.12);
-}
-
-.institutional-header .btn-institutional-action:hover {
-    transform: translateY(-2px);
-}
-
-/* =========================================
-   HEADER CONTAINER FOR ECONOMIC TAB
-   ========================================= */
-.economic-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1.25rem;
-    border-radius: 12px;
-    margin-bottom: 1rem;
-    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
-    border-left: 4px solid #10b981;
-}
-
-.economic-header-content h4 {
-    color: #059669;
-    margin-bottom: 0.5rem;
-    font-size: 1.25rem;
-}
-
-.economic-header-content p {
-    color: #6b7280;
-    margin-bottom: 0;
-    font-size: 0.85rem;
-}
-
-.btn-economic-action {
-    background: #fbbf24;
-    color: #1e293b;
-    border: 1px solid #f59e0b;
-    border-radius: 6px;
-    padding: 6px 14px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    cursor: pointer;
-    white-space: nowrap;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    transition: all 0.2s ease;
-    flex-shrink: 0;
-}
-
-.btn-economic-action:hover {
-    background: #f59e0b;
-    transform: translateY(-1px);
-    box-shadow: 0 3px 6px rgba(245, 158, 11, 0.3);
-}
-
-.btn-economic-action i {
-    font-size: 0.75rem;
-}
-
-/* =========================================
-   BOX ACTION BUTTON (Inside info boxes)
-   ========================================= */
-.btn-box-action {
-    background: #fbbf24;
-    color: #1e293b;
-    border: 1px solid #f59e0b;
-    border-radius: 6px;
-    padding: 4px 10px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    cursor: pointer;
-    white-space: nowrap;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
-    transition: all 0.2s ease;
-    flex-shrink: 0;
-}
-
-.btn-box-action:hover {
-    background: #f59e0b;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(245, 158, 11, 0.25);
-}
-
-.btn-box-action i {
-    font-size: 0.65rem;
-}
-
-/* =========================================
-   FOOTER ACTION BUTTON (Centered in box footer)
-   ========================================= */
-.info-box-footer {
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid #e5e7eb;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.btn-footer-action {
-    background: #fbbf24;
-    color: #1e293b;
-    border: none;
-    border-radius: 8px;
-    padding: 8px 20px;
-    font-size: 0.8rem;
-    font-weight: 700;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    cursor: pointer;
-    white-space: nowrap;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    transition: all 0.2s ease;
-}
-
-.btn-footer-action:hover {
-    background: #f59e0b;
-    transform: translateY(-1px);
-    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
-}
-
-.btn-footer-action:active {
-    transform: translateY(0);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-.btn-footer-action i {
-    font-size: 0.75rem;
-}
-
-.profile-header-container {
-    display: flex;
-    padding: 1.25rem;
-    border-radius: 12px;
-    margin-bottom: 1rem;
-}
-
-.profile-header-container .btn-edit-action {
-    flex-shrink: 0;
-    margin-left: auto;
-    /* Override for institutional tab button - smaller size */
-    padding: 4px 12px !important;
-    font-size: 0.72rem !important;
-    gap: 4px !important;
-    border-radius: 6px !important;
-    border-width: 1px !important;
-}
-
-.profile-header-container .btn-edit-action i {
-    font-size: 0.7rem !important;
-}
-
-/* Smaller button variant */
-.btn-edit-action.btn-edit-sm {
-    padding: 4px 12px !important;
-    font-size: 0.72rem !important;
-    gap: 4px !important;
-    border-radius: 6px !important;
-}
-
-.btn-edit-action.btn-edit-sm i {
-    font-size: 0.7rem !important;
-}
-
-.btn-edit-action.btn-edit-sm i {
-    font-size: 0.75rem;
-}
-
-/* =========================================
-   BUDGET TAB - HISTORIAL STYLES
-   ========================================= */
-.budget-history-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.budget-history-list::-webkit-scrollbar {
-    width: 6px;
-}
-
-.budget-history-list::-webkit-scrollbar-thumb {
-    background: #e2e8f0;
-    border-radius: 10px;
-}
-
-/* Styles for managed tables inside wizard info boxes */
-.info-box-styled .content-table {
-    width: 100%;
-}
-
-.info-box-styled .table-controls {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start; /* ensure items start at left; search will use margin-left:auto */
-    gap: 12px;
-    margin-bottom: 10px;
-    width: 100%;
-}
-
-.info-box-styled .table-controls .table-export-btns {
-    display: flex;
-    gap: 8px;
-}
-
-.info-box-styled .table-search-input {
-    width: 380px;
-    max-width: 40%;
-    border-radius: 999px;
-    padding: 10px 16px;
-}
-
-.info-box-styled .managed-table {
-    width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
-    table-layout: fixed;
-}
-
-.info-box-styled .managed-table thead th {
-    font-weight: 700;
-    font-size: 0.95rem;
-    vertical-align: middle;
-    background: transparent;
-    color: #0f172a;
-}
-
-/* Header color and centered content (modern, compact) */
-.info-box-styled .managed-table thead th {
-    background: linear-gradient(90deg, #eef2ff 0%, #f4f9ff 100%);
-    color: #1e3a8a;
-    border-bottom: 1px solid rgba(30, 58, 138, 0.08);
-    text-align: center;
-    font-size: 0.88rem;
-    padding: 8px 8px;
-}
-
-/* Compact table cells */
-.info-box-styled .managed-table,
-.info-box-styled .managed-table tbody td {
-    font-size: 0.92rem;
-}
-
-.info-box-styled .managed-table thead th,
-.info-box-styled .managed-table tbody td {
-    text-align: center;
-    vertical-align: middle;
-    padding: 8px 8px;
-}
-
-/* Keep action buttons centered in their cell */
-.info-box-styled .managed-table tbody td:last-child .action-buttons {
-    justify-content: center;
-}
-
-/* Row hover effect */
-.info-box-styled .managed-table tbody tr:hover {
-    background: #f8fafc; /* very light */
-    transition: background-color 120ms ease-in-out;
-}
-
-/* Search box: wider and aligned to the right */
-.info-box-styled .table-controls {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.info-box-styled .table-controls .table-export-btns {
-    order: 1;
-}
-
-.info-box-styled .table-controls .search-box {
-    order: 2;
-    margin-left: auto;
-}
-
-.info-box-styled .table-search-input {
-    width: 420px;
-    max-width: 55%;
-    border-radius: 999px;
-    padding: 8px 16px;
-    font-size: 0.95rem;
-}
-
-@media (max-width: 900px) {
-    .info-box-styled .table-search-input {
-        width: 260px;
-        max-width: 60%;
-    }
-}
-
-.info-box-styled .managed-table tbody td {
-    vertical-align: middle;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.info-box-styled .table-export-btns .btn-export-excel,
-.info-box-styled .table-export-btns .btn-export-pdf {
-    height: 38px;
-}
-
-/* Column and action button tweaks for personnel actions table */
-.info-box-styled .managed-table th.col-number,
-.info-box-styled .managed-table td.col-number {
-    width: 80px; /* give more space to N° */
-    text-align: center;
-    font-weight: 700;
-}
-
-.info-box-styled .action-buttons {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    justify-content: flex-end;
-}
-
-.info-box-styled .action-buttons .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 10px;
-    border-radius: 6px;
-    font-size: 0.82rem;
-    line-height: 1;
-}
-
-.info-box-styled .btn-action-view {
-    background: #0d6efd;
-    color: #fff;
-    border: 1px solid rgba(13, 110, 253, 0.9);
-}
-
-.info-box-styled .btn-action-view:hover {
-    filter: brightness(0.95);
-}
-
-.info-box-styled .btn-action-download {
-    background: #fff;
-    color: #dc3545;
-    border: 1px solid rgba(220, 53, 69, 0.15);
-}
-
-.info-box-styled .btn-action-download i {
-    color: #dc3545;
-}
-
-.info-box-styled .btn-label {
-    display: inline-block;
-}
-
-/* On very small screens hide labels to save space */
-@media (max-width: 540px) {
-    .info-box-styled .btn-label {
-        display: none;
-    }
-
-    .info-box-styled .managed-table th.col-number,
-    .info-box-styled .managed-table td.col-number {
-        width: 56px;
-    }
-}
-
-/* Make only the inner container scrollable to avoid body jump */
-.info-box-styled > .p-3.bg-light.rounded {
-    overflow: hidden;
-}
-
-.info-box-styled > .p-3.bg-light.rounded .content-table {
-    max-height: 320px;
-    overflow-y: auto;
-}
-
-.budget-history-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    padding: 14px 16px;
-    background: #ffffff;
-    border-radius: 8px;
-    border: 1px solid #e6edf3;
-    margin-bottom: 10px;
-}
-
-.budget-history-item + .budget-history-item {
-    margin-top: 10px;
-}
-
-.budget-history-left {
-    flex: 1 1 auto;
-    padding-right: 12px;
-}
-
-.budget-history-title {
-    font-weight: 700;
-    color: #0f172a;
-    font-size: 1rem;
-}
-
-/* Modern contract title link */
-.contract-title-link {
-    color: #6b3e2d; /* brown accent */
-    text-decoration: none;
-    font-weight: 700;
-    font-size: 1.03rem;
-    display: inline-block;
-    position: relative;
-    padding-bottom: 3px;
-    border-radius: 4px;
-    transition: color 180ms ease, transform 150ms ease;
-    letter-spacing: 0.2px;
-}
-
-.contract-title-link:hover {
-    color: #4e2c20; /* darker brown on hover */
-    transform: translateY(-1px);
-}
-
-.contract-title-link::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    bottom: 0;
-    height: 3px;
-    width: 0;
-    background: linear-gradient(90deg, rgba(176, 139, 97, 0.95), rgba(107, 62, 45, 0.95));
-    border-radius: 3px;
-    transition: width 220ms ease;
-}
-
-.contract-title-link:hover::after {
-    width: 100%;
-}
-
-.contract-title-link:focus {
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(107, 62, 45, 0.12);
-}
-
-/* Accent classes to reuse */
-.info-box-accent-gold {
-    border-left: 4px solid #6b3e2d;
-}
-
-.section-title-accent-gold {
-    color: #6b3e2d !important;
-}
-
-/* Pink accent for permissions tab (matches button color) */
-.info-box-accent-pink {
-    border-left: 4px solid #e91e63;
-}
-
-.section-title-accent-pink {
-    color: #e91e63 !important;
-}
-
-.budget-history-sub {
-    color: #064e3b;
-    font-size: 0.85rem;
-    margin-top: 6px;
-    display: inline-block;
-    background: #ecfdf5; /* light green similar to border */
-    padding: 4px 8px;
-    border-radius: 6px;
-    box-shadow: inset 0 0 0 1px rgba(6, 78, 59, 0.03);
-}
-
-/* Pink variant for permission tab */
-.info-box-accent-pink .budget-history-sub {
-    color: #7a1630;
-    background: transparent;
-    box-shadow: none;
-    padding: 0; /* remove pill background for compact list rows */
-}
-
-/* For permission panels we don't want vertical space-between distribution */
-.info-box-styled.info-box-accent-pink {
-    justify-content: flex-start !important;
-    height: auto !important;
-    min-height: 0 !important;
-}
-
-/* Verde para la pestaña Roles de pago (combina con el botón de la barra) */
-.info-box-accent-green {
-    border-left: 4px solid #44a641;
-}
-
-.section-title-accent-green {
-    color: #44a641 !important;
-}
-
-.info-box-accent-green .budget-history-sub {
-    color: #14532d;
-    background: transparent;
-    box-shadow: none;
-    padding: 0;
-}
-
-/* budget-history-list will be constrained by the parent scroll container */
-
-/* Permission filter buttons */
-.permission-filters {
-    display: flex;
-    gap: 8px;
-    align-items: flex-start;
-}
-
-.permission-filter-btn {
-    border-radius: 999px;
-    padding: 6px 10px;
-    font-size: 0.84rem;
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    background: white;
-    color: #333;
-    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
-    transition: all 180ms ease;
-}
-
-.permission-filter-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 18px rgba(233, 30, 99, 0.08);
-}
-
-.permission-filter-btn.active, .permission-filter-btn.btn-outline.active {
-    background: linear-gradient(90deg, #ff6b99, #e91e63);
-    color: white;
-    border-color: transparent;
-    box-shadow: 0 6px 16px rgba(233, 30, 99, 0.12);
-}
-
-/* Spacing adjustments to avoid buttons touching the container edge */
-.info-box-styled .permission-filters {
-    margin-left: 8px;
-    margin-top: 0;
-}
-
-/* Color variants for active state matching status-badge colors */
-.permission-filter-active-approved {
-    background: linear-gradient(90deg, #bbf7d0, #10b981);
-    color: #064e3b !important;
-    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.08);
-}
-
-.permission-filter-active-rejected {
-    background: linear-gradient(90deg, #fee2e2, #ef4444);
-    color: #7f1d1d !important;
-    box-shadow: 0 6px 16px rgba(239, 68, 68, 0.08);
-}
-
-/* Action group at the right side of each history item */
-.budget-history-right {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    min-width: 110px; /* reserve space so icons don't touch edge */
-    padding-right: 12px;
-}
-
-.permission-action-group {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.permission-action-group .btn-action-download,
-.permission-action-group .btn-action-print {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    padding: 0;
-}
-
-.permission-action-group .btn-action-print i,
-.permission-action-group .btn-action-download i {
-    color: #5b21b6; /* purple accent for icons */
-}
-
-.permission-filter-active-requested {
-    background: linear-gradient(90deg, #f1f5f9, #94a3b8);
-    color: #475569 !important;
-    box-shadow: 0 6px 16px rgba(16, 24, 40, 0.04);
-}
-
-.budget-history-right {
-    text-align: right;
-}
-
-.budget-history-right .budget-history-rem {
-    font-size: 0.98rem;
-}
-
-/* Ensure consistent gap between header (filters) and the history list */
-.info-box-styled .budget-history-list {
-    margin-top: 12px;
-}
-
-/* Roles de pago filters follow the same pill shape but in green */
-.payment-filters {
-    display: flex;
-    gap: 8px;
-    align-items: flex-start;
-}
-
-.payment-filter-btn {
-    border-radius: 999px;
-    padding: 6px 10px;
-    font-size: 0.84rem;
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    background: white;
-    color: #333;
-    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
-    transition: all 180ms ease;
-}
-
-.payment-filter-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 18px rgba(68, 166, 65, 0.15);
-}
-
-.payment-filter-btn.active,
-.payment-filter-btn.btn-outline.active {
-    background: linear-gradient(90deg, #7fe373, #44a641);
-    color: white;
-    border-color: transparent;
-    box-shadow: 0 6px 16px rgba(68, 166, 65, 0.15);
-}
-
-.info-box-styled .payment-filters {
-    margin-left: 8px;
-    margin-top: 0;
-}
-
-/* The scroll constraint is handled by the inner .p-3.bg-light container above */
-
-/* Compact layout for current budget */
-.compact-budget {
-    padding: 10px 14px;
-    background: #ffffff;
-    border-radius: 8px;
-}
-
-.compact-budget-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 6px 0;
-    border-bottom: 1px solid #f1f5f9;
-}
-
-.compact-budget-row:last-child {
-    border-bottom: none;
-}
-
-.compact-budget-label {
-    color: #0f766e;
-    font-weight: 700;
-    font-size: 0.85rem;
-}
-
-.compact-budget-value {
-    color: #0f172a;
-    font-weight: 700;
-    text-align: right;
-    max-width: 68%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.compact-budget-value.text-primary {
-    color: #065f46;
-}
-
-/* Reduce height of history container - scoped to permissions/budget boxes only */
-.info-box-styled .p-3.bg-light.rounded {
-    max-height: 320px;
-}
-
-.budget-history-rem {
-    font-weight: 600;
-    color: #0f172a;
-}
-
-.budget-history-cat {
-    color: #6b7280;
-    font-size: 0.85rem;
-    margin-top: 6px;
-}
-
-/* Scrollbar styling for the history container (light) */
-.p-3.bg-light.rounded {
-    scrollbar-width: thin;
-}
-
-.p-3.bg-light.rounded::-webkit-scrollbar {
-    height: 8px;
-    width: 8px;
-}
-
-.p-3.bg-light.rounded::-webkit-scrollbar-thumb {
-    background: rgba(15, 23, 42, 0.08);
-    border-radius: 8px;
-}
-
-/* =========================================
-   VACATION TAB METRICS
-   ========================================= */
-.vacation-metric-card {
-    min-height: 195px;
-}
-
-/* Contenedor principal del contenido del tab */
 .schedule-container {
     background: white;
     padding: 20px;
@@ -930,15 +587,13 @@
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 
-/* La rejilla de 7 días */
 .schedule-grid {
     display: grid;
-    grid-template-columns: repeat(7, 1fr); /* 7 columnas iguales */
+    grid-template-columns: repeat(7, 1fr);
     gap: 12px;
     margin-top: 10px;
 }
 
-/* Estilo de cada tarjeta de día */
 .day-card {
     background: #ffffff;
     border: 1px solid #e2e8f0;
@@ -948,8 +603,8 @@
     transition: all 0.2s ease;
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    min-height: 120px;
+    justify-content: space-between;
+    min-height: 140px;
 }
 
 .day-card:hover {
@@ -958,14 +613,12 @@
     box-shadow: 0 4px 12px rgba(139, 92, 246, 0.1);
 }
 
-/* Días no laborables o fin de semana */
 .day-card.weekend {
     background-color: #f8fafc;
     border-style: dashed;
     opacity: 0.8;
 }
 
-/* Etiquetas dentro de la tarjeta */
 .day-label {
     display: block;
     font-weight: 800;
@@ -974,11 +627,25 @@
     text-transform: uppercase;
 }
 
+.time-container {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 8px;
+}
+
 .time-slot {
     font-weight: 700;
     color: #1e293b;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     margin-bottom: 5px;
+}
+
+.time-slot.afternoon {
+    color: #8b5cf6;
+    border-top: 1px solid #f1f5f9;
+    padding-top: 4px;
+    margin-top: 2px;
 }
 
 .time-sub {
@@ -987,48 +654,9 @@
     font-weight: 600;
 }
 
-/* Responsive: si la pantalla es pequeña, se rompe en 2 o 3 columnas */
-@media (max-width: 1200px) {
-    .schedule-grid {
-        grid-template-columns: repeat(4, 1fr);
-    }
-}
-
-@media (max-width: 768px) {
-    .schedule-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-.day-card {
-    min-height: 140px; /* Aumentamos un poco la altura mínima */
-    justify-content: space-between;
-}
-
-.time-container {
-    display: flex;
-    flex-direction: column;
-    gap: 4px; /* Espacio entre jornada 1 y jornada 2 */
-    margin-bottom: 8px;
-}
-
-.time-slot.afternoon {
-    color: #8b5cf6; /* Color violeta suave para la segunda jornada */
-    border-top: 1px solid #f1f5f9;
-    padding-top: 4px;
-    margin-top: 2px;
-}
-
-/* Si el texto es muy largo, bajamos un poco el tamaño */
-.time-slot {
-    font-size: 0.85rem;
-}
-
-/* =====================================================================
-   MÓDULO DE TELETRABAJO - 50/50 ESTRICTO Y SIMÉTRICO
-   ===================================================================== */
-
-/* Contenedor principal: Fila estricta que no se rompe */
+/* ==========================================================================
+   8. MÓDULO DE TELETRABAJO
+   ========================================================================== */
 .telework-dashboard-grid {
     display: flex !important;
     flex-direction: row !important;
@@ -1038,12 +666,10 @@
     align-items: stretch !important;
 }
 
-/* Paneles idénticos: Obligados a ocupar el 50% exacto */
 .telework-panel {
     flex: 1 1 50% !important;
     width: 50% !important;
-    max-width: calc(50% - 10px) !important; /* El -10px descuenta el espacio del gap */
-
+    max-width: calc(50% - 10px) !important;
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 16px;
@@ -1051,12 +677,11 @@
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
     display: flex;
     flex-direction: column;
-    height: 560px; /* Alto idéntico predefinido */
+    height: 560px;
     box-sizing: border-box;
-    overflow: hidden; /* Evita que el contenido interno desborde la caja */
+    overflow: hidden;
 }
 
-/* Cabecera centrada verticalmente (Título arriba, elementos abajo) */
 .telework-panel-header-centered {
     display: flex;
     flex-direction: column;
@@ -1083,7 +708,6 @@
     letter-spacing: 0.3px;
 }
 
-/* Grupo de botones perfectamente centrado debajo del título */
 .attendance-btn-group-centered {
     display: flex;
     justify-content: center;
@@ -1092,7 +716,6 @@
     width: 100%;
 }
 
-/* Botones Cuadrados Modernos */
 .btn-attendance {
     display: flex !important;
     flex-direction: column !important;
@@ -1122,12 +745,6 @@
     line-height: 1 !important;
 }
 
-.btn-attendance span {
-    display: block !important;
-    margin: 0 !important;
-    line-height: 1 !important;
-}
-
 .btn-attendance.income {
     background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
 }
@@ -1136,27 +753,14 @@
     background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
 }
 
-.btn-attendance:hover:not(:disabled) {
-    transform: translateY(-2px) !important;
-    filter: brightness(1.06) !important;
-    box-shadow: 0 6px 12px rgba(15, 23, 42, 0.18) !important;
-}
-
-.btn-attendance:disabled {
-    opacity: 0.4 !important;
-    cursor: not-allowed !important;
-    filter: grayscale(0.4) !important;
-}
-
-/* Contenedor de Listas con Scroll */
 .telework-scroll-area {
     flex: 1;
     overflow-y: auto;
-    overflow-x: hidden; /* Evita scrolls horizontales indeseados */
+    overflow-x: hidden;
     padding-right: 4px;
     display: flex;
     flex-direction: column;
-    gap: 8px; /* Separación compacta */
+    gap: 8px;
 }
 
 .telework-scroll-area::-webkit-scrollbar {
@@ -1168,7 +772,6 @@
     border-radius: 10px;
 }
 
-/* Filas Ultra Compactas Reestilizadas */
 .day-card-compact {
     min-height: auto !important;
     padding: 8px 14px !important;
@@ -1194,7 +797,6 @@
     text-transform: uppercase !important;
 }
 
-/* Adaptación para pantallas pequeñas: Poner uno debajo del otro si no hay espacio */
 @media (max-width: 900px) {
     .telework-dashboard-grid {
         flex-direction: column !important;
@@ -1206,44 +808,306 @@
     }
 }
 
-.timeline-container {
-    max-height: 400px;
-    overflow-y: auto;
-    padding-left: 10px;
+/* ==========================================================================
+   PESTAÑA DE DATOS INSTITUCIONALES (ORANGE THEME)
+   ========================================================================== */
+.grid-two-columns {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
 }
 
-.timeline-item {
-    border-left: 2px solid #8b5cf6;
-    padding: 10px 0 10px 15px;
-    position: relative;
-    margin-bottom: 5px;
+@media (max-width: 900px) {
+    .grid-two-columns {
+        grid-template-columns: 1fr;
+    }
 }
 
-.timeline-time {
+.text-orange {
+    color: #f97316 !important;
+}
+
+/* Caja de Motivo de Origen */
+.origin-reason-box {
+    background: #fff7ed;
+    border: 1px solid #ffedd5;
+    border-left: 3px solid #f97316;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+}
+
+.reason-label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #c2410c;
+    text-transform: uppercase;
+    margin-bottom: 0.25rem;
+    letter-spacing: 0.025em;
+}
+
+.reason-text {
+    font-size: 0.85rem;
+    color: #431407;
+    line-height: 1.35;
+}
+
+/* Árbol Jerárquico Escalable */
+.hierarchy-tree-wrapper {
+    background: #f8fafc;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    padding: 1.25rem;
+}
+
+.hierarchy-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.hierarchy-node {
+    display: flex;
+    align-items: stretch;
+    gap: 1rem;
+}
+
+.node-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 28px;
+    flex-shrink: 0;
+}
+
+.node-circle {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: #f97316;
+    color: #ffffff;
     font-size: 0.75rem;
-    color: #8b5cf6;
-    font-weight: bold;
-}
-
-.alert-warning-custom {
-    background: #fffbeb;
-    border-left: 4px solid #f59e0b;
-    padding: 1rem;
+    font-weight: 800;
     display: flex;
     align-items: center;
-    gap: 10px;
-    color: #92400e;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(249, 115, 22, 0.25);
+    z-index: 2;
 }
 
-.progress-bar-mini {
-    height: 4px;
-    background: #e2e8f0;
-    border-radius: 2px;
-    margin-top: 5px;
+.node-line {
+    flex-grow: 1;
+    width: 2px;
+    background: #fed7aa;
+    margin: 4px 0;
 }
 
-.progress-fill {
-    height: 100%;
-    background: #8b5cf6;
-    border-radius: 2px;
+.node-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0.65rem 1rem;
+    margin-bottom: 0.75rem;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.node-level {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #94a3b8;
+    margin-bottom: 0.15rem;
+}
+
+.node-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+/* Contenedor de Observaciones */
+.observations-container {
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px dashed #cbd5e1;
+    padding: 1rem 1.25rem;
+    display: flex;
+    align-items: flex-start;
+}
+
+.observations-text {
+    font-size: 0.88rem;
+    color: #334155;
+    line-height: 1.45;
+}
+
+/* ==========================================================================
+   PESTAÑA: PARTIDA PRESUPUESTARIA (EMERALD / GREEN THEME)
+   ========================================================================== */
+.budget-border {
+    border-left: 4px solid #10b981 !important;
+}
+
+.text-emerald {
+    color: #059669 !important;
+}
+
+/* Layout de la Partida Actual */
+.budget-current-layout {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 1.25rem 1.5rem;
+    gap: 1.5rem;
+}
+
+@media (max-width: 768px) {
+    .budget-current-layout {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+.budget-main-data {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.budget-job-title {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: -0.01em;
+}
+
+.budget-tags-group {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+/* Recuadro de Salario Destacado */
+.budget-salary-box {
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    border-radius: 8px;
+    padding: 0.75rem 1.25rem;
+    text-align: right;
+    min-width: 200px;
+    flex-shrink: 0;
+}
+
+.salary-label {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #047857;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    margin-bottom: 0.25rem;
+}
+
+.salary-amount {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #065f46;
+}
+
+/* Contenedor del Historial */
+.budget-history-container {
+    background: #f8fafc;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    padding: 0.75rem;
+    max-height: 380px;
+    overflow-y: auto;
+}
+
+.budget-timeline-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.budget-history-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0.85rem 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.budget-history-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.history-card-left {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.history-job-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.history-meta-row {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.history-card-right {
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.history-rem-label {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+}
+
+.history-rem-value {
+    font-size: 1rem;
+}
+
+.budget-dates-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 2px 10px;
+    font-size: 0.75rem;
+    color: #334155;
+}
+
+.budget-dates-pill strong {
+    color: #64748b;
+    font-weight: 700;
+}
+
+.dates-separator {
+    color: #94a3b8;
+    font-weight: bold;
 }

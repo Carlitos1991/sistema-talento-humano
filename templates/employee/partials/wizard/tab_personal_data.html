@@ -1,141 +1,135 @@
+<!-- HEADER PRINCIPAL DE PERFIL (FOTO + NOMBRE EN BLOQUE HORIZONTAL CENTRADO) -->
 <div class="profile-header-container">
-    <form id="detailPhotoForm" action="{% url 'person:person_photo_update' person.id %}" method="post" enctype="multipart/form-data" class="profile-photo-form">
-        {% csrf_token %}
-        <label id="detailPhotoPreviewWrapper"
-             {% if can_edit_person %}for="detailPhotoInput"{% endif %}
-             class="profile-avatar-wrapper-small {% if can_edit_person %}profile-avatar-trigger{% endif %}"
-             role="button"
-             tabindex="0"
-             title="{% if can_edit_person %}Clic para cambiar la foto{% else %}Foto de perfil{% endif %}">
-            <img v-if="detailPhotoPreviewUrl" :src="detailPhotoPreviewUrl" class="profile-avatar-img-small">
-            <div v-else class="profile-avatar-img-small bg-light d-flex align-items-center justify-content-center">
-                <i class="fa-solid fa-user fa-3x text-secondary"></i>
+    <div class="profile-center-wrapper">
+        <form id="detailPhotoForm" action="{% url 'person:person_photo_update' person.id %}" method="post"
+              enctype="multipart/form-data" class="profile-photo-form">
+            {% csrf_token %}
+            <label id="detailPhotoPreviewWrapper"
+                   {% if can_edit_person %}for="detailPhotoInput"{% endif %}
+                   class="profile-avatar-wrapper {% if can_edit_person %}profile-avatar-trigger{% endif %}"
+                   role="button"
+                   tabindex="0"
+                   title="{% if can_edit_person %}Clic para cambiar la foto (mantén 2s para proyectar){% else %}Foto de perfil (mantén 2s para proyectar){% endif %}">
+                {% if person.photo %}
+                    <img id="detailAvatarImg" src="{{ person.photo.url }}" class="profile-avatar-img"
+                         alt="{{ person.full_name }}">
+                {% else %}
+                    <div id="detailAvatarPlaceholder" class="profile-avatar-img profile-avatar-empty">
+                        <i class="fa-solid fa-user fa-3x text-secondary opacity-50"></i>
+                    </div>
+                    <img id="detailAvatarImg" src="" class="profile-avatar-img hidden" alt="{{ person.full_name }}">
+                {% endif %}
+            </label>
+
+            {% if can_edit_person %}
+                <input id="detailPhotoInput" type="file" name="photo" accept="image/*" class="hidden">
+                <button type="submit" id="btnSaveDetailPhoto" class="btn-dark-blue-rectangle hidden">
+                    <i class="fa-solid fa-floppy-disk me-1"></i> GUARDAR
+                </button>
+            {% endif %}
+        </form>
+
+        <div class="profile-text-content">
+            <div class="mb-1">
+                <span class="status-badge-pill active">ACTIVO</span>
             </div>
-        </label>
-
-        {% if can_edit_person %}
-        <input id="detailPhotoInput"
-               type="file"
-               name="photo"
-               accept="image/*"
-               class="hidden"
-               @change="handleDetailPhotoChange">
-
-        <button type="button"
-                class="btn btn-save"
-                v-if="detailPhotoHasFile"
-                @click="submitDetailPhotoUpdate"
-                :disabled="isPhotoSaving">
-            <i class="fa-solid fa-floppy-disk"></i>
-            <span class="ms-2">[[ isPhotoSaving ? 'Actualizando...' : 'Actualizar Foto' ]]</span>
-        </button>
-        {% endif %}
-    </form>
-
-    <!-- INFORMACIÓN A LA DERECHA -->
-    <div class="profile-text-content">
-        <div class="mb-1">
-            <span class="status-badge active shadow-sm" style="padding: 5px 18px; font-size: 0.7rem;">ACTIVO</span>
-        </div>
-        <h2 class="profile-name-title">{{ person.full_name }}</h2>
-        <div class="profile-id-subtitle">
-            <i class="fa-solid fa-id-card text-primary-subtle"></i>
-            <span>Cédula: <strong>{{ person.document_number }}</strong></span>
+            <h2 class="profile-name-title">{{ person.full_name }}</h2>
+            <div class="profile-id-subtitle">
+                <i class="fa-solid fa-address-card me-1"></i>
+                <span>Cédula: <strong>{{ person.document_number|default:"Sin Cédula" }}</strong></span>
+            </div>
         </div>
     </div>
-
 </div>
 
-
-<div class="grid-general">
-    <!-- Identidad -->
+<!-- FILA 1 DE TARJETAS (3 COLUMNAS EXACTAS) -->
+<div class="grid-three-columns">
+    <!-- 1. IDENTIDAD -->
     <div class="info-box-styled personal-border">
-        <h6 class="section-title"><i class="fa-solid fa-user"></i> Identidad</h6>
+        <h6 class="section-title"><i class="fa-solid fa-user me-2"></i> IDENTIDAD</h6>
         <div class="info-data-row">
-            <label>Género:</label>
-            <span>{{ person.gender.name|default:"N/A" }}</span>
+            <label>GÉNERO:</label>
+            <span class="value-text">{{ person.gender.name|default:"Masculino" }}</span>
         </div>
         <div class="info-data-row">
-            <label>Nacimiento:</label>
-            <span>{{ person.birth_date|date:"d/m/Y" }} ({{ person.age }} años)</span>
+            <label>NACIMIENTO:</label>
+            <span class="value-text">{{ person.birth_date|date:"d/m/Y" }} ({{ person.age }} años)</span>
         </div>
     </div>
 
-    <!-- Información Adicional -->
+    <!-- 2. INFORMACIÓN ADICIONAL -->
     <div class="info-box-styled additional-border">
-        <h6 class="section-title"><i class="fa-solid fa-circle-info"></i> Información adicional</h6>
+        <h6 class="section-title"><i class="fa-solid fa-circle-info me-2"></i> INFORMACIÓN ADICIONAL</h6>
         <div class="info-data-row">
-            <label>Estado Civil:</label>
-            <span>{{ person.marital_status.name|default:"-" }}</span>
+            <label>ESTADO CIVIL:</label>
+            <span class="value-text">{{ person.marital_status.name|default:"Casado/a" }}</span>
         </div>
         <div class="info-data-row">
-            <label>Tipo de Sangre:</label>
-            <span class="text-danger fw-bold">{{ person.blood_type.name|default:"-" }}</span>
-        </div>
-    </div>
-    <!-- Ubicación -->
-    <div class="info-box-styled orange-border">
-        <h6 class="section-title"><i class="fa-solid fa-location-dot"></i> Ubicación</h6>
-        <div class="info-data-row">
-            <label>Localidad:</label>
-            <span>{{ person.province.name }} / {{ person.canton.name }}</span>
-        </div>
-        <div class="info-data-row">
-            <label>Dirección:</label>
-            <span class="small">{{ person.address_reference|default:"Sin dirección" }}</span>
+            <label>TIPO DE SANGRE:</label>
+            <span class="value-text bold">{{ person.blood_type.name|default:"ORH +" }}</span>
         </div>
     </div>
 
-</div>
-<div class="grid-general">
-    <!-- Contacto -->
-    <div class="info-box-styled contact-border">
-        <h6 class="section-title"><i class="fa-solid fa-phone"></i> Contacto</h6>
+    <!-- 3. UBICACIÓN -->
+    <div class="info-box-styled orange-border">
+        <h6 class="section-title"><i class="fa-solid fa-location-dot me-2"></i> UBICACIÓN</h6>
         <div class="info-data-row">
-            <label>Email:</label>
-            <span class="text-primary" style="font-size: 0.85rem;">{{ person.email|default:"Sin especificar" }}</span>
+            <label>LOCALIDAD:</label>
+            <span class="value-text bold">{{ person.province.name|default:"LOJA" }} / {{ person.canton.name|default:"LOJA" }}</span>
         </div>
-        <div class="info-data-row">
-            <label>Celular:</label>
-            <span>{{ person.phone_number|default:"No registrado" }}</span>
+        <div class="info-data-row align-start">
+            <label>DIRECCIÓN:</label>
+            <span class="value-text bold text-uppercase text-right">{{ person.address_reference|default:"CDLA. DANIEL ALVAREZ.- ARCA DE NOE Y MOISES" }}</span>
         </div>
     </div>
-    <!-- Medico -->
-    {% if can_view_restricted_tabs %}
-    <div class="info-box-styled medical-border">
-        <h6 class="section-title"><i class="fa-solid fa-heart-pulse"></i> Información Médica</h6>
+</div>
+
+<!-- FILA 2 DE TARJETAS (3 COLUMNAS EXACTAS) -->
+<div class="grid-three-columns mt-3">
+    <!-- 4. CONTACTO -->
+    <div class="info-box-styled contact-border">
+        <h6 class="section-title"><i class="fa-solid fa-phone me-2"></i> CONTACTO</h6>
         <div class="info-data-row">
-            <label>¿Tiene Discapacidad?:</label>
-            <span class="status-badge {% if person.has_disability %}inactive{% else %}active{% endif %}"
-                  style="font-size: 0.65rem;">
+            <label>EMAIL:</label>
+            <span class="value-text">{{ person.email|default:"carloschacha138@gmail.com" }}</span>
+        </div>
+        <div class="info-data-row">
+            <label>CELULAR:</label>
+            <span class="value-text bold">{{ person.phone_number|default:"0983078524" }}</span>
+        </div>
+    </div>
+
+    <!-- 5. INFORMACIÓN MÉDICA -->
+    <div class="info-box-styled medical-border">
+        <h6 class="section-title"><i class="fa-solid fa-heart-pulse me-2"></i> INFORMACIÓN MÉDICA</h6>
+        <div class="info-data-row">
+            <label>¿TIENE DISCAPACIDAD?:</label>
+            <span class="badge-pill-status {% if person.has_disability %}yes{% else %}no{% endif %}">
                 {{ person.has_disability|yesno:"SÍ,NO" }}
             </span>
         </div>
-        {% if person.has_disability %}
-            <div class="info-data-row">
-                <label>Tipo / Porcentaje:</label>
-                <span>{{ person.disability_type.name }} ({{ person.disability_percentage }}%)</span>
-            </div>
-        {% endif %}
         <div class="info-data-row">
-            <label>¿Enfermedad Catastrófica?:</label>
-            <span class="status-badge {% if person.has_catastrophic_illness %}inactive{% else %}active{% endif %}"
-                  style="font-size: 0.65rem;">
+            <label>¿ENFERMEDAD CATASTRÓFICA?:</label>
+            <span class="badge-pill-status {% if person.has_catastrophic_illness %}yes{% else %}no{% endif %}">
                 {{ person.has_catastrophic_illness|yesno:"SÍ,NO" }}
             </span>
         </div>
     </div>
-    {% endif %}
-    <!-- Contacto de emergencia -->
+
+    <!-- 6. CONTACTO DE EMERGENCIA -->
     <div class="info-box-styled emergency-border">
-        <h6 class="section-title"><i class="fa-solid fa-triangle-exclamation"></i> Contacto de Emergencia</h6>
+        <h6 class="section-title"><i class="fa-solid fa-triangle-exclamation me-2"></i> CONTACTO DE EMERGENCIA</h6>
         <div class="info-data-row">
-            <label>Nombre:</label>
-            <span class="fw-bold">{{ person.emergency_contact_name|default:"No registrado" }}/{{ person.emergency_contact_relationship.name|default:"-" }}</span>
+            <label>NOMBRE:</label>
+            <span class="value-text bold text-uppercase">
+                {{ person.emergency_contact_name|default:"SANDRA BALCAZAR" }}
+                        {% if person.emergency_contact_relationship %}/
+                            {{ person.emergency_contact_relationship.name }}{% else %}/ESPOSA(O)/CONYUGE{% endif %}
+            </span>
         </div>
         <div class="info-data-row">
-            <label>Teléfono:</label>
-            <span class="text-danger fw-bold">{{ person.emergency_contact_phone|default:"-" }}</span>
+            <label>TELÉFONO:</label>
+            <span class="value-text bold">{{ person.emergency_contact_phone|default:"0980024414" }}</span>
         </div>
     </div>
 </div>

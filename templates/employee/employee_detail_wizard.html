@@ -1,118 +1,48 @@
 {% extends 'base.html' %}
 {% load static %}
-{% block title %}Detalle de Empleado | SIGETH{% endblock %}
-{% block content %}
-    <link rel="stylesheet" href="{% static 'css/wizard_custom.css' %}">
+
+{% block title %}Expediente Digital | {{ person.full_name }} | SIGETH{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/wizard_custom.css' %}?v={% now 'U' %}">
     <link rel="stylesheet" href="{% static 'css/vacations.css' %}">
     <link rel="stylesheet" href="{% static 'css/permission.css' %}">
     <link rel="stylesheet" href="{% static 'css/personnel_action.css' %}">
-    <style>
-        .profile-avatar-trigger {
-            cursor: pointer;
-            border: 0;
-            padding: 0;
-            background: transparent;
-        }
+{% endblock %}
 
-        .profile-photo-form {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.75rem;
-            flex-shrink: 0;
-        }
-
-        .detail-photo-footer {
-            position: sticky;
-            bottom: 0;
-            z-index: 20;
-            margin-top: 1rem;
-            padding: 0.85rem 1rem;
-            background: rgba(255, 255, 255, 0.92);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(226, 232, 240, 0.9);
-            border-radius: 18px;
-            box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
-        }
-
-        .detail-photo-footer-inner {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1rem;
-            flex-wrap: wrap;
-        }
-
-        .detail-photo-footer-text {
-            display: flex;
-            flex-direction: column;
-            gap: 0.15rem;
-        }
-
-        .detail-photo-footer-text strong {
-            color: #0f172a;
-            font-weight: 700;
-        }
-
-        .mini-check {
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            width: 20px;
-            height: 20px;
-            background-color: #fff;
-            border: 1px solid #ccc;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-        }
-
-        .mini-check.visible {
-            background-color: #28a745;
-            color: white;
-            border-color: #28a745;
-        }
-    </style>
-    <div id="employeeWizardApp"
-         v-cloak
+{% block content %}
+    <div id="employeeWizardContainer"
          data-person-id="{{ person.id }}"
-         data-tab-visibilities='{{ tab_visibilities|safe }}'
-         data-can-edit-person="{{ can_edit_person|yesno:'true,false' }}"
-         {% if person.photo %}data-photo-url="{{ person.photo.url }}"{% else %}data-photo-url=""{% endif %}
-         data-titles="{{ curriculum_titles_count|default:0 }}"
-         data-experiences="{{ curriculum_experiences_count|default:0 }}"
-         data-courses="{{ curriculum_courses_count|default:0 }}">
+         data-can-edit-person="{{ can_edit_person|yesno:'true,false' }}">
 
-        <!-- 1. BANNER -->
+        <!-- 1. BANNER INSTITUCIONAL -->
         <div class="banner-employee-detail">
             <div class="banner-info-employee-detail">
                 <span class="banner-label-top">Expediente Digital</span>
                 <h1>{{ person.full_name }}</h1>
                 <div class="banner-badges-group">
                     <span class="banner-badge-info">
-                        <i class="fa-solid fa-id-card"></i>
+                        <i class="fa-solid fa-id-card me-1"></i>
                         {{ person.document_number }}
                     </span>
                     <span class="banner-badge-info">
-                        <i class="fa-solid fa-briefcase"></i>
+                        <i class="fa-solid fa-briefcase me-1"></i>
                         {{ employee_area_name|default:"SIN ÁREA ASIGNADA" }}
                     </span>
                 </div>
             </div>
-            <div class="header-title header-actions-group">
-                <a href="{% url 'person:person_list' %}" class="btn-warning-outline">
-                    <i class="fa-solid fa-arrow-left"></i> Volver
+            <div class="header-actions-group">
+                <a href="{% url 'person:person_list' %}" class="btn-dark-blue-rectangle-outline">
+                    <i class="fa-solid fa-arrow-left me-1"></i> VOLVER
                 </a>
                 {% if can_edit_person %}
                     <button type="button"
-                            class="btn-white-rectangle"
+                            class="btn-dark-blue-rectangle"
                             onclick="openAjaxModal('{% url 'employee:person_audit_modal' person.id %}')">
-                        <i class="fa-solid fa-shield-halved"></i> Auditoría
+                        <i class="fa-solid fa-shield-halved me-1"></i> AUDITORÍA
                     </button>
                     <button type="button"
-                            class="btn-icon btn-edit-action"
+                            class="btn-blue-circle"
                             title="Editar Ficha Personal"
                             onclick="openAjaxModal('{% url 'person:person_update' person.id %}')">
                         <i class="fa-solid fa-pen-to-square"></i>
@@ -121,107 +51,193 @@
             </div>
         </div>
 
-        <!-- 2. NAVEGACIÓN-->
+        <!-- 2. NAVEGACIÓN DE PESTAÑAS (VANILLA JS CON CLASES EXACTAS) -->
         <div class="employee-detail-buttons-container">
             <h3 class="buttons-section-title">
-                <i class="fa fa-th-large"></i>
-                Acciones y Módulos
+                <i class="fa-solid fa-table-cells-large me-2"></i> Acciones y Módulos
             </h3>
-            <div class="module-grid-premium">
-                <div v-for="tab in tabs"
-                     :key="tab.id"
-                     @click="activeTab = tab.id"
-                     :class="['employee-detail-button', tab.class, { active: activeTab === tab.id }]">
+            <div class="module-grid-premium" id="wizardTabsNavigation">
+                <div class="employee-detail-button employee-detail-button-personal active" data-tab-target="personal">
                     <div class="employee-detail-button-icon">
-                        <i :class="tab.icon"></i>
+                        <i class="fa-solid fa-user"></i>
                     </div>
-                    <span class="employee-detail-button-label">[[ tab.name ]]</span>
-                    <span class="mini-check" :class="{ visible: tab.isVisible }" @click.stop="toggleTabVisibility(tab)">
-                        <i v-if="tab.isVisible" class="fa fa-check"></i>
+                    <span class="employee-detail-button-label">Datos Personales</span>
+                    <span class="mini-check visible">
+                        <i class="fa-solid fa-check"></i>
                     </span>
+                </div>
+
+                <div class="employee-detail-button employee-detail-button-curriculum" data-tab-target="curriculum">
+                    <div class="employee-detail-button-icon">
+                        <i class="fa-solid fa-file-invoice"></i>
+                    </div>
+                    <span class="employee-detail-button-label">Currículum Vitae</span>
+                    <span class="mini-check {% if curriculum_titles_count or curriculum_courses_count %}visible{% endif %}">
+                        {% if curriculum_titles_count or curriculum_courses_count %}
+                            <i class="fa-solid fa-check"></i>{% endif %}
+                    </span>
+                </div>
+
+                <div class="employee-detail-button employee-detail-button-institutional"
+                     data-tab-target="institutional">
+                    <div class="employee-detail-button-icon">
+                        <i class="fa-solid fa-building"></i>
+                    </div>
+                    <span class="employee-detail-button-label">Datos Inst.</span>
+                    <span class="mini-check {% if employee_area_name %}visible{% endif %}">
+                        {% if employee_area_name %}<i class="fa-solid fa-check"></i>{% endif %}
+                    </span>
+                </div>
+
+                <div class="employee-detail-button employee-detail-button-economic" data-tab-target="economic">
+                    <div class="employee-detail-button-icon">
+                        <i class="fa-solid fa-money-bill-1-wave"></i>
+                    </div>
+                    <span class="employee-detail-button-label">Datos Económicos</span>
+                    <span class="mini-check {% if bank_account or payroll_info %}visible{% endif %}">
+                        {% if bank_account or payroll_info %}<i class="fa-solid fa-check"></i>{% endif %}
+                    </span>
+                </div>
+
+                <div class="employee-detail-button employee-detail-button-budget" data-tab-target="budget">
+                    <div class="employee-detail-button-icon">
+                        <i class="fa-solid fa-address-book"></i>
+                    </div>
+                    <span class="employee-detail-button-label">Partida Presup.</span>
+                    <span class="mini-check"></span>
+                </div>
+
+                <div class="employee-detail-button employee-detail-button-history" data-tab-target="contracts">
+                    <div class="employee-detail-button-icon">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                    </div>
+                    <span class="employee-detail-button-label">Historia Lab.</span>
+                    <span class="mini-check"></span>
+                </div>
+
+                <div class="employee-detail-button employee-detail-button-permissions" data-tab-target="permissions">
+                    <div class="employee-detail-button-icon">
+                        <i class="fa-solid fa-calendar-check"></i>
+                    </div>
+                    <span class="employee-detail-button-label">Permisos</span>
+                    <span class="mini-check"></span>
+                </div>
+
+                <div class="employee-detail-button employee-detail-button-actions" data-tab-target="actions">
+                    <div class="employee-detail-button-icon">
+                        <i class="fa-solid fa-file-invoice"></i>
+                    </div>
+                    <span class="employee-detail-button-label">Acciones Pers.</span>
+                    <span class="mini-check"></span>
+                </div>
+
+                <div class="employee-detail-button employee-detail-button-sanctions" data-tab-target="sanctions">
+                    <div class="employee-detail-button-icon">
+                        <i class="fa-solid fa-gavel"></i>
+                    </div>
+                    <span class="employee-detail-button-label">Sanciones</span>
+                    <span class="mini-check"></span>
+                </div>
+
+                <div class="employee-detail-button employee-detail-button-vacations" data-tab-target="vacations">
+                    <div class="employee-detail-button-icon">
+                        <i class="fa-solid fa-plane"></i>
+                    </div>
+                    <span class="employee-detail-button-label">Vacaciones</span>
+                    <span class="mini-check"></span>
+                </div>
+
+                <div class="employee-detail-button employee-detail-button-payments" data-tab-target="payments">
+                    <div class="employee-detail-button-icon">
+                        <i class="fa-solid fa-money-bill"></i>
+                    </div>
+                    <span class="employee-detail-button-label">Roles de pago</span>
+                    <span class="mini-check"></span>
+                </div>
+
+                <div class="employee-detail-button employee-detail-button-schedule" data-tab-target="schedule">
+                    <div class="employee-detail-button-icon">
+                        <i class="fa-solid fa-clock"></i>
+                    </div>
+                    <span class="employee-detail-button-label">Horario</span>
+                    <span class="mini-check"></span>
+                </div>
+
+                <div class="employee-detail-button employee-detail-button-telework" data-tab-target="telework">
+                    <div class="employee-detail-button-icon">
+                        <i class="fa-solid fa-house-laptop"></i>
+                    </div>
+                    <span class="employee-detail-button-label">Teletrabajo</span>
+                    <span class="mini-check"></span>
                 </div>
             </div>
         </div>
 
-        <!-- 3. CUERPO DINÁMICO -->
-        <div class="animate__animated animate__fadeIn mt-4">
-
-            <!-- PESTAÑA: DATOS PERSONALES -->
-            <div v-if="activeTab === 'personal'">
+        <!-- 3. CUERPO DINÁMICO DE PESTAÑAS -->
+        <div class="wizard-tab-contents-container mt-4">
+            <div id="tab-pane-personal" class="wizard-tab-pane active animate-scale-in">
                 {% include 'employee/partials/wizard/tab_personal_data.html' %}
             </div>
 
-            <!-- PESTAÑA: CURRICULUM -->
-            <div v-if="activeTab === 'curriculum'" id="curriculum-tab-container"
-                 class="animate__animated animate__fadeIn">
+            <div id="tab-pane-curriculum" class="wizard-tab-pane animate-scale-in">
                 {% include 'employee/partials/wizard/tab_curriculum.html' %}
             </div>
 
-            <!-- PESTAÑA: ECONÓMICOS -->
-            <div v-if="activeTab === 'economic'">
-                {% include 'employee/partials/wizard/tab_economic_data.html' %}
-            </div>
-
-            <!-- PESTAÑA: INSTITUCIONAL -->
-            <div v-if="activeTab === 'institutional'">
+            <div id="tab-pane-institutional" class="wizard-tab-pane animate-scale-in">
                 {% include 'employee/partials/wizard/tab_institutional_data.html' %}
             </div>
 
-            <!-- PESTAÑA: PARTIDA PRESUPUESTARIA -->
-            <div v-if="activeTab === 'budget'">
+            <div id="tab-pane-economic" class="wizard-tab-pane animate-scale-in">
+                {% include 'employee/partials/wizard/tab_economic_data.html' %}
+            </div>
+
+            <div id="tab-pane-budget" class="wizard-tab-pane animate-scale-in">
                 {% include 'employee/partials/wizard/tab_budget_data.html' %}
             </div>
 
-            <!-- PESTAÑA: CONTRATOS -->
-            <div v-if="activeTab === 'contracts'">
+            <div id="tab-pane-contracts" class="wizard-tab-pane animate-scale-in">
                 {% include 'employee/partials/wizard/tab_contracts_data.html' %}
             </div>
 
-            <!-- PESTAÑA: ACCIONES DE PERSONAL -->
-            <div v-if="activeTab === 'actions'">
-                {% include 'employee/partials/wizard/tab_actions_personal.html' %}
-            </div>
-
-            <!-- PESTAÑA: PERMISOS -->
-            <div v-if="activeTab === 'permissions'">
+            <div id="tab-pane-permissions" class="wizard-tab-pane animate-scale-in">
                 {% include 'employee/partials/wizard/tab_permissions_data.html' %}
             </div>
 
-            <!-- PESTAÑA: ROLES DE PAGO -->
-            <div v-if="activeTab === 'payments'">
-                {% include 'employee/partials/wizard/tab_payment_roles.html' %}
+            <div id="tab-pane-actions" class="wizard-tab-pane animate-scale-in">
+                {% include 'employee/partials/wizard/tab_actions_personal.html' %}
             </div>
 
-            <!-- PESTAÑA: SANCIONES -->
-            <div v-if="activeTab === 'sanctions'">
+            <div id="tab-pane-sanctions" class="wizard-tab-pane animate-scale-in">
                 {% include 'employee/partials/wizard/tab_sanctions_data.html' %}
             </div>
 
-            <!-- PESTAÑA: VACACIONES -->
-            <div v-if="activeTab === 'vacations'">
+            <div id="tab-pane-vacations" class="wizard-tab-pane animate-scale-in">
                 {% include 'employee/partials/wizard/tab_vacations_data.html' %}
             </div>
-            <!-- PESTAÑA: HORARIO -->
-            <div v-if="activeTab === 'schedule'">
+
+            <div id="tab-pane-payments" class="wizard-tab-pane animate-scale-in">
+                {% include 'employee/partials/wizard/tab_payment_roles.html' %}
+            </div>
+
+            <div id="tab-pane-schedule" class="wizard-tab-pane animate-scale-in">
                 {% include 'employee/partials/wizard/tab_schedule.html' %}
             </div>
-            <!-- PESTAÑA: TELETRABAJO -->
-            <div v-if="activeTab === 'telework'">
+
+            <div id="tab-pane-telework" class="wizard-tab-pane animate-scale-in">
                 {% include 'employee/partials/wizard/tab_telework.html' %}
             </div>
-
         </div>
-        <div id="modal-root"></div>
 
+        <div id="modal-root"></div>
     </div>
-    {# Incluir modal de detalle de contrato y una pequeña instancia Vue para manejarlo fuera del main Vue root #}
+
+    <!-- Modales adicionales -->
     <div id="period-app-employee">
         {% include 'contract/modals/modal_management_period_detail.html' %}
     </div>
     <div id="permission-modal-employee"></div>
     <div id="action-modal-employee"></div>
 
-    <!-- Placeholders para modales de Vacaciones (usados por static/js/vacation/vacation_detail.js) -->
     <div id="modalNewVacation" class="modal-overlay hidden"></div>
     <div id="modalHourPermit" class="modal-overlay hidden"></div>
     <div id="modalDayPermit" class="modal-overlay hidden"></div>
@@ -230,50 +246,14 @@
     <div id="vacationHistoryModalContainer"></div>
     <div id="permitHistoryModalContainer"></div>
     <div id="permitReportModalContainer"></div>
-
 {% endblock %}
 
 {% block extra_js %}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="{% static 'js/personnel_actions/wizard_table_init.js' %}"></script>
-    <script src="{% static 'js/employee_wizard.js' %}"></script>
+    <script src="{% static 'js/employee_wizard.js' %}?v={% now 'U' %}"></script>
     <script src="{% static 'js/employee_period_modal_init.js' %}"></script>
     <script src="{% static 'js/employee_permission_modal_init.js' %}"></script>
-    <!-- Chart.js CDN (global para todas las instancias) -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="{% static 'js/employee_vacation_chart.js' %}"></script>
     <script src="{% static 'js/vacation/vacation.js' %}"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const wizardRoot = document.getElementById('employeeWizardApp');
-            if (!wizardRoot) return;
-
-            const personId = wizardRoot.getAttribute('data-person-id');
-            window.__lastAuditedTab = 'Datos Personales'; // Pestaña activa inicial por defecto
-
-            document.querySelector('.module-grid-premium')?.addEventListener('click', function (e) {
-                // Ignorar si se hizo clic en el mini check de visibilidad
-                if (e.target.closest('.mini-check')) return;
-
-                const btn = e.target.closest('.employee-detail-button');
-                if (!btn) return;
-
-                const label = btn.querySelector('.employee-detail-button-label')?.textContent?.trim();
-                if (!label || label === window.__lastAuditedTab) return;
-                window.__lastAuditedTab = label;
-
-                const csrf = (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] ||
-                    document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
-
-                fetch(`/employee/person/${personId}/audit/tab/`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRFToken': csrf
-                    },
-                    body: JSON.stringify({tab_name: label})
-                }).catch(err => console.error("Error al registrar auditoría:", err));
-            });
-        });
-    </script>
 {% endblock %}
