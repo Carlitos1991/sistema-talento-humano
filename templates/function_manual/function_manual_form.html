@@ -6,7 +6,7 @@
 {% endblock %}
 
 {% block content %}
-    <div id="profileFormApp" v-cloak
+    <div id="profileFormApp"
          data-is-edit="{% if form.instance.pk %}true{% else %}false{% endif %}"
          data-url-units="{% url 'function_manual:api_units_root' %}"
          data-url-next-code="{% url 'function_manual:api_next_code' 0 %}"
@@ -15,40 +15,40 @@
          data-url-save-action="{% url 'function_manual:api_profile_save' %}"
          data-url-valuation-nodes="{% url 'function_manual:api_valuation_nodes' %}">
 
-
         <!-- HEADER CON STEPPER -->
         <div class="header-card">
             <div class="wizard-header-info">
-                <h1>[[ isEdit ? 'Editar Perfil' : 'Nuevo Perfil de Puesto' ]]</h1>
-                <p>Paso [[ currentStep ]]: [[ stepLabels[currentStep-1] ]]</p>
+                <h1 id="wizardTitle">{% if form.instance.pk %}Editar Perfil{% else %}Nuevo Perfil de
+                    Puesto{% endif %}</h1>
+                <p id="wizardSubtitle">Paso 1: Estructura e Identificación</p>
             </div>
 
             <!-- Stepper Visual -->
             <div class="wizard-stepper">
-                <div v-for="step in 4" :key="step" class="step-item"
-                     :class="{ 'active': currentStep === step, 'completed': currentStep > step }">
-                    <div class="step-dot">[[ step ]]</div>
+                <div class="step-item active" data-step="1">
+                    <div class="step-dot">1</div>
+                </div>
+                <div class="step-item" data-step="2">
+                    <div class="step-dot">2</div>
+                </div>
+                <div class="step-item" data-step="3">
+                    <div class="step-dot">3</div>
+                </div>
+                <div class="step-item" data-step="4">
+                    <div class="step-dot">4</div>
                 </div>
             </div>
         </div>
 
-        <form @submit.prevent="submitForm" class="wizard-container">
+        <form id="wizardForm" class="wizard-container" novalidate>
             {% csrf_token %}
 
             <!-- PASO 1: ESTRUCTURA E IDENTIFICACIÓN -->
-            <section v-show="currentStep === 1" class="wizard-step-content step-1">
+            <section class="wizard-step-content step-1" data-step-content="1">
                 <div class="form-section-card">
                     <div class="section-title"><i class="fa-solid fa-sitemap"></i> Ubicación Organizacional</div>
-                    <div class="unit-dynamic-grid">
-                        <div v-for="(level, index) in unitLevels" :key="index" class="unit-level-box">
-                            <label class="form-label">[[ getLevelLabel(index) ]]</label>
-                            <select class="form-control select2-unit" :data-index="index"
-                                    v-model="selectedUnits[index]">
-                                <option value="">Seleccione una opción...</option>
-                                <option v-for="unit in level.options" :key="unit.id" :value="unit.id">[[ unit.name ]]
-                                </option>
-                            </select>
-                        </div>
+                    <div class="unit-dynamic-grid" id="unitLevelsContainer">
+                        <!-- Nivel 0 cargado por JavaScript dinámicamente -->
                     </div>
                 </div>
 
@@ -57,212 +57,143 @@
                     <div class="grid-2-cols">
                         <div class="form-group">
                             <label class="form-label">Código Posicional</label>
-                            <input type="text" v-model="formData.position_code" class="form-control bg-readonly"
-                                   readonly>
+                            <input type="text" id="position_code" name="position_code" class="form-control bg-readonly"
+                                   readonly placeholder="Calculado automáticamente...">
                         </div>
                     </div>
                 </div>
             </section>
 
-            <section v-show="currentStep === 2" class="wizard-step-content">
+            <!-- PASO 2: VALORACIÓN NORMATIVA -->
+            <section class="wizard-step-content hidden" data-step-content="2">
                 <div class="form-section-card">
                     <div class="section-title">
                         <i class="fa-solid fa-diagram-predecessor"></i>
                         Valoración Normativa (Proceso de Clasificación)
                     </div>
 
-                    <div class="valuation-chain-container">
-                        <div v-for="(level, index) in valuationLevels" :key="index" class="valuation-node-box"
-                             v-show="level.type !== 'RESULT'">
-                            <label class="form-label">[[ getValuationLabel(level.type) ]]</label>
-                            <select class="form-control select2-valuation"
-                                    :data-index="index"
-                                    v-model="selectedNodes[index]">
-                                <option value="">Seleccione una opción...</option>
-                                <option v-for="node in level.options" :key="node.id" :value="node.id">
-                                    [[ node.name ]]
-                                </option>
-                            </select>
-                        </div>
+                    <div class="valuation-chain-container" id="valuationLevelsContainer">
+                        <!-- Niveles de valoración inyectados dinámicamente -->
                     </div>
 
                     <!-- RESULTADO FINAL AUTOMÁTICO -->
-                    <div class="classification-result-banner mt-4" v-if="matchResult">
+                    <div class="classification-result-banner mt-4 hidden" id="classificationResultBanner">
                         <div class="match-icon"><i class="fa-solid fa-award"></i></div>
                         <div class="match-details">
-                            <div class="match-group">[[ matchResult.group ]]</div>
-                            <div class="match-label">GRADO ESCALA: [[ matchResult.grade ]]</div>
+                            <div class="match-group" id="matchGroupName">---</div>
+                            <div class="match-label" id="matchGradeText">GRADO ESCALA: ---</div>
                         </div>
                         <div class="match-salary">
                             <small>RMU ACORDADO:</small>
-                            <span>$[[ matchResult.rmu ]]</span>
+                            <span id="matchRmuText">$0.00</span>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <!-- PASO 3: FUNCIONES / ACTIVIDADES -->
-            <section v-show="currentStep === 3" class="wizard-step-content">
+            <!-- PASO 3: ACTIVIDADES ESENCIALES -->
+            <section class="wizard-step-content hidden" data-step-content="3">
                 <div class="form-section-card">
                     <div class="section-header-inline">
                         <div class="section-title">
                             <i class="fa-solid fa-list-check"></i> Actividades Esenciales
                         </div>
-                        <button type="button" class="btn-add-activity" @click="addActivity">
+                        <button type="button" class="btn-add-activity" id="btnAddActivity">
                             <i class="fas fa-plus"></i> Añadir Actividad
                         </button>
                     </div>
 
                     <div class="table-responsive">
-                        <table class="table-premium">
+                        <table class="table-premium" id="activitiesTable">
                             <thead>
                             <tr>
-                                <th style="width: 180px;">Acción y Producto</th>
+                                <th style="width: 200px;">Acción y Producto</th>
                                 <th>Descripción de la Actividad</th>
-                                <th style="width: 150px;">Valoración (C/AG/F)</th>
-                                <th style="width: 160px;">Conocimientos</th>
-                                <th style="width: 60px; text-align: center; display: none;">Pts</th>
-                                <th style="width: 40px;"></th>
+                                <th style="width: 170px;">Valoración (C/AG/F)</th>
+                                <th style="width: 170px;">Conocimientos</th>
+                                <th style="width: 40px;" class="text-center"></th>
                             </tr>
                             </thead>
-                            <tbody>
-                            <tr v-for="(act, idx) in activities" :key="idx" class="row-animated">
-                                <td>
-                                    <select :data-index="idx" data-field="action_verb"
-                                            data-placeholder="Seleccione Verbo..." class="select2-act mb-1">
-                                        <option></option>
-                                        <option v-for="v in filteredVerbs" :key="v.id" :value="v.id"
-                                                :selected="act.action_verb == v.id">[[ v.name ]]
-                                        </option>
-                                    </select>
-
-                                    <select :data-index="idx" data-field="deliverables"
-                                            data-placeholder="Productos/Servicios..." class="select2-act"
-                                            multiple="multiple">
-                                        <option v-for="d in currentUnitDeliverables" :key="d.id" :value="d.id">
-                                            [[ d.name ]]
-                                        </option>
-                                    </select>
-                                </td>
-                                <td>
-                                    <textarea v-model="act.description" class="form-textarea-inline"
-                                              placeholder="¿Qué hace? + ¿Sobre qué?..."></textarea>
-                                </td>
-                                <td>
-                                    <select :data-index="idx" data-field="complexity"
-                                            data-placeholder="Complejidad (C)..." class="select2-act mb-1">
-                                        <option></option>
-                                        <option v-for="c in catalogs.complexity" :key="c.id" :value="c.id"
-                                                :selected="act.complexity == c.id">[[ c.name ]]
-                                        </option>
-                                    </select>
-
-                                    <select :data-index="idx" data-field="contribution"
-                                            data-placeholder="Aporte Gestión (AG)..." class="select2-act mb-1">
-                                        <option></option>
-                                        <option v-for="c in catalogs.complexity" :key="c.id" :value="c.id"
-                                                :selected="act.contribution == c.id">[[ c.name ]]
-                                        </option>
-                                    </select>
-
-                                    <select :data-index="idx" data-field="frequency"
-                                            data-placeholder="Frecuencia (F)..." class="select2-act">
-                                        <option></option>
-                                        <!-- FILTRO: No mostrar MENSUAL en la lista -->
-                                        <option v-for="f in catalogs.frequency"
-                                                v-show="!f.name.toUpperCase().includes('MENSUAL')"
-                                                :key="f.id" :value="f.id"
-                                                :selected="act.frequency == f.id">
-                                            [[ f.name ]]
-                                        </option>
-                                    </select>
-                                </td>
-                                <td>
-                                    <textarea v-model="act.additional_knowledge" class="form-textarea-inline"
-                                              placeholder="Conocimientos..."></textarea>
-                                </td>
-                                <td style="text-align: center; vertical-align: middle; display: none;">
-                                    <span class="badge-points">[[ act.points || 0 ]]</span>
-                                </td>
-                                <td class="cell-actions">
-                                    <div class="actions-col">
-                                        <button type="button" class="btn-clone-icon" title="Clonar actividad"
-                                                @click="cloneActivity(idx)">
-                                            <i class="fa-solid fa-clone"></i>
-                                        </button>
-                                        <button type="button" class="btn-delete-icon" title="Eliminar actividad"
-                                                @click="removeActivity(idx)">
-                                            <i class="fa-solid fa-trash-can"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
+                            <tbody id="activitiesTableBody">
+                            <!-- Filas de actividades renderizadas por JS -->
                             </tbody>
                         </table>
                     </div>
                     <div class="normative-note">
-                        <i class="fa-solid fa-circle-info"></i> Nota: El proceso de clasificación debe describir minimo
-                        10 actividades principales.
+                        <i class="fa-solid fa-circle-info"></i> Nota: El proceso de clasificación debe describir mínimo
+                        10 actividades principales con verbo, entregable, descripción y conocimientos adicionales.
                     </div>
                 </div>
             </section>
 
             <!-- PASO 4: COMPLETAR PERFIL -->
-            <section v-show="currentStep === 4" class="wizard-step-content">
+            <section class="wizard-step-content hidden" data-step-content="4">
                 <div class="form-section-card">
                     <div class="section-title"><i class="fa-solid fa-feather"></i> Definiciones Finales</div>
                     <div class="form-group">
-                        <label class="form-label">Misión del Puesto
+                        <label class="form-label">
+                            Misión del Puesto
                             <button type="button" class="btn-info-icon" title="Información"
-                                    @click="openInfo('Misión del Puesto', $event)">
+                                    data-info-key="Misión del Puesto">
                                 <i class="fa-solid fa-circle-info"></i>
                             </button>
                         </label>
-                        <textarea v-model="formData.mission" class="form-control" rows="3"></textarea>
-                        <small class="form-hint">[[ missionPreview ]]</small>
+                        <textarea id="mission" name="mission" class="form-control" rows="3"
+                                  placeholder="Definición de la misión del puesto..."></textarea>
+                        <small class="form-hint" id="missionHint">Complete las actividades para generar una
+                            sugerencia.</small>
                     </div>
+
                     <div class="grid-2-cols mt-3">
                         <div class="form-group">
-                            <label class="form-label">Área de Conocimiento
+                            <label class="form-label">
+                                Área de Conocimiento
                                 <button type="button" class="btn-info-icon" title="Información"
-                                        @click="openInfo('Área de Conocimiento', $event)">
+                                        data-info-key="Área de Conocimiento">
                                     <i class="fa-solid fa-circle-info"></i>
                                 </button>
                             </label>
-                            <textarea v-model="formData.knowledge_area" class="form-control" rows="2"></textarea>
-                            <small class="form-hint">[[ suggestionInstruction ]]</small>
+                            <textarea id="knowledge_area" name="knowledge_area" class="form-control"
+                                      rows="2"></textarea>
+                            <small class="form-hint" id="instructionHint">Sugerencia: Seleccione Instrucción en Paso
+                                2.</small>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Especificidad de la Experiencia
+                            <label class="form-label">
+                                Especificidad de la Experiencia
                                 <button type="button" class="btn-info-icon" title="Información"
-                                        @click="openInfo('Especificidad de la Experiencia', $event)">
+                                        data-info-key="Especificidad de la Experiencia">
                                     <i class="fa-solid fa-circle-info"></i>
                                 </button>
                             </label>
-                            <textarea v-model="formData.experience_details" class="form-control" rows="2"></textarea>
-                            <small class="form-hint">[[ suggestionExperience ]]</small>
+                            <textarea id="experience_details" name="experience_details" class="form-control"
+                                      rows="2"></textarea>
+                            <small class="form-hint" id="experienceHint">Sugerencia: Seleccione Experiencia en Paso
+                                2.</small>
                         </div>
                     </div>
 
                     <div class="grid-2-cols mt-3">
                         <div class="form-group">
-                            <label class="form-label">Relaciones Internas/Externas
+                            <label class="form-label">
+                                Relaciones Internas/Externas
                                 <button type="button" class="btn-info-icon" title="Información"
-                                        @click="openInfo('Relaciones Internas/Externas', $event)">
+                                        data-info-key="Relaciones Internas/Externas">
                                     <i class="fa-solid fa-circle-info"></i>
                                 </button>
                             </label>
-                            <textarea v-model="formData.interface_relations" class="form-control" rows="2"
+                            <textarea id="interface_relations" name="interface_relations" class="form-control" rows="2"
                                       placeholder="Describa con quién se relaciona el puesto"></textarea>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Temática de Capacitación
+                            <label class="form-label">
+                                Temática de Capacitación
                                 <button type="button" class="btn-info-icon" title="Información"
-                                        @click="openInfo('Temática de Capacitación', $event)">
+                                        data-info-key="Temática de Capacitación">
                                     <i class="fa-solid fa-circle-info"></i>
                                 </button>
                             </label>
-                            <textarea v-model="formData.training_topic" class="form-control" rows="2"
+                            <textarea id="training_topic" name="training_topic" class="form-control" rows="2"
                                       placeholder="Describa la temática de capacitación requerida"></textarea>
                         </div>
                     </div>
@@ -271,89 +202,87 @@
                     <div class="section-title mt-4"><i class="fa-solid fa-brain"></i> Competencias del Perfil</div>
 
                     <div class="row">
-                        <!-- Técnicas -->
+                        <!-- Técnicas (3) -->
                         <div class="col-md-4">
                             <div class="p-3 bg-white border rounded">
                                 <h6 class="text-primary border-bottom pb-2 mb-3">Técnicas</h6>
-                                <div v-for="(sel, i) in selectedTechnical" :key="'tech-'+i" class="mb-3">
-                                    <label class="form-label small text-muted">Opción [[ i+1 ]]</label>
-                                    <select class="form-control select2-comp-tech" :data-index="i">
-                                        <option value="">Seleccione...</option>
-                                        <option v-for="c in availableTechnical(i)" :key="c.id" :value="c.id"
-                                                :selected="selectedTechnical[i] == c.id">[[ c.name ]]
-                                        </option>
-                                    </select>
+                                <div class="mb-3">
+                                    <label class="form-label small text-muted">Opción 1</label>
+                                    <select class="form-control select2-comp-tech" data-index="0"></select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label small text-muted">Opción 2</label>
+                                    <select class="form-control select2-comp-tech" data-index="1"></select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label small text-muted">Opción 3</label>
+                                    <select class="form-control select2-comp-tech" data-index="2"></select>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Conductuales -->
+                        <!-- Conductuales (3) -->
                         <div class="col-md-4">
                             <div class="p-3 bg-white border rounded">
                                 <h6 class="text-info border-bottom pb-2 mb-3">Conductuales</h6>
-                                <div v-for="(sel, i) in selectedBehavioral" :key="'beh-'+i" class="mb-3">
-                                    <label class="form-label small text-muted">Opción [[ i+1 ]]</label>
-                                    <select class="form-control select2-comp-beh" :data-index="i">
-                                        <option value="">Seleccione...</option>
-                                        <option v-for="c in availableBehavioral(i)" :key="c.id" :value="c.id"
-                                                :selected="selectedBehavioral[i] == c.id">[[ c.name ]]
-                                        </option>
-                                    </select>
+                                <div class="mb-3">
+                                    <label class="form-label small text-muted">Opción 1</label>
+                                    <select class="form-control select2-comp-beh" data-index="0"></select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label small text-muted">Opción 2</label>
+                                    <select class="form-control select2-comp-beh" data-index="1"></select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label small text-muted">Opción 3</label>
+                                    <select class="form-control select2-comp-beh" data-index="2"></select>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Transversales -->
+                        <!-- Transversales (2) -->
                         <div class="col-md-4">
                             <div class="p-3 bg-white border rounded">
                                 <h6 class="text-secondary border-bottom pb-2 mb-3">Transversales</h6>
-                                <div v-for="(sel, i) in selectedTransversal" :key="'trans-'+i" class="mb-3">
-                                    <label class="form-label small text-muted">Opción [[ i+1 ]]</label>
-                                    <select class="form-control select2-comp-trans" :data-index="i">
-                                        <option value="">Seleccione...</option>
-                                        <option v-for="c in availableTransversal(i)" :key="c.id" :value="c.id"
-                                                :selected="selectedTransversal[i] == c.id">[[ c.name ]]
-                                        </option>
-                                    </select>
+                                <div class="mb-3">
+                                    <label class="form-label small text-muted">Opción 1</label>
+                                    <select class="form-control select2-comp-trans" data-index="0"></select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label small text-muted">Opción 2</label>
+                                    <select class="form-control select2-comp-trans" data-index="1"></select>
                                 </div>
                             </div>
                         </div>
                     </div>
-
                 </div>
             </section>
 
             <!-- NAVEGACIÓN DEL WIZARD -->
             <div class="wizard-nav-bar">
-
-                <button type="button" class="btn-wizard-nav btn-wizard-cancel" @click="cancelProcess">
+                <button type="button" class="btn-wizard-nav btn-wizard-cancel" id="btnWizardCancel">
                     <i class="fa-solid fa-xmark"></i> Cancelar
                 </button>
-
-                <button v-if="currentStep > 1" type="button" class="btn-wizard-nav btn-wizard-prev"
-                        @click="currentStep--">
+                <button type="button" class="btn-wizard-nav btn-wizard-prev hidden" id="btnWizardPrev">
                     <i class="fas fa-chevron-left"></i> Anterior
                 </button>
-
-                <button v-if="currentStep < 4" type="button" class="btn-wizard-nav btn-wizard-next"
-                        @click="currentStep++" :disabled="isNextDisabled">
+                <button type="button" class="btn-wizard-nav btn-wizard-next" id="btnWizardNext">
                     Siguiente <i class="fas fa-chevron-right"></i>
                 </button>
-
-                <button v-if="currentStep === 4" type="button" class="btn-wizard-nav btn-wizard-save"
-                        :disabled="loading" @click="handleFinalizeClick">
+                <button type="button" class="btn-wizard-nav btn-wizard-save hidden" id="btnWizardSave">
                     <i class="fa-solid fa-floppy-disk"></i> Finalizar y Guardar
                 </button>
             </div>
         </form>
-
     </div>
+
+    <!-- DATA ISLANDS -->
     <script id="catalogs-data" type="application/json">
-    {{ catalogs_json|safe }}
+        {{ catalogs_json|safe }}
     </script>
     {% if initial_data %}
         <script id="initial-data" type="application/json">
-    {{ initial_data|safe }}
+        {{ initial_data|safe }}
     </script>
     {% endif %}
 {% endblock %}

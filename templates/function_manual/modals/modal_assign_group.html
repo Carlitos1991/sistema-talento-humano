@@ -1,276 +1,44 @@
-<!-- Modal para Asignar Grupo Ocupacional -->
-<div id="assign-group-app" v-cloak>
-    <div class="modal-overlay" :class="{ 'hidden': !isVisible }">
-        <form @submit.prevent="submitAssignment" class="modal-container animate-scale-in" style="max-width: 700px;">
-            {% csrf_token %}
-            <div class="modal-header modal-header-gradient">
-                <h3 class="modal-title text-white">
-                    <i class="fa-solid fa-scale-balanced me-2"></i> Asignar Grupo Ocupacional
-                </h3>
-                <button type="button" class="btn-close-modal text-white-opacity" @click="closeModal">
-                    <i class="fas fa-times"></i>
-                </button>
+<!-- Modal para Asignar Grupo Ocupacional (100% Nativo SIGETH) -->
+<div class="modal-overlay hidden" id="modalAssignGroup">
+    <form id="formAssignGroup" onsubmit="submitAssignGroup(event)" class="modal-container-medium animate-scale-in"
+          style="max-width: 700px; margin: auto;">
+        {% csrf_token %}
+        <input type="hidden" id="assign_group_profile_id" name="profile_id" value="">
+
+        <!-- HEADER -->
+        <div class="modal-header modal-header-gradient">
+            <h3 class="modal-title text-white">
+                <i class="fa-solid fa-scale-balanced me-2"></i> Asignar Grupo Ocupacional
+            </h3>
+            <button type="button" class="btn-close-modal text-white-opacity" onclick="closeModal('modalAssignGroup')">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <!-- BODY -->
+        <div class="modal-body modal-body-custom">
+            <p class="text-sm text-gray-600 mb-4">
+                Seleccione el grupo ocupacional correspondiente basado en la valoración normativa del perfil.
+            </p>
+
+            <!-- Loading Spinner -->
+            <div id="assignGroupLoading" class="text-center py-4">
+                <i class="fas fa-spinner fa-spin fa-2x text-primary"></i>
+                <p class="mt-2 text-sm text-muted">Cargando opciones de la cadena de valoración...</p>
             </div>
 
-            <div class="modal-body modal-body-custom">
-                <p class="text-sm text-gray-600 mb-4">
-                    Seleccione el grupo ocupacional correspondiente basado en la valoración del perfil.
-                </p>
-
-                <!-- Indicador de carga -->
-                <div v-if="!hasResultLevel" class="text-center py-4">
-                    <i class="fas fa-spinner fa-spin fa-2x text-primary"></i>
-                    <p class="mt-2 text-sm text-gray-600">Cargando opciones...</p>
-                </div>
-
-                <!-- Cadena de valoración - Solo mostrar el nivel RESULT (7mo) cuando esté disponible -->
-                <div v-else class="valuation-chain-container mb-4">
-                    <div v-for="(level, index) in valuationLevels"
-                         :key="index"
-                         class="valuation-node-box"
-                         v-show="level.type === 'RESULT'">
-                        <label class="form-label">[[ getValuationLabel(level.type) ]]</label>
-                        <select class="form-control select2-valuation-assign"
-                                :data-index="index"
-                                v-model="selectedNodes[index]"
-                                :disabled="level.type !== 'RESULT'"
-                                :required="level.type === 'RESULT'">
-                            <option value="">Seleccione una opción...</option>
-                            <option v-for="node in level.options" :key="node.id" :value="node.id">
-                                [[ node.name ]]
-                            </option>
-                        </select>
-                    </div>
-                </div>
-
-
+            <!-- Contenedor dinámico de cadena -->
+            <div id="assignGroupChainContainer" class="valuation-chain-container mb-4 hidden">
+                <!-- Se inyecta por JS la cadena y el selector de RESULT -->
             </div>
+        </div>
 
-            <div class="modal-footer modal-footer-spaced">
-                <button type="button" class="btn-cancel" @click="closeModal">Cancelar</button>
-                <button type="submit" class="btn-save" :disabled="loading || !hasResultSelected">
-                    <span v-if="loading"><i class="fas fa-spinner fa-spin"></i> Guardando...</span>
-                    <span v-else><i class="fas fa-check"></i> Asignar</span>
-                </button>
-            </div>
-        </form>
-    </div>
+        <!-- FOOTER -->
+        <div class="modal-footer modal-footer-spaced">
+            <button type="button" class="btn-cancel" onclick="closeModal('modalAssignGroup')">Cancelar</button>
+            <button type="submit" id="btnSubmitAssignGroup" class="btn-save" disabled>
+                <i class="fas fa-check me-1"></i> Asignar Grupo
+            </button>
+        </div>
+    </form>
 </div>
-
-<!-- Script data -->
-<script id="matrix-data" type="application/json">
-{{ occupational_matrix_json|default:"[]"|safe }}
-</script>
-
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        // Verificamos si el elemento existe para montar la app
-        if (document.getElementById('assign-group-app')) {
-            const {createApp} = Vue;
-            createApp({
-                delimiters: ['[[', ']]'],
-                data() {
-                    return {
-                        isVisible: false,
-                        loading: false,
-                        profileId: null,
-                        selectedGroup: null,
-                        valuationLevels: [],
-                        selectedNodes: []
-                    }
-                },
-                computed: {
-                    // Verifica si se ha seleccionado un valor en el nivel RESULT
-                    hasResultSelected() {
-                        const resultIndex = this.valuationLevels.findIndex(l => l.type === 'RESULT');
-                        // Verificamos que el índice exista y que haya un valor seleccionado en el array
-                        return resultIndex !== -1 && this.selectedNodes[resultIndex];
-                    },
-                    hasResultLevel() {
-                        return this.valuationLevels.some(l => l.type === 'RESULT');
-                    }
-                },
-                mounted() {
-                    // Exponer función globalmente para abrir el modal
-                    window.openAssignGroupModal = async (id) => {
-                        this.profileId = id;
-                        this.selectedGroup = null;
-                        this.valuationLevels = [];
-                        this.selectedNodes = [];
-                        this.isVisible = true;
-
-                        // Cargar la cadena de valoración
-                        await this.loadProfileValuationChain(id);
-                    };
-                },
-                methods: {
-                    closeModal() {
-                        this.isVisible = false;
-                        this.valuationLevels = [];
-                        this.selectedNodes = [];
-                    },
-                    // =========================================================
-                    // CARGA SECUENCIAL DE LA CADENA DE VALORACIÓN
-                    // =========================================================
-                    async loadProfileValuationChain(profileId) {
-                        try {
-                            const res = await fetch(`/function_manual/api/profile/${profileId}/valuation-chain/`);
-                            const data = await res.json();
-
-                            if (!data.success) {
-                                Swal.fire('Error', data.message, 'error');
-                                return;
-                            }
-
-                            const selected = data.selected_values;
-
-                            // Cargar niveles uno por uno (Rol -> Instrucción -> ... -> Resultado)
-                            await this.fetchAndSelectLevel(null, 'ROLE', selected.role_id);
-
-                            // Usamos los IDs guardados en selectedNodes para buscar los hijos
-                            if (this.selectedNodes[0]) await this.fetchAndSelectLevel(this.selectedNodes[0], 'INSTRUCTION', selected.instruction_id);
-                            if (this.selectedNodes[1]) await this.fetchAndSelectLevel(this.selectedNodes[1], 'EXPERIENCE', null, selected.experience_text); // Usamos texto para experiencia
-                            if (this.selectedNodes[2]) await this.fetchAndSelectLevel(this.selectedNodes[2], 'DECISION', selected.decision_id);
-                            if (this.selectedNodes[3]) await this.fetchAndSelectLevel(this.selectedNodes[3], 'IMPACT', selected.impact_id);
-                            if (this.selectedNodes[4]) await this.fetchAndSelectLevel(this.selectedNodes[4], 'COMPLEXITY', selected.complexity_id);
-
-                            // Nivel Final: RESULT (Sin preselección automática del servidor, el usuario debe confirmar o seleccionar)
-                            if (this.selectedNodes[5]) await this.fetchAndSelectLevel(this.selectedNodes[5], 'RESULT', null, null, false);
-
-                            this.$nextTick(() => this.initSelect2Valuation());
-
-                        } catch (e) {
-                            console.error('Error cargando cadena:', e);
-                        }
-                    },
-
-                    async fetchAndSelectLevel(parentId, expectedType, catalogItemId = null, experienceText = null, autoSelectFirst = true) {
-                        const url = parentId
-                            ? `/function_manual/api/valuation-nodes/?parent=${parentId}`
-                            : '/function_manual/api/valuation-nodes/';
-
-                        try {
-                            const res = await fetch(url);
-                            const nodes = await res.json();
-
-                            if (nodes.length > 0 && nodes[0].type === expectedType) {
-                                this.valuationLevels.push({type: expectedType, options: nodes});
-
-                                let nodeToSelect = '';
-
-                                if (catalogItemId) {
-                                    // Buscar por coincidencia de Catalog Item
-                                    const match = nodes.find(n => n.catalog_item_id == catalogItemId);
-                                    if (match) nodeToSelect = match.id;
-                                } else if (expectedType === 'EXPERIENCE' && experienceText) {
-                                    // Buscar por coincidencia de Texto (Experiencia)
-                                    // Normalizamos texto para comparar
-                                    const cleanText = (txt) => txt ? txt.toLowerCase().trim() : '';
-                                    const target = cleanText(experienceText);
-
-                                    const match = nodes.find(n => {
-                                        const nText = cleanText(n.name_extra || n.name);
-                                        return nText === target;
-                                    });
-                                    if (match) nodeToSelect = match.id;
-                                }
-
-                                // Si no hubo coincidencia exacta y se permite autoseleccionar el primero (excepto en RESULT)
-                                if (!nodeToSelect && autoSelectFirst && expectedType !== 'RESULT') {
-                                    nodeToSelect = nodes[0].id;
-                                }
-
-                                this.selectedNodes.push(nodeToSelect);
-                            }
-                        } catch (e) {
-                            console.error(e);
-                        }
-                    },
-
-                    handleNodeChange(index) {
-                        // Al cambiar un nodo intermedio, cortar la cadena hacia abajo
-                        // Pero en este modal, generalmente solo el último (RESULT) es editable por el usuario
-                        // Si cambiaran uno intermedio, habría que recargar los hijos.
-                        // Para simplificar la asignación, asumimos que solo cambian el RESULT.
-                    },
-
-                    // =========================================================
-                    // INICIALIZACIÓN DE SELECT2
-                    // =========================================================
-                    initSelect2Valuation() {
-                        const self = this;
-                        // Destruir previos si existen
-                        $('.select2-valuation-assign').each(function () {
-                            if ($(this).hasClass('select2-hidden-accessible')) $(this).select2('destroy');
-                        });
-
-                        // Iniciar
-                        $('.select2-valuation-assign').select2({
-                            width: '100%',
-                            dropdownParent: $('#assign-group-app .modal-container'), // Importante para que funcione en modal
-                            placeholder: 'Seleccione...',
-                            allowClear: false
-                        }).off('change.vue').on('change.vue', function () {
-                            const idx = $(this).data('index');
-                            const val = $(this).val();
-                            if (self.selectedNodes[idx] !== val) {
-                                self.selectedNodes[idx] = val;
-                                // Vue reactividad manual
-                                self.$forceUpdate();
-                            }
-                        });
-                    },
-                    getValuationLabel(type) {
-                        const labels = {
-                            'ROLE': '1. Rol', 'INSTRUCTION': '2. Instrucción', 'EXPERIENCE': '3. Experiencia',
-                            'DECISION': '4. Decisiones', 'IMPACT': '5. Impacto', 'COMPLEXITY': '6. Complejidad',
-                            'RESULT': '7. Grupo Ocupacional'
-                        };
-                        return labels[type] || type;
-                    },
-
-                    // =========================================================
-                    // ENVÍO DEL FORMULARIO (CORREGIDO)
-                    // =========================================================
-                    async submitAssignment() {
-                        const resultIndex = this.valuationLevels.findIndex(l => l.type === 'RESULT');
-                        // Obtenemos el ID del NODO seleccionado (ValuationNode ID), NO el ID de la matriz
-                        const resultNodeId = this.selectedNodes[resultIndex];
-
-                        if (!resultNodeId) {
-                            Swal.fire('Atención', 'Debe seleccionar un grupo ocupacional final.', 'warning');
-                            return;
-                        }
-
-                        this.loading = true;
-                        try {
-                            const res = await fetch('/function_manual/api/profile/assign-group/', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                                },
-                                body: JSON.stringify({
-                                    profile_id: this.profileId,
-                                    result_node_id: resultNodeId // <--- AQUÍ ESTÁ LA CORRECCIÓN CLAVE
-                                })
-                            });
-                            const data = await res.json();
-
-                            if (data.success) {
-                                Swal.fire('Guardado', data.message, 'success').then(() => location.reload());
-                                this.closeModal();
-                            } else {
-                                Swal.fire('Error', data.message, 'error');
-                            }
-                        } catch (e) {
-                            Swal.fire('Error', 'Error de conexión', 'error');
-                        } finally {
-                            this.loading = false;
-                        }
-                    }
-                }
-            }).mount('#assign-group-app');
-        }
-    });
-</script>

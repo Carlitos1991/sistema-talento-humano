@@ -1,2426 +1,1610 @@
-/* static/js/function_manual.js */
-
-// ─── VARIABLE GLOBAL PARA FILTROS DE PAGINACIÓN ───
-let currentProfileFilters = {q: '', page: 1};
-
-const {createApp} = Vue;
-
-const getCsrfToken = () => document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
-
-document.addEventListener('DOMContentLoaded', () => {
-        const matrixElement = document.getElementById('matrixApp');
-        if (matrixElement) {
-            createApp({
-                delimiters: ['[[', ']]'],
-                data() {
-                    return {
-                        showModal: false, loading: false, isEdit: false,
-                        catalogs: {roles: [], instruction: [], complexity: []},
-                        formData: {
-                            id: null,
-                            occupational_group: '',
-                            grade: '',
-                            remuneration: '',
-                            required_role_id: '',
-                            complexity_level_id: '',
-                            minimum_instruction_id: '',
-                            minimum_experience_months: 0
-                        },
-                        activities: [{
-                            action_verb: '',
-                            description: '',
-                            additional_knowledge: '',
-                            deliverables: [],
-                            complexity: '',
-                            contribution: '',
-                            frequency: ''
-                        }],
-                        currentUnitDeliverables: [],
-                    }
-                },
-                mounted() {
-                    const tag = document.getElementById('catalogs-data');
-                    if (tag) this.catalogs = JSON.parse(tag.textContent);
-                },
-                methods: {
-                    openCreateModal() {
-                        this.isEdit = false;
-                        this.resetForm();
-                        this.showModal = true;
-                        document.body.classList.add('no-scroll');
-                    },
-                    async editEntry(id) {
-                        this.loading = true;
-                        try {
-                            const res = await fetch(`/function_manual/api/matrix/detail/${id}/`);
-                            const data = await res.json();
-                            this.formData = {...data}; // Cargamos toda la data en el form
-                            this.isEdit = true
-                            ;
-                            this.showModal = true;
-                            document.body.classList.add('no-scroll');
-                        } catch (e) {
-                            window.Toast.fire({icon: 'error', title: 'Error al cargar datos'});
-                        } finally {
-                            this.loading = false;
-                        }
-                    },
-                    async toggleEntry(id, name, isActive) {
-                        const actionName = isActive ? "Inactivar" : "Activar";
-                        const confirmText = isActive ? "Sí, inactivar" : "Sí, activar";
-                        const message = isActive
-                            ? "El registro no aparecerá en la valoración, pero no se eliminará."
-                            : "El registro volverá a estar disponible para su uso.";
-
-                        const result = await Swal.fire({
-                            title: `¿${actionName} ${name}?`,
-                            text: message,
-                            icon: isActive ? 'warning' : 'info',
-                            showCancelButton: true,
-                            customClass: {
-                                confirmButton: isActive ? 'btn-swal-danger' : 'btn-swal-success'
-                            },
-                            confirmButtonText: confirmText
-                        });
-
-                        if (result.isConfirmed) {
-                            const res = await fetch(`/function_manual/api/matrix/toggle/${id}/`, {
-                                method: 'POST',
-                                headers: {'X-CSRFToken': getCsrfToken()}
-                            });
-                            if (res.ok) {
-                                window.Toast.fire({icon: 'success', title: 'Estado actualizado'});
-                                location.reload();
-                            }
-                        }
-                    },
-                    async saveMatrix() {
-                        this.loading = true;
-                        try {
-                            const res = await fetch(matrixElement.dataset.urlSave, {
-                                method: 'POST',
-                                headers: {'X-CSRFToken': getCsrfToken(), 'Content-Type': 'application/json'},
-                                body: JSON.stringify(this.formData)
-                            });
-                            if (res.ok) {
-                                window.Toast.fire({icon: 'success', title: 'Registro guardado'});
-                                location.reload();
-                            }
-                        } finally {
-                            this.loading = false;
-                        }
-                    },
-                    closeModal() {
-                        this.showModal = false;
-                        document.body.classList.remove('no-scroll');
-                    },
-                    resetForm() {
-                        this.formData = {
-                            id: null,
-                            occupational_group: '',
-                            grade: '',
-                            remuneration: '',
-                            required_role_id: '',
-                            complexity_level_id: '',
-                            minimum_instruction_id: '',
-                            minimum_experience_months: 0
-                        };
-                    }
-                }
-            }).mount('#matrixApp');
-        }
-        // =========================================================================
-        // 1. GESTIÓN DE ESCALAS / ESTRUCTURA (#valuationApp)
-        // =========================================================================
-        const valuationElement = document.getElementById('valuationApp');
-        if (valuationElement) {
-            createApp({
-                delimiters: ['[[', ']]'],
-                data() {
-                    return {
-                        parentId: valuationElement.dataset.parentId || null,
-                        nextType: valuationElement.dataset.nextType || 'ROLE',
-                        nextLevelName: valuationElement.dataset.nextLevelName || 'Nivel',
-                        urlSave: valuationElement.dataset.urlSave,
-                        urlDetailBase: valuationElement.dataset.urlDetail.replace('/0/', '/'),
-                        workingType: '',
-                        showModal: false, isEdit: false, loading: false,
-                        catalogs: {instruction: [], decisions: [], impact: [], roles: [], matrix: [], complexity: []},
-                        formData: {
-                            id: null,
-                            catalog_item_id: '',
-                            name_extra: '',
-                            occupational_classification_id: '',
-                            minimum_value: null,
-                            level: null
-                        }
-                    }
-                },
-                computed: {
-                    currentNodeTypeName() {
-                        const names = {
-                            'ROLE': 'Rol',
-                            'INSTRUCTION': 'Instrucción',
-                            'EXPERIENCE': 'Experiencia',
-                            'DECISION': 'Decisión',
-                            'IMPACT': 'Impacto',
-                            'COMPLEXITY': 'Complejidad',
-                            'RESULT': 'Resultado',
-                            'GENERIC_DENOMINATION': 'Denominación Genérica'
-                        };
-                        return names[this.workingType] || 'Nivel';
-                    },
-                    filteredCatalogItems() {
-                        const mapping = {
-                            'ROLE': 'roles',
-                            'INSTRUCTION': 'instruction',
-                            'DECISION': 'decisions',
-                            'IMPACT': 'impact',
-                            'COMPLEXITY': 'complexity'
-                        };
-                        const key = mapping[this.workingType];
-                        return (this.catalogs && this.catalogs[key]) ? this.catalogs[key] : [];
-                    }
-                },
-                mounted() {
-                    const tag = document.getElementById('catalogs-data');
-                    if (tag) {
-                        try {
-                            this.catalogs = JSON.parse(tag.textContent);
-                        } catch (e) {
-                            console.error("Error catálogos:", e);
-                        }
-                    }
-                    this.workingType = this.nextType;
-                },
-                methods: {
-                    openCreateModal() {
-                        this.isEdit = false;
-                        this.workingType = this.nextType;
-                        this.resetForm();
-                        this.showModal = true;
-                        document.body.classList.add('no-scroll');
-                    },
-                    async editNode(id) {
-                        if (!id) {
-                            window.Toast.fire({icon: 'error', title: 'ID de registro no válido'});
-                            return;
-                        }
-                        this.loading = true;
-                        try {
-                            // CONSTRUCCIÓN DE RUTA ABSOLUTA
-                            const response = await fetch(`${this.urlDetailBase}${id}/`);
-                            if (!response.ok) throw new Error("Registro no encontrado");
-
-                            const data = await response.json();
-                            this.formData = {
-                                id: data.id,
-                                catalog_item_id: data.catalog_item_id || '',
-                                name_extra: data.name_extra || '',
-                                occupational_classification_id: data.occupational_classification_id || '',
-                                minimum_value: data.minimum_value || null,
-                                level: data.level || null
-                            };
-                            this.workingType = data.node_type;
-                            this.isEdit = true;
-                            this.showModal = true;
-                            document.body.classList.add('no-scroll');
-                        } catch (e) {
-                            console.error("Error Fetch:", e);
-                            window.Toast.fire({icon: 'error', title: 'Error al obtener datos del servidor'});
-                        } finally {
-                            this.loading = false;
-                        }
-                    },
-                    async deleteNode(id) {
-                        if (!id) {
-                            window.Toast.fire({icon: 'error', title: 'ID de registro no válido'});
-                            return;
-                        }
-
-                        const result = await Swal.fire({
-                            title: '¿Desactivar este nodo?',
-                            text: 'El nodo no aparecerá en la valoración, pero se puede reactivar después.',
-                            icon: 'warning',
-                            showCancelButton: true,
-                            confirmButtonText: 'Sí, desactivar',
-                            cancelButtonText: 'Cancelar',
-                            customClass: {
-                                confirmButton: 'btn-swal-danger'
-                            }
-                        });
-
-                        if (result.isConfirmed) {
-                            this.loading = true;
-                            try {
-                                const res = await fetch(`/function_manual/api/valuation-nodes/toggle/${id}/`, {
-                                    method: 'POST',
-                                    headers: {'X-CSRFToken': getCsrfToken()}
-                                });
-                                if (res.ok) {
-                                    window.Toast.fire({icon: 'success', title: 'Nodo desactivado'});
-                                    location.reload();
-                                } else {
-                                    window.Toast.fire({icon: 'error', title: 'Error al desactivar el nodo'});
-                                }
-                            } finally {
-                                this.loading = false;
-                            }
-                        }
-                    },
-                    closeModal() {
-                        this.showModal = false;
-                        document.body.classList.remove('no-scroll');
-                        this.resetForm();
-                    },
-                    async saveNode() {
-                        this.loading = true;
-                        const payload = {...this.formData, parent_id: this.parentId, node_type: this.workingType};
-                        try {
-                            const res = await fetch(this.urlSave, {
-                                method: 'POST',
-                                headers: {'X-CSRFToken': getCsrfToken(), 'Content-Type': 'application/json'},
-                                body: JSON.stringify(payload)
-                            });
-                            if (res.ok) {
-                                window.Toast.fire({icon: 'success', title: 'Registro guardado'});
-                                location.reload();
-                            }
-                        } finally {
-                            this.loading = false;
-                        }
-                    },
-                    resetForm() {
-                        this.formData = {
-                            id: null,
-                            catalog_item_id: '',
-                            name_extra: '',
-                            occupational_classification_id: '',
-                            minimum_value: null,
-                            level: null
-                        };
-                    }
-                }
-            }).mount('#valuationApp');
-        }
-
-        // =========================================================================
-        // 2. WIZARD DE PERFILES (#profileFormApp)
-        // =========================================================================
-        const wizEl = document.getElementById('profileFormApp');
-        if (wizEl) {
-            createApp({
-                delimiters: ['[[', ']]'],
-                data() {
-                    return {
-                        currentStep: 1,
-                        stepLabels: ['Estructura', 'Valoración', 'Actividades', 'Finalización'],
-                        loading: false,
-                        isEdit: false,
-                        formData: {
-                            position_code: '',
-                            specific_job_title: '',
-                            administrative_unit: '',
-                            occupational_classification: '',
-                            mission: '',
-                            knowledge_area: '',
-                            experience_details: '',
-                            training_topic: '',
-                            interface_relations: ''
-                        },
-                        unitLevels: [],
-                        selectedUnits: [],
-                        valuationLevels: [],
-                        selectedNodes: [],
-                        matchResult: null,
-                        filteredMatrix: [],
-
-                        currentUnitDeliverables: [],
-
-                        // Estructura de actividades con el campo points
-                        activities: [{
-                            action_verb: '',
-                            description: '',
-                            additional_knowledge: '',
-                            deliverables: [],
-                            complexity: '',
-                            contribution: '',
-                            frequency: '',
-                            points: 0
-                        }],
-
-                        catalogs: {
-                            instruction: [],
-                            decisions: [],
-                            impact: [],
-                            roles: [],
-                            verbs: [],
-                            frequency: [],
-                            competencies: []
-                        },
-                        allCompetencies: [],
-                        selectedTechnical: ['', '', ''],
-                        selectedBehavioral: ['', '', ''],
-                        selectedTransversal: ['', ''],
-                        urls: {}
-                    }
-                },
-                async mounted() {
-                    this.urls = {
-                        units: wizEl.dataset.urlUnits,
-                        nextCode: wizEl.dataset.urlNextCode,
-                        valuationNodes: wizEl.dataset.urlValuationNodes,
-                        matrix: wizEl.dataset.urlMatrix,
-                        cancel: wizEl.dataset.urlCancel
-                    };
-                    const tag = document.getElementById('catalogs-data');
-                    if (tag) {
-                        this.catalogs = JSON.parse(tag.textContent);
-                        if (this.catalogs.competencies) this.allCompetencies = this.catalogs.competencies;
-                    }
-
-                    await this.fetchUnits(null, 0);
-                    await this.fetchValuationLevel(null);
-
-                    // --- LOGICA DE EDICIÓN ---
-                    const initTag = document.getElementById('initial-data');
-                    if (initTag) {
-                        try {
-                            const initData = JSON.parse(initTag.textContent);
-                            this.isEdit = true;
-                            await this.loadInitialData(initData);
-                        } catch (e) {
-                            console.error("Error cargando datos iniciales:", e);
-                        }
-                    }
-
-                    this.$nextTick(() => {
-                        if (window.jQuery && $.fn.select2) {
-                            this.initSelect2();
-                            this.initSelect2Valuation();
-                            this.initSelect2Competencies();
-                        }
-                    });
-                },
-                computed: {
-                    technicalList() {
-                        return this.allCompetencies.filter(c => c.type === 'TECHNICAL');
-                    },
-                    behavioralList() {
-                        return this.allCompetencies.filter(c => c.type === 'BEHAVIORAL');
-                    },
-                    transversalList() {
-                        return this.allCompetencies.filter(c => c.type === 'TRANSVERSAL');
-                    },
-
-                    // Listas filtradas de competencias disponibles por índice
-                    availableTechnical() {
-                        return (index) => {
-                            const selected = this.selectedTechnical.filter((val, i) => i !== index && val);
-                            return this.technicalList.filter(c => !selected.includes(String(c.id)));
-                        };
-                    },
-                    availableBehavioral() {
-                        return (index) => {
-                            const selected = this.selectedBehavioral.filter((val, i) => i !== index && val);
-                            return this.behavioralList.filter(c => !selected.includes(String(c.id)));
-                        };
-                    },
-                    availableTransversal() {
-                        return (index) => {
-                            const selected = this.selectedTransversal.filter((val, i) => i !== index && val);
-                            return this.transversalList.filter(c => !selected.includes(String(c.id)));
-                        };
-                    },
-
-                    selectedMatrixItem() {
-                        if (!this.formData.occupational_classification) return null;
-                        return this.filteredMatrix.find(m => m.id == this.formData.occupational_classification);
-                    },
-
-                    filteredVerbs() {
-                        // Filtrar verbos por el ROL seleccionado en Step 2
-                        const roleLevelIndex = this.valuationLevels.findIndex(lvl => lvl.type === 'ROLE');
-
-                        // Si no se ha seleccionado un rol, retornar todos los verbos
-                        if (roleLevelIndex === -1 || !this.selectedNodes[roleLevelIndex]) {
-                            return this.catalogs.verbs;
-                        }
-
-                        const selectedRoleNodeId = this.selectedNodes[roleLevelIndex];
-
-                        return this.catalogs.verbs.filter(verb => {
-                            // Si el verbo no tiene rol específico (target_role es null), se muestra para todos
-                            if (!verb.target_role) return true;
-
-                            // Comparar el target_role del verbo con el nodo de valoración seleccionado
-                            return verb.target_role == selectedRoleNodeId;
-                        });
-                    },
-                    missionPreview() {
-                        const firstAct = this.activities[0];
-                        if (firstAct && firstAct.action_verb && firstAct.description && !this.formData.mission) {
-                            const verbObj = this.catalogs.verbs.find(v => v.id == firstAct.action_verb);
-                            const verbName = verbObj ? verbObj.name : '';
-                            return `Sugerencia: ${verbName} ${firstAct.description.toLowerCase()}...`;
-                        }
-                        return "Complete las actividades para generar una sugerencia.";
-                    },
-                    firstUnitSelected() {
-                        return this.selectedUnits && this.selectedUnits.length > 0 && !!this.selectedUnits[0];
-                    },
-                    hasBasicData() {
-                        return this.firstUnitSelected;
-                    },
-                    isNextDisabled() {
-                        if (this.currentStep === 1) return !this.hasBasicData;
-
-                        if (this.currentStep === 2) {
-                            // MODIFICACIÓN: Habilitar botón si ya se tienen los 6 primeros niveles
-                            // (Rol, Instrucción, Exp, Decisión, Impacto, Complejidad)
-                            const validNodes = this.selectedNodes.filter(n => n !== '');
-                            return validNodes.length < 6;
-                        }
-
-                        if (this.currentStep === 3) {
-                            if (this.activities.length < 10) return true;
-                            return !this.activities.every(a => a.action_verb && a.description && a.additional_knowledge);
-                        }
-                        return false;
-                    }
-                    ,
-                    // Sugerencia para el campo 'Área de Conocimiento' basada en la selección de Instrucción
-                    suggestionInstruction() {
-                        try {
-                            const instrIndex = this.valuationLevels.findIndex(l => l.type === 'INSTRUCTION');
-                            if (instrIndex === -1 || !this.selectedNodes[instrIndex]) return 'Sugerencia: Seleccione Instrucción en Paso 2.';
-                            const node = this.valuationLevels[instrIndex].options.find(n => n.id == this.selectedNodes[instrIndex]);
-                            if (!node) return 'Sugerencia: Seleccione Instrucción en Paso 2.';
-                            let instrName = node.name_extra || node.name || '';
-                            if (!instrName && node.catalog_item_id && this.catalogs.instruction) {
-                                const ci = this.catalogs.instruction.find(c => String(c.id) === String(node.catalog_item_id));
-                                if (ci) instrName = ci.name || '';
-                            }
-                            if (!instrName) return 'Sugerencia: Seleccione Instrucción en Paso 2.';
-                            return ` Instrucción seleccionada: ${instrName}`;
-                        } catch (e) {
-                            return '';
-                        }
-                    },
-                    // Sugerencia para el campo 'Especificidad de la Experiencia' basada en la selección de Experiencia
-                    suggestionExperience() {
-                        try {
-                            const expIndex = this.valuationLevels.findIndex(l => l.type === 'EXPERIENCE');
-                            if (expIndex === -1 || !this.selectedNodes[expIndex]) return 'Sugerencia: Seleccione Experiencia en Paso 2.';
-                            const node = this.valuationLevels[expIndex].options.find(n => n.id == this.selectedNodes[expIndex]);
-                            if (!node) return 'Sugerencia: Seleccione Experiencia en Paso 2.';
-                            const expName = node.name_extra || node.name || '';
-                            if (!expName) return 'Sugerencia: Seleccione Experiencia en Paso 2.';
-                            return `Experiencia seleccionada: ${expName}`;
-                        } catch (e) {
-                            return '';
-                        }
-                    }
-                },
-                watch: {
-                    selectedNodes: {
-                        handler(newVal) {
-                            // Cuando se selecciona COMPLEXITY (índice 5), buscar sus nodos RESULT hijos
-                            if (newVal[5]) {
-                                const complexityNodeId = newVal[5];
-                                console.log(`🔗 COMPLEXITY seleccionado: ${complexityNodeId}, buscando nodos RESULT hijos...`);
-                                this.fetchResultNodes(complexityNodeId);
-                            }
-
-                            // Intentar autocompletar los campos de Paso 4 cada vez que cambian las selecciones
-                            this.autofillStep4();
-                        },
-                        deep: true
-                    }
-                },
-                methods: {
-                    async fetchResultNodes(complexityNodeId) {
-                        try {
-                            const url = `${this.urls.valuationNodes}?parent=${complexityNodeId}`;
-                            const res = await fetch(url);
-                            const resultNodes = await res.json();
-
-                            console.log(`📦 Nodos RESULT hijos encontrados: ${resultNodes.length}`);
-                            resultNodes.forEach(n => {
-                                const nt = n.node_type || n.type || 'undefined';
-                                const name = n.name_extra || n.name || 'undefined';
-                                console.log(`   - ${n.id}: ${name} (type: ${nt})`);
-                            });
-
-                            // Filtrar solo RESULT nodes (soportando 'node_type' o 'type')
-                            const results = resultNodes.filter(n => (n.node_type === 'RESULT' || n.type === 'RESULT'));
-                            console.log(`✅ RESULT nodes: ${results.length}`);
-
-                            if (results.length === 1) {
-                                // Si hay solo 1 RESULT, intentar obtener sus hijos (nietos)
-                                const resultNode = results[0];
-                                console.log(`✨ RESULT asignado automáticamente: ${resultNode.id}. Buscando hijos (nietos) ...`);
-                                this.selectedNodes[6] = resultNode.id;
-
-                                // Solicitar hijos del RESULT para encontrar GENERIC_DENOMINATION
-                                try {
-                                    const grandchildrenRes = await fetch(`${this.urls.valuationNodes}?parent=${resultNode.id}`);
-                                    const grandchildren = await grandchildrenRes.json();
-                                    console.log(`📦 Nodos hijos del RESULT (nietos) encontrados: ${grandchildren.length}`);
-                                    grandchildren.forEach(g => {
-                                        const gtype = g.node_type || g.type || 'undefined';
-                                        const gname = g.name_extra || g.name || 'undefined';
-                                        console.log(`   - ${g.id}: ${gname} (type: ${gtype}, parent_id: ${g.parent_id || 'unknown'})`);
-                                    });
-
-                                    // Filtrar GENERIC_DENOMINATION entre los nietos (soporta 'node_type' o 'type')
-                                    const genericNodes = grandchildren.filter(n => (n.node_type === 'GENERIC_DENOMINATION' || n.type === 'GENERIC_DENOMINATION'));
-                                    console.log(`🔍 GENERIC_DENOMINATION encontrados (nietos): ${genericNodes.length}`);
-
-                                    if (genericNodes.length === 1) {
-                                        // Asignar directamente el nodo GENERIC_DENOMINATION (índice 7)
-                                        this.selectedNodes[7] = genericNodes[0].id;
-                                        console.log(`✅ GENERIC_DENOMINATION asignado automáticamente: ${genericNodes[0].id}`);
-                                    } else if (genericNodes.length > 1) {
-                                        // Elegir el que cumpla por minimum_value o el primero
-                                        let sel = null;
-                                        const totalPoints = this.formData.total_points || this.activities.reduce((s, a) => s + (a.points || 0), 0);
-                                        for (const gn of genericNodes) {
-                                            if (!gn.minimum_value) {
-                                                sel = gn;
-                                                break;
-                                            }
-                                            if (totalPoints !== undefined && gn.minimum_value <= totalPoints) {
-                                                sel = gn;
-                                                break;
-                                            }
-                                        }
-                                        if (!sel) sel = genericNodes[0];
-                                        this.selectedNodes[7] = sel.id;
-                                        console.log(`✅ GENERIC_DENOMINATION seleccionado (heurística): ${sel.id}`);
-                                    } else {
-                                        console.warn('❌ No hay GENERIC_DENOMINATION entre los nietos.');
-                                    }
-                                } catch (e) {
-                                    console.error('Error fetching grandchildren nodes:', e);
-                                }
-                            } else if (results.length > 1) {
-                                console.log(`⚠️ Múltiples RESULT nodes. Usuario debe seleccionar.`);
-                                // Aquí podrías mostrar un diálogo o cargar un dropdown
-                                this.selectedNodes[6] = results[0].id;  // Por ahora, tomar el primero
-                            } else {
-                                console.warn(`❌ No hay RESULT nodes para COMPLEXITY ${complexityNodeId}`);
-                            }
-                        } catch (e) {
-                            console.error('Error fetching RESULT nodes:', e);
-                        }
-                    },
-                    initSelect2Activities() {
-                        this.$nextTick(() => {
-                            const self = this;
-                            $('.select2-act').each(function () {
-                                const $el = $(this);
-                                const idx = $el.data('index');
-                                const field = $el.data('field');
-                                const customPlaceholder = $el.data('placeholder') || "Seleccione...";
-
-                                if ($el.hasClass('select2-hidden-accessible')) {
-                                    $el.select2('destroy');
-                                }
-
-                                // Obtener el valor actual del array de actividades
-                                const currentValue = self.activities[idx] ? self.activities[idx][field] : '';
-
-                                // Establecer el valor en el select antes de inicializar Select2
-                                if (currentValue) {
-                                    $el.val(currentValue);
-                                }
-
-                                $el.select2({
-                                    width: '100%',
-                                    placeholder: customPlaceholder,
-                                    allowClear: false,
-                                    dropdownAutoWidth: true
-                                }).off('change.act').on('change.act', function () {
-                                    const val = $(this).val();
-                                    if (self.activities[idx]) {
-                                        self.activities[idx][field] = val;
-
-                                        // RECALCULAR PUNTOS DE ESTA FILA
-                                        if (['complexity', 'contribution', 'frequency'].includes(field)) {
-                                            self.activities[idx].points = self.calculateActivityPoints(self.activities[idx]);
-                                        }
-                                    }
-                                });
-
-                                // Trigger change.select2 para actualizar la visualización
-                                if (currentValue) {
-                                    $el.trigger('change.select2');
-                                    // Calcular puntos iniciales al cargar edición
-                                    if (['complexity', 'contribution', 'frequency'].includes(field)) {
-                                        self.activities[idx].points = self.calculateActivityPoints(self.activities[idx]);
-                                    }
-                                }
-                            });
-                        });
-                    },
-                    calculateActivityPoints(act) {
-                        if (!act.complexity || !act.contribution || !act.frequency) return 0;
-
-                        const getItemName = (id, catKey) => {
-                            const item = this.catalogs[catKey].find(i => i.id == id);
-                            return item ? item.name.toUpperCase() : '';
-                        };
-
-                        const nameC = getItemName(act.complexity, 'complexity');
-                        const nameAG = getItemName(act.contribution, 'complexity');
-                        const nameF = getItemName(act.frequency, 'frequency');
-
-                        // Mapeo: Alto(3), Medio(2), Bajo(1)
-                        const mapVal = (name) => {
-                            if (name.includes('ALTO')) return 3;
-                            if (name.includes('MEDIO')) return 2;
-                            if (name.includes('BAJO')) return 1;
-                            return 0;
-                        };
-
-                        // Mapeo Frecuencia: Diario(5), Semanal(4), Mensual(3), Semestral/Trim(2), Anual(1)
-                        const mapFreq = (name) => {
-                            if (name.includes('DIARIO')) return 5;
-                            if (name.includes('SEMANAL')) return 4;
-                            if (name.includes('MENSUAL')) return 3;
-                            if (name.includes('SEMESTRAL') || name.includes('TRIMESTRAL')) return 2;
-                            if (name.includes('ANUAL')) return 1;
-                            return 0;
-                        };
-
-                        const c = mapVal(nameC);
-                        const ag = mapVal(nameAG);
-                        const f = mapFreq(nameF);
-
-                        // Fórmula: AG * (F + C)
-                        return ag * (f + c);
-                    },
-
-                    updateTotals() {
-                        let grandTotal = 0;
-                        this.activities.forEach(act => {
-                            act.points = this.calculateActivityPoints(act);
-                            grandTotal += act.points;
-                        });
-                        this.formData.total_points = grandTotal;
-                    },
-                    async loadInitialData(initData) {
-                        this.loading = true;
-                        try {
-                            // A. Datos básicos
-                            this.formData = {...this.formData, ...initData};
-
-                            // B. REHIDRATAR PASO 1 (Unidades Organizacionales)
-                            this.unitLevels = [];
-                            this.selectedUnits = [];
-                            await this.fetchUnits(null, 0); // Carga la raíz
-
-                            if (initData.selectedUnits && initData.selectedUnits.length > 0) {
-                                for (let i = 0; i < initData.selectedUnits.length; i++) {
-                                    const uId = initData.selectedUnits[i];
-                                    this.selectedUnits[i] = uId;
-                                    await this.fetchUnits(uId, i + 1); // Espera a cargar los hijos
-                                }
-                                const finalUnitId = initData.selectedUnits[initData.selectedUnits.length - 1];
-                                this.formData.administrative_unit = finalUnitId;
-                                // Cargar entregables de la unidad final
-                                await this.fetchUnitDeliverables(finalUnitId);
-                            }
-
-                            // C. REHIDRATAR PASO 2 (Valoración Normativa - SECUENCIAL)
-                            this.valuationLevels = [];
-                            this.selectedNodes = [];
-                            await this.fetchValuationLevel(null); // Carga Nivel 1 (Roles)
-
-                            if (initData.selectedNodes && initData.selectedNodes.length > 0) {
-                                for (let i = 0; i < initData.selectedNodes.length; i++) {
-                                    const nodeId = initData.selectedNodes[i];
-                                    this.selectedNodes[i] = nodeId;
-                                    // Cargamos el siguiente nivel basándonos en el nodo actual
-                                    await this.fetchValuationLevel(nodeId);
-                                }
-                            }
-
-                            // D. REHIDRATAR PASO 3 (Actividades)
-                            this.activities = initData.activities.map(a => {
-                                const actObj = {
-                                    action_verb: a.action_verb || '',
-                                    description: a.description || '',
-                                    additional_knowledge: a.additional_knowledge || '',
-                                    deliverables: a.deliverables || [],
-                                    complexity: a.complexity || '',
-                                    contribution: a.contribution || '',
-                                    frequency: a.frequency || '',
-                                    points: 0
-                                };
-                                actObj.points = this.calculateActivityPoints(actObj);
-                                return actObj;
-                            });
-                            this.selectedTechnical = initData.selectedTechnical ? [...initData.selectedTechnical] : ['', '', ''];
-                            this.selectedBehavioral = initData.selectedBehavioral ? [...initData.selectedBehavioral] : ['', '', ''];
-                            this.selectedTransversal = initData.selectedTransversal ? [...initData.selectedTransversal] : ['', ''];
-
-                            // E. SINCRONIZACIÓN VISUAL (Select2)
-                            this.$nextTick(() => {
-                                // Inicializamos todos los Select2
-                                this.initSelect2();           // Paso 1
-                                this.initSelect2Valuation();  // Paso 2
-                                this.initSelect2Activities(); // Paso 3
-                                this.initSelect2Competencies();// Paso 4
-
-                                // Forzamos a Select2 del PASO 2 a mostrar los valores
-                                this.selectedNodes.forEach((nodeId, i) => {
-                                    $(`.select2-valuation[data-index="${i}"]`).val(nodeId).trigger('change.select2');
-                                });
-                                this.selectedTechnical.forEach((id, i) => {
-                                    $(`.select2-comp-tech[data-index="${i}"]`).val(id).trigger('change.select2');
-                                });
-                                this.selectedBehavioral.forEach((id, i) => {
-                                    $(`.select2-comp-beh[data-index="${i}"]`).val(id).trigger('change.select2');
-                                });
-                                this.selectedTransversal.forEach((id, i) => {
-                                    $(`.select2-comp-trans[data-index="${i}"]`).val(id).trigger('change.select2');
-                                });
-
-                                // Forzamos a Select2 del PASO 3 a mostrar los valores
-                                this.activities.forEach((act, idx) => {
-                                    $(`select[data-index="${idx}"][data-field="action_verb"]`).val(act.action_verb).trigger('change.select2');
-                                    $(`select[data-index="${idx}"][data-field="deliverables"]`).val(act.deliverables).trigger('change.select2');
-                                    $(`select[data-index="${idx}"][data-field="complexity"]`).val(act.complexity).trigger('change.select2');
-                                    $(`select[data-index="${idx}"][data-field="contribution"]`).val(act.contribution).trigger('change.select2');
-                                    $(`select[data-index="${idx}"][data-field="frequency"]`).val(act.frequency).trigger('change.select2');
-                                });
-                            });
-
-                            if (initData.matchResult) this.matchResult = initData.matchResult;
-
-                        } catch (e) {
-                            console.error("Error rehidratando formulario:", e);
-                        } finally {
-                            this.loading = false;
-                        }
-                    },
-
-                    cancelProcess() {
-                        window.location.href = this.urls.cancel || this.urls.matrix;
-                    },
-                    validateCurrentStep() {
-                        if (this.currentStep === 1) {
-                            if (!this.formData.administrative_unit) {
-                                window.Toast.fire({icon: 'warning', title: 'Seleccione la unidad organizacional.'});
-                                return false;
-                            }
-                        }
-                        if (this.currentStep === 2) {
-                            // MODIFICACIÓN: Validar hasta el nivel 6 (Complejidad). El nivel 7 (Resultado) se hace fuera.
-                            // Niveles: 1.Rol, 2.Instrucción, 3.Exp, 4.Decisión, 5.Impacto, 6.Complejidad
-                            // Se verifica que selectedNodes tenga al menos 6 valores no vacíos
-
-                            // Filtramos valores vacíos
-                            const validNodes = this.selectedNodes.filter(n => n !== '');
-
-                            // Si hay menos de 6, falta completar
-                            if (validNodes.length < 10) {
-                                window.Toast.fire({
-                                    icon: 'warning',
-                                    title: 'Debe registrar al menos 10 actividades esenciales.'
-                                });
-                                return false;
-                            }
-                        }
-                        if (this.currentStep === 3) {
-                            if (this.activities.length < 6) {
-                                window.Toast.fire({
-                                    icon: 'warning',
-                                    title: 'Debe registrar al menos 6 actividades esenciales.'
-                                });
-                                return false;
-                            }
-                            const allComplete = this.activities.every(a => a.action_verb && a.description && a.additional_knowledge);
-                            if (!allComplete) {
-                                window.Toast.fire({
-                                    icon: 'warning',
-                                    title: 'Todas las actividades deben tener verbo, descripción y conocimientos.'
-                                });
-                                return false;
-                            }
-                        }
-                        return true;
-                    },
-                    nextStep() {
-                        if (this.validateCurrentStep()) {
-                            if (this.currentStep === 3) this.generateMissionSuggestion();
-                            this.currentStep++;
-                        }
-                    },
-                    generateMissionSuggestion() {
-                        // MDT-2025: Verbo + Objeto + Condición (Sugerencia)
-                        const firstAct = this.activities[0];
-                        if (firstAct && firstAct.action_verb && firstAct.description && !this.formData.mission) {
-                            const verbText = this.catalogs.verbs.find(v => v.id == firstAct.action_verb)?.name || '';
-                            this.formData.mission = `${verbText} ${firstAct.description.toLowerCase()} para asegurar el cumplimiento de los objetivos institucionales.`;
-                        }
-                    },
-
-
-                    // --- UNIDADES PASO 1 ---
-                    async fetchUnits(parentId, index) {
-                        const url = parentId ? `${this.urls.units}${parentId}/children/` : this.urls.units;
-                        const res = await fetch(url);
-                        const data = await res.json();
-                        if (data.length > 0) {
-                            this.unitLevels.push({options: data});
-                            this.selectedUnits.push('');
-                        }
-                    },
-                    async handleUnitChange(index) {
-                        const id = this.selectedUnits[index];
-
-                        // 1. Limpiar hijos
-                        this.unitLevels = this.unitLevels.slice(0, index + 1);
-                        this.selectedUnits = this.selectedUnits.slice(0, index + 1);
-
-                        // 2. Determinar cuál es la unidad más específica seleccionada hasta ahora
-                        // Filtramos el array para obtener el último valor que no sea vacío
-                        const lastSelectedId = this.selectedUnits.filter(u => u !== '').pop();
-
-                        if (id) {
-                            // Cargar el siguiente nivel si existe
-                            await this.fetchUnits(id, index + 1);
-                        }
-
-                        if (lastSelectedId) {
-                            this.formData.administrative_unit = lastSelectedId;
-
-                            // CARGAR ENTREGABLES de la unidad más específica
-                            await this.fetchUnitDeliverables(lastSelectedId);
-
-                            // Obtener código posicional
-                            const codeRes = await fetch(this.urls.nextCode.replace('0', lastSelectedId));
-                            const codeData = await codeRes.json();
-                            this.formData.position_code = codeData.next_code;
-                        } else {
-                            this.formData.administrative_unit = '';
-                            this.currentUnitDeliverables = [];
-                        }
-
-                        this.$nextTick(() => {
-                            this.initSelect2(); // Refresca select2 de unidades
-                            this.initSelect2Activities(); // MUY IMPORTANTE: Refresca los combos de la tabla
-                        });
-                    },
-                    async fetchUnitDeliverables(unitId) {
-                        if (!unitId) return;
-                        try {
-                            const response = await fetch(`/institution/api/units/${unitId}/deliverables/`);
-                            const result = await response.json();
-
-                            // Ajuste según estructura de tu API (si devuelve .data o el array directo)
-                            this.currentUnitDeliverables = result.success ? result.data : result;
-
-
-                        } catch (e) {
-                            console.error("Error cargando entregables:", e);
-                            this.currentUnitDeliverables = [];
-                        }
-                    },
-                    // --- VALORACIÓN PASO 2 ---
-                    async fetchValuationLevel(parentId) {
-                        const url = parentId ? `${this.urls.valuationNodes}?parent=${parentId}` : this.urls.valuationNodes;
-                        const res = await fetch(url);
-                        const data = await res.json();
-                        if (data.length > 0) {
-                            this.valuationLevels.push({type: data[0].type, options: data});
-                            this.selectedNodes.push('');
-                        }
-                    },
-                    async handleNodeChange(index) {
-                        const id = this.selectedNodes[index];
-
-                        // Cortamos los niveles que siguen al que cambió
-                        this.valuationLevels = this.valuationLevels.slice(0, index + 1);
-                        this.selectedNodes = this.selectedNodes.slice(0, index + 1);
-                        this.matchResult = null;
-
-                        if (id) {
-                            const sel = this.valuationLevels[index].options.find(n => n.id == id);
-                            if (sel && sel.type === 'RESULT') {
-                                this.matchResult = sel.classification;
-                                this.formData.occupational_classification = sel.classification_id;
-                                // IMPORTANTE: Guardar el node_id del RESULT para enviarlo al backend
-                                this.selectedNodes[index] = id;
-                                console.log(`RESULT node guardado: selectedNodes[${index}] = ${id}`);
-                            } else {
-                                await this.fetchValuationLevel(id);
-                            }
-                        }
-                        // ------------------
-                        // Lógica adicional: autocompletar campos de Paso 4
-                        // Si el usuario selecciona Instrucción = 'Bachiller' -> Área de Conocimiento = 'Bachillerato'
-                        // Si el usuario selecciona Experiencia que indica 'No requerida' -> Detalle = 'No requerida'
-                        try {
-                            // Índices de niveles en valuationLevels
-                            const instrIndex = this.valuationLevels.findIndex(l => l.type === 'INSTRUCTION');
-                            const expIndex = this.valuationLevels.findIndex(l => l.type === 'EXPERIENCE');
-
-                            // Instrucción
-                            if (instrIndex !== -1 && this.selectedNodes[instrIndex]) {
-                                const node = this.valuationLevels[instrIndex].options.find(n => n.id == this.selectedNodes[instrIndex]);
-                                if (node) {
-                                    // Intentar obtener el texto legible
-                                    let instrText = node.name_extra || node.name || '';
-                                    if (!instrText && node.catalog_item_id && this.catalogs.instruction) {
-                                        const ci = this.catalogs.instruction.find(c => String(c.id) === String(node.catalog_item_id));
-                                        if (ci) instrText = ci.name || '';
-                                    }
-                                    if (instrText && instrText.toLowerCase().includes('bachiller')) {
-                                        // Solo autocompletar si el campo está vacío
-                                        if (!this.formData.knowledge_area || this.formData.knowledge_area.trim() === '') {
-                                            this.formData.knowledge_area = 'Bachillerato';
-                                        }
-                                    }
-                                }
-                            }
-
-                            // Experiencia
-                            if (expIndex !== -1 && this.selectedNodes[expIndex]) {
-                                const node = this.valuationLevels[expIndex].options.find(n => n.id == this.selectedNodes[expIndex]);
-                                if (node) {
-                                    const expText = (node.name_extra || node.name || '').toLowerCase();
-                                    if (expText && expText.includes('no requerida')) {
-                                        if (!this.formData.experience_details || this.formData.experience_details.trim() === '') {
-                                            this.formData.experience_details = 'No requerida';
-                                        }
-                                    }
-                                }
-                            }
-                        } catch (e) {
-                            console.error('Error autocompletando campos paso 4:', e);
-                        }
-                        // Reinicializamos los select2 de los nuevos niveles creados
-                        this.$nextTick(() => this.initSelect2Valuation());
-                    },
-                    async filterMatrixByComplexity(complexityCatalogItemId) {
-                        // Filtrar la matriz ocupacional por TODA la cadena de valoración
-                        if (!complexityCatalogItemId) {
-                            this.filteredMatrix = [];
-                            return;
-                        }
-
-                        console.log(`🔍 Iniciando filterMatrixByComplexity con complexity_id=${complexityCatalogItemId}`);
-                        console.log(`📊 Total de registros en matriz: ${this.catalogs.matrix.length}`);
-                        if (this.catalogs.matrix.length > 0) {
-                            console.log(`📋 Primer registro de matriz:`, this.catalogs.matrix[0]);
-                        }
-
-                        // Obtener los catalog_item_id de todos los niveles seleccionados
-                        const nodes = this.selectedNodes.map((nodeId, idx) => {
-                            if (!nodeId || !this.valuationLevels[idx]) return null;
-                            return this.valuationLevels[idx].options.find(n => n.id == nodeId);
-                        }).filter(Boolean);
-
-                        // Extraer y convertir a números los catalog_item_id de cada nivel
-                        const roleId = nodes[0]?.catalog_item_id ? parseInt(nodes[0].catalog_item_id) : null;
-                        const instructionId = nodes[1]?.catalog_item_id ? parseInt(nodes[1].catalog_item_id) : null;
-                        const experienceNode = nodes[2];
-                        const decisionId = nodes[3]?.catalog_item_id ? parseInt(nodes[3].catalog_item_id) : null;
-                        const impactId = nodes[4]?.catalog_item_id ? parseInt(nodes[4].catalog_item_id) : null;
-                        const complexityId = parseInt(complexityCatalogItemId);
-
-                        // Calcular meses de experiencia
-                        let experienceMonths = 0;
-                        if (experienceNode && experienceNode.name_extra) {
-                            const experienceName = experienceNode.name_extra.toLowerCase();
-                            if (experienceName.includes('no requerida')) {
-                                experienceMonths = 0;
-                            } else {
-                                const parsed = parseInt(experienceNode.name_extra);
-                                if (!isNaN(parsed)) {
-                                    experienceMonths = parsed;
-                                }
-                            }
-                        }
-
-                        console.log(`🔎 Criterios de búsqueda:`);
-                        console.log(`   roleId=${roleId}`);
-                        console.log(`   instructionId=${instructionId}`);
-                        console.log(`   experienceMonths=${experienceMonths}`);
-                        console.log(`   decisionId=${decisionId}`);
-                        console.log(`   impactId=${impactId}`);
-                        console.log(`   complexityId=${complexityId}`);
-
-                        // Filtrar la matriz - TODOS los campos deben coincidir exactamente (comparación numérica)
-                        this.filteredMatrix = this.catalogs.matrix.filter(m => {
-                            const matchRole = parseInt(m.required_role_id) === roleId;
-                            const matchInstruction = parseInt(m.minimum_instruction_id) === instructionId;
-                            const matchExperience = parseInt(m.minimum_experience_months) === experienceMonths;
-                            const matchDecision = parseInt(m.required_decision_id) === decisionId;
-                            const matchImpact = parseInt(m.required_impact_id) === impactId;
-                            const matchComplexity = parseInt(m.complexity_level_id) === complexityId;
-
-                            const passAll = matchRole && matchInstruction && matchExperience &&
-                                matchDecision && matchImpact && matchComplexity;
-
-                            if (matchComplexity) {
-
-                            }
-
-                            return passAll;
-                        });
-
-                        console.log(`✅ Resultados encontrados: ${this.filteredMatrix.length}`);
-
-                        if (this.filteredMatrix.length === 0) {
-                            console.warn('⚠️ No se encontraron registros que coincidan con todos los criterios');
-                            this.matchResult = null;
-                        } else if (this.filteredMatrix.length === 1) {
-                            // Si hay exactamente 1 resultado, asignarlo automáticamente
-                            const matrix = this.filteredMatrix[0];
-                            this.formData.occupational_classification = matrix.id;
-                            this.matchResult = {
-                                group: matrix.occupational_group,
-                                grade: matrix.grade
-                            };
-                            console.log(`✨ Match encontrado automáticamente: ${matrix.occupational_group} - G${matrix.grade}`);
-                        } else {
-                            // Si hay múltiples, el usuario debe seleccionar
-                            console.log(`⚠️ Se encontraron ${this.filteredMatrix.length} matrices. Usuario debe seleccionar.`);
-                        }
-                    },
-                    // --- OTROS MÉTODOS ---
-                    getValuationLabel(type) {
-                        const labels = {
-                            'ROLE': '1. Rol',
-                            'INSTRUCTION': '2. Instrucción',
-                            'EXPERIENCE': '3. Experiencia',
-                            'DECISION': '4. Decisiones',
-                            'IMPACT': '5. Impacto',
-                            'COMPLEXITY': '6. Complejidad',
-                            'RESULT': '7. Resultado',
-                            'GENERIC_DENOMINATION': '8. Denominación Genérica'
-                        };
-                        return labels[type] || 'Nivel';
-                    },
-                    getLevelLabel(index) {
-                        return ['Nivel Institucional', 'Dirección', 'Jefatura', 'Unidad'][index] || 'Subnivel';
-                    },
-                    initSelect2() {
-                        const self = this;
-                        $('.select2-unit').select2({width: '100%'});
-
-                        $('.select2-unit').off('change.vue').on('change.vue', function () {
-                            const idx = $(this).data('index');
-                            const val = $(this).val();
-                            if (self.selectedUnits[idx] !== val) {
-                                self.selectedUnits[idx] = val;
-                                self.handleUnitChange(idx);
-                            }
-                        });
-                    },
-                    initSelect2Valuation() {
-                        const self = this;
-                        $('.select2-valuation').each(function () {
-                            const $el = $(this);
-                            const idx = $el.data('index');
-
-                            if ($el.hasClass('select2-hidden-accessible')) {
-                                $el.select2('destroy');
-                            }
-
-                            $el.select2({
-                                width: '100%',
-                                placeholder: "Seleccione...",
-                                allowClear: false
-                            }).off('change').on('change', function () {
-                                const val = $(this).val();
-                                if (self.selectedNodes[idx] !== val) {
-                                    self.selectedNodes[idx] = val;
-                                    self.handleNodeChange(idx); // Esto dispara la carga del siguiente nivel
-                                }
-                            });
-                        });
-                    },
-                    initSelect2Matrix() {
-                        const self = this;
-                        if ($('.select2-matrix').length) {
-                            // Destruir instancia previa
-                            if ($('.select2-matrix').hasClass('select2-hidden-accessible')) {
-                                $('.select2-matrix').select2('destroy');
-                            }
-
-                            $('.select2-matrix').select2({
-                                width: '100%',
-                                placeholder: 'Seleccione grupo ocupacional...'
-                            }).off('change.vue').on('change.vue', function () {
-                                self.formData.occupational_classification = $(this).val();
-                            });
-                        }
-                    },
-                    initSelect2Competencies() {
-                        const self = this;
-                        const setup = (cls, arrayRef, availableFunc) => {
-                            $(cls).each(function () {
-                                const $el = $(this);
-                                const idx = $el.data('index');
-
-                                if ($el.hasClass('select2-hidden-accessible')) {
-                                    $el.select2('destroy');
-                                }
-
-                                // Obtener las opciones disponibles para este índice
-                                const availableOptions = availableFunc(idx);
-                                const currentValue = arrayRef[idx];
-
-                                // Limpiar y reconstruir las opciones
-                                $el.empty();
-                                $el.append('<option value="">Seleccione...</option>');
-                                availableOptions.forEach(comp => {
-                                    $el.append(`<option value="${comp.id}">${comp.name}</option>`);
-                                });
-
-                                // Restaurar el valor actual si existe
-                                if (currentValue) {
-                                    $el.val(currentValue);
-                                }
-
-                                $el.select2({
-                                    width: '100%',
-                                    placeholder: "Seleccione...",
-                                }).off('change.comp').on('change.comp', function () {
-                                    const val = $(this).val();
-                                    arrayRef[idx] = val;
-                                    // Refrescar todos los selects del mismo grupo
-                                    self.initSelect2Competencies();
-                                });
-                            });
-                        };
-
-                        setup('.select2-comp-tech', this.selectedTechnical, this.availableTechnical);
-                        setup('.select2-comp-beh', this.selectedBehavioral, this.availableBehavioral);
-                        setup('.select2-comp-trans', this.selectedTransversal, this.availableTransversal);
-                    },
-                    addActivity() {
-                        // Insertar nueva actividad vacía al inicio para que aparezca arriba
-                        this.activities.unshift({
-                            action_verb: '',
-                            description: '',
-                            additional_knowledge: '',
-                            deliverables: [],
-                            complexity: '',
-                            contribution: '',
-                            frequency: '',
-                            points: 0
-                        });
-
-                        // Inicializar Select2 para los nuevos elementos (re-mapear índices)
-                        this.$nextTick(() => {
-                            this.initSelect2Activities();
-                        });
-                    },
-                    removeActivity(idx) {
-                        if (this.activities.length <= 1) {
-                            window.Toast.fire({
-                                icon: 'info',
-                                title: 'El perfil debe contener al menos una actividad.'
-                            });
-                            return;
-                        }
-                        Swal.fire({
-                            title: '¿Eliminar actividad?',
-                            text: "Esta acción no se puede deshacer.",
-                            icon: 'question',
-                            showCancelButton: true,
-                            confirmButtonText: 'Sí, eliminar',
-                            cancelButtonText: 'Cancelar',
-                            customClass: {
-                                confirmButton: 'btn-wizard-cancel',
-                                cancelButton: 'btn-wizard-prev'
-                            }
-                        }).then((result) => {
-                            if (result.isConfirmed) {
-                                // Eliminar del array de Vue
-                                this.activities.splice(idx, 1);
-
-                                // MUY IMPORTANTE: Refrescar Select2
-                                // Al eliminar una fila intermedia, los data-index de las filas siguientes cambian.
-                                // initSelect2Activities() se encarga de re-mapear todo.
-                                this.$nextTick(() => {
-                                    this.initSelect2Activities();
-                                });
-
-                                window.Toast.fire({
-                                    icon: 'success',
-                                    title: 'Actividad eliminada.'
-                                });
-                            }
-                        });
-                    },
-
-                    // Clonar una actividad: inserta una copia justo debajo de la original
-                    cloneActivity(idx) {
-                        try {
-                            const original = this.activities[idx];
-                            if (!original) return;
-                            // Deep copy de los campos relevantes
-                            const copy = {
-                                action_verb: original.action_verb || '',
-                                description: original.description || '',
-                                additional_knowledge: original.additional_knowledge || '',
-                                deliverables: [...(original.deliverables || [])],
-                                complexity: original.complexity || '',
-                                contribution: original.contribution || '',
-                                frequency: original.frequency || '',
-                                points: this.calculateActivityPoints(original)
-                            };
-                            $(`select[data-index="${newIndex}"][data-field="deliverables"]`).val(copy.deliverables).trigger('change.select2');
-
-                            // Insertar copia después del índice actual
-                            const newIndex = idx + 1;
-                            this.activities.splice(newIndex, 0, copy);
-
-                            // Re-inicializar select2 y aplicar valores para la nueva fila
-                            this.$nextTick(() => {
-                                this.initSelect2Activities();
-
-                                // Establecer valores en los selects del nuevo índice
-                                $(`select[data-index="${newIndex}"][data-field="action_verb"]`).val(copy.action_verb).trigger('change.select2');
-                                $(`select[data-index="${newIndex}"][data-field="deliverable"]`).val(copy.deliverable).trigger('change.select2');
-                                $(`select[data-index="${newIndex}"][data-field="complexity"]`).val(copy.complexity).trigger('change.select2');
-                                $(`select[data-index="${newIndex}"][data-field="contribution"]`).val(copy.contribution).trigger('change.select2');
-                                $(`select[data-index="${newIndex}"][data-field="frequency"]`).val(copy.frequency).trigger('change.select2');
-
-                                // Calcular puntos si es necesario
-                                this.activities[newIndex].points = this.calculateActivityPoints(this.activities[newIndex]);
-                            });
-
-                        } catch (e) {
-                            console.error('Error al clonar actividad:', e);
-                            window.Toast.fire({icon: 'error', title: 'No se pudo clonar la actividad.'});
-                        }
-                    },
-
-                    // Mostrar popup informativo con pausa/reanudar y auto-cierre
-                    openInfo(labelName, event) {
-                        try {
-                            // Inyectar estilos premium (solo una vez)
-                            const styleId = 'swal-info-style';
-                            if (!document.getElementById(styleId)) {
-                                const s = document.createElement('style');
-                                s.id = styleId;
-                                s.textContent = `
-                                    .swal2-info-popup {
-                                        background: #ffffff !important;
-                                        border-radius: 18px !important;
-                                        padding: 0 !important;
-                                        overflow: hidden !important;
-                                        box-shadow: 0 24px 60px rgba(15,23,42,0.2), 0 8px 24px rgba(15,23,42,0.12) !important;
-                                        max-width: 400px !important;
-                                        width: 400px !important;
-                                    }
-                                    .swal2-info-popup .swal2-html-container {
-                                        padding: 0 !important;
-                                        margin: 0 !important;
-                                        text-align: left !important;
-                                        overflow: visible !important;
-                                    }
-                                    /* Ocultar title y close nativo */
-                                    .swal2-info-popup .swal2-title,
-                                    .swal2-info-popup .swal2-header,
-                                    .swal2-info-popup .swal2-close {
-                                        display: none !important;
-                                    }
-                                    /* Cabecera custom */
-                                    .info-popup-header {
-                                        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-                                        padding: 0.85rem 1.1rem;
-                                        display: flex;
-                                        align-items: center;
-                                        justify-content: space-between;
-                                        gap: 10px;
-                                    }
-                                    .info-popup-title {
-                                        font-size: 0.88rem;
-                                        font-weight: 700;
-                                        color: #ffffff;
-                                        letter-spacing: 0.02em;
-                                        display: flex;
-                                        align-items: center;
-                                        gap: 8px;
-                                        flex: 1;
-                                        margin: 0;
-                                    }
-                                    .info-popup-title-dot {
-                                        width: 7px;
-                                        height: 7px;
-                                        border-radius: 50%;
-                                        background: #10b981;
-                                        flex-shrink: 0;
-                                        box-shadow: 0 0 6px rgba(16,185,129,0.6);
-                                    }
-                                    .info-popup-actions {
-                                        display: flex;
-                                        align-items: center;
-                                        gap: 5px;
-                                        flex-shrink: 0;
-                                    }
-                                    .info-popup-btn {
-                                        width: 28px;
-                                        height: 28px;
-                                        border-radius: 7px;
-                                        border: none;
-                                        cursor: pointer;
-                                        display: flex;
-                                        align-items: center;
-                                        justify-content: center;
-                                        font-size: 0.78rem;
-                                        background: rgba(255,255,255,0.1);
-                                        color: rgba(255,255,255,0.7);
-                                        transition: all 0.15s ease;
-                                        flex-shrink: 0;
-                                        padding: 0;
-                                        line-height: 1;
-                                    }
-                                    .info-popup-btn:hover {
-                                        background: rgba(255,255,255,0.22);
-                                        color: #fff;
-                                        transform: scale(1.1);
-                                    }
-                                    .info-popup-btn.btn-close-info:hover {
-                                        background: #e11d48;
-                                        color: #fff;
-                                        transform: scale(1.1);
-                                    }
-                                    .info-popup-btn.is-paused {
-                                        background: rgba(16,185,129,0.22);
-                                        color: #10b981;
-                                    }
-                                    /* Cuerpo */
-                                    .info-popup-body {
-                                        padding: 1.1rem 1.25rem 0.8rem;
-                                        background: #f8fafc;
-                                    }
-                                    .info-popup-text {
-                                        font-size: 0.875rem;
-                                        line-height: 1.7;
-                                        color: #334155;
-                                        text-align: justify;
-                                        hyphens: auto;
-                                        margin: 0;
-                                    }
-                                    /* Barra de progreso */
-                                    .info-popup-footer {
-                                        padding: 0.55rem 1.25rem 0.85rem;
-                                        background: #f8fafc;
-                                    }
-                                    .info-popup-track {
-                                        width: 100%;
-                                        height: 3px;
-                                        background: #e2e8f0;
-                                        border-radius: 99px;
-                                        overflow: hidden;
-                                    }
-                                    .info-popup-fill {
-                                        height: 100%;
-                                        width: 100%;
-                                        background: linear-gradient(90deg, #10b981, #059669);
-                                        border-radius: 99px;
-                                    }
-                                `;
-                                document.head.appendChild(s);
-                            }
-
-                            const messages = {
-                                'Misión del Puesto': 'La misión se define de las actividades asignadas al puesto, en función del portafolio de productos y/o servicios de las unidades y los procesos.',
-                                'Área de Conocimiento': 'Conjunto de conocimientos requeridos para el desempeño del puesto, adquiridos a través de estudios formales; competencia necesaria para que el servidor se desempeñe eficientemente en el puesto. Por ejemplo: "Ingeniería en Administración de Empresas, Derecho o Carreras afines".',
-                                'Especificidad de la Experiencia': 'Se refiere al nivel de experticia necesaria para el desarrollo eficiente de las actividades asignadas al puesto, para el logro de los productos y/o servicios en los que interviene el mismo.',
-                                'Relaciones Internas/Externas': 'Relación que tiene el cargo con las unidades administrativas internas o externas de la institución, así como con entidades u organismos del sector público o privado.',
-                                'Temática de Capacitación': 'Temáticas de capacitaciones inherentes al cargo o unidad administrativa, orientadas al fortalecimiento de las competencias requeridas para el desempeño del puesto.'
-                            };
-
-                            let infoText = null;
-                            try {
-                                if (event?.currentTarget?.dataset?.info) {
-                                    infoText = event.currentTarget.dataset.info;
-                                }
-                            } catch (e) { /* ignore */
-                            }
-
-                            const message = infoText || messages[labelName] || `Información sobre ${labelName}`;
-
-                            Swal.fire({
-                                html: `
-                                    <div class="info-popup-header">
-                                        <div class="info-popup-title">
-                                            <span class="info-popup-title-dot"></span>
-                                            ${labelName}
-                                        </div>
-                                        <div class="info-popup-actions">
-                                            <button id="swal-pause-btn" class="info-popup-btn" title="Pausar">
-                                                <i class="fa-solid fa-pause"></i>
-                                            </button>
-                                            <button id="swal-close-btn" class="info-popup-btn btn-close-info" title="Cerrar">
-                                                <i class="fa-solid fa-xmark"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div class="info-popup-body">
-                                        <p class="info-popup-text">${message}</p>
-                                    </div>
-                                    <div class="info-popup-footer">
-                                        <div class="info-popup-track">
-                                            <div id="swal-timer-bar" class="info-popup-fill"></div>
-                                        </div>
-                                    </div>
-                                `,
-                                showCloseButton: false,
-                                showConfirmButton: false,
-                                showTitle: false,
-                                timer: 6000,
-                                customClass: {popup: 'swal2-info-popup'},
-                                didOpen: (popup) => {
-                                    const swalRef = Swal;
-                                    const pauseBtn = popup.querySelector('#swal-pause-btn');
-                                    const closeBtn = popup.querySelector('#swal-close-btn');
-                                    const timerBar = popup.querySelector('#swal-timer-bar');
-
-                                    let isPaused = false;
-                                    let duration = 6000;
-                                    let start = Date.now();
-                                    let remaining = duration;
-
-                                    const updateBar = () => {
-                                        if (!isPaused && timerBar) {
-                                            const pct = Math.max(0, 1 - (Date.now() - start) / duration);
-                                            timerBar.style.width = `${pct * 100}%`;
-                                        }
-                                    };
-
-                                    const interval = setInterval(updateBar, 50);
-
-                                    pauseBtn?.addEventListener('click', () => {
-                                        if (!isPaused) {
-                                            remaining = Math.max(0, duration - (Date.now() - start));
-                                            isPaused = true;
-                                            pauseBtn.classList.add('is-paused');
-                                            pauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
-                                            pauseBtn.title = 'Reanudar';
-                                            swalRef.stopTimer();
-                                        } else {
-                                            isPaused = false;
-                                            start = Date.now();
-                                            duration = remaining;
-                                            pauseBtn.classList.remove('is-paused');
-                                            pauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
-                                            pauseBtn.title = 'Pausar';
-                                            swalRef.resumeTimer();
-                                        }
-                                    });
-
-                                    closeBtn?.addEventListener('click', () => {
-                                        clearInterval(interval);
-                                        swalRef.close();
-                                    });
-
-                                    popup.addEventListener('mouseenter', () => {
-                                        if (!isPaused) {
-                                            remaining = Math.max(0, duration - (Date.now() - start));
-                                            swalRef.stopTimer();
-                                        }
-                                    });
-                                    popup.addEventListener('mouseleave', () => {
-                                        if (!isPaused) {
-                                            start = Date.now();
-                                            duration = remaining;
-                                            swalRef.resumeTimer();
-                                        }
-                                    });
-
-                                    const closeObserver = new MutationObserver((mutations) => {
-                                        mutations.forEach(m => {
-                                            if (m.removedNodes?.length) clearInterval(interval);
-                                        });
-                                    });
-                                    closeObserver.observe(popup.parentNode, {childList: true});
-                                }
-                            });
-                        } catch (e) {
-                            console.error('openInfo error:', e);
-                        }
-                    },
-
-                    // Intenta autocompletar los campos del Paso 4 según selectedNodes
-                    autofillStep4() {
-                        try {
-                            const instrIndex = this.valuationLevels.findIndex(l => l.type === 'INSTRUCTION');
-                            const expIndex = this.valuationLevels.findIndex(l => l.type === 'EXPERIENCE');
-
-                            // Instrucción -> Área de Conocimiento
-                            if (instrIndex !== -1 && this.selectedNodes[instrIndex]) {
-                                const node = this.valuationLevels[instrIndex].options.find(n => n.id == this.selectedNodes[instrIndex]);
-                                if (node) {
-                                    let instrText = node.name_extra || node.name || '';
-                                    if (!instrText && node.catalog_item_id && this.catalogs.instruction) {
-                                        const ci = this.catalogs.instruction.find(c => String(c.id) === String(node.catalog_item_id));
-                                        if (ci) instrText = ci.name || '';
-                                    }
-                                    if (instrText && instrText.toLowerCase().includes('bachiller')) {
-                                        if (!this.formData.knowledge_area || this.formData.knowledge_area.trim() === '') {
-                                            this.formData.knowledge_area = 'Bachillerato';
-                                        }
-                                    }
-                                }
-                            }
-
-                            // Experiencia -> Especificidad de la Experiencia
-                            if (expIndex !== -1 && this.selectedNodes[expIndex]) {
-                                const node = this.valuationLevels[expIndex].options.find(n => n.id == this.selectedNodes[expIndex]);
-                                if (node) {
-                                    const expText = (node.name_extra || node.name || '').toLowerCase();
-                                    if (expText && expText.includes('no requerida')) {
-                                        if (!this.formData.experience_details || this.formData.experience_details.trim() === '') {
-                                            this.formData.experience_details = 'No requerida';
-                                        }
-                                    }
-                                }
-                            }
-                        } catch (e) {
-                            console.error('autofillStep4 error:', e);
-                        }
-                    },
-
-                    async handleFinalizeClick() {
-                        // Mostrar SweetAlert con checkbox de aceptación
-                        return new Promise((resolve) => {
-                            let isCheckboxChecked = false;
-
-                            const swalHtml = `
-                                <div style="text-align: left;">
-                                    <div style="margin-bottom: 20px;">
-                                        <label style="display: flex; align-items: center; cursor: pointer; font-size: 14px;">
-                                            <input type="checkbox" id="acceptance-checkbox" style="cursor: pointer; margin-right: 10px; width: 18px; height: 18px;">
-                                            <span>Acepta que toda la información es veraz de conformidad a las necesidades de la unidad administrativa</span>
-                                        </label>
-                                    </div>
-                                </div>
-                            `;
-
-                            Swal.fire({
-                                title: 'Confirmación de Información',
-                                html: swalHtml,
-                                icon: 'warning',
-                                showCancelButton: true,
-                                confirmButtonText: '<i class="fas fa-check me-2"></i> Guardar',
-                                cancelButtonText: 'Cancelar',
-                                confirmButtonColor: '#0d6efd',
-                                cancelButtonColor: '#6c757d',
-                                didOpen: () => {
-                                    const checkbox = document.getElementById('acceptance-checkbox');
-                                    const confirmBtn = document.querySelector('.swal2-confirm');
-
-                                    // Deshabilitar el botón al inicio
-                                    confirmBtn.disabled = true;
-                                    confirmBtn.style.opacity = '0.5';
-                                    confirmBtn.style.cursor = 'not-allowed';
-
-                                    // Evento del checkbox
-                                    checkbox.addEventListener('change', function () {
-                                        isCheckboxChecked = this.checked;
-                                        if (isCheckboxChecked) {
-                                            confirmBtn.disabled = false;
-                                            confirmBtn.style.opacity = '1';
-                                            confirmBtn.style.cursor = 'pointer';
-                                        } else {
-                                            confirmBtn.disabled = true;
-                                            confirmBtn.style.opacity = '0.5';
-                                            confirmBtn.style.cursor = 'not-allowed';
-                                        }
-                                    });
-                                }
-                            }).then((result) => {
-                                if (result.isConfirmed && isCheckboxChecked) {
-                                    this.submitForm();
-                                }
-                            });
-                        });
-                    },
-                    async submitForm() {
-                        if (!this.validateCurrentStep()) return;
-
-                        this.loading = true;
-                        // Recopilar IDs de competencias (filtrando vacíos)
-                        const competencies = [
-                            ...this.selectedTechnical,
-                            ...this.selectedBehavioral,
-                            ...this.selectedTransversal
-                        ].filter(id => id && id !== '');
-
-                        // Capturar los IDs de todos los niveles de valoración (nodos)
-                        const valuationNodeIds = {
-                            role_node_id: this.selectedNodes[0] || null,
-                            instruction_node_id: this.selectedNodes[1] || null,
-                            experience_node_id: this.selectedNodes[2] || null,
-                            decision_node_id: this.selectedNodes[3] || null,
-                            impact_node_id: this.selectedNodes[4] || null,
-                            complexity_node_id: this.selectedNodes[5] || null,
-                            result_node_id: this.selectedNodes[6] || null  // Nivel 7 (RESULT) si existe
-                        };
-
-                        const payload = {
-                            ...this.formData,
-                            ...valuationNodeIds,
-                            selectedNodes: this.selectedNodes,
-                            selected_generic_node_id: this.selectedNodes[7] || null,
-                            final_complexity_level_id: valuationNodeIds.complexity_node_id,  // Por compatibilidad
-                            activities: this.activities,
-                            competencies: competencies
-                        };
-
-                        try {
-                            const res = await fetch(wizEl.dataset.urlSaveAction, { // Debes agregar este data-attr al HTML
-                                method: 'POST',
-                                headers: {
-                                    'X-CSRFToken': getCsrfToken(),
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify(payload)
-                            });
-                            const data = await res.json();
-                            if (data.success) {
-                                Swal.fire('¡Éxito!', data.message, 'success').then(() => {
-                                    window.location.href = data.redirect;
-                                });
-                            } else {
-                                throw new Error(data.error);
-                            }
-                        } catch (e) {
-                            window.Toast.fire({icon: 'error', title: e.message});
-                        } finally {
-                            this.loading = false;
-                        }
-                    }
-                    ,
-                }
-            }).mount('#profileFormApp');
-        }
-
-        // =========================================================================
-        // 3. COMPETENCIAS (#competencyApp)
-        // =========================================================================
-        const compEl = document.getElementById('competencyApp');
-        if (compEl) {
-            createApp({
-                delimiters: ['[[', ']]'],
-                data() {
-                    return {
-                        loading: false,
-                        isEdit: false,
-                        showModal: false,
-                        currentId: null,
-                        searchQuery: '',
-                        urls: {},
-                        complexityLevels: [],
-                        formData: {name: '', type: 'TECHNICAL', definition: '', suggested_level: ''},
-                        currentErrors: {}
-                    }
-                },
-                mounted() {
-                    // Leer configuración inicial
-                    this.urls = {
-                        table: compEl.dataset.urlTable,
-                        create: compEl.dataset.urlCreate,
-                        update: compEl.dataset.urlUpdateBase,
-                        toggle: compEl.dataset.urlToggleBase
-                    };
-
-                    try {
-                        this.complexityLevels = JSON.parse(compEl.dataset.levels || '[]');
-                    } catch (e) {
-                        console.error("Error niveles:", e);
-                    }
-
-                    // Exponer app para llamadas externas desde el HTML inyectado
-                    window.competencyApp = this;
-
-                    // Cargar tabla inicial
-                    this.fetchTable();
-                },
-                methods: {
-                    async refreshTable() {
-                        const res = await fetch(this.urls.table);
-                        document.getElementById('table-content-wrapper').innerHTML = await res.text();
-                    },
-                    openModal(mode, data = null) {
-                        this.isEdit = mode === 'edit';
-                        if (this.isEdit && data) {
-                            this.currentId = data.id;
-                            this.formData = {...data};
-                        } else {
-                            this.formData = {name: '', type: 'TECHNICAL', definition: '', suggested_level: ''};
-                        }
-                        this.showModal = true;
-                        document.body.classList.add('no-scroll');
-                    },
-                    closeModal() {
-                        this.showModal = false;
-                        document.body.classList.remove('no-scroll');
-                        this.resetForm();
-                    },
-                    resetForm() {
-                        this.isEdit = false;
-                        this.formData = {id: null, name: '', type: 'TECHNICAL', definition: '', suggested_level: ''};
-                        this.currentErrors = {};
-                    },
-                    async saveCompetency() {
-                        this.loading = true;
-                        this.currentErrors = {};
-                        const url = this.isEdit
-                            ? this.urls.update.replace('0', this.currentId)
-                            : this.urls.create;
-
-                        try {
-                            const res = await fetch(url, {
-                                method: 'POST',
-                                headers: {'X-CSRFToken': getCsrfToken(), 'Content-Type': 'application/json'},
-                                body: JSON.stringify(this.formData)
-                            });
-                            const data = await res.json();
-
-                            if (data.status === 'success') {
-                                window.Toast.fire({icon: 'success', title: data.message || 'Guardado correctamente'});
-                                this.closeModal();
-                                await this.fetchTable();
-                            } else {
-                                window.Toast.fire({icon: 'error', title: data.message || 'Error al guardar'});
-                            }
-                        } catch (e) {
-                            console.error('Error:', e);
-                            window.Toast.fire({icon: 'error', title: 'Error al guardar'});
-                        } finally {
-                            this.loading = false;
-                        }
-                    },
-                    async fetchTable() {
-                        const res = await fetch(this.urls.table);
-                        const html = await res.text();
-                        document.querySelector('#table-content-wrapper').innerHTML = html;
-                    }
-                },
-            }).mount('#competencyApp');
-        }
-
-        // =========================================================================
-        // 4. LISTADO DE PERFILES (#profileApp)
-        // =========================================================================
-        const profileListEl = document.getElementById('profileApp');
-        if (profileListEl) {
-            createApp({
-                delimiters: ['[[', ']]'],
-                data() {
-                    return {
-                        searchQuery: '',
-                        debounceTimer: null,
-                        // Paginación
-                        currentPage: 1,
-                        pageSize: 10,
-                        totalRows: 0,
-                        allDOMRows: []
-                    };
-                },
-                computed: {
-                    totalPages() {
-                        return Math.ceil(this.totalRows / this.pageSize) || 1;
-                    }
-                },
-                mounted() {
-                    this.initPagination();
-                },
-                methods: {
-                    debounceSearch() {
-                        clearTimeout(this.debounceTimer);
-                        this.debounceTimer = setTimeout(() => {
-                            this.filterTable();
-                        }, 300);
-                    },
-                    filterTable() {
-                        const query = this.searchQuery.toLowerCase().trim();
-                        const rows = document.querySelectorAll('#profileTable tbody tr');
-
-                        rows.forEach(row => {
-                            const text = row.textContent.toLowerCase();
-                            row.dataset.filtered = text.includes(query) ? 'true' : 'false';
-                        });
-
-                        // Re-aplicar paginación después de filtrar
-                        this.currentPage = 1;
-                        this.applyPagination();
-                    },
-                    initPagination() {
-                        const rows = document.querySelectorAll('#profileTable tbody tr');
-                        this.allDOMRows = Array.from(rows);
-                        this.allDOMRows.forEach(row => row.dataset.filtered = 'true');
-                        this.applyPagination();
-                    },
-                    applyPagination() {
-                        // Obtener filas visibles (filtradas)
-                        const visibleRows = this.allDOMRows.filter(r => r.dataset.filtered === 'true');
-                        this.totalRows = visibleRows.length;
-
-                        const start = (this.currentPage - 1) * this.pageSize;
-                        const end = start + this.pageSize;
-
-                        // Ocultar todas las filas primero
-                        this.allDOMRows.forEach(row => row.style.display = 'none');
-
-                        // Mostrar solo las de la página actual
-                        visibleRows.forEach((row, idx) => {
-                            row.style.display = (idx >= start && idx < end) ? '' : 'none';
-                        });
-                    },
-                    nextPage() {
-                        if (this.currentPage < this.totalPages) {
-                            this.currentPage++;
-                            this.applyPagination();
-                        }
-                    },
-                    prevPage() {
-                        if (this.currentPage > 1) {
-                            this.currentPage--;
-                            this.applyPagination();
-                        }
-                    },
-                    goToPage(page) {
-                        if (page >= 1 && page <= this.totalPages) {
-                            this.currentPage = page;
-                            this.applyPagination();
-                        }
-                    }
-                }
-            }).mount('#profileApp');
-        }
-
-        // =========================================================================
-        // 5. FUNCIONES GLOBALES: ASIGNAR EMPLEADO REFERENCIAL (Fuera de Vue)
-        // =========================================================================
-
-        window.openAssignReferentialModal = (pk) => {
-            fetch(`/function_manual/profiles/assign-referential/${pk}/`)
-                .then(res => res.text())
-                .then(html => {
-                    const container = document.getElementById('modal-inject-container');
-                    if (container) {
-                        container.innerHTML = html;
-                        const overlay = container.querySelector('.modal-overlay');
-                        if (overlay) overlay.style.display = 'flex';
-                        document.body.classList.add('no-scroll');
-                    }
-                });
+/**
+ * SIGETH - MÓDULO MANUAL DE FUNCIONES (ESTANDARIZADO SIN VUE.JS)
+ * Administra el Wizard de Perfiles, Valoración de Puestos, Actividades y Modales.
+ */
+
+// Utilidad CSRF compatible con el estándar main.js
+const getCsrfToken = () => {
+    return typeof getCSRF === 'function' ? getCSRF() : (document.querySelector('[name=csrfmiddlewaretoken]')?.value || '');
+};
+
+/* ==========================================================================
+   1. WIZARD DE PERFILES DE PUESTOS (PASOS 1 A 4)
+   ========================================================================== */
+class JobProfileWizard {
+    constructor(rootElement) {
+        this.root = rootElement;
+        this.urls = {
+            units: this.root.dataset.urlUnits,
+            nextCode: this.root.dataset.urlNextCode,
+            valuationNodes: this.root.dataset.urlValuationNodes,
+            matrix: this.root.dataset.urlMatrix,
+            cancel: this.root.dataset.urlCancel,
+            save: this.root.dataset.urlSaveAction
         };
+        this.isEdit = this.root.dataset.isEdit === 'true';
 
-        window.closeManualModal = () => {
-            const container = document.getElementById('modal-inject-container');
-            if (container) {
-                if (typeof window.destroyLegalizeProfileSelect2 === 'function') {
-                    window.destroyLegalizeProfileSelect2();
-                }
-                container.innerHTML = '';
-                document.body.classList.remove('no-scroll');
-            }
+        // Catálogos e inicialización
+        this.catalogs = {
+            instruction: [], decisions: [], impact: [], roles: [],
+            verbs: [], frequency: [], complexity: [], matrix: [], competencies: []
         };
+        this.allCompetencies = [];
+        this.unitDeliverables = [];
 
-        window.searchEmployeeReferential = async () => {
-            const cedula = document.getElementById('search-cedula-ref').value;
-            const resultCard = document.getElementById('search-result-card-ref'),
-                btnSubmit = document.getElementById('btn-submit-assign-ref'),
-                resName = document.getElementById('res-name-ref'),
-                resEmail = document.getElementById('res-email-ref'),
-                resPhoto = document.getElementById('res-photo-ref'),
-                hiddenId = document.getElementById('selected-employee-id-ref');
+        // Estado del formulario
+        this.currentStep = 1;
+        this.stepLabels = [
+            'Estructura e Identificación',
+            'Valoración Normativa',
+            'Actividades Esenciales',
+            'Definiciones y Competencias'
+        ];
 
-            if (!cedula || cedula.length < 10) return Swal.fire('Error', 'Cédula no válida (mínimo 10 dígitos)', 'warning');
+        this.selectedUnits = [];       // Array de IDs de unidades seleccionadas por nivel
+        this.selectedNodes = [];       // Array de IDs de ValuationNode por nivel
+        this.valuationLevels = [];     // Metadata de cada nivel de valoración cargado
+        this.activities = [];          // Lista de objetos de actividades
+        this.matchResult = null;       // Objeto de clasificación resultante
 
-            // Estado de carga
-            btnSubmit.disabled = true;
-            resName.textContent = 'Buscando...';
-            resultCard.classList.remove('hidden');
+        this.selectedTechnical = ['', '', ''];
+        this.selectedBehavioral = ['', '', ''];
+        this.selectedTransversal = ['', ''];
 
+        this.init();
+    }
+
+    async init() {
+        // Cargar Catálogos desde Data Island
+        const catTag = document.getElementById('catalogs-data');
+        if (catTag) {
             try {
-                const res = await fetch(`/function_manual/api/search-employee-simple/?q=${cedula}`);
-                const data = await res.json();
-
-                if (data.success) {
-                    const emp = data.data;
-                    resName.textContent = emp.full_name;
-                    resEmail.textContent = emp.cargo || 'Sin asignar';
-
-                    // Foto
-                    const photoUrl = emp.photo ? emp.photo : '/static/img/avatar-placeholder.png';
-                    resPhoto.innerHTML = `<img src="${photoUrl}" style="width:100%; height:100%; object-fit:cover;">`;
-
-                    hiddenId.value = emp.id;
-
-                    btnSubmit.disabled = false;
-                    resultCard.classList.remove('hidden');
-                } else {
-                    resName.textContent = 'No encontrado';
-                    resEmail.textContent = data.message;
-                    resPhoto.innerHTML = '<i class="fas fa-user-slash fa-lg text-muted"></i>';
-                    hiddenId.value = '';
-
-                    // Opcionalmente ocultar card o mostrar error style
-                    btnSubmit.disabled = true;
-                }
-
+                this.catalogs = JSON.parse(catTag.textContent || '{}');
+                this.allCompetencies = this.catalogs.competencies || [];
             } catch (e) {
-                console.error(e);
-                resName.textContent = 'Error de conexión';
+                console.error("Error parseando catalogs-data:", e);
             }
-        };
+        }
 
-        window.submitAssignReferential = async (e, pk) => {
-            e.preventDefault();
-            const form = e.target;
-            const btn = document.getElementById('btn-submit-assign-ref');
+        this.bindEvents();
+        this.renderStepNavigation();
 
-            // Bloqueo
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
-            btn.disabled = true;
+        // Carga de Unidades Raíz y Niveles Iniciales de Valoración
+        await this.fetchUnits(null, 0);
+        await this.fetchValuationLevel(null, 0);
 
+        // Si es edición, rehidratar
+        const initTag = document.getElementById('initial-data');
+        if (initTag) {
             try {
-                const formData = new FormData(form);
-                const res = await fetch(`/function_manual/profiles/assign-referential/${pk}/`, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {'X-Requested-With': 'XMLHttpRequest'}
-                });
-                const data = await res.json();
+                const initData = JSON.parse(initTag.textContent || '{}');
+                await this.loadInitialData(initData);
+            } catch (e) {
+                console.error("Error cargando datos de edición:", e);
+            }
+        } else {
+            // Actividad inicial por defecto
+            this.addActivity();
+        }
 
-                if (data.success) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Asignado!',
-                        text: data.message,
-                        timer: 1500,
-                        showConfirmButton: false
-                    }).then(() => {
-                        location.reload();
-                    });
+        this.initCompetencySelects();
+    }
+
+    bindEvents() {
+        // Navegación Stepper
+        document.getElementById('btnWizardPrev')?.addEventListener('click', () => this.goToStep(this.currentStep - 1));
+        document.getElementById('btnWizardNext')?.addEventListener('click', () => this.handleNextStep());
+        document.getElementById('btnWizardCancel')?.addEventListener('click', () => {
+            window.location.href = this.urls.cancel || '/function_manual/profiles/';
+        });
+        document.getElementById('btnWizardSave')?.addEventListener('click', () => this.handleFinalizeClick());
+
+        // Botón agregar actividad
+        document.getElementById('btnAddActivity')?.addEventListener('click', () => this.addActivity());
+
+        // Eventos Popups de Información paso 4
+        document.querySelectorAll('.btn-info-icon').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const key = btn.dataset.infoKey || btn.closest('label')?.textContent.trim();
+                this.openInfoPopup(key);
+            });
+        });
+    }
+
+    // --- MANEJO DE PASOS ---
+    goToStep(stepNumber) {
+        if (stepNumber < 1 || stepNumber > 4) return;
+        this.currentStep = stepNumber;
+
+        // Alternar visualización de pasos
+        document.querySelectorAll('.wizard-step-content').forEach(sec => {
+            const stepId = parseInt(sec.dataset.stepContent, 10);
+            if (stepId === this.currentStep) {
+                sec.classList.remove('hidden');
+            } else {
+                sec.classList.add('hidden');
+            }
+        });
+
+        // Actualizar Stepper Header
+        document.querySelectorAll('.wizard-stepper .step-item').forEach(item => {
+            const step = parseInt(item.dataset.step, 10);
+            item.classList.remove('active', 'completed');
+            if (step === this.currentStep) {
+                item.classList.add('active');
+            } else if (step < this.currentStep) {
+                item.classList.add('completed');
+            }
+        });
+
+        const subtitle = document.getElementById('wizardSubtitle');
+        if (subtitle) {
+            subtitle.textContent = `Paso ${this.currentStep}: ${this.stepLabels[this.currentStep - 1]}`;
+        }
+
+        this.renderStepNavigation();
+
+        // Acciones específicas al entrar a un paso
+        if (this.currentStep === 3) {
+            this.refreshActivitiesSelect2();
+        } else if (this.currentStep === 4) {
+            this.generateMissionSuggestion();
+            this.autofillStep4();
+            this.initCompetencySelects();
+        }
+
+        window.scrollTo({top: 0, behavior: 'smooth'});
+    }
+
+    renderStepNavigation() {
+        const btnPrev = document.getElementById('btnWizardPrev');
+        const btnNext = document.getElementById('btnWizardNext');
+        const btnSave = document.getElementById('btnWizardSave');
+
+        if (btnPrev) btnPrev.classList.toggle('hidden', this.currentStep === 1);
+        if (btnNext) btnNext.classList.toggle('hidden', this.currentStep === 4);
+        if (btnSave) btnSave.classList.toggle('hidden', this.currentStep !== 4);
+    }
+
+    validateCurrentStep() {
+        if (this.currentStep === 1) {
+            const adminUnit = this.selectedUnits.filter(Boolean).pop();
+            if (!adminUnit) {
+                if (typeof showToast === 'function') {
+                    showToast('Seleccione la unidad organizacional completa.', 'warning');
                 } else {
-                    Swal.fire('Error', data.message, 'error');
-                    btn.innerHTML = '<i class="fas fa-save me-2"></i> Guardar Asignación';
-                    btn.disabled = false;
+                    Swal.fire({icon: 'warning', title: 'Atención', text: 'Seleccione la unidad organizacional.'});
                 }
-            } catch (err) {
-                console.error(err);
-                Swal.fire('Error', 'Fallo de conexión', 'error');
-                btn.innerHTML = '<i class="fas fa-save me-2"></i> Guardar Asignación';
-                btn.disabled = false;
+                return false;
             }
-        };
+            return true;
+        }
 
-        // =========================================================================
-        // COMPLETAR DENOMINACIÓN DEL CARGO
-        // =========================================================================
-
-        window.openCompleteDenominationModal = (pk) => {
-            fetch(`/function_manual/profiles/complete-denomination/${pk}/`)
-                .then(res => res.text())
-                .then(html => {
-                    const container = document.getElementById('modal-inject-container');
-                    if (container) {
-                        container.innerHTML = html;
-
-                        // Ejecutar scripts dentro del HTML inyectado
-                        const scripts = container.querySelectorAll('script');
-                        scripts.forEach(script => {
-                            const newScript = document.createElement('script');
-                            newScript.textContent = script.textContent;
-                            container.appendChild(newScript);
-                        });
-
-                        const overlay = container.querySelector('.modal-overlay');
-                        if (overlay) overlay.style.display = 'flex';
-                        document.body.classList.add('no-scroll');
-                    }
-                });
-        };
-
-        window.submitCompleteDenomination = async (e, pk) => {
-            e.preventDefault();
-
-            const currentDenom = document.getElementById('current-denomination').value;
-            const complement = document.getElementById('denomination-complement').value.trim();
-            const finalDenom = complement ? `${currentDenom} ${complement}` : currentDenom;
-
-            // Mostrar confirmación con SweetAlert2
-            const result = await Swal.fire({
-                title: '¿Confirmación?',
-                html: `
-                    <div style="text-align: left; background: #f8fafc; padding: 20px; border-radius: 8px;">
-                        <p style="margin: 0 0 15px 0; color: #475569;">
-                            <strong>¿Está seguro de actualizar la denominación del cargo por:</strong>
-                        </p>
-                        <div style="font-size: 1.1rem; font-weight: 700; color: #7c3aed; padding: 15px; background: white; border-radius: 6px; border-left: 4px solid #7c3aed; margin-bottom: 15px;">
-                            ${finalDenom}
-                        </div>
-                        <p style="margin: 0; color: #dc2626; font-weight: 600;">
-                            <i class="fas fa-exclamation-triangle me-2"></i> Este cambio no se puede modificar.
-                        </p>
-                    </div>
-                `,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#7c3aed',
-                cancelButtonColor: '#6b7280',
-                confirmButtonText: '<i class="fas fa-check me-2"></i> Sí, actualizar',
-                cancelButtonText: 'Cancelar',
-                reverseButtons: true
-            });
-
-            if (!result.isConfirmed) return;
-
-            // Proceder con la actualización
-            const btn = document.getElementById('btn-submit-complete-denom');
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Actualizando...';
-            btn.disabled = true;
-
-            try {
-                const res = await fetch('/function_manual/api/profile/complete-denomination/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                    },
-                    body: JSON.stringify({
-                        profile_id: pk,
-                        complement: complement
-                    })
-                });
-
-                const data = await res.json();
-
-                if (data.success) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Actualizado!',
-                        text: 'Denominación del cargo actualizada con éxito.',
-                        timer: 1500,
-                        showConfirmButton: false
-                    }).then(() => {
-                        closeManualModal();
-                        // Recargar tabla en lugar de recargar página completa
-                        if (typeof window.fetchFunctionManualProfiles === 'function') {
-                            window.fetchFunctionManualProfiles();
-                        } else {
-                            location.reload();
-                        }
-                    });
-                } else {
-                    // Mostrar mensaje de error del servidor
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error de Validación',
-                        text: data.message || 'No se pudo actualizar la denominación',
-                        confirmButtonColor: '#dc2626'
-                    });
-                    btn.innerHTML = '<i class="fas fa-check me-2"></i> Actualizar Denominación';
-                    btn.disabled = false;
-                }
-            } catch (err) {
-                console.error(err);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error de Conexión',
-                    text: 'Fallo al conectar con el servidor',
-                    confirmButtonColor: '#dc2626'
-                });
-                btn.innerHTML = '<i class="fas fa-check me-2"></i> Actualizar Denominación';
-                btn.disabled = false;
-            }
-        };
-
-        // =========================================================================
-        // LEGALIZACIÓN (FIRMAS)
-        // =========================================================================
-
-        window.openLegalizeModal = (pk) => {
-            fetch(`/function_manual/profiles/legalize/${pk}/`)
-                .then(res => res.text())
-                .then(html => {
-                    const container = document.getElementById('modal-inject-container');
-                    if (container) {
-                        if (typeof window.destroyLegalizeProfileSelect2 === 'function') {
-                            window.destroyLegalizeProfileSelect2();
-                        }
-                        container.innerHTML = html;
-                        const overlay = container.querySelector('.modal-overlay');
-                        if (overlay) {
-                            // Forzamos estilos para garantizar overlay
-                            overlay.style.position = 'fixed';
-                            overlay.style.display = 'flex';
-                            overlay.style.zIndex = '999999';
-                        }
-                        document.body.classList.add('no-scroll');
-                        if (typeof window.initLegalizeProfileSelect2 === 'function') {
-                            window.initLegalizeProfileSelect2();
-                        }
-                        validateLegalizeSelects();
-                    }
-                });
-        };
-
-        window.validateLegalizeSelects = () => {
-            const selects = document.querySelectorAll('.select-authority');
-            const btn = document.getElementById('btn-submit-legalize');
-            const warning = document.getElementById('legalize-duplicate-warning');
-            const selectedValues = Array.from(selects).map(s => s.value).filter(v => v);
-            const hasDuplicates = new Set(selectedValues).size !== selectedValues.length;
-
-            if (warning) {
-                warning.style.display = hasDuplicates ? 'block' : 'none';
-            }
-
-            if (btn) {
-                btn.disabled = hasDuplicates;
-            }
-
-            return !hasDuplicates;
-        };
-
-        window.destroyLegalizeProfileSelect2 = () => {
-            if (!window.$ || !$.fn.select2) return;
-
-            document.querySelectorAll('.select-authority').forEach(select => {
-                try {
-                    const $select = $(select);
-                    if ($select.hasClass('select2-hidden-accessible')) {
-                        $select.select2('destroy');
-                    }
-                } catch (err) {
-                    console.warn('Error destruyendo Select2 de legalización:', err);
-                }
-            });
-        };
-
-        window.initLegalizeProfileSelect2 = () => {
-            if (!window.$ || !$.fn.select2) return;
-
-            const modal = document.getElementById('legalizeProfileModal');
-            const selects = document.querySelectorAll('.select-authority');
-
-            selects.forEach(select => {
-                try {
-                    const $select = $(select);
-                    const ajaxUrl = select.dataset.ajaxUrl;
-                    const placeholder = select.dataset.placeholder || 'Seleccione un usuario';
-                    const minimumInputLength = parseInt(select.dataset.minimumInputLength || '1', 10) || 1;
-
-                    if ($select.hasClass('select2-hidden-accessible')) {
-                        $select.select2('destroy');
-                    }
-
-                    $select.select2({
-                        dropdownParent: modal ? $(modal) : $(document.body),
-                        width: '100%',
-                        placeholder,
-                        allowClear: true,
-                        minimumInputLength,
-                        language: {
-                            errorLoading: function () {
-                                return 'No se pudieron cargar los resultados';
-                            },
-                            inputTooShort: function (args) {
-                                const remaining = args.minimum - args.input.length;
-                                return `Por favor ingrese ${remaining} caracter${remaining !== 1 ? 'es' : ''} más`;
-                            },
-                            noResults: function () {
-                                return 'No se encontraron usuarios';
-                            },
-                            searching: function () {
-                                return 'Buscando usuarios...';
-                            }
-                        },
-                        ajax: {
-                            url: ajaxUrl,
-                            dataType: 'json',
-                            delay: 250,
-                            data: function (params) {
-                                return {term: params.term};
-                            },
-                            processResults: function (data) {
-                                const currentValue = String(select.value || '');
-                                const takenValues = Array.from(document.querySelectorAll('.select-authority'))
-                                    .map(item => String(item.value || ''))
-                                    .filter(Boolean);
-
-                                const results = (data.results || []).filter(item => {
-                                    const itemId = String(item.id || '');
-                                    return !takenValues.includes(itemId) || itemId === currentValue;
-                                });
-
-                                return {results};
-                            },
-                            cache: true
-                        }
-                    });
-                } catch (err) {
-                    console.error('Error inicializando Select2 de legalización:', err);
-                }
-            });
-        };
-
-        window.submitLegalizeProfile = async (e, pk) => {
-            e.preventDefault();
-            if (!validateLegalizeSelects()) {
+        if (this.currentStep === 2) {
+            const validNodes = this.selectedNodes.filter(Boolean);
+            if (validNodes.length < 6) {
                 Swal.fire({
                     icon: 'warning',
-                    title: 'Validación requerida',
-                    text: 'Una misma persona no puede ocupar más de un rol de firma.'
+                    title: 'Valoración incompleta',
+                    text: 'Debe completar los 6 niveles de valoración normativa.'
                 });
-                return;
+                return false;
+            }
+            return true;
+        }
+
+        if (this.currentStep === 3) {
+            if (this.activities.length < 10) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Actividades insuficientes',
+                    text: 'El manual normativo exige describir al menos 10 actividades esenciales.'
+                });
+                return false;
             }
 
-            const form = e.target;
-            const btn = document.getElementById('btn-submit-legalize');
-
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
-            btn.disabled = true;
-
-            try {
-                const formData = new FormData(form);
-                const res = await fetch(`/function_manual/profiles/legalize/${pk}/`, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {'X-Requested-With': 'XMLHttpRequest'}
-                });
-                const data = await res.json();
-
-                if (data.success) {
+            for (let i = 0; i < this.activities.length; i++) {
+                const act = this.activities[i];
+                if (!act.action_verb || !act.description || !act.complexity || !act.contribution || !act.frequency) {
                     Swal.fire({
-                        icon: 'success',
-                        title: '¡Legalizado!',
-                        text: data.message,
-                        timer: 1500,
-                        showConfirmButton: false
-                    }).then(() => {
-                        window.closeManualModal();
-                        location.reload();
+                        icon: 'warning',
+                        title: 'Actividad Incompleta',
+                        text: `Por favor complete todos los campos obligatorios en la actividad #${i + 1}.`
                     });
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        return true;
+    }
+
+    handleNextStep() {
+        if (this.validateCurrentStep()) {
+            this.goToStep(this.currentStep + 1);
+        }
+    }
+
+    // --- PASO 1: UNIDADES ORGANIZACIONALES ---
+    async fetchUnits(parentId, index) {
+        const url = parentId ? `${this.urls.units}${parentId}/children/` : this.urls.units;
+        try {
+            const res = await fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}});
+            const data = await res.json();
+            if (data && data.length > 0) {
+                this.renderUnitSelect(index, data);
+            }
+        } catch (e) {
+            console.error("Error consultando unidades:", e);
+        }
+    }
+
+    renderUnitSelect(index, options) {
+        const container = document.getElementById('unitLevelsContainer');
+        if (!container) return;
+
+        // Remover selectores de nivel superior a 'index'
+        const existingBoxes = container.querySelectorAll('.unit-level-box');
+        for (let i = index; i < existingBoxes.length; i++) {
+            existingBoxes[i].remove();
+        }
+
+        const labels = ['Nivel Institucional', 'Dirección / Gerencia', 'Jefatura / Departamento', 'Unidad / Coordinación'];
+        const labelText = labels[index] || `Subnivel ${index + 1}`;
+
+        const box = document.createElement('div');
+        box.className = 'unit-level-box';
+        box.dataset.level = index;
+
+        box.innerHTML = `
+            <label class="form-label">${labelText}</label>
+            <select class="form-control select2-unit" data-index="${index}">
+                <option value="">Seleccione una opción...</option>
+                ${options.map(u => `<option value="${u.id}">${u.name}</option>`).join('')}
+            </select>
+        `;
+
+        container.appendChild(box);
+
+        const $select = $(box).find('select');
+        $select.select2({width: '100%', placeholder: 'Seleccione opción...'});
+
+        $select.on('change', async (e) => {
+            const selectedVal = e.target.value;
+            this.selectedUnits = this.selectedUnits.slice(0, index);
+            if (selectedVal) {
+                this.selectedUnits[index] = selectedVal;
+            }
+
+            // Limpiar cajas de niveles posteriores en DOM
+            const allBoxes = container.querySelectorAll('.unit-level-box');
+            for (let i = index + 1; i < allBoxes.length; i++) {
+                allBoxes[i].remove();
+            }
+
+            const currentAdminUnit = this.selectedUnits.filter(Boolean).pop();
+            if (currentAdminUnit) {
+                await this.fetchUnitDeliverables(currentAdminUnit);
+                await this.fetchNextCode(currentAdminUnit);
+                if (selectedVal) {
+                    await this.fetchUnits(selectedVal, index + 1);
+                }
+            } else {
+                document.getElementById('position_code').value = '';
+                this.unitDeliverables = [];
+            }
+        });
+    }
+
+    async fetchUnitDeliverables(unitId) {
+        try {
+            const res = await fetch(`/institution/api/units/${unitId}/deliverables/`, {
+                headers: {'X-Requested-With': 'XMLHttpRequest'}
+            });
+            const data = await res.json();
+            this.unitDeliverables = data.success ? data.data : (Array.isArray(data) ? data : []);
+            this.refreshActivitiesSelect2();
+        } catch (e) {
+            console.error("Error obteniendo entregables de unidad:", e);
+            this.unitDeliverables = [];
+        }
+    }
+
+    async fetchNextCode(unitId) {
+        try {
+            const res = await fetch(this.urls.nextCode.replace('0', unitId));
+            const data = await res.json();
+            const input = document.getElementById('position_code');
+            if (input && data.next_code) {
+                input.value = data.next_code;
+            }
+        } catch (e) {
+            console.error("Error obteniendo código posicional:", e);
+        }
+    }
+
+    // --- PASO 2: VALORACIÓN NORMATIVA ---
+    getValuationLabel(type) {
+        const labels = {
+            'ROLE': '1. Rol de Puesto',
+            'INSTRUCTION': '2. Instrucción Formal',
+            'EXPERIENCE': '3. Experiencia Requerida',
+            'DECISION': '4. Toma de Decisiones',
+            'IMPACT': '5. Impacto Institucional',
+            'COMPLEXITY': '6. Nivel de Complejidad',
+            'RESULT': '7. Resultado / Grupo Ocupacional',
+            'GENERIC_DENOMINATION': '8. Denominación Genérica'
+        };
+        return labels[type] || 'Nivel de Valoración';
+    }
+
+    async fetchValuationLevel(parentId, index) {
+        const url = parentId ? `${this.urls.valuationNodes}?parent=${parentId}` : this.urls.valuationNodes;
+        try {
+            const res = await fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}});
+            const data = await res.json();
+
+            if (data && data.length > 0) {
+                this.valuationLevels[index] = {type: data[0].type, options: data};
+                this.renderValuationSelect(index, data[0].type, data);
+            }
+        } catch (e) {
+            console.error("Error consultando nodos de valoración:", e);
+        }
+    }
+
+    renderValuationSelect(index, type, options) {
+        if (type === 'RESULT' || type === 'GENERIC_DENOMINATION') {
+            return;
+        }
+
+        const container = document.getElementById('valuationLevelsContainer');
+        if (!container) return;
+
+        // Limpiar niveles superiores
+        const existingBoxes = container.querySelectorAll('.valuation-node-box');
+        for (let i = index; i < existingBoxes.length; i++) {
+            existingBoxes[i].remove();
+        }
+
+        const box = document.createElement('div');
+        box.className = 'valuation-node-box';
+        box.dataset.level = index;
+
+        box.innerHTML = `
+            <label class="form-label">${this.getValuationLabel(type)}</label>
+            <select class="form-control select2-valuation" data-index="${index}">
+                <option value="">Seleccione una opción...</option>
+                ${options.map(n => `<option value="${n.id}">${n.name}</option>`).join('')}
+            </select>
+        `;
+
+        container.appendChild(box);
+
+        const $select = $(box).find('select');
+        $select.select2({width: '100%', placeholder: 'Seleccione opción...'});
+
+        $select.on('change', async (e) => {
+            const selectedVal = e.target.value;
+            this.selectedNodes = this.selectedNodes.slice(0, index);
+
+            // Eliminar selects posteriores del DOM
+            const allBoxes = container.querySelectorAll('.valuation-node-box');
+            for (let i = index + 1; i < allBoxes.length; i++) {
+                allBoxes[i].remove();
+            }
+
+            this.hideMatchResult();
+
+            if (selectedVal) {
+                this.selectedNodes[index] = selectedVal;
+
+                // Nivel 6 (Complejidad) es el último antes de RESULT
+                if (index === 5) {
+                    await this.fetchResultNodes(selectedVal);
                 } else {
-                    Swal.fire('Error', data.message, 'error');
-                    btn.innerHTML = '<i class="fas fa-save"></i> Guardar Legalización';
-                    btn.disabled = false;
+                    await this.fetchValuationLevel(selectedVal, index + 1);
+                }
+            }
+        });
+    }
+
+    async fetchResultNodes(complexityNodeId) {
+        try {
+            const url = `${this.urls.valuationNodes}?parent=${complexityNodeId}`;
+            const res = await fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}});
+            const resultNodes = await res.json();
+
+            const results = resultNodes.filter(n => n.type === 'RESULT' || n.node_type === 'RESULT');
+            if (results.length > 0) {
+                const resultNode = results[0];
+                this.selectedNodes[6] = resultNode.id;
+
+                if (resultNode.classification) {
+                    this.showMatchResult(resultNode.classification);
                 }
 
-            } catch (e) {
-                console.error(e);
-                Swal.fire('Error', 'Fallo de conexión', 'error');
+                // Buscar nietos para Denominación Genérica
+                const gRes = await fetch(`${this.urls.valuationNodes}?parent=${resultNode.id}`);
+                const grandchildren = await gRes.json();
+                const genericNodes = grandchildren.filter(n => n.type === 'GENERIC_DENOMINATION' || n.node_type === 'GENERIC_DENOMINATION');
+                if (genericNodes.length > 0) {
+                    this.selectedNodes[7] = genericNodes[0].id;
+                }
+            }
+        } catch (e) {
+            console.error("Error obteniendo nodo resultado:", e);
+        }
+    }
+
+    showMatchResult(classification) {
+        this.matchResult = classification;
+        const banner = document.getElementById('classificationResultBanner');
+        if (banner) {
+            document.getElementById('matchGroupName').textContent = classification.group || '---';
+            document.getElementById('matchGradeText').textContent = `GRADO ESCALA: ${classification.grade || '---'}`;
+            document.getElementById('matchRmuText').textContent = `$${classification.rmu || '0.00'}`;
+            banner.classList.remove('hidden');
+        }
+    }
+
+    hideMatchResult() {
+        this.matchResult = null;
+        const banner = document.getElementById('classificationResultBanner');
+        if (banner) banner.classList.add('hidden');
+    }
+
+    // --- PASO 3: ACTIVIDADES ESENCIALES ---
+    getFilteredVerbs() {
+        const roleNodeId = this.selectedNodes[0];
+        if (!roleNodeId) return this.catalogs.verbs;
+        return this.catalogs.verbs.filter(v => !v.target_role || v.target_role == roleNodeId);
+    }
+
+    addActivity(data = null) {
+        const activity = data || {
+            action_verb: '',
+            deliverables: [],
+            description: '',
+            additional_knowledge: '',
+            complexity: '',
+            contribution: '',
+            frequency: '',
+            points: 0
+        };
+
+        this.activities.unshift(activity);
+        this.renderActivitiesTable();
+    }
+
+    renderActivitiesTable() {
+        const tbody = document.getElementById('activitiesTableBody');
+        if (!tbody) return;
+
+        // Limpiar Select2 existentes antes de renderizar
+        $(tbody).find('select').each(function () {
+            if ($(this).hasClass('select2-hidden-accessible')) {
+                $(this).select2('destroy');
+            }
+        });
+
+        tbody.innerHTML = '';
+
+        const verbs = this.getFilteredVerbs();
+        const frequencies = (this.catalogs.frequency || []).filter(f => !f.name.toUpperCase().includes('MENSUAL'));
+
+        this.activities.forEach((act, idx) => {
+            const tr = document.createElement('tr');
+            tr.className = 'row-animated';
+            tr.dataset.index = idx;
+
+            tr.innerHTML = `
+                <td>
+                    <select class="select2-act mb-1 select-verb" data-index="${idx}" data-field="action_verb">
+                        <option value="">Seleccione Verbo...</option>
+                        ${verbs.map(v => `<option value="${v.id}" ${act.action_verb == v.id ? 'selected' : ''}>${v.name}</option>`).join('')}
+                    </select>
+                    <select class="select2-act select-deliverables" data-index="${idx}" data-field="deliverables" multiple="multiple">
+                        ${this.unitDeliverables.map(d => `<option value="${d.id}" ${(act.deliverables || []).includes(d.id) ? 'selected' : ''}>${d.name}</option>`).join('')}
+                    </select>
+                </td>
+                <td>
+                    <textarea class="form-textarea-inline input-desc" data-index="${idx}" placeholder="¿Qué hace? + ¿Sobre qué?...">${act.description || ''}</textarea>
+                </td>
+                <td>
+                    <select class="select2-act mb-1 select-complexity" data-index="${idx}" data-field="complexity">
+                        <option value="">Complejidad (C)...</option>
+                        ${(this.catalogs.complexity || []).map(c => `<option value="${c.id}" ${act.complexity == c.id ? 'selected' : ''}>${c.name}</option>`).join('')}
+                    </select>
+                    <select class="select2-act mb-1 select-contribution" data-index="${idx}" data-field="contribution">
+                        <option value="">Aporte Gestión (AG)...</option>
+                        ${(this.catalogs.complexity || []).map(c => `<option value="${c.id}" ${act.contribution == c.id ? 'selected' : ''}>${c.name}</option>`).join('')}
+                    </select>
+                    <select class="select2-act select-frequency" data-index="${idx}" data-field="frequency">
+                        <option value="">Frecuencia (F)...</option>
+                        ${frequencies.map(f => `<option value="${f.id}" ${act.frequency == f.id ? 'selected' : ''}>${f.name}</option>`).join('')}
+                    </select>
+                </td>
+                <td>
+                    <textarea class="form-textarea-inline input-knowledge" data-index="${idx}" placeholder="Conocimientos adicionales...">${act.additional_knowledge || ''}</textarea>
+                </td>
+                <td class="cell-actions text-center">
+                    <div class="actions-col">
+                        <button type="button" class="btn-clone-icon" data-index="${idx}" title="Clonar actividad">
+                            <i class="fa-solid fa-clone"></i>
+                        </button>
+                        <button type="button" class="btn-delete-icon" data-index="${idx}" title="Eliminar actividad">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                </td>
+            `;
+
+            tbody.appendChild(tr);
+        });
+
+        this.bindActivityRowEvents();
+        this.refreshActivitiesSelect2();
+    }
+
+    bindActivityRowEvents() {
+        const tbody = document.getElementById('activitiesTableBody');
+        if (!tbody) return;
+
+        // Textareas sync
+        tbody.querySelectorAll('.input-desc').forEach(textarea => {
+            textarea.addEventListener('input', (e) => {
+                const idx = parseInt(e.target.dataset.index, 10);
+                this.activities[idx].description = e.target.value;
+            });
+        });
+
+        tbody.querySelectorAll('.input-knowledge').forEach(textarea => {
+            textarea.addEventListener('input', (e) => {
+                const idx = parseInt(e.target.dataset.index, 10);
+                this.activities[idx].additional_knowledge = e.target.value;
+            });
+        });
+
+        // Botones Clonar y Eliminar
+        tbody.querySelectorAll('.btn-clone-icon').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const idx = parseInt(btn.dataset.index, 10);
+                this.cloneActivity(idx);
+            });
+        });
+
+        tbody.querySelectorAll('.btn-delete-icon').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const idx = parseInt(btn.dataset.index, 10);
+                this.removeActivity(idx);
+            });
+        });
+    }
+
+    refreshActivitiesSelect2() {
+        const self = this;
+        $('.select2-act').each(function () {
+            const $el = $(this);
+            const idx = parseInt($el.data('index'), 10);
+            const field = $el.data('field');
+
+            if ($el.hasClass('select2-hidden-accessible')) {
+                $el.select2('destroy');
+            }
+
+            $el.select2({
+                width: '100%',
+                placeholder: field === 'deliverables' ? 'Productos/Servicios...' : 'Seleccione...'
+            }).off('change.act').on('change.act', function () {
+                const val = $(this).val();
+                if (self.activities[idx]) {
+                    self.activities[idx][field] = val;
+                    if (['complexity', 'contribution', 'frequency'].includes(field)) {
+                        self.activities[idx].points = self.calculateActivityPoints(self.activities[idx]);
+                    }
+                }
+            });
+        });
+    }
+
+    calculateActivityPoints(act) {
+        if (!act.complexity || !act.contribution || !act.frequency) return 0;
+
+        const getItemName = (id, list) => {
+            const item = (list || []).find(i => i.id == id);
+            return item ? item.name.toUpperCase() : '';
+        };
+
+        const nameC = getItemName(act.complexity, this.catalogs.complexity);
+        const nameAG = getItemName(act.contribution, this.catalogs.complexity);
+        const nameF = getItemName(act.frequency, this.catalogs.frequency);
+
+        const mapVal = (name) => {
+            if (name.includes('ALTO')) return 3;
+            if (name.includes('MEDIO')) return 2;
+            if (name.includes('BAJO')) return 1;
+            return 0;
+        };
+
+        const mapFreq = (name) => {
+            if (name.includes('DIARIO')) return 5;
+            if (name.includes('SEMANAL')) return 4;
+            if (name.includes('MENSUAL')) return 3;
+            if (name.includes('SEMESTRAL') || name.includes('TRIMESTRAL')) return 2;
+            if (name.includes('ANUAL')) return 1;
+            return 0;
+        };
+
+        return mapVal(nameAG) * (mapFreq(nameF) + mapVal(nameC));
+    }
+
+    cloneActivity(idx) {
+        const original = this.activities[idx];
+        if (!original) return;
+
+        const copy = {
+            action_verb: original.action_verb || '',
+            deliverables: [...(original.deliverables || [])],
+            description: original.description || '',
+            additional_knowledge: original.additional_knowledge || '',
+            complexity: original.complexity || '',
+            contribution: original.contribution || '',
+            frequency: original.frequency || '',
+            points: original.points || 0
+        };
+
+        this.activities.splice(idx + 1, 0, copy);
+        this.renderActivitiesTable();
+    }
+
+    removeActivity(idx) {
+        if (this.activities.length <= 1) {
+            Swal.fire({icon: 'info', title: 'Atención', text: 'El perfil debe contener al menos una actividad.'});
+            return;
+        }
+
+        Swal.fire({
+            title: '¿Eliminar actividad?',
+            text: 'Esta acción removerá la actividad de la lista.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar'
+        }).then(res => {
+            if (res.isConfirmed) {
+                this.activities.splice(idx, 1);
+                this.renderActivitiesTable();
+            }
+        });
+    }
+
+    // --- PASO 4: COMPLETAR PERFIL & COMPETENCIAS ---
+    generateMissionSuggestion() {
+        const missionEl = document.getElementById('mission');
+        const hintEl = document.getElementById('missionHint');
+        const firstAct = this.activities[0];
+
+        if (firstAct && firstAct.action_verb && firstAct.description) {
+            const verbObj = (this.catalogs.verbs || []).find(v => v.id == firstAct.action_verb);
+            const verbName = verbObj ? verbObj.name : '';
+            const suggestion = `${verbName} ${firstAct.description.toLowerCase()} para garantizar el cumplimiento de metas y objetivos institucionales.`;
+
+            if (hintEl) hintEl.textContent = `Sugerencia: ${suggestion}`;
+            if (missionEl && !missionEl.value.trim()) {
+                missionEl.value = suggestion;
+            }
+        }
+    }
+
+    autofillStep4() {
+        const instrNodeId = this.selectedNodes[1];
+        const expNodeId = this.selectedNodes[2];
+
+        const knowledgeAreaEl = document.getElementById('knowledge_area');
+        const experienceDetailsEl = document.getElementById('experience_details');
+
+        if (instrNodeId) {
+            const instrLevel = this.valuationLevels[1];
+            const node = instrLevel?.options?.find(o => o.id == instrNodeId);
+            if (node) {
+                const hint = document.getElementById('instructionHint');
+                if (hint) hint.textContent = `Instrucción seleccionada: ${node.name}`;
+                if (node.name.toLowerCase().includes('bachiller') && knowledgeAreaEl && !knowledgeAreaEl.value.trim()) {
+                    knowledgeAreaEl.value = 'Bachillerato';
+                }
+            }
+        }
+
+        if (expNodeId) {
+            const expLevel = this.valuationLevels[2];
+            const node = expLevel?.options?.find(o => o.id == expNodeId);
+            if (node) {
+                const hint = document.getElementById('experienceHint');
+                if (hint) hint.textContent = `Experiencia seleccionada: ${node.name}`;
+                if (node.name.toLowerCase().includes('no requerida') && experienceDetailsEl && !experienceDetailsEl.value.trim()) {
+                    experienceDetailsEl.value = 'No requerida';
+                }
+            }
+        }
+    }
+
+    initCompetencySelects() {
+        const setup = (selector, valuesArray, type) => {
+            const list = this.allCompetencies.filter(c => c.type === type);
+            $(selector).each((idx, el) => {
+                const $el = $(el);
+                const currentVal = valuesArray[idx];
+
+                if ($el.hasClass('select2-hidden-accessible')) {
+                    $el.select2('destroy');
+                }
+
+                $el.empty().append('<option value="">Seleccione...</option>');
+                list.forEach(item => {
+                    const isSelected = currentVal == item.id;
+                    $el.append(new Option(item.name, item.id, isSelected, isSelected));
+                });
+
+                $el.select2({width: '100%', placeholder: 'Seleccione competencia...'})
+                    .off('change.comp')
+                    .on('change.comp', function () {
+                        valuesArray[idx] = $(this).val();
+                    });
+            });
+        };
+
+        setup('.select2-comp-tech', this.selectedTechnical, 'TECHNICAL');
+        setup('.select2-comp-beh', this.selectedBehavioral, 'BEHAVIORAL');
+        setup('.select2-comp-trans', this.selectedTransversal, 'TRANSVERSAL');
+    }
+
+    openInfoPopup(labelName) {
+        const messages = {
+            'Misión del Puesto': 'La misión se define de las actividades asignadas al puesto, en función del portafolio de productos y/o servicios de las unidades y los procesos.',
+            'Área de Conocimiento': 'Conjunto de conocimientos requeridos para el desempeño del puesto, adquiridos a través de estudios formales; competencia necesaria para que el servidor se desempeñe eficientemente en el puesto.',
+            'Especificidad de la Experiencia': 'Se refiere al nivel de experticia necesaria para el desarrollo eficiente de las actividades asignadas al puesto, para el logro de los productos y/o servicios en los que interviene el mismo.',
+            'Relaciones Internas/Externas': 'Relación que tiene el cargo con las unidades administrativas internas o externas de la institución, así como con entidades u organismos del sector público o privado.',
+            'Temática de Capacitación': 'Temáticas de capacitaciones inherentes al cargo o unidad administrativa, orientadas al fortalecimiento de las competencias requeridas.'
+        };
+
+        const msg = messages[labelName] || `Definición correspondiente a ${labelName}.`;
+
+        Swal.fire({
+            title: labelName,
+            text: msg,
+            icon: 'info',
+            confirmButtonText: 'Entendido'
+        });
+    }
+
+    // --- REHIDRATACIÓN DE EDICIÓN ---
+    async loadInitialData(initData) {
+        // Asignar campos de texto
+        ['position_code', 'mission', 'knowledge_area', 'experience_details', 'training_topic', 'interface_relations'].forEach(field => {
+            const el = document.getElementById(field);
+            if (el && initData[field]) el.value = initData[field];
+        });
+
+        // Rehidratar Unidades Paso 1
+        if (initData.selectedUnits && initData.selectedUnits.length > 0) {
+            for (let i = 0; i < initData.selectedUnits.length; i++) {
+                const uId = initData.selectedUnits[i];
+                this.selectedUnits[i] = uId;
+                const select = document.querySelector(`.select2-unit[data-index="${i}"]`);
+                if (select) $(select).val(uId).trigger('change');
+                await this.fetchUnits(uId, i + 1);
+            }
+            const lastUnit = initData.selectedUnits[initData.selectedUnits.length - 1];
+            await this.fetchUnitDeliverables(lastUnit);
+        }
+
+        // Rehidratar Valoración Paso 2
+        if (initData.selectedNodes && initData.selectedNodes.length > 0) {
+            for (let i = 0; i < initData.selectedNodes.length; i++) {
+                const nId = initData.selectedNodes[i];
+                this.selectedNodes[i] = nId;
+                const select = document.querySelector(`.select2-valuation[data-index="${i}"]`);
+                if (select) $(select).val(nId).trigger('change');
+                await this.fetchValuationLevel(nId, i + 1);
+            }
+        }
+
+        if (initData.matchResult) {
+            this.showMatchResult(initData.matchResult);
+        }
+
+        // Rehidratar Actividades Paso 3
+        if (initData.activities && initData.activities.length > 0) {
+            this.activities = initData.activities.map(a => ({
+                action_verb: a.action_verb || '',
+                deliverables: a.deliverables || [],
+                description: a.description || '',
+                additional_knowledge: a.additional_knowledge || '',
+                complexity: a.complexity || '',
+                contribution: a.contribution || '',
+                frequency: a.frequency || '',
+                points: a.points || 0
+            }));
+            this.renderActivitiesTable();
+        }
+
+        // Rehidratar Competencias Paso 4
+        if (initData.selectedTechnical) this.selectedTechnical = [...initData.selectedTechnical];
+        if (initData.selectedBehavioral) this.selectedBehavioral = [...initData.selectedBehavioral];
+        if (initData.selectedTransversal) this.selectedTransversal = [...initData.selectedTransversal];
+        this.initCompetencySelects();
+    }
+
+    // --- GUARDADO FINAL ---
+    handleFinalizeClick() {
+        if (!this.validateCurrentStep()) return;
+
+        Swal.fire({
+            title: 'Confirmación de Información',
+            html: `
+                <div style="text-align: left; padding: 5px 10px;">
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 0.92rem;">
+                        <input type="checkbox" id="swalAcceptanceCheck" style="width: 18px; height: 18px; accent-color: #059669;">
+                        <span>Declaro que la información ingresada es veraz y responde a las necesidades del puesto.</span>
+                    </label>
+                </div>
+            `,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: '<i class="fas fa-floppy-disk me-1"></i> Sí, Guardar Perfil',
+            cancelButtonText: 'Cancelar',
+            customClass: {
+                confirmButton: 'swal2-confirm btn-swal-success',
+                cancelButton: 'swal2-cancel btn-swal-cancel'
+            },
+            didOpen: () => {
+                const confirmBtn = Swal.getConfirmButton();
+                const checkbox = document.getElementById('swalAcceptanceCheck');
+                if (confirmBtn && checkbox) {
+                    confirmBtn.disabled = true;
+                    checkbox.addEventListener('change', () => {
+                        confirmBtn.disabled = !checkbox.checked;
+                    });
+                }
+            }
+        }).then((res) => {
+            if (res.isConfirmed) {
+                this.submitForm();
+            }
+        });
+    }
+
+    async submitForm() {
+        const saveBtn = document.getElementById('btnWizardSave');
+        if (saveBtn) {
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+        }
+
+        const competencies = [
+            ...this.selectedTechnical,
+            ...this.selectedBehavioral,
+            ...this.selectedTransversal
+        ].filter(Boolean);
+
+        const payload = {
+            id: document.querySelector('#initial-data') ? JSON.parse(document.querySelector('#initial-data').textContent).id : null,
+            position_code: document.getElementById('position_code')?.value || '',
+            administrative_unit: this.selectedUnits.filter(Boolean).pop(),
+            mission: document.getElementById('mission')?.value || '',
+            knowledge_area: document.getElementById('knowledge_area')?.value || '',
+            experience_details: document.getElementById('experience_details')?.value || '',
+            training_topic: document.getElementById('training_topic')?.value || '',
+            interface_relations: document.getElementById('interface_relations')?.value || '',
+            role_node_id: this.selectedNodes[0] || null,
+            instruction_node_id: this.selectedNodes[1] || null,
+            experience_node_id: this.selectedNodes[2] || null,
+            decision_node_id: this.selectedNodes[3] || null,
+            impact_node_id: this.selectedNodes[4] || null,
+            complexity_node_id: this.selectedNodes[5] || null,
+            result_node_id: this.selectedNodes[6] || null,
+            selected_generic_node_id: this.selectedNodes[7] || null,
+            selectedNodes: this.selectedNodes,
+            activities: this.activities,
+            competencies: competencies
+        };
+
+        try {
+            const response = await fetch(this.urls.save, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCsrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                if (typeof showToast === 'function') {
+                    showToast(data.message || 'Perfil guardado con éxito.', 'success');
+                }
+                setTimeout(() => {
+                    window.location.href = data.redirect || this.urls.cancel;
+                }, 800);
+            } else {
+                throw new Error(data.error || data.message || 'Error en validación del servidor');
+            }
+        } catch (err) {
+            console.error(err);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error al Guardar',
+                text: err.message || 'Ocurrió un problema de comunicación.'
+            });
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Finalizar y Guardar';
+            }
+        }
+    }
+}
+
+
+/* ==========================================================================
+   2. INICIALIZACIÓN GLOBAL DE COMPONENTES AL CARGAR DOM
+   ========================================================================== */
+document.addEventListener('DOMContentLoaded', () => {
+    // A. Inicializar Wizard de Perfiles
+    const wizardEl = document.getElementById('profileFormApp');
+    if (wizardEl) {
+        new JobProfileWizard(wizardEl);
+    }
+});
+
+
+/* ==========================================================================
+   3. ACCIONES DE MODALES Y LISTADO DE PERFILES
+   ========================================================================== */
+
+// 3.1 Asignar Empleado Referencial
+window.openAssignReferentialModal = function (pk) {
+    if (typeof openAjaxModal === 'function') {
+        openAjaxModal(`/function_manual/profiles/assign-referential/${pk}/`);
+    }
+};
+
+window.searchEmployeeReferential = async function () {
+    const cedula = document.getElementById('search-cedula-ref')?.value?.trim();
+    const resultCard = document.getElementById('search-result-card-ref');
+    const btnSubmit = document.getElementById('btn-submit-assign-ref');
+    const resName = document.getElementById('res-name-ref');
+    const resEmail = document.getElementById('res-email-ref');
+    const resPhoto = document.getElementById('res-photo-ref');
+    const hiddenId = document.getElementById('selected-employee-id-ref');
+
+    if (!cedula || cedula.length < 10) {
+        Swal.fire('Atención', 'Ingrese un número de cédula válido.', 'warning');
+        return;
+    }
+
+    if (btnSubmit) btnSubmit.disabled = true;
+    if (resName) resName.textContent = 'Buscando empleado...';
+    if (resultCard) resultCard.classList.remove('hidden');
+
+    try {
+        const res = await fetch(`/function_manual/api/search-employee-simple/?q=${cedula}`, {
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        });
+        const data = await res.json();
+
+        if (data.success && data.data) {
+            const emp = data.data;
+            if (resName) resName.textContent = emp.full_name;
+            if (resEmail) resEmail.textContent = emp.cargo || 'Sin partida asignada';
+            if (resPhoto) {
+                resPhoto.innerHTML = `<img src="${emp.photo || '/static/img/avatar-placeholder.png'}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
+            }
+            if (hiddenId) hiddenId.value = emp.id;
+            if (btnSubmit) btnSubmit.disabled = false;
+        } else {
+            if (resName) resName.textContent = 'No encontrado';
+            if (resEmail) resEmail.textContent = data.message || 'Empleado no registrado o inactivo';
+            if (resPhoto) resPhoto.innerHTML = '<i class="fas fa-user-slash text-muted fa-lg"></i>';
+            if (hiddenId) hiddenId.value = '';
+            if (btnSubmit) btnSubmit.disabled = true;
+        }
+    } catch (e) {
+        console.error(e);
+        if (resName) resName.textContent = 'Error de conexión';
+        if (btnSubmit) btnSubmit.disabled = true;
+    }
+};
+
+window.submitAssignReferential = async function (e, pk) {
+    e.preventDefault();
+    const form = e.target;
+    const btn = document.getElementById('btn-submit-assign-ref');
+
+    if (btn) {
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+        btn.disabled = true;
+    }
+
+    try {
+        const formData = new FormData(form);
+        const res = await fetch(`/function_manual/profiles/assign-referential/${pk}/`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': getCsrfToken()
+            }
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            if (typeof closeModal === 'function') closeModal();
+            if (typeof showToast === 'function') {
+                showToast(data.message || 'Empleado referencial asignado.', 'success');
+            }
+            if (typeof window.fetchFunctionManualProfiles === 'function') {
+                window.fetchFunctionManualProfiles();
+            } else {
+                location.reload();
+            }
+        } else {
+            Swal.fire('Error', data.message || 'No se pudo asignar el empleado.', 'error');
+            if (btn) {
+                btn.innerHTML = '<i class="fas fa-save me-1"></i> Guardar Asignación';
+                btn.disabled = false;
+            }
+        }
+    } catch (err) {
+        console.error(err);
+        Swal.fire('Error', 'Fallo de comunicación con el servidor.', 'error');
+        if (btn) {
+            btn.innerHTML = '<i class="fas fa-save me-1"></i> Guardar Asignación';
+            btn.disabled = false;
+        }
+    }
+};
+
+// 3.2 Completar Denominación
+window.openCompleteDenominationModal = function (pk) {
+    if (typeof openAjaxModal === 'function') {
+        openAjaxModal(`/function_manual/profiles/complete-denomination/${pk}/`);
+    }
+};
+
+window.submitCompleteDenomination = async function (e, pk) {
+    e.preventDefault();
+    const currentDenom = document.getElementById('current-denomination')?.value || '';
+    const complement = document.getElementById('denomination-complement')?.value.trim() || '';
+    const finalDenom = complement ? `${currentDenom} ${complement}` : currentDenom;
+
+    const result = await Swal.fire({
+        title: '¿Confirmar Denominación?',
+        html: `
+            <div style="text-align: left; background: #f8fafc; padding: 15px; border-radius: 8px;">
+                <p style="margin: 0 0 10px; color: #475569;">Se asignará la denominación definitiva:</p>
+                <div style="font-weight: 700; color: #1e3a8a; padding: 10px; background: white; border-radius: 6px; border-left: 4px solid #3b82f6;">
+                    ${finalDenom}
+                </div>
+            </div>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, confirmar',
+        cancelButtonText: 'Cancelar'
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+        const res = await fetch('/function_manual/api/profile/complete-denomination/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken(),
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({profile_id: pk, complement: complement})
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            if (typeof closeModal === 'function') closeModal();
+            if (typeof showToast === 'function') {
+                showToast(data.message || 'Denominación actualizada.', 'success');
+            }
+            if (typeof window.fetchFunctionManualProfiles === 'function') {
+                window.fetchFunctionManualProfiles();
+            } else {
+                location.reload();
+            }
+        } else {
+            Swal.fire('Atención', data.message || 'No se pudo actualizar la denominación.', 'warning');
+        }
+    } catch (err) {
+        console.error(err);
+        Swal.fire('Error', 'Problema al procesar la solicitud.', 'error');
+    }
+};
+
+// 3.3 Legalización (Firmas)
+window.openLegalizeModal = function (pk) {
+    if (typeof openAjaxModal === 'function') {
+        openAjaxModal(`/function_manual/profiles/legalize/${pk}/`, () => {
+            initLegalizeSelects();
+        });
+    }
+};
+
+function initLegalizeSelects() {
+    const selects = document.querySelectorAll('.select-authority');
+    selects.forEach(select => {
+        const $select = $(select);
+        const ajaxUrl = select.dataset.ajaxUrl || '/function_manual/api/users/search/';
+
+        $select.select2({
+            width: '100%',
+            placeholder: 'Buscar usuario...',
+            allowClear: true,
+            ajax: {
+                url: ajaxUrl,
+                dataType: 'json',
+                delay: 250,
+                data: params => ({term: params.term}),
+                processResults: data => ({results: data.results || []}),
+                cache: true
+            }
+        });
+    });
+}
+
+window.submitLegalizeProfile = async function (e, pk) {
+    e.preventDefault();
+    const form = e.target;
+    const btn = document.getElementById('btn-submit-legalize');
+
+    if (btn) {
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+        btn.disabled = true;
+    }
+
+    try {
+        const formData = new FormData(form);
+        const res = await fetch(`/function_manual/profiles/legalize/${pk}/`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': getCsrfToken()
+            }
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            if (typeof closeModal === 'function') closeModal();
+            if (typeof showToast === 'function') {
+                showToast(data.message || 'Perfil legalizado correctamente.', 'success');
+            }
+            if (typeof window.fetchFunctionManualProfiles === 'function') {
+                window.fetchFunctionManualProfiles();
+            } else {
+                location.reload();
+            }
+        } else {
+            Swal.fire('Error', data.message || 'No se pudo guardar la legalización.', 'error');
+            if (btn) {
                 btn.innerHTML = '<i class="fas fa-save"></i> Guardar Legalización';
                 btn.disabled = false;
             }
-        };
+        }
+    } catch (e) {
+        console.error(e);
+        Swal.fire('Error', 'Fallo de conexión.', 'error');
+        if (btn) {
+            btn.innerHTML = '<i class="fas fa-save"></i> Guardar Legalización';
+            btn.disabled = false;
+        }
+    }
+};
 
-        // =========================================================================
-        // SUBIDA Y DETALLE (LEGALIZADOS)
-        // =========================================================================
+// 3.4 Subir PDF Legalizado y Reporte
+window.openUploadLegalizedModal = function (pk) {
+    if (typeof openAjaxModal === 'function') {
+        openAjaxModal(`/function_manual/profiles/upload-legalized/${pk}/`);
+    }
+};
 
-        window.openUploadLegalizedModal = (pk) => {
-            fetch(`/function_manual/profiles/upload-legalized/${pk}/`)
-                .then(res => res.text())
-                .then(html => {
-                    const container = document.getElementById('modal-inject-container');
-                    if (container) {
-                        container.innerHTML = html;
-                        const overlay = container.querySelector('.modal-overlay');
-                        if (overlay) overlay.style.display = 'flex';
-                        document.body.classList.add('no-scroll');
-                    }
-                });
-        };
+window.submitUploadLegalized = async function (e, pk) {
+    e.preventDefault();
+    const form = e.target;
+    const btn = document.getElementById('btn-submit-upload');
 
-        window.submitUploadLegalized = async (e, pk) => {
-            e.preventDefault();
-            const form = e.target;
-            const btn = document.getElementById('btn-submit-upload');
+    if (btn) {
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Subiendo...';
+        btn.disabled = true;
+    }
 
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Subiendo...';
-            btn.disabled = true;
+    try {
+        const formData = new FormData(form);
+        const res = await fetch(`/function_manual/profiles/upload-legalized/${pk}/`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': getCsrfToken()
+            }
+        });
+        const data = await res.json();
 
-            try {
-                const formData = new FormData(form);
-                const res = await fetch(`/function_manual/profiles/upload-legalized/${pk}/`, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {'X-Requested-With': 'XMLHttpRequest'}
-                });
-                const data = await res.json();
-
-                if (data.success) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Subido!',
-                        text: data.message,
-                        timer: 1500,
-                        showConfirmButton: false
-                    }).then(() => {
-                        window.closeManualModal();
-                        // Opcional: recargar solo fila o página
-                        location.reload();
-                    });
-                } else {
-                    Swal.fire('Error', data.message, 'error');
-                    btn.innerHTML = '<i class="fas fa-upload"></i> Subir Documento';
-                    btn.disabled = false;
-                }
-
-            } catch (e) {
-                console.error(e);
-                Swal.fire('Error', 'Fallo de conexión', 'error');
+        if (data.success) {
+            if (typeof closeModal === 'function') closeModal();
+            if (typeof showToast === 'function') {
+                showToast(data.message || 'Documento cargado con éxito.', 'success');
+            }
+            if (typeof window.fetchFunctionManualProfiles === 'function') {
+                window.fetchFunctionManualProfiles();
+            } else {
+                location.reload();
+            }
+        } else {
+            Swal.fire('Error', data.message || 'No se pudo subir el archivo.', 'error');
+            if (btn) {
                 btn.innerHTML = '<i class="fas fa-upload"></i> Subir Documento';
                 btn.disabled = false;
             }
-        };
-
-        window.openProfileDetailModal = (pk) => {
-            fetch(`/function_manual/profiles/detail/${pk}/`)
-                .then(res => res.text())
-                .then(html => {
-                    const container = document.getElementById('modal-inject-container');
-                    if (container) {
-                        container.innerHTML = html;
-                        const overlay = container.querySelector('.modal-overlay');
-                        if (overlay) overlay.style.display = 'flex';
-                        document.body.classList.add('no-scroll');
-                    }
-                });
-        };
-
-        window.openReportPdfModal = (pk) => {
-            fetch(`/function_manual/profiles/report_pdf_modal/${pk}/`)
-                .then(res => res.text())
-                .then(html => {
-                    const container = document.getElementById('modal-inject-container');
-                    if (container) {
-                        container.innerHTML = html;
-
-                        // Ejecutar scripts dentro del HTML inyectado
-                        const scripts = container.querySelectorAll('script');
-                        scripts.forEach(script => {
-                            const newScript = document.createElement('script');
-                            newScript.textContent = script.textContent;
-                            container.appendChild(newScript);
-                        });
-
-                        const overlay = container.querySelector('.modal-overlay');
-                        if (overlay) overlay.style.display = 'flex';
-                        document.body.classList.add('no-scroll');
-                    }
-                });
-        };
+        }
+    } catch (e) {
+        console.error(e);
+        Swal.fire('Error', 'Error de comunicación.', 'error');
+        if (btn) {
+            btn.innerHTML = '<i class="fas fa-upload"></i> Subir Documento';
+            btn.disabled = false;
+        }
     }
-);
+};
+
+window.openProfileDetailModal = function (pk) {
+    if (typeof openAjaxModal === 'function') {
+        openAjaxModal(`/function_manual/profiles/detail/${pk}/`);
+    }
+};
+
+window.openReportPdfModal = function (pk) {
+    if (typeof openAjaxModal === 'function') {
+        openAjaxModal(`/function_manual/profiles/report_pdf_modal/${pk}/`);
+    }
+};
+
+/* ==========================================================================
+   4. MODALES DINÁMICOS Y AJAX (CATÁLOGOS, MATRIZ Y ASIGNACIÓN DE GRUPO)
+   ========================================================================== */
+
+/* ==========================================================================
+   GESTOR: ASIGNAR GRUPO OCUPACIONAL (VANILLA JS + SELECT2)
+   ========================================================================== */
+
+window.openAssignGroupModal = async function (profileId) {
+    const modal = document.getElementById('modalAssignGroup');
+    if (!modal) return;
+
+    const inputId = document.getElementById('assign_group_profile_id');
+    const loading = document.getElementById('assignGroupLoading');
+    const chainContainer = document.getElementById('assignGroupChainContainer');
+    const btnSubmit = document.getElementById('btnSubmitAssignGroup');
+
+    inputId.value = profileId;
+    btnSubmit.disabled = true;
+    loading.classList.remove('hidden');
+    chainContainer.classList.add('hidden');
+    chainContainer.innerHTML = '';
+
+    // Abrir modal usando la API de main.js
+    if (typeof openModal === 'function') {
+        openModal('modalAssignGroup');
+    } else {
+        modal.classList.remove('hidden');
+        document.body.classList.add('no-scroll');
+    }
+
+    try {
+        // 1. Obtener la cadena del perfil desde el backend
+        const res = await fetch(`/function_manual/api/profile/${profileId}/valuation-chain/`, {
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        });
+        const data = await res.json();
+
+        if (!data.success) {
+            throw new Error(data.message || 'No se pudo cargar la cadena de valoración.');
+        }
+
+        const selected = data.selected_values;
+        let parentId = null;
+
+        // Función auxiliar para consultar y avanzar en el árbol de valoración
+        const fetchLevel = async (parent, expectedType) => {
+            const url = parent ? `/function_manual/api/valuation-nodes/?parent=${parent}` : '/function_manual/api/valuation-nodes/';
+            const r = await fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}});
+            const list = await r.json();
+            return list.filter(n => (n.type === expectedType || n.node_type === expectedType));
+        };
+
+        // Recorrer árbol hasta COMPLEXITY para encontrar los RESULT hijos
+        const roles = await fetchLevel(null, 'ROLE');
+        const roleNode = roles.find(n => n.catalog_item_id == selected.role_id) || roles[0];
+        if (roleNode) {
+            parentId = roleNode.id;
+            const instructions = await fetchLevel(parentId, 'INSTRUCTION');
+            const instNode = instructions.find(n => n.catalog_item_id == selected.instruction_id) || instructions[0];
+            if (instNode) {
+                parentId = instNode.id;
+                const experiences = await fetchLevel(parentId, 'EXPERIENCE');
+                const expNode = experiences.find(n => (n.name_extra || n.name) === selected.experience_text) || experiences[0];
+                if (expNode) {
+                    parentId = expNode.id;
+                    const decisions = await fetchLevel(parentId, 'DECISION');
+                    const decNode = decisions.find(n => n.catalog_item_id == selected.decision_id) || decisions[0];
+                    if (decNode) {
+                        parentId = decNode.id;
+                        const impacts = await fetchLevel(parentId, 'IMPACT');
+                        const impNode = impacts.find(n => n.catalog_item_id == selected.impact_id) || impacts[0];
+                        if (impNode) {
+                            parentId = impNode.id;
+                            const complexities = await fetchLevel(parentId, 'COMPLEXITY');
+                            const compNode = complexities.find(n => n.catalog_item_id == selected.complexity_id) || complexities[0];
+                            if (compNode) {
+                                parentId = compNode.id;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!parentId) {
+            throw new Error('La cadena de valoración previa está incompleta o no coincide.');
+        }
+
+        // 2. Obtener los nodos RESULT finales bajo la complejidad obtenida
+        const results = await fetchLevel(parentId, 'RESULT');
+
+        if (!results || results.length === 0) {
+            throw new Error('No se encontraron grupos ocupacionales (RESULT) para esta configuración.');
+        }
+
+        // Renderizar selector
+        chainContainer.innerHTML = `
+            <div class="valuation-node-box w-100">
+                <label class="form-label font-weight-700">7. Grupo Ocupacional (Resultado Final) (*)</label>
+                <select class="form-control select2-modal" id="assign_result_node_select" name="result_node_id" required>
+                    <option value="">Seleccione grupo ocupacional...</option>
+                    ${results.map(r => `<option value="${r.id}">${r.name}</option>`).join('')}
+                </select>
+                <p class="form-hint mt-1">Seleccione la clasificación salarial correspondiente.</p>
+            </div>
+        `;
+
+        const $select = $(chainContainer).find('#assign_result_node_select');
+        $select.select2({
+            width: '100%',
+            dropdownParent: $(modal)
+        }).on('change', function () {
+            btnSubmit.disabled = !this.value;
+        });
+
+        loading.classList.add('hidden');
+        chainContainer.classList.remove('hidden');
+
+    } catch (err) {
+        console.error(err);
+        loading.classList.add('hidden');
+        closeModal('modalAssignGroup');
+        Swal.fire({
+            icon: 'error',
+            title: 'Error de Valoración',
+            text: err.message || 'No se pudo obtener la cadena de nodos.'
+        });
+    }
+};
+
+window.submitAssignGroup = async function (e) {
+    e.preventDefault();
+    const form = e.target;
+    const profileId = document.getElementById('assign_group_profile_id').value;
+    const resultNodeId = document.getElementById('assign_result_node_select')?.value;
+    const btn = document.getElementById('btnSubmitAssignGroup');
+
+    if (!resultNodeId) {
+        Swal.fire('Atención', 'Seleccione un grupo ocupacional final.', 'warning');
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Guardando...';
+
+    try {
+        const res = await fetch('/function_manual/api/profile/assign-group/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken(),
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                profile_id: profileId,
+                result_node_id: resultNodeId
+            })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+            closeModal('modalAssignGroup');
+            showToast(data.message || 'Grupo ocupacional asignado con éxito.', 'success');
+            if (typeof fetchFunctionManualProfiles === 'function') {
+                fetchFunctionManualProfiles();
+            } else {
+                setTimeout(() => location.reload(), 600);
+            }
+        } else {
+            throw new Error(data.message || 'Error al asignar el grupo.');
+        }
+    } catch (err) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: err.message || 'Error de comunicación con el servidor.'
+        });
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check me-1"></i> Asignar Grupo';
+    }
+};
+
+async function initAssignGroupWorkflow(profileId, modalEl) {
+    const inputId = modalEl.querySelector('#assign_group_profile_id');
+    if (inputId) inputId.value = profileId;
+
+    const loading = modalEl.querySelector('#assignGroupLoading');
+    const content = modalEl.querySelector('#assignGroupContent');
+    const select = modalEl.querySelector('#assign_result_node_id');
+    const btnSubmit = modalEl.querySelector('#btnSubmitAssignGroup');
+
+    try {
+        const res = await fetch(`/function_manual/api/profile/${profileId}/valuation-chain/`, {
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message);
+
+        // Nivel 6 (Complejidad) es el padre directo de RESULT
+        const complexityId = data.selected_values?.complexity_id;
+        if (complexityId) {
+            const nodeRes = await fetch(`/function_manual/api/valuation-nodes/?parent=${complexityId}`);
+            const nodes = await nodeRes.json();
+            const resultNodes = nodes.filter(n => n.type === 'RESULT' || n.node_type === 'RESULT');
+
+            $(select).empty().append('<option value="">Seleccione grupo...</option>');
+            resultNodes.forEach(n => {
+                $(select).append(new Option(n.name, n.id));
+            });
+
+            $(select).select2({width: '100%', dropdownParent: $(modalEl)});
+            $(select).on('change', () => {
+                btnSubmit.disabled = !select.value;
+            });
+
+            loading.classList.add('hidden');
+            content.classList.remove('hidden');
+        }
+    } catch (e) {
+        Swal.fire({icon: 'error', title: 'Error', text: 'No se pudo cargar la cadena de valoración.'});
+    }
+}
+
+window.submitAssignGroup = async function (e) {
+    e.preventDefault();
+    const form = e.target;
+    const profileId = form.querySelector('#assign_group_profile_id').value;
+    const resultNodeId = form.querySelector('#assign_result_node_id').value;
+    const btn = form.querySelector('#btnSubmitAssignGroup');
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Guardando...';
+
+    try {
+        const res = await fetch('/function_manual/api/profile/assign-group/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken(),
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({profile_id: profileId, result_node_id: resultNodeId})
+        });
+        const data = await res.json();
+        if (data.success) {
+            closeModal();
+            showToast(data.message || 'Grupo asignado correctamente.', 'success');
+            if (typeof fetchFunctionManualProfiles === 'function') fetchFunctionManualProfiles();
+        } else {
+            throw new Error(data.message);
+        }
+    } catch (err) {
+        Swal.fire({icon: 'error', title: 'Error', text: err.message || 'Error al asignar grupo.'});
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check me-1"></i> Asignar';
+    }
+};
+
+// 4.2 Guardar Competencias
+window.submitCompetencyForm = async function (e, pk) {
+    e.preventDefault();
+    const form = e.target;
+    const payload = {
+        name: form.querySelector('#comp_name').value.trim(),
+        type: form.querySelector('#comp_type').value,
+        suggested_level: form.querySelector('#comp_level').value || null,
+        definition: form.querySelector('#comp_definition').value.trim()
+    };
+
+    const url = pk ? `/function_manual/competencies/update/${pk}/` : '/function_manual/competencies/create/';
+
+    try {
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken(),
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            closeModal();
+            showToast(data.message, 'success');
+            setTimeout(() => location.reload(), 600);
+        } else {
+            Swal.fire({icon: 'warning', title: 'Atención', text: data.message});
+        }
+    } catch (err) {
+        Swal.fire({icon: 'error', title: 'Error', text: 'Error de comunicación con el servidor.'});
+    }
+};
+
+// 4.3 Guardar Matriz Escalar Ocupacional
+window.submitMatrixForm = async function (e, pk) {
+    e.preventDefault();
+    const form = e.target;
+    const payload = {
+        id: pk || null,
+        occupational_group: form.querySelector('#matrix_group').value.trim(),
+        grade: form.querySelector('#matrix_grade').value,
+        remuneration: form.querySelector('#matrix_rmu').value
+    };
+
+    try {
+        const res = await fetch('/function_manual/api/matrix/save/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCsrfToken(),
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.success) {
+            closeModal();
+            showToast(data.message, 'success');
+            setTimeout(() => location.reload(), 600);
+        } else {
+            Swal.fire({icon: 'error', title: 'Error', text: data.message});
+        }
+    } catch (err) {
+        Swal.fire({icon: 'error', title: 'Error', text: 'Error de comunicación con el servidor.'});
+    }
+};

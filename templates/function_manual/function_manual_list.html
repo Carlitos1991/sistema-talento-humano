@@ -2,91 +2,89 @@
 {% load static %}
 {% block title %}Perfiles de Puestos | SIGETH{% endblock %}
 
-{% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/function_manual.css' %}">
-{% endblock %}
-
 {% block content %}
-    <div id="profileApp" data-url-table="{% url 'function_manual:profile_list' %}">
+    <div id="profileApp">
 
-        <!-- 1. Header estilo SIGETH -->
+        <!-- 1. Header institucional (style.css) -->
         <div class="header-card">
-            <div>
+            <div class="header-card-body">
                 <h1>Manual de Funciones</h1>
                 <p>Administración y Clasificación de Perfiles de Puestos Institucionales.</p>
             </div>
-            {% if perms.function_manual.add_jobprofile %}
+            <div class="header-actions-group">
                 {% if perms.function_manual.can_admin %}
-                    <a href="{% url 'function_manual:report_valuation_excel' %}" class="btn btn-create"
-                       style="background: #107c41; margin-right: 10px;">
+                    <a href="{% url 'function_manual:report_valuation_excel' %}" class="btn-success">
                         <i class="fas fa-file-excel"></i> Imprimir Valoraciones
                     </a>
                 {% endif %}
-                <a href="{% url 'function_manual:profile_create' %}" class="btn btn-create">
-                    <i class="fas fa-plus"></i> Nuevo Perfil
-                </a>
-            {% endif %}
+                {% if perms.function_manual.add_jobprofile %}
+                    <a href="{% url 'function_manual:profile_create' %}" class="btn-blue-rectangle">
+                        <i class="fas fa-plus"></i> Nuevo Perfil
+                    </a>
+                {% endif %}
+            </div>
         </div>
 
-        <!-- 2. Estadísticas Dinámicas -->
+        <!-- 2. Estadísticas Corporativas (style.css) -->
         <div class="stats-row">
-            <div class="stat-card color-one">
-                <div class="stat-left">
+            <div class="stat-card color-one readonly">
+                <div>
                     <h3>Total Perfiles</h3>
                     <div class="number">{{ stats_total|default:"0" }}</div>
                 </div>
                 <i class="fa-solid fa-address-card stat-icon"></i>
             </div>
 
-            <div class="stat-card color-two">
-                <div class="stat-left">
+            <div class="stat-card color-two readonly">
+                <div>
                     <h3>Legalizados</h3>
                     <div class="number">{{ stats_legalized|default:"0" }}</div>
                 </div>
                 <i class="fa-solid fa-check-double stat-icon"></i>
             </div>
 
-            <div class="stat-card color-three">
-                <div class="stat-left">
+            <div class="stat-card color-three readonly">
+                <div>
                     <h3>Pendientes</h3>
                     <div class="number">{{ stats_pending|default:"0" }}</div>
                 </div>
                 <i class="fa-solid fa-triangle-exclamation stat-icon"></i>
             </div>
 
-            <div class="stat-card color-four">
-                <div class="stat-left">
+            <div class="stat-card color-four readonly">
+                <div>
                     <h3>Perfiles Activos</h3>
-                    <div class="number">{{ stats_active|default:"0" }}</div>
+                    <div class="number">{{ stats_total|default:"0" }}</div>
                 </div>
                 <i class="fa-solid fa-user-gear stat-icon"></i>
             </div>
         </div>
 
-        <!-- 3. Contenedor de Tabla con Buscador -->
-        <div id="table-app">
-            <div class="content-table">
-                <div class="table-controls">
+        <!-- 3. Contenedor de Tabla con Buscador Estándar (style.css) -->
+        <div class="content-table">
+            <div class="toolbar-row">
+                <div class="toolbar-left"></div>
+                <div class="toolbar-center"></div>
+                <div class="toolbar-right">
                     <div class="search-box">
-                        <input type="text" id="searchInput" class="table-search-input input-field"
-                               placeholder="Buscar por cargo o unidad">
+                        <input type="text" id="searchInput" class="table-search-input"
+                               placeholder="Buscar por cargo o unidad...">
+                        <button type="button" class="search-btn">
+                            <i class="fas fa-search"></i>
+                        </button>
                     </div>
                 </div>
+            </div>
 
-                <div id="tableContainer" class="table-container">
-                    <!-- Contenido inicial del partial será inyectado aquí -->
-                </div>
-                
-                <!-- Paginación FUERA del tableContainer -->
-                <div class="pagination-container" id="paginationContainer">
-                    <!-- Será rellenada por fetch -->
-                </div>
+            <div id="tableContainer" class="table-container">
+                <!-- Se inyecta partial_function_manual_table.html -->
+            </div>
+
+            <div class="pagination-container" id="paginationContainer">
+                <!-- Paginación inyectada -->
             </div>
         </div>
     </div>
-
-    <!-- CONTENEDOR PARA MODALES -->
-    <div id="modal-inject-container"></div>
 
     {% include 'function_manual/modals/modal_assign_group.html' %}
 {% endblock %}
@@ -94,26 +92,21 @@
 {% block extra_js %}
     <script src="{% static 'js/function_manual.js' %}"></script>
     <script>
-        // ─── GESTIÓN CENTRALIZADA DE BÚSQUEDA / PAGINACIÓN / SORT ───
-        // Evitar duplicación: verificar si ya existe
         if (typeof window.currentProfileFilters === 'undefined') {
             window.currentProfileFilters = {q: '', page: 1, sort_field: '', sort_dir: 'asc'};
         }
 
-        // Función stub para cambiar página (llamada desde botones de paginación en el partial)
-        window.changeProfilePage = function(page) {
+        window.changeProfilePage = function (page) {
             if (page && page > 0) {
                 window.currentProfileFilters.page = page;
                 window.fetchFunctionManualProfiles();
             }
         };
 
-        // Función para ordenar (llamada desde onclick en encabezados de tabla)
-        window.sortProfileTable = function(th) {
+        window.sortProfileTable = function (th) {
             const field = th?.dataset?.field;
             if (!field) return;
 
-            // Toggle dirección si mismo campo, si no → asc
             if (window.currentProfileFilters.sort_field === field) {
                 window.currentProfileFilters.sort_dir = window.currentProfileFilters.sort_dir === 'asc' ? 'desc' : 'asc';
             } else {
@@ -121,13 +114,11 @@
                 window.currentProfileFilters.sort_dir = 'asc';
             }
 
-            // Resetear a página 1 cuando se cambia ordenamiento
             window.currentProfileFilters.page = 1;
             window.fetchFunctionManualProfiles();
         };
 
-        // Fetch centralizado
-        window.fetchFunctionManualProfiles = function() {
+        window.fetchFunctionManualProfiles = function () {
             const url = new URL(window.location.href);
 
             if (window.currentProfileFilters.q) url.searchParams.set('q', window.currentProfileFilters.q);
@@ -137,12 +128,8 @@
             url.searchParams.set('partial', 'true');
 
             fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
-                .then(res => {
-                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                    return res.text();
-                })
+                .then(res => res.text())
                 .then(html => {
-                    // Parsear HTML en un contenedor temporal
                     const temp = document.createElement('div');
                     temp.innerHTML = html;
 
@@ -150,33 +137,24 @@
                     const newPagination = temp.querySelector('.pagination-container');
                     const newNoResults = temp.querySelector('.no-results-overlay');
 
-                    // Inyectar tabla en tableContainer
                     const tableContainer = document.getElementById('tableContainer');
                     if (tableContainer) {
                         tableContainer.innerHTML = '';
-                        if (newTable) {
-                            tableContainer.appendChild(newTable);
-                        }
-                        if (newNoResults) {
-                            tableContainer.appendChild(newNoResults);
-                        }
+                        if (newTable) tableContainer.appendChild(newTable);
+                        if (newNoResults) tableContainer.appendChild(newNoResults);
                     }
 
-                    // Inyectar paginación en paginationContainer (fuera de la tabla)
                     const paginationContainer = document.getElementById('paginationContainer');
                     if (paginationContainer && newPagination) {
                         paginationContainer.innerHTML = newPagination.innerHTML;
                     }
                 })
                 .catch(err => console.error('fetchFunctionManualProfiles error:', err));
-        }
+        };
 
-        // Inicializar en DOMContentLoaded
         document.addEventListener('DOMContentLoaded', () => {
-            // Carga inicial: obtener tabla y paginación
             window.fetchFunctionManualProfiles();
-            
-            // Búsqueda con debounce
+
             const searchInput = document.getElementById('searchInput');
             if (searchInput) {
                 let timeout;
@@ -184,7 +162,7 @@
                     clearTimeout(timeout);
                     window.currentProfileFilters.q = e.target.value;
                     window.currentProfileFilters.page = 1;
-                    timeout = setTimeout(() => window.fetchFunctionManualProfiles(), 400);
+                    timeout = setTimeout(() => window.fetchFunctionManualProfiles(), 350);
                 });
             }
         });

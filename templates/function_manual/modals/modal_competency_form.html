@@ -1,66 +1,65 @@
-<!-- templates/function_manual/modals/modal_competency_form.html -->
-<div class="valuation-modal-wrapper" :class="{ 'is-active': showModal }" v-if="showModal">
-    <!-- Backdrop separado -->
-    <div class="valuation-modal-backdrop" @click="closeModal"></div>
-
-    <!-- Contenedor Modal -->
-    <div class="valuation-modal-box animate-scale-in" style="max-width: 600px;">
-
-        <!-- HEADER  -->
+<div class="modal-overlay" id="competencyModalOverlay">
+    <div class="modal-container-medium animate-scale-in" style="max-width: 600px; margin: auto;">
         <div class="modal-header modal-header-gradient">
             <h3 class="modal-title text-white">
-                <i class="fa-solid fa-brain me-2"></i> [[ isEdit ? 'Editar Competencia' : 'Nueva Competencia' ]]
+                <i class="fa-solid fa-brain me-2"></i> {{ competency.id|yesno:"Editar Competencia,Nueva Competencia" }}
             </h3>
-            <button type="button" class="btn-close-modal text-white-opacity" @click="closeModal">
-                &times;
+            <button type="button" class="btn-close-modal text-white-opacity"
+                    onclick="closeModal('competencyModalOverlay')">
+                <i class="fas fa-times"></i>
             </button>
         </div>
 
-        <form @submit.prevent="saveCompetency">
-
-            <!-- BODY -->
+        <form id="competencyForm" onsubmit="submitCompetencyForm(event, {{ competency.id|default:'null' }})">
+            {% csrf_token %}
             <div class="modal-body modal-body-custom">
-                <div class="form-group">
-                    <label class="form-label">Nombre de la Competencia (*)</label>
-                    <input type="text" v-model="formData.name" required class="input-field"
-                           placeholder="Ej: Liderazgo Estratégico">
+                <div class="form-group mb-3">
+                    <label class="form-label" for="comp_name">Nombre de la Competencia (*)</label>
+                    <input type="text" id="comp_name" name="name" class="form-control"
+                           value="{{ competency.name|default:'' }}" placeholder="Ej: Liderazgo Estratégico" required>
                 </div>
 
-                <div class="grid-2-cols mt-3">
+                <div class="grid-2-cols mb-3">
                     <div class="form-group">
-                        <label class="form-label">Tipo (*)</label>
-                        <select v-model="formData.type" class="input-field" required>
-                            <option value="TECHNICAL">Técnica</option>
-                            <option value="BEHAVIORAL">Conductual</option>
-                            <option value="TRANSVERSAL">Transversal</option>
-                        </select>
-                    </div>
-                    <!-- Nota: El nivel sugerido debe venir de "levels" en JS -->
-                    <div class="form-group">
-                        <label class="form-label">Nivel Sugerido</label>
-                        <select v-model="formData.suggested_level" class="input-field">
-                            <option value="">Seleccione nivel...</option>
-                            <option v-for="lvl in complexityLevels" :key="lvl.id" :value="lvl.id">
-                                [[ lvl.name ]]
+                        <label class="form-label" for="comp_type">Tipo (*)</label>
+                        <select id="comp_type" name="type" class="form-control" required>
+                            <option value="TECHNICAL" {% if competency.type == 'TECHNICAL' %}selected{% endif %}>
+                                Técnica
+                            </option>
+                            <option value="BEHAVIORAL" {% if competency.type == 'BEHAVIORAL' %}selected{% endif %}>
+                                Conductual
+                            </option>
+                            <option value="TRANSVERSAL" {% if competency.type == 'TRANSVERSAL' %}selected{% endif %}>
+                                Transversal
                             </option>
                         </select>
                     </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="comp_level">Nivel Sugerido</label>
+                        <select id="comp_level" name="suggested_level" class="form-control select2-modal">
+                            <option value="">Seleccione nivel...</option>
+                            {% for lvl in complexity_levels %}
+                                <option value="{{ lvl.id }}"
+                                        {% if competency.suggested_level_id == lvl.id %}selected{% endif %}>{{ lvl.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
                 </div>
 
-                <div class="form-group mt-3">
-                    <label class="form-label">Definición / Descripción (*)</label>
-                    <textarea v-model="formData.definition" rows="4" class="input-field"
-                              placeholder="Describa la competencia..." required></textarea>
+                <div class="form-group">
+                    <label class="form-label" for="comp_definition">Definición / Descripción (*)</label>
+                    <textarea id="comp_definition" name="definition" rows="4" class="form-control"
+                              placeholder="Describa la competencia y conductas observables..."
+                              required>{{ competency.definition|default:'' }}</textarea>
                 </div>
             </div>
 
-            <!-- FOOTER -->
             <div class="modal-footer modal-footer-spaced">
-                <button type="button" class="btn-cancel" @click="closeModal">Cancelar</button>
-                <button type="submit" class="btn-save" :disabled="loading">
-                    <i v-if="loading" class="fa-solid fa-spinner fa-spin"></i>
-                    <i v-else class="fas fa-save"></i>
-                    [[ loading ? 'Guardando...' : 'Guardar Cambios' ]]
+                <button type="button" class="btn-cancel" onclick="closeModal('competencyModalOverlay')">Cancelar
+                </button>
+                <button type="submit" class="btn-save" id="btnSaveCompetency">
+                    <i class="fas fa-save me-1"></i> Guardar Cambios
                 </button>
             </div>
         </form>

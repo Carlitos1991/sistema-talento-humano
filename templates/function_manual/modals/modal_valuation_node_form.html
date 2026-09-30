@@ -1,96 +1,84 @@
-<!-- templates/function_manual/modals/modal_valuation_node_form.html -->
-<div class="valuation-modal-wrapper" :class="{ 'is-active': showModal }" v-if="showModal">
-    <!-- Overlay oscuro separado -->
-    <div class="valuation-modal-backdrop" @click="closeModal"></div>
-    
-    <!-- Contenedor del modal (FUERA del backdrop para evitar blur) -->
-    <div class="valuation-modal-box">
+<!-- Modal para Crear/Editar Nodo de Valoración (100% Nativo SIGETH) -->
+<div class="modal-overlay hidden" id="valuationNodeModal">
+    <div class="modal-container-medium animate-scale-in" style="max-width: 550px; margin: auto;">
         <div class="modal-header modal-header-gradient">
             <h3 class="modal-title text-white">
-                <i class="fa-solid fa-layer-group me-2"></i>
-                [[ isEdit ? 'Editar ' : 'Nuevo ' ]] [[ currentNodeTypeName ]]
+                <i class="fa-solid fa-layer-group me-2"></i> <span
+                    id="valuationNodeModalTitle">Nuevo Nodo de Valoración</span>
             </h3>
-            <button type="button" class="btn-close-modal text-white-opacity" @click="closeModal">
+            <button type="button" class="btn-close-modal text-white-opacity" onclick="closeModal('valuationNodeModal')">
                 <i class="fas fa-times"></i>
             </button>
         </div>
 
-        <form @submit.prevent="saveNode">
+        <form id="valuationNodeForm" onsubmit="submitValuationNodeForm(event)">
+            {% csrf_token %}
+            <input type="hidden" id="node_id" name="id" value="">
+            <input type="hidden" id="node_parent_id" name="parent_id" value="">
+            <input type="hidden" id="node_type" name="node_type" value="">
+
             <div class="modal-body modal-body-custom">
-                <!-- Select de Catálogos -->
-                <div class="form-group"
-                     v-if="['ROLE', 'INSTRUCTION', 'DECISION', 'IMPACT', 'COMPLEXITY'].includes(workingType)">
-                    <label class="form-label">
-                        <i class="fa-solid fa-list-ul"></i> Seleccionar Item de Catálogo (*)
+                <!-- Select de Catálogos (ROLE, INSTRUCTION, DECISION, IMPACT, COMPLEXITY) -->
+                <div class="form-group mb-3 hidden" id="groupCatalogItem">
+                    <label class="form-label" for="node_catalog_item_id">
+                        <i class="fa-solid fa-list-ul me-1"></i> Seleccionar Ítem de Catálogo (*)
                     </label>
-                    <select v-model="formData.catalog_item_id" class="input-field" required>
+                    <select class="form-control select2-modal" id="node_catalog_item_id" name="catalog_item_id">
                         <option value="">Seleccione una opción...</option>
-                        <option v-for="item in filteredCatalogItems" :key="item.id" :value="item.id">
-                            [[ item.name ]]
-                        </option>
                     </select>
                 </div>
 
-                <!-- Input de Texto (Experiencia) -->
-                <div class="form-group" v-if="workingType === 'EXPERIENCE'">
-                    <label class="form-label">
-                        <i class="fa-solid fa-clock"></i> Descripción de Experiencia (*)
+                <!-- Input de Texto (EXPERIENCE) -->
+                <div class="form-group mb-3 hidden" id="groupExperience">
+                    <label class="form-label" for="node_name_extra_exp">
+                        <i class="fa-solid fa-clock me-1"></i> Descripción de Experiencia (*)
                     </label>
-                    <input type="text" v-model="formData.name_extra" class="input-field"
-                           placeholder="Ej: Mínimo 24 meses" required>
+                    <input type="text" id="node_name_extra_exp" class="form-control" placeholder="Ej: Mínimo 24 meses">
                 </div>
 
-                <!-- Select de Matriz (Resultado) -->
-                <div class="form-group" v-if="workingType === 'RESULT'">
-                    <label class="form-label">
-                        <i class="fa-solid fa-bullseye"></i> Vincular Clasificación Ocupacional (*)
+                <!-- Select de Clasificación (RESULT) -->
+                <div class="form-group mb-3 hidden" id="groupResult">
+                    <label class="form-label" for="node_occupational_classification_id">
+                        <i class="fa-solid fa-bullseye me-1"></i> Vincular Clasificación Ocupacional (*)
                     </label>
-                    <select v-model="formData.occupational_classification_id" class="input-field" required>
+                    <select class="form-control select2-modal" id="node_occupational_classification_id"
+                            name="occupational_classification_id">
                         <option value="">Seleccione clasificación...</option>
-                        <option v-for="m in catalogs.matrix" :key="m.id" :value="m.id">
-                            [[ m.occupational_group ]] ($[[ m.remuneration ]])
-                        </option>
                     </select>
                 </div>
 
-                <!-- Input de Valor Mínimo (Resultado Final) -->
-                <div class="form-group" v-if="workingType === 'RESULT'">
-                    <label class="form-label">
-                        <i class="fa-solid fa-arrow-down-short-wide"></i> Valor Mínimo
-                    </label>
-                    <input type="number" v-model.number="formData.minimum_value" class="input-field"
-                           placeholder="Ej: 1500" min="0" step="1">
-                    <small style="color: #666; margin-top: 5px; display: block;">Opcional - Solo números enteros sin decimales</small>
+                <!-- Valores opcionales (RESULT) -->
+                <div class="grid-2-cols mb-3 hidden" id="groupResultExtras">
+                    <div class="form-group">
+                        <label class="form-label" for="node_minimum_value">
+                            <i class="fa-solid fa-arrow-down-short-wide me-1"></i> Puntos Mínimos
+                        </label>
+                        <input type="number" id="node_minimum_value" name="minimum_value" class="form-control"
+                               placeholder="Ej: 1500" min="0" step="1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="node_level">
+                            <i class="fa-solid fa-ranking-star me-1"></i> Nivel
+                        </label>
+                        <input type="number" id="node_level" name="level" class="form-control" placeholder="Ej: 1"
+                               min="0" step="1">
+                    </div>
                 </div>
 
-                <!-- Input de Nivel (Resultado Final) -->
-                <div class="form-group" v-if="workingType === 'RESULT'">
-                    <label class="form-label">
-                        <i class="fa-solid fa-ranking-star"></i> Nivel
+                <!-- Denominación Genérica -->
+                <div class="form-group mb-3 hidden" id="groupGenericDenomination">
+                    <label class="form-label" for="node_name_extra_generic">
+                        <i class="fa-solid fa-bookmark me-1"></i> Denominación Genérica (*)
                     </label>
-                    <input type="number" v-model.number="formData.level" class="input-field"
-                           placeholder="Ej: 5" min="0" step="1">
-                    <small style="color: #666; margin-top: 5px; display: block;">Opcional - Solo números enteros sin decimales</small>
-                </div>
-
-                <!-- Input de Texto (Denominación Genérica) -->
-                <div class="form-group" v-if="workingType === 'GENERIC_DENOMINATION'">
-                    <label class="form-label">
-                        <i class="fa-solid fa-bookmark"></i> Denominación Genérica (*)
-                    </label>
-                    <input type="text" v-model="formData.name_extra" class="input-field"
-                           placeholder="Ej: Técnico Especializado" required>
+                    <input type="text" id="node_name_extra_generic" class="form-control"
+                           placeholder="Ej: Especialista 1">
                 </div>
             </div>
 
             <div class="modal-footer modal-footer-spaced">
-                <button type="button" class="btn-cancel" @click="closeModal">
-                    Cancelar
-                </button>
-                <button type="submit" class="btn-save" :disabled="loading">
-                    <i v-if="loading" class="fa-solid fa-spinner fa-spin"></i>
-                    <i v-else class="fas fa-save"></i>
-                    [[ loading ? 'Guardando...' : 'Guardar' ]]
+                <button type="button" class="btn-cancel" onclick="closeModal('valuationNodeModal')">Cancelar</button>
+                <button type="submit" class="btn-save" id="btnSaveValuationNode">
+                    <i class="fas fa-save me-1"></i> Guardar
                 </button>
             </div>
         </form>

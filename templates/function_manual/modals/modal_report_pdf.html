@@ -1,132 +1,82 @@
-<div class="modal-overlay" style="display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
-    <div class="modal-box" style="background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); width: 100%; max-width: 450px; padding: 0;">
-        
+<div class="modal-overlay" id="modalReportPdf">
+    <div class="modal-container-medium animate-scale-in" style="max-width: 480px; margin: auto;">
         <!-- Header -->
-        <div style="background: linear-gradient(135deg, #0d6efd 0%, #0d5ecd 100%); color: white; padding: 20px; border-radius: 8px 8px 0 0; display: flex; justify-content: space-between; align-items: center;">
-            <h5 style="margin: 0; font-size: 18px; font-weight: 600;">
-                <i class="fas fa-file-pdf" style="margin-right: 8px;"></i>Exportar a PDF
-            </h5>
-            <button type="button" onclick="closeReportPdfModal()" style="background: none; border: none; color: white; font-size: 24px; cursor: pointer; padding: 0; line-height: 1;">
-                ×
+        <div class="modal-header modal-header-gradient"
+             style="background: linear-gradient(135deg, #0d6efd 0%, #0d5ecd 100%);">
+            <h3 class="modal-title text-white">
+                <i class="fas fa-file-pdf me-2"></i> Exportar a PDF
+            </h3>
+            <button type="button" class="btn-close-modal text-white-opacity" onclick="closeModal('modalReportPdf')">
+                &times;
             </button>
         </div>
 
         <!-- Body -->
-        <div style="padding: 25px;">
-            <p style="margin: 0 0 20px 0; color: #64748b; font-size: 14px;">
+        <div class="modal-body modal-body-custom">
+            <p class="text-sm text-muted mb-3">
                 Seleccione el usuario que autorizará este reporte de actividades.
             </p>
 
-            <form id="form-report-pdf" style="margin: 0;">
-                <div style="margin-bottom: 20px;">
-                    <label for="authority-select" style="display: block; font-weight: 600; margin-bottom: 8px; color: #1e293b; font-size: 14px;">
+            <form id="formReportPdf" onsubmit="submitReportPdf(event, {{ profile.id }})">
+                {% csrf_token %}
+                <div class="form-group mb-3">
+                    <label for="authority-select" class="form-label">
                         Usuario que Autoriza:
                     </label>
-                    <select id="authority-select" class="select2" style="width: 100%;"
+                    <select id="authority-select" name="authority_id" class="form-control select2-modal"
                             data-ajax-url="{% url 'function_manual:api_user_search' %}"
                             data-placeholder="Buscar por nombres, apellidos o cédula"
-                            data-minimum-input-length="1">
+                            data-minimum-input-length="1" required>
                         <option value="">-- Seleccione un usuario --</option>
-                        {% if authorities and authorities|length == 1 %}
-                            <option value="{{ authorities.0.id }}" selected>{{ authorities.0.signature_name }}</option>
-                        {% endif %}
                     </select>
                 </div>
 
-                <div style="background-color: #f0f4f8; padding: 15px; border-radius: 6px; margin-bottom: 20px; border-left: 4px solid #0d6efd;">
-                    <p style="margin: 0; font-size: 13px; color: #64748b;">
-                        <i class="fas fa-info-circle" style="margin-right: 6px; color: #0d6efd;"></i>
-                        El reporte se generará con la firma autorizada por {{ profile.specific_job_title }} de la unidad de {{ profile.administrative_unit.name }}.
-                    </p>
+                <div class="alert alert-info mt-2">
+                    <i class="fas fa-info-circle me-1"></i>
+                    El reporte se generará con la firma autorizada para {{ profile.specific_job_title }}
+                    en {{ profile.administrative_unit.name }}.
+                </div>
+
+                <div class="modal-footer modal-footer-spaced mt-3">
+                    <button type="button" class="btn-cancel" onclick="closeModal('modalReportPdf')">Cancelar</button>
+                    <button type="submit" id="btn-submit-report-pdf" class="btn-save" style="background: #0d6efd;">
+                        <i class="fas fa-download me-1"></i> Descargar PDF
+                    </button>
                 </div>
             </form>
-        </div>
-
-        <!-- Footer -->
-        <div style="background: #f8fafc; padding: 15px 25px; border-radius: 0 0 8px 8px; display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #e2e8f0;">
-            <button type="button" onclick="closeReportPdfModal()" style="padding: 10px 20px; border: 1px solid #cbd5e1; background: white; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; color: #475569; transition: all 0.2s;">
-                Cancelar
-            </button>
-            <button type="button" onclick="submitReportPdf({{ profile.id }})" id="btn-submit-report-pdf" style="padding: 10px 20px; background: #0d6efd; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.2s;">
-                <i class="fas fa-download" style="margin-right: 6px;"></i>Descargar PDF
-            </button>
         </div>
     </div>
 </div>
 
 <script>
-    // Inicializar Select2 AJAX para el select de autoridad
-    (function() {
-        const selectElement = document.getElementById('authority-select');
-        if (selectElement && window.$ && $.fn.select2) {
-            const modal = document.querySelector('.modal-overlay');
-
-            if ($(selectElement).hasClass('select2-hidden-accessible')) {
-                $(selectElement).select2('destroy');
+    // Inicializar Select2 al renderizarse en el modal
+    $(document).ready(function () {
+        const select = $('#authority-select');
+        select.select2({
+            dropdownParent: $('#modalReportPdf'),
+            width: '100%',
+            allowClear: true,
+            ajax: {
+                url: select.data('ajax-url'),
+                dataType: 'json',
+                delay: 250,
+                data: params => ({term: params.term}),
+                processResults: data => ({results: data.results || []}),
+                cache: true
             }
+        });
+    });
 
-            $(selectElement).select2({
-                dropdownParent: modal ? $(modal) : $(document.body),
-                width: '100%',
-                placeholder: selectElement.dataset.placeholder || 'Seleccione un usuario',
-                allowClear: true,
-                minimumInputLength: parseInt(selectElement.dataset.minimumInputLength || '1', 10) || 1,
-                language: {
-                    errorLoading: function () {
-                        return 'No se pudieron cargar los resultados';
-                    },
-                    inputTooShort: function (args) {
-                        const remaining = args.minimum - args.input.length;
-                        return 'Por favor ingrese ' + remaining + ' carácter' + (remaining !== 1 ? 'es' : '') + ' más';
-                    },
-                    noResults: function () {
-                        return 'No se encontraron usuarios';
-                    },
-                    searching: function () {
-                        return 'Buscando usuarios...';
-                    }
-                },
-                ajax: {
-                    url: selectElement.dataset.ajaxUrl,
-                    dataType: 'json',
-                    delay: 250,
-                    data: function (params) {
-                        return {term: params.term};
-                    },
-                    processResults: function (data) {
-                        return {results: data.results || []};
-                    },
-                    cache: true
-                }
-            });
-        }
-    })();
-
-    function closeReportPdfModal() {
-        const overlay = document.querySelector('.modal-overlay');
-        if (overlay) {
-            // Destruir Select2 si existe
-            const selectElement = document.getElementById('authority-select');
-            if (selectElement && window.$ && $.fn.select2 && $(selectElement).data('select2')) {
-                $(selectElement).select2('destroy');
-            }
-            overlay.remove();
-        }
-    }
-
-    function submitReportPdf(profileId) {
+    function submitReportPdf(e, profileId) {
+        e.preventDefault();
         const authorityId = document.getElementById('authority-select').value;
-        
+        const btn = document.getElementById('btn-submit-report-pdf');
+
         if (!authorityId) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Selección Requerida',
-                text: 'Por favor, seleccione un usuario antes de continuar.'
-            });
+            Swal.fire({icon: 'warning', title: 'Atención', text: 'Seleccione un usuario firmante.'});
             return;
         }
 
-        const btn = document.getElementById('btn-submit-report-pdf');
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...';
         btn.disabled = true;
 
@@ -134,47 +84,34 @@
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                'X-CSRFToken': getCsrfToken(),
+                'X-Requested-With': 'XMLHttpRequest'
             },
-            body: JSON.stringify({
-                profile_id: profileId,
-                authority_id: parseInt(authorityId)
-            })
+            body: JSON.stringify({profile_id: profileId, authority_id: parseInt(authorityId)})
         })
-        .then(response => {
-            if (response.ok) {
-                return response.blob().then(blob => {
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `Actividades_${profileId}.pdf`;
-                    document.body.appendChild(a);
-                    a.click();
-                    window.URL.revokeObjectURL(url);
-                    document.body.removeChild(a);
-                    closeReportPdfModal();
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Descarga Completada!',
-                        text: 'El PDF ha sido generado y descargado correctamente.',
-                        timer: 2000,
-                        showConfirmButton: false
+            .then(response => {
+                if (response.ok) {
+                    return response.blob().then(blob => {
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `Actividades_${profileId}.pdf`;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        window.URL.revokeObjectURL(url);
+                        closeModal('modalReportPdf');
+                        showToast('PDF generado correctamente.', 'success');
                     });
-                });
-            } else {
+                }
                 return response.json().then(data => {
-                    throw new Error(data.message || 'Error al generar el PDF');
+                    throw new Error(data.message);
                 });
-            }
-        })
-        .catch(err => {
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: err.message || 'Ocurrió un error al generar el PDF'
+            })
+            .catch(err => {
+                Swal.fire({icon: 'error', title: 'Error', text: err.message || 'No se pudo generar el reporte.'});
+                btn.innerHTML = '<i class="fas fa-download me-1"></i> Descargar PDF';
+                btn.disabled = false;
             });
-            btn.innerHTML = '<i class="fas fa-download" style="margin-right: 6px;"></i>Descargar PDF';
-            btn.disabled = false;
-        });
     }
 </script>

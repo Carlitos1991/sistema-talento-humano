@@ -1,6 +1,6 @@
 {% load static %}
 <div class="table-container">
-    <table class="data-table">
+    <table class="managed-table">
         <thead>
         <tr>
             <th>Nombre</th>
@@ -17,41 +17,80 @@
                     <strong>{{ competency.name }}</strong><br>
                     <small class="text-muted">{{ competency.definition|truncatechars:60 }}</small>
                 </td>
-                <td data-type="{{ competency.type }}">
-                <span class="badge badge-outline">
-                    {{ competency.get_type_display }}
-                </span>
+                <td>
+                    <span class="badge badge-outline">
+                        {{ competency.get_type_display }}
+                    </span>
                 </td>
                 <td>{{ competency.suggested_level.name|default:"---" }}</td>
                 <td>
                     {% if perms.function_manual.change_competency %}
-                        <label class="switch">
-                            <input type="checkbox" {% if competency.is_active %}checked{% endif %}
-                                   @change="toggleStatus({{ competency.id }})">
-                            <span class="slider"></span>
+                        <input type="checkbox" id="comp-switch-{{ competency.id }}" class="switch-input switch-green"
+                               {% if competency.is_active %}checked{% endif %}
+                               onchange="toggleCompetencyStatus({{ competency.id }}, this)">
+                        <label for="comp-switch-{{ competency.id }}" class="switch-wrapper">
+                            <span class="switch-circle"></span>
+                            <span class="switch-text">{% if competency.is_active %}Activo{% else %}
+                                Inactivo{% endif %}</span>
                         </label>
                     {% endif %}
                 </td>
                 <td class="text-center">
                     {% if perms.function_manual.change_competency %}
-                        <button class="btn-icon" title="Editar"
-                                @click="openModal('edit', {
-                                    id: {{ competency.id }}, 
-                                    name: '{{ competency.name|escapejs }}', 
-                                    type: '{{ competency.type }}', 
-                                    definition: '{{ competency.definition|escapejs }}', 
-                                    suggested_level: {% if competency.suggested_level %}{{ competency.suggested_level.id }}{% else %}''{% endif %}
-                                })">
-                            <i class="fa-solid fa-pen-to-square"></i>
-                        </button>
+                        <div class="actions-wrapper">
+                            <button class="btn-icon btn-views-action" title="Editar"
+                                    onclick="openEditCompetencyModal({{ competency.id }}, '{{ competency.name|escapejs }}', '{{ competency.type }}', '{{ competency.definition|escapejs }}', '{{ competency.suggested_level_id|default:'' }}')">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
+                        </div>
                     {% endif %}
                 </td>
             </tr>
         {% empty %}
             <tr>
-                <td colspan="5" class="text-center">No hay competencias registradas.</td>
+                <td colspan="5" class="text-center py-4 text-muted">No hay competencias registradas.</td>
             </tr>
         {% endfor %}
         </tbody>
     </table>
 </div>
+
+<script>
+    function toggleCompetencyStatus(id, checkbox) {
+        fetch(`/function_manual/competencies/toggle-status/${id}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken(),
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    showToast('Estado de competencia actualizado.', 'success');
+                    const label = checkbox.nextElementSibling.querySelector('.switch-text');
+                    if (label) label.textContent = checkbox.checked ? 'Activo' : 'Inactivo';
+                } else {
+                    checkbox.checked = !checkbox.checked;
+                    Swal.fire({icon: 'warning', title: 'Atención', text: 'No se pudo cambiar el estado.'});
+                }
+            })
+            .catch(() => {
+                checkbox.checked = !checkbox.checked;
+                Swal.fire({icon: 'error', title: 'Error', text: 'Error de red.'});
+            });
+    }
+
+    function openEditCompetencyModal(id, name, type, definition, levelId) {
+        const modal = document.getElementById('competencyModalOverlay');
+        if (!modal) return;
+
+        document.getElementById('comp_name').value = name;
+        document.getElementById('comp_type').value = type;
+        document.getElementById('comp_definition').value = definition;
+        $('#comp_level').val(levelId).trigger('change');
+
+        document.getElementById('competencyForm').setAttribute('onsubmit', `submitCompetencyForm(event, ${id})`);
+        openModal('competencyModalOverlay');
+    }
+</script>
