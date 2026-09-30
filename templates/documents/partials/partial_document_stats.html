@@ -1,5 +1,7 @@
-<!-- Tarjeta Total -->
-<div class="stat-card color-one {% if not current_filters.documents %}active-card{% endif %}" id="stat-card-total"
+<!-- Tarjeta Total: Activa si no hay ningún filtro específico seleccionado -->
+<div class="stat-card color-one {% if not current_filters.documents %}active-card{% else %}opacity-low{% endif %}"
+     id="stat-card-total"
+     data-code=""
      onclick="filterByRegime('')">
     <div class="stat-left">
         <h3>TOTAL ACTIVOS</h3>
@@ -10,7 +12,7 @@
 
 <!-- Tarjetas por tipo -->
 {% for regime in stats.regimes %}
-    <div class="stat-card color-{{ forloop.counter|add:1 }} {% if current_filters.documents == regime.code|stringformat:'s' %}active-card{% endif %}"
+    <div class="stat-card color-{{ forloop.counter|add:1 }} {% if current_filters.documents and current_filters.documents == regime.code|stringformat:'s' %}active-card{% elif current_filters.documents %}opacity-low{% endif %}"
          data-code="{{ regime.code }}"
          onclick="filterByRegime('{{ regime.code }}')">
         <div class="stat-left">

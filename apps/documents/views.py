@@ -134,7 +134,13 @@ class DocumentListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        # Estadísticas limitadas a rango de fechas si se envían, sino por año (por defecto año actual)
+        raw_doc_filter = self.request.GET.get('documents') or ''
+        ctx['current_filters'] = {
+            'q': (self.request.GET.get('q') or '').strip(),
+            'date_from': (self.request.GET.get('date_from') or '').strip(),
+            'date_to': (self.request.GET.get('date_to') or '').strip(),
+            'documents': str(raw_doc_filter).strip(),
+        }
         date_from = self.request.GET.get('date_from')
         date_to = self.request.GET.get('date_to')
         if date_from and date_to:

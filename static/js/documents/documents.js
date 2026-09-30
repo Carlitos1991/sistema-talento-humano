@@ -90,14 +90,41 @@
     window.filterByRegime = function (typeId) {
         const hiddenInput = document.getElementById('filter_document_type');
         const codeStr = String(typeId || '');
+        const cards = document.querySelectorAll('#documentStatsRow .stat-card');
 
+        // Si se hace clic en la misma tarjeta que ya estaba activa, se deselecciona (vuelve a Total)
         if (hiddenInput.value === codeStr) {
             hiddenInput.value = '';
         } else {
             hiddenInput.value = codeStr;
         }
 
-        setAddButtonEnabled(hiddenInput.value !== '');
+        const selectedVal = hiddenInput.value;
+
+        // Actualización visual inmediata de las tarjetas
+        cards.forEach(card => {
+            const cardCode = card.dataset.code || '';
+            if (!selectedVal) {
+                // Modo Total activo
+                card.classList.remove('opacity-low', 'active-card');
+                if (card.id === 'stat-card-total') {
+                    card.classList.add('active-card');
+                }
+            } else {
+                if (cardCode === selectedVal) {
+                    card.classList.add('active-card');
+                    card.classList.remove('opacity-low');
+                } else {
+                    card.classList.remove('active-card');
+                    card.classList.add('opacity-low');
+                }
+            }
+        });
+
+        // Habilita el botón "Nuevo Documento" solo si hay un tipo seleccionado
+        setAddButtonEnabled(selectedVal !== '');
+
+        // Aplica el filtro desde la página 1
         window.applyDocumentFilters(1);
     };
 
