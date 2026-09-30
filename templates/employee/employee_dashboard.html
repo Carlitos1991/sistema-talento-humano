@@ -58,7 +58,7 @@
                 <div class="header-actions-wrapper">
                     {% if can_edit_person %}
                         <button type="button"
-                                onclick="openAjaxModal('{% url 'person:person_edit_wizard' person.id %}')"
+                            onclick="openAjaxModal('{% url 'person:person_update' person.id %}')"
                                 class="btn-yellow-circle"
                                 title="Editar Perfil">
                             <i class="fa-solid fa-user-pen"></i>
