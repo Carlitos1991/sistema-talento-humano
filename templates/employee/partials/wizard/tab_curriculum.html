@@ -83,7 +83,6 @@
         </div>
         <div class="buttons-centered">
             {% if can_edit_person %}
-                <!-- Input oculto para carga de archivo -->
                 <input type="file" id="cvPdfInput" accept=".pdf" style="display: none;"
                        onchange="uploadCvPdf(this, '{{ person.id }}')">
 

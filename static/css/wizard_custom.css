@@ -1990,3 +1990,19 @@
     color: #99f6e4;
     font-weight: bold;
 }
+
+/* SweetAlert2: Contenedor vertical de acciones en modal de visibilidad */
+.swal2-actions-vertical {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: center !important;
+    margin: 1.25rem auto 0 auto !important;
+}
+
+.swal2-actions-vertical button {
+    margin: 0 !important;
+    font-size: 0.82rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.03em !important;
+}

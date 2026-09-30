@@ -11,7 +11,8 @@
                 </div>
             </div>
             <div class="header-actions-group">
-                {% if perms.person.change_person or perms.employee.add_academictitle %}
+                <!-- Botón visible SOLO para administradores / personal con permisos de edición -->
+                {% if can_edit_person %}
                     <button type="button"
                             class="btn-success"
                             onclick="openAjaxModal('{% url 'employee:academic_title_create' person.id %}')">
@@ -43,13 +44,13 @@
                 <table class="managed-table modal-table" data-page-size="5">
                     <thead>
                     <tr>
-                        <th class="width-25"><i class="fa-solid fa-certificate"></i> Título / Nivel</th>
-                        <th class="width-20"><i class="fa-solid fa-building-columns"></i> Institución
-                            Educativa
-                        </th>
-                        <th class="width-10"> Reg. SENESCYT</th>
+                        <th class="width-30"><i class="fa-solid fa-certificate"></i> Título / Nivel</th>
+                        <th class="width-30"><i class="fa-solid fa-building-columns"></i> Institución Educativa</th>
+                        <th class="width-15"> Reg. SENESCYT</th>
                         <th class="width-10 no-sort">Año</th>
-                        <th class="width-15 no-sort">Acciones</th>
+                        {% if can_edit_person %}
+                            <th class="width-15 no-sort text-center">Acciones</th>
+                        {% endif %}
                     </tr>
                     </thead>
                     <tbody>
@@ -68,26 +69,29 @@
                             <td class="col-modal-year">
                                 {{ item.graduation_year|default:"—" }}
                             </td>
-                            <td class="actions">
-                                <div class="actions-wrapper">
-                                    <button type="button"
-                                            class="btn-icon btn-action-yellow"
-                                            title="Editar Título"
-                                            onclick="openAjaxModal('{% url 'employee:academic_title_update' item.pk %}')">
-                                        <i class="fa-solid fa-pen-to-square"></i>
-                                    </button>
-                                    <button type="button"
-                                            class="btn-icon btn-action-delete"
-                                            title="Eliminar Título"
-                                            onclick="deleteRecordAjax('{% url 'employee:academic_title_delete' item.pk %}', 'este título académico')">
-                                        <i class="fa-solid fa-trash"></i>
-                                    </button>
-                                </div>
-                            </td>
+                            {% if can_edit_person %}
+                                <td class="actions">
+                                    <div class="actions-wrapper justify-content-center">
+                                        <button type="button"
+                                                class="btn-icon btn-action-yellow"
+                                                title="Editar Título"
+                                                onclick="openAjaxModal('{% url 'employee:academic_title_update' item.pk %}')">
+                                            <i class="fa-solid fa-pen-to-square"></i>
+                                        </button>
+                                        <button type="button"
+                                                class="btn-icon btn-action-delete"
+                                                title="Eliminar Título"
+                                                onclick="deleteRecordAjax('{% url 'employee:academic_title_delete' item.pk %}', 'este título académico')">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            {% endif %}
                         </tr>
                     {% empty %}
                         <tr class="empty-results-row">
-                            <td colspan="5" class="text-center empty-state-container">
+                            <td colspan="{% if can_edit_person %}5{% else %}4{% endif %}"
+                                class="text-center empty-state-container">
                                 <i class="fa-solid fa-folder-open empty-state-icon"></i>
                                 <span class="empty-state-text">No hay títulos académicos registrados.</span>
                             </td>

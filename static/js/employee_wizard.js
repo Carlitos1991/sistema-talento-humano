@@ -206,14 +206,15 @@ async function handleTabVisibilityToggle(checkElement) {
         icon: 'question',
         showDenyButton: true,
         showCancelButton: true,
-        confirmButtonText: 'Solo para este empleado',
-        denyButtonText: 'Para TODOS los empleados',
-        cancelButtonText: 'Cancelar',
+        confirmButtonText: '<i class="fa-solid fa-user me-1"></i> SOLO PARA ESTE EMPLEADO',
+        denyButtonText: '<i class="fa-solid fa-users me-1"></i> PARA TODOS LOS EMPLEADOS',
+        cancelButtonText: 'CANCELAR',
         buttonsStyling: false,
         customClass: {
-            confirmButton: 'btn-dark-blue-rectangle me-2',
-            denyButton: 'btn-green-rectangle me-2',
-            cancelButton: 'btn-dark-blue-rectangle-outline'
+            actions: 'swal2-actions-vertical gap-2 w-100 px-4',
+            confirmButton: 'btn-dark-blue-rectangle w-100 py-2',
+            denyButton: 'btn-green-rectangle w-100 py-2',
+            cancelButton: 'btn-dark-blue-rectangle-outline w-100 py-2'
         }
     });
 
@@ -222,6 +223,7 @@ async function handleTabVisibilityToggle(checkElement) {
     const tabId = btn.dataset.tabTarget;
 
     if (selection === true) {
+        // Lógica individual
         try {
             const res = await fetch('/employee/api/profile-visibility/', {
                 method: 'POST',
@@ -255,21 +257,33 @@ async function handleTabVisibilityToggle(checkElement) {
             Swal.fire('Error', 'Problema de conexión con el servidor', 'error');
         }
     } else if (selection === false) {
+        // Lógica masiva
         try {
             const formData = new FormData();
             formData.append('tab_id', tabId);
-            formData.append('is_visible', !isCurrentlyVisible);
+            formData.append('is_visible', (!isCurrentlyVisible).toString());
 
             const res = await fetch('/employee/api/bulk-visibility/', {
                 method: 'POST',
-                headers: {'X-CSRFToken': getCookie('csrftoken')},
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
                 body: formData
             });
             const data = await res.json();
             if (data.success) {
                 checkElement.classList.toggle('visible', !isCurrentlyVisible);
                 checkElement.innerHTML = !isCurrentlyVisible ? '<i class="fa-solid fa-check"></i>' : '';
-                Swal.fire('¡Éxito Masivo!', `Se ha ${!isCurrentlyVisible ? 'habilitado' : 'deshabilitado'} para todos los empleados.`, 'success');
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Éxito Masivo!',
+                    text: `Se ha ${!isCurrentlyVisible ? 'habilitado' : 'deshabilitado'} para todos los empleados.`,
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+            } else {
+                Swal.fire('Atención', data.message || 'Error en acción masiva.', 'warning');
             }
         } catch (e) {
             Swal.fire('Error', 'No se pudo realizar la acción masiva', 'error');

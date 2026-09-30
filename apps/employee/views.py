@@ -675,6 +675,12 @@ class AcademicTitleModalListView(LoginRequiredMixin, PermissionRequiredMixin, Li
     context_object_name = 'titles'
     permission_required = 'employee.view_academictitle'
 
+    def has_permission(self):
+        # Permite a administradores O al propio servidor ver sus títulos
+        person = get_object_or_404(Person, pk=self.kwargs['person_id'])
+        is_owner = (person.user == self.request.user) or (person.document_number == self.request.user.username)
+        return super().has_permission() or self.request.user.has_perm('person.change_person') or is_owner
+
     def get_queryset(self):
         self.person = get_object_or_404(Person, pk=self.kwargs['person_id'])
         return AcademicTitle.objects.filter(curriculum__person=self.person).select_related('education_level').order_by(
@@ -683,6 +689,8 @@ class AcademicTitleModalListView(LoginRequiredMixin, PermissionRequiredMixin, Li
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['person'] = self.person
+        # Solo quien tenga permiso person.change_person podrá ver botones de crear/editar/eliminar
+        context['can_edit_person'] = self.request.user.has_perm('person.change_person')
         return context
 
 
@@ -746,6 +754,11 @@ class WorkExperienceModalListView(LoginRequiredMixin, PermissionRequiredMixin, L
     context_object_name = 'experiences'
     permission_required = 'person.view_person'
 
+    def has_permission(self):
+        person = get_object_or_404(Person, pk=self.kwargs['person_id'])
+        is_owner = (person.user == self.request.user) or (person.document_number == self.request.user.username)
+        return super().has_permission() or self.request.user.has_perm('person.change_person') or is_owner
+
     def get_queryset(self):
         self.person = get_object_or_404(Person, pk=self.kwargs['person_id'])
         return WorkExperience.objects.filter(curriculum__person=self.person).order_by('-start_date', '-pk')
@@ -753,6 +766,7 @@ class WorkExperienceModalListView(LoginRequiredMixin, PermissionRequiredMixin, L
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['person'] = self.person
+        context['can_edit_person'] = self.request.user.has_perm('person.change_person')
         return context
 
 
@@ -817,6 +831,12 @@ class CoursesModalListView(LoginRequiredMixin, PermissionRequiredMixin, ListView
     context_object_name = 'courses'
     permission_required = 'person.change_person'
 
+    def has_permission(self):
+        person = get_object_or_404(Person, pk=self.kwargs['person_id'])
+        is_owner = (person.user == self.request.user) or (person.document_number == self.request.user.username)
+        return self.request.user.has_perm('person.change_person') or self.request.user.has_perm(
+            'person.view_person') or is_owner
+
     def get_queryset(self):
         self.person = get_object_or_404(Person, pk=self.kwargs['person_id'])
         return Training.objects.filter(curriculum__person=self.person).order_by('-completion_date', '-pk')
@@ -824,6 +844,7 @@ class CoursesModalListView(LoginRequiredMixin, PermissionRequiredMixin, ListView
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['person'] = self.person
+        context['can_edit_person'] = self.request.user.has_perm('person.change_person')
         return context
 
 
