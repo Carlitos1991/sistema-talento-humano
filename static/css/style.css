@@ -7106,3 +7106,26 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
 .custom-toast-warning .toast-icon {
     color: #f59e0b;
 }
+
+/* =====================================================================
+   AJUSTE DE POSICIÓN DE MODALES EN MÓVILES (ARRIBA, NO AL FONDO)
+   ===================================================================== */
+@media (max-width: 768px) {
+    .modal-overlay,
+    #modal-root .modal-overlay {
+        align-items: flex-start !important; /* Alinea hacia la parte superior */
+        padding: 2.5rem 0.75rem 1.5rem !important; /* Espacio superior prudente */
+        overflow-y: auto !important; /* Permite scroll si la pantalla es muy corta */
+    }
+
+    .modal-container-small,
+    .modal-container-medium,
+    .modal-container-large,
+    .modal-container-xl,
+    .time-modal-container {
+        margin-top: 1rem !important;
+        margin-bottom: 2rem !important;
+        max-height: calc(100vh - 4rem) !important;
+        width: 100% !important;
+    }
+}
