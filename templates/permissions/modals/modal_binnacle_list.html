@@ -1,159 +1,260 @@
 {% load static %}
 
-<div class="modal-overlay hidden">
+<div class="modal-overlay hidden" id="modalBinnacleListOverlay">
     <div class="modal-container-large">
-        <!-- HEADER -->
+        <!-- 1. HEADER DEL MODAL -->
         <div class="modal-header-medium">
-            <h3 class="header-title">
-                <i class="fa-solid fa-clock-rotate-left me-2"></i> Bitácoras Pendientes: {{ employee_name }}
-            </h3>
+            <div class="d-flex align-items-center gap-2">
+                <div class="header-icon-circle bg-primary-subtle text-primary">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                </div>
+                <div>
+                    <h3 class="header-title mb-0">Bitácoras Pendientes</h3>
+                    <span class="text-muted small">Servidor: <strong>{{ employee_name }}</strong></span>
+                </div>
+            </div>
             <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
                 <i class="fas fa-times"></i>
             </button>
         </div>
 
-        <!-- BODY -->
-        <div class="modal-body-content modal-body-custom">
-            <!-- Barra Superior sin colisiones -->
-            <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
-                <!-- Filtros Fecha (Izquierda) -->
-                <div class="d-flex align-items-center gap-2">
-                    <label class="label-muted m-0" style="font-weight: 700;">Desde:</label>
-                    <input type="date" id="binnacle-filter-from" class="form-control"
-                           style="width: 140px; height: 36px;">
-                    <label class="label-muted m-0 ms-1" style="font-weight: 700;">Hasta:</label>
-                    <input type="date" id="binnacle-filter-to" class="form-control" style="width: 140px; height: 36px;">
-                    <button type="button" class="btn-white-rectangle py-1 px-3 ms-1"
-                            style="height: 36px; font-size: 0.75rem;" onclick="clearBinnacleDates()">
-                        <i class="fas fa-eraser me-1"></i> LIMPIAR
-                    </button>
-                </div>
+        <!-- 2. BODY CON FILTROS Y TABLA -->
+        <div class="modal-body-content modal-body-custom p-3">
 
-                <!-- Botones de Acción Masiva (Derecha, no tapan Limpiar) -->
-                <div class="d-flex align-items-center gap-2">
-                    {% if perms.permitrequest.change_permitrequest %}
-                        <button type="button" id="btn-approve-selected-binnacles" class="btn-green-circle"
-                                onclick="approveSelectedBinnacles()" title="Aprobar Seleccionadas"
-                                style="display: none; width: 36px; height: 36px;">
-                            <i class="fas fa-check"></i>
+            <!-- PANEL DE FILTROS AL ESTILO PERSON_LIST -->
+            <div class="content-table p-0 border-0 shadow-none bg-transparent">
+                <form id="binnacleFiltersForm" onsubmit="return false;">
+                    <div class="search-panel mb-2">
+                        <div class="search-grid" style="grid-template-columns: 2fr 1.2fr 1.2fr;">
+                            <!-- Buscador por texto -->
+                            <input type="text" id="binnacleSearchInput" class="input-field"
+                                   placeholder="Buscar por fecha, justificación o creador..." autocomplete="off">
+
+                            <!-- Fecha Desde -->
+                            <div class="person-filter-field">
+                                <input type="date" id="binnacle-filter-from" class="input-field" title="Fecha Desde">
+                            </div>
+
+                            <!-- Fecha Hasta -->
+                            <div class="person-filter-field">
+                                <input type="date" id="binnacle-filter-to" class="input-field" title="Fecha Hasta">
+                            </div>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- TOOLBAR CON BOTONES Y ACCIONES MASIVAS -->
+                <div class="search-toolbar mb-3">
+                    <!-- Izquierda: Contador o Acciones masivas -->
+                    <div class="d-flex align-items-center gap-2" id="binnacle-bulk-actions">
+                        <span class="badge badge-gray" id="binnacle-total-counter">
+                            Total: <strong>{{ bitacoras|length }}</strong>
+                        </span>
+
+                        {% if perms.permitrequest.change_permitrequest %}
+                            <button type="button" id="btn-approve-selected-binnacles"
+                                    class="btn-green-rectangle btn-sm"
+                                    onclick="approveSelectedBinnacles()"
+                                    style="display: none;">
+                                <i class="fas fa-check me-1"></i> Aprobar (<span class="selected-count">0</span>)
+                            </button>
+                            <button type="button" id="btn-reject-selected-binnacles"
+                                    class="btn-amber-rectangle btn-sm"
+                                    onclick="rejectSelectedBinnacles()"
+                                    style="display: none;">
+                                <i class="fas fa-ban me-1"></i> Rechazar
+                            </button>
+                        {% endif %}
+                        {% if perms.permitrequest.delete_permitrequest %}
+                            <button type="button" id="btn-delete-selected-binnacles"
+                                    class="btn-red-rectangle btn-sm"
+                                    onclick="deleteSelectedBinnacles()"
+                                    style="display: none;">
+                                <i class="fas fa-trash me-1"></i> Eliminar
+                            </button>
+                        {% endif %}
+                    </div>
+
+                    <!-- Derecha: Botones de Buscar y Limpiar -->
+                    <div class="search-filter-actions">
+                        <button type="button" id="btn-binnacle-filter" class="btn-blue-rectangle"
+                                onclick="filterBinnacles()">
+                            <i class="fas fa-search me-1"></i> Filtrar
                         </button>
-                        <button type="button" id="btn-reject-selected-binnacles" class="btn-yellow-circle"
-                                onclick="rejectSelectedBinnacles()" title="Rechazar Seleccionadas"
-                                style="display: none; width: 36px; height: 36px;">
-                            <i class="fas fa-ban"></i>
+                        <button type="button" id="btn-binnacle-clear" class="btn-blue-rectangle-outline"
+                                onclick="clearBinnacleDates()">
+                            <i class="fas fa-eraser me-1"></i> Limpiar
                         </button>
-                    {% endif %}
-                    {% if perms.permitrequest.delete_permitrequest %}
-                        <button type="button" id="btn-delete-selected-binnacles" class="btn-red-circle"
-                                onclick="deleteSelectedBinnacles()" title="Eliminar Seleccionadas"
-                                style="display: none; width: 36px; height: 36px;">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    {% endif %}
+                    </div>
                 </div>
             </div>
 
-            <!-- TABLA -->
-            <div class="table-container" style="max-height: 52vh; overflow-y: auto;">
-                <table class="managed-table m-0" id="binnacle-pending-table">
-                    <thead style="position: sticky; top: 0; z-index: 2;">
-                    <tr>
-                        {% if perms.permitrequest.change_permitrequest %}
-                            <th class="width-3 text-center no-sort">
-                                <input type="checkbox" id="check-all-binnacles" class="custom-checkbox"
-                                       style="width: 18px; height: 18px;" onchange="toggleAllBinnacles(this.checked)">
-                            </th>
-                        {% endif %}
-                        <th class="width-5 text-center">N°</th>
-                        <th class="width-10">Fecha</th>
-                        <th class="width-8 text-center">Inicio</th>
-                        <th class="width-8 text-center">Fin</th>
-                        <th class="width-10 text-center">Estado</th>
-                        <th class="width-24">Justificación</th>
-                        <th class="width-10 text-center">Documento</th>
-                        <th class="width-12">Registrado por</th>
-                        <th class="width-10 text-center actions no-sort"><i class="fas fa-cogs"></i> Acciones</th>
-                    </tr>
-                    </thead>
-                    <tbody id="binnacle-pending-tbody">
-                    {% for b in bitacoras %}
-                        <tr data-date="{{ b.start_date|date:'Y-m-d' }}" data-id="{{ b.id }}">
-                            {% if perms.permitrequest.change_permitrequest %}
-                                <td class="text-center">
-                                    <input type="checkbox" class="binnacle-check-item custom-checkbox"
-                                           style="width: 18px; height: 18px;" value="{{ b.id }}"
-                                           onchange="updateBinnacleSelectionState()">
-                                </td>
-                            {% endif %}
-                            <td class="text-center">{{ forloop.counter }}</td>
-                            <td class="font-monospace bold">{{ b.start_date|date:"d/m/Y" }}</td>
-                            <td class="text-center font-monospace">{{ b.start_time|time:"H:i"|default:"--:--" }}</td>
-                            <td class="text-center font-monospace">
-                                <div>{{ b.end_time|time:"H:i"|default:"--:--" }}</div>
-                                {% if b.end_date and b.end_date != b.start_date %}
-                                    <div class="text-muted small">{{ b.end_date|date:"d/m/Y" }}</div>
-                                {% endif %}
-                            </td>
-                            <td class="text-center">
-                                {% if b.status == 'REQUESTED' %}
-                                    <span class="badge badge-amber">PENDIENTE</span>
-                                {% elif b.status == 'REJECTED' %}
-                                    <span class="badge badge-red">RECHAZADA</span>
-                                {% else %}
-                                    <span class="badge badge-gray">{{ b.get_status_display }}</span>
-                                {% endif %}
-                            </td>
-                            <td class="small">
-                                {% if b.response_note %}
-                                    {{ b.response_note|safe }}
-                                {% else %}
-                                    <span class="text-muted italic">Sin justificación</span>
-                                {% endif %}
-                            </td>
-                            <td class="text-center">
-                                {% if b.justification_file %}
-                                    <a href="{{ b.justification_file.url }}" target="_blank"
-                                       class="btn-blue-rectangle-outline py-0 px-2" style="font-size: 0.72rem;">
-                                        <i class="fas fa-file-pdf me-1"></i> PDF
-                                    </a>
-                                {% else %}
-                                    <span class="text-muted small">Sin archivo</span>
-                                {% endif %}
-                            </td>
-                            <td class="small">{{ b.created_by.get_full_name|default:b.created_by.username|default:"Sistema" }}</td>
-                            <td class="actions text-center">
-                                <div class="actions-wrapper">
-                                    <button type="button" class="btn-yellow-circle"
-                                            onclick="openEditBitacoraModal({{ b.id }}, '{{ b.start_time|time:'H:i'|default:'' }}', '{{ b.end_time|time:'H:i'|default:'' }}')"
-                                            title="Editar bitácora">
-                                        <i class="fa-solid fa-pen-to-square"></i>
-                                    </button>
-                                    <button type="button" class="btn-red-circle"
-                                            onclick="deleteBinnacleSingle({{ b.id }})"
-                                            title="Eliminar bitácora">
-                                        <i class="fa-solid fa-trash-can"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    {% empty %}
+            <!-- CONTENEDOR CON SCROLL SUPERIOR SINCRONIZADO -->
+            <div class="table-container" style="max-height: 55vh; overflow-y: auto;">
+                <div class="table-scroll-top">
+                    <table class="managed-table m-0" id="binnacle-pending-table" data-external-pagination="true">
+                        <thead style="position: sticky; top: 0; z-index: 2;">
                         <tr>
-                            <td colspan="10">
-                                <div class="empty-state-container">
-                                    <i class="fa-solid fa-inbox empty-state-icon"></i>
-                                    <p class="empty-state-text">No existen bitácoras pendientes registradas.</p>
-                                </div>
-                            </td>
+                            {% if perms.permitrequest.change_permitrequest %}
+                                <th class="width-3 text-center no-sort">
+                                    <input type="checkbox" id="check-all-binnacles" class="custom-checkbox"
+                                           onchange="toggleAllBinnacles(this.checked)">
+                                </th>
+                            {% endif %}
+                            <th class="width-5 text-center">N°</th>
+                            <th class="width-10">Fecha</th>
+                            <th class="width-8 text-center">Inicio</th>
+                            <th class="width-8 text-center">Fin</th>
+                            <th class="width-12 text-center">Estado</th>
+                            <th class="width-22">Justificación</th>
+                            <th class="width-8 text-center">Adjunto</th>
+                            <th class="width-14">Registrado por</th>
+                            <th class="width-10 text-center actions no-sort">Acciones</th>
                         </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody id="binnacle-pending-tbody">
+                        {% for b in bitacoras %}
+                            <tr data-date="{{ b.start_date|date:'Y-m-d' }}" data-id="{{ b.id }}" class="binnacle-row">
+                                {% if perms.permitrequest.change_permitrequest %}
+                                    <td class="text-center">
+                                        <input type="checkbox" class="binnacle-check-item custom-checkbox"
+                                               value="{{ b.id }}" onchange="updateBinnacleSelectionState()">
+                                    </td>
+                                {% endif %}
+                                <td class="text-center font-monospace text-muted">{{ forloop.counter }}</td>
+                                <td class="font-monospace fw-bold text-dark">{{ b.start_date|date:"d/m/Y" }}</td>
+                                <td class="text-center font-monospace">{{ b.start_time|time:"H:i"|default:"--:--" }}</td>
+                                <td class="text-center font-monospace">
+                                    <div>{{ b.end_time|time:"H:i"|default:"--:--" }}</div>
+                                    {% if b.end_date and b.end_date != b.start_date %}
+                                        <div class="text-muted small">{{ b.end_date|date:"d/m/Y" }}</div>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    {% if b.status == 'REQUESTED' %}
+                                        <span class="badge badge-amber">PENDIENTE</span>
+                                    {% elif b.status == 'REJECTED' %}
+                                        <span class="badge badge-red">RECHAZADA</span>
+                                    {% else %}
+                                        <span class="badge badge-gray">{{ b.get_status_display }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="small">
+                                    <span style="display:block; max-width:240px; white-space:normal; word-break:break-word; line-height:1.35;">
+                                        {% if b.response_note %}
+                                            {{ b.response_note|safe }}
+                                        {% else %}
+                                            <span class="text-muted fst-italic">Sin justificación</span>
+                                        {% endif %}
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    {% if b.justification_file %}
+                                        <a href="{{ b.justification_file.url }}" target="_blank"
+                                           class="btn-red-circle" title="Ver archivo PDF adjunto">
+                                            <i class="fa-solid fa-file-pdf"></i>
+                                        </a>
+                                    {% else %}
+                                        <span class="text-muted small">—</span>
+                                    {% endif %}
+                                </td>
+                                <td class="small text-secondary">
+                                    {{ b.created_by.get_full_name|default:b.created_by.username|default:"Sistema" }}
+                                </td>
+                                <td class="actions text-center">
+                                    <div class="actions-wrapper justify-content-center">
+                                        <button type="button" class="btn-yellow-circle"
+                                                onclick="openEditBitacoraModal({{ b.id }}, '{{ b.start_time|time:'H:i'|default:'' }}', '{{ b.end_time|time:'H:i'|default:'' }}')"
+                                                title="Editar horario de bitácora">
+                                            <i class="fa-solid fa-pen-to-square"></i>
+                                        </button>
+                                        <button type="button" class="btn-red-circle"
+                                                onclick="deleteBinnacleSingle({{ b.id }})"
+                                                title="Eliminar bitácora">
+                                            <i class="fa-solid fa-trash-can"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr id="binnacle-empty-tr">
+                                <td colspan="10">
+                                    <div class="empty-state-container py-5">
+                                        <i class="fa-solid fa-calendar-xmark empty-state-icon fa-2x text-muted opacity-50 mb-2"></i>
+                                        <p class="empty-state-text text-muted mb-0">No existen bitácoras pendientes
+                                            registradas.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
-        <!-- FOOTER -->
+        <!-- 3. FOOTER DEL MODAL -->
         <div class="modal-footer-medium">
-            <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">Cerrar</button>
+            <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">
+                <i class="fa-solid fa-xmark me-1"></i> Cerrar
+            </button>
         </div>
     </div>
 </div>
+
+<script>
+    // Inicialización del script de sincronización de scroll y filtrado en vivo
+    (function () {
+        const searchInput = document.getElementById('binnacleSearchInput');
+        const fromInput = document.getElementById('binnacle-filter-from');
+        const toInput = document.getElementById('binnacle-filter-to');
+        const rows = document.querySelectorAll('.binnacle-row');
+
+        window.filterBinnacles = function () {
+            const query = (searchInput.value || '').toLowerCase().trim();
+            const fromDate = fromInput.value;
+            const toDate = toInput.value;
+            let visibleCount = 0;
+
+            rows.forEach(row => {
+                const rowDate = row.getAttribute('data-date');
+                const rowText = row.innerText.toLowerCase();
+
+                let matchText = !query || rowText.includes(query);
+                let matchDate = true;
+
+                if (fromDate && rowDate && rowDate < fromDate) matchDate = false;
+                if (toDate && rowDate && rowDate > toDate) matchDate = false;
+
+                if (matchText && matchDate) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            const counter = document.getElementById('binnacle-total-counter');
+            if (counter) counter.innerHTML = `Mostrando: <strong>${visibleCount}</strong>`;
+        };
+
+        window.clearBinnacleDates = function () {
+            if (searchInput) searchInput.value = '';
+            if (fromInput) fromInput.value = '';
+            if (toInput) toInput.value = '';
+            window.filterBinnacles();
+        };
+
+        if (searchInput) {
+            searchInput.addEventListener('input', window.filterBinnacles);
+        }
+        if (fromInput) fromInput.addEventListener('change', window.filterBinnacles);
+        if (toInput) toInput.addEventListener('change', window.filterBinnacles);
+
+        // Inicializar sincronización del scroll superior si existe TableManager o scroll listener
+        const scrollTopContainer = document.querySelector('.table-scroll-top');
+        if (scrollTopContainer && window.initTableScrollTop) {
+            window.initTableScrollTop(scrollTopContainer);
+        }
+    })();
+</script>
