@@ -21,7 +21,7 @@
               action="{% url 'person:person_update' object.pk %}"
               method="POST"
               enctype="multipart/form-data"
-              onsubmit="submitAjaxForm(event)">
+              onsubmit="submitAjaxForm(event, window.onPersonUpdatedSuccess)">
             {% csrf_token %}
 
             <div class="modal-body-custom">
@@ -57,7 +57,7 @@
                                     <label class="form-label">Número Documento</label>
                                     <input type="text" name="document_number"
                                            value="{{ form.document_number.value|default:'' }}"
-                                           class="input-field readonly-styled" readonly>
+                                           class="input-field">
                                 </div>
                                 <div class="form-group form-group-compact">
                                     <label class="form-label">Nombres</label>

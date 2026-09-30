@@ -585,7 +585,6 @@ class PersonUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
         self.object = self.get_object()
         form = self.get_form()
 
-        # Contexto adicional requerido por el modal
         context = self.get_context_data(
             form=form,
             gender_list=CatalogItem.objects.filter(catalog__code='GENDERS', is_active=True),
@@ -614,6 +613,26 @@ class PersonUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView):
             PersonAuditLog.Action.UPDATE,
             PERSON_AUDIT_SECTIONS['personal']
         )
+
+        # Si la petición viene vía AJAX (desde el modal)
+        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            tab_html = render_to_string(
+                'employee/partials/wizard/tab_personal_data.html',
+                {
+                    'person': self.object,
+                    'can_edit_person': self.request.user.has_perm('person.change_person'),
+                    'request': self.request
+                },
+                request=self.request
+            )
+            return JsonResponse({
+                'success': True,
+                'message': 'Datos actualizados correctamente.',
+                'tab_html': tab_html,
+                'full_name': self.object.full_name,
+                'document_number': self.object.document_number or ''
+            })
+
         return JsonResponse({
             'success': True,
             'message': 'Datos actualizados correctamente.'

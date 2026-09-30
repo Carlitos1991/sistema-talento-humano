@@ -464,3 +464,31 @@ $(document).off('click', '.js-view-action-detail').on('click', '.js-view-action-
         })
         .catch(err => Swal.fire("Error", "No se pudo cargar el detalle.", "error"));
 });
+/**
+ * Callback tras actualizar los datos desde el modal de edición
+ */
+window.onPersonUpdatedSuccess = function (data) {
+    if (!data) return;
+
+    // 1. Reemplazar el contenido completo de la pestaña de Datos Personales
+    const tabPersonal = document.getElementById('tab-pane-personal');
+    if (tabPersonal && data.tab_html) {
+        tabPersonal.innerHTML = data.tab_html;
+
+        // Re-inicializar el listener del input/form de foto de la pestaña recién inyectada
+        if (typeof initDetailPhotoUpload === 'function') {
+            initDetailPhotoUpload();
+        }
+    }
+
+    // 2. Actualizar el Banner Institucional superior (Nombre y Cédula)
+    const bannerTitle = document.querySelector('.banner-info-employee-detail h1');
+    if (bannerTitle && data.full_name) {
+        bannerTitle.textContent = data.full_name;
+    }
+
+    const bannerBadges = document.querySelectorAll('.banner-badges-group .banner-badge-info');
+    if (bannerBadges.length > 0 && data.document_number) {
+        bannerBadges[0].innerHTML = `<i class="fa-solid fa-id-card me-1"></i> ${data.document_number}`;
+    }
+};
