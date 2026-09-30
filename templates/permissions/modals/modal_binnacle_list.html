@@ -1,7 +1,7 @@
 {% load static %}
 
 <div class="modal-overlay hidden" id="modalBinnacleListOverlay">
-    <div class="modal-container-large">
+    <div class="modal-container-large modal-binnacle-container">
         <!-- 1. HEADER DEL MODAL -->
         <div class="modal-header-medium">
             <div class="d-flex align-items-center gap-2">
@@ -21,45 +21,36 @@
         <!-- 2. BODY CON FILTROS Y TABLA -->
         <div class="modal-body-content modal-body-custom p-3">
 
-            <!-- PANEL DE FILTROS AL ESTILO PERSON_LIST -->
+            <!-- PANEL DE FILTROS -->
             <div class="content-table p-0 border-0 shadow-none bg-transparent">
                 <form id="binnacleFiltersForm" onsubmit="return false;">
                     <div class="search-panel mb-2">
                         <div class="search-grid" style="grid-template-columns: 2fr 1.2fr 1.2fr;">
-                            <!-- Buscador por texto -->
                             <input type="text" id="binnacleSearchInput" class="input-field"
-                                   placeholder="Buscar por fecha, justificación o creador..." autocomplete="off">
-
-                            <!-- Fecha Desde -->
-                            <div class="person-filter-field">
-                                <input type="date" id="binnacle-filter-from" class="input-field" title="Fecha Desde">
-                            </div>
-
-                            <!-- Fecha Hasta -->
-                            <div class="person-filter-field">
-                                <input type="date" id="binnacle-filter-to" class="input-field" title="Fecha Hasta">
-                            </div>
+                                   placeholder="Buscar por justificación o creador..." autocomplete="off">
+                            <input type="date" id="binnacle-filter-from" class="input-field" title="Fecha Desde">
+                            <input type="date" id="binnacle-filter-to" class="input-field" title="Fecha Hasta">
                         </div>
                     </div>
                 </form>
 
-                <!-- TOOLBAR CON BOTONES Y ACCIONES MASIVAS -->
-                <div class="search-toolbar mb-3">
-                    <!-- Izquierda: Contador o Acciones masivas -->
-                    <div class="d-flex align-items-center gap-2" id="binnacle-bulk-actions">
-                        <span class="badge badge-gray" id="binnacle-total-counter">
+                <!-- TOOLBAR Y ACCIONES MASIVAS -->
+                <div class="search-toolbar binnacle-toolbar mb-3">
+                    <div class="d-flex align-items-center gap-2 flex-wrap" id="binnacle-bulk-actions">
+                        <span class="badge badge-gray px-3" id="binnacle-total-counter"
+                              style="height: 34px; display: inline-flex; align-items: center; font-size: 0.8rem;">
                             Total: <strong>{{ bitacoras|length }}</strong>
                         </span>
 
                         {% if perms.permitrequest.change_permitrequest %}
                             <button type="button" id="btn-approve-selected-binnacles"
-                                    class="btn-green-rectangle btn-sm"
+                                    class="binnacle-bulk-btn binnacle-bulk-btn-approve"
                                     onclick="approveSelectedBinnacles()"
                                     style="display: none;">
                                 <i class="fas fa-check me-1"></i> Aprobar (<span class="selected-count">0</span>)
                             </button>
                             <button type="button" id="btn-reject-selected-binnacles"
-                                    class="btn-amber-rectangle btn-sm"
+                                    class="binnacle-bulk-btn binnacle-bulk-btn-reject"
                                     onclick="rejectSelectedBinnacles()"
                                     style="display: none;">
                                 <i class="fas fa-ban me-1"></i> Rechazar
@@ -67,7 +58,7 @@
                         {% endif %}
                         {% if perms.permitrequest.delete_permitrequest %}
                             <button type="button" id="btn-delete-selected-binnacles"
-                                    class="btn-red-rectangle btn-sm"
+                                    class="binnacle-bulk-btn binnacle-bulk-btn-delete"
                                     onclick="deleteSelectedBinnacles()"
                                     style="display: none;">
                                 <i class="fas fa-trash me-1"></i> Eliminar
@@ -75,121 +66,135 @@
                         {% endif %}
                     </div>
 
-                    <!-- Derecha: Botones de Buscar y Limpiar -->
                     <div class="search-filter-actions">
-                        <button type="button" id="btn-binnacle-filter" class="btn-blue-rectangle"
-                                onclick="filterBinnacles()">
+                        <button type="button" class="btn-blue-rectangle" onclick="filterBinnacles()"
+                                style="height: 34px; font-size: 0.8rem;">
                             <i class="fas fa-search me-1"></i> Filtrar
                         </button>
-                        <button type="button" id="btn-binnacle-clear" class="btn-blue-rectangle-outline"
-                                onclick="clearBinnacleDates()">
+                        <button type="button" class="btn-blue-rectangle-outline" onclick="clearBinnacleDates()"
+                                style="height: 34px; font-size: 0.8rem;">
                             <i class="fas fa-eraser me-1"></i> Limpiar
                         </button>
                     </div>
                 </div>
             </div>
 
-            <!-- CONTENEDOR CON SCROLL SUPERIOR SINCRONIZADO -->
-            <div class="table-container" style="max-height: 55vh; overflow-y: auto;">
-                <div class="table-scroll-top">
-                    <table class="managed-table m-0" id="binnacle-pending-table" data-external-pagination="true">
-                        <thead style="position: sticky; top: 0; z-index: 2;">
-                        <tr>
+            <!-- TABLA CON ESTILOS EN LÍNEA PARA FORZAR EL CENTRADO -->
+            <div class="table-container binnacle-table-scroll">
+                <table class="managed-table m-0" id="binnacle-pending-table">
+                    <thead style="position: sticky; top: 0; z-index: 2;">
+                    <tr>
+                        {% if perms.permitrequest.change_permitrequest %}
+                            <th style="width: 40px; text-align: center !important;" class="no-sort">
+                                <input type="checkbox" id="check-all-binnacles" class="custom-checkbox"
+                                       onchange="toggleAllBinnacles(this.checked)">
+                            </th>
+                        {% endif %}
+                        <th style="width: 50px; text-align: center !important;">N°</th>
+                        <th style="width: 110px; text-align: center !important;">FECHA</th>
+                        <th style="width: 140px; text-align: center !important;">HORARIO</th>
+                        <th style="width: 110px; text-align: center !important;">ESTADO</th>
+                        <th style="width: 220px; text-align: left !important;">JUSTIFICACIÓN</th>
+                        <th style="width: 70px; text-align: center !important;">PDF</th>
+                        <th class="binnacle-registered-column">REGISTRADO POR</th>
+                        <th class="no-sort binnacle-actions-column">ACCIONES</th>
+                    </tr>
+                    </thead>
+                    <tbody id="binnacle-pending-tbody">
+                    {% for b in bitacoras %}
+                        <tr data-date="{{ b.start_date|date:'Y-m-d' }}" data-id="{{ b.id }}" class="binnacle-row">
                             {% if perms.permitrequest.change_permitrequest %}
-                                <th class="width-3 text-center no-sort">
-                                    <input type="checkbox" id="check-all-binnacles" class="custom-checkbox"
-                                           onchange="toggleAllBinnacles(this.checked)">
-                                </th>
+                                <td style="text-align: center !important;">
+                                    <input type="checkbox" class="binnacle-check-item custom-checkbox"
+                                           value="{{ b.id }}" onchange="updateBinnacleSelectionState()">
+                                </td>
                             {% endif %}
-                            <th class="width-5 text-center">N°</th>
-                            <th class="width-10">Fecha</th>
-                            <th class="width-8 text-center">Inicio</th>
-                            <th class="width-8 text-center">Fin</th>
-                            <th class="width-12 text-center">Estado</th>
-                            <th class="width-22">Justificación</th>
-                            <th class="width-8 text-center">Adjunto</th>
-                            <th class="width-14">Registrado por</th>
-                            <th class="width-10 text-center actions no-sort">Acciones</th>
-                        </tr>
-                        </thead>
-                        <tbody id="binnacle-pending-tbody">
-                        {% for b in bitacoras %}
-                            <tr data-date="{{ b.start_date|date:'Y-m-d' }}" data-id="{{ b.id }}" class="binnacle-row">
-                                {% if perms.permitrequest.change_permitrequest %}
-                                    <td class="text-center">
-                                        <input type="checkbox" class="binnacle-check-item custom-checkbox"
-                                               value="{{ b.id }}" onchange="updateBinnacleSelectionState()">
-                                    </td>
+                            <td style="text-align: center !important;"
+                                class="font-monospace text-muted">{{ forloop.counter }}</td>
+                            <td style="text-align: center !important;"
+                                class="font-monospace fw-bold text-dark">{{ b.start_date|date:"d/m/Y" }}</td>
+
+                            <!-- HORARIO -->
+                            <td style="text-align: center !important; font-size: 0.8rem; white-space: nowrap;"
+                                class="font-monospace">
+                                <span class="text-success fw-bold">De: {{ b.start_time|time:"H:i"|default:"--:--" }}</span><br>
+                                <span class="text-danger fw-bold">A: {{ b.end_time|time:"H:i"|default:"--:--" }}</span>
+                                {% if b.end_date and b.end_date != b.start_date %}
+                                    <div class="text-muted" style="font-size: 0.7rem;">({{ b.end_date|date:"d/m/Y" }})
+                                    </div>
                                 {% endif %}
-                                <td class="text-center font-monospace text-muted">{{ forloop.counter }}</td>
-                                <td class="font-monospace fw-bold text-dark">{{ b.start_date|date:"d/m/Y" }}</td>
-                                <td class="text-center font-monospace">{{ b.start_time|time:"H:i"|default:"--:--" }}</td>
-                                <td class="text-center font-monospace">
-                                    <div>{{ b.end_time|time:"H:i"|default:"--:--" }}</div>
-                                    {% if b.end_date and b.end_date != b.start_date %}
-                                        <div class="text-muted small">{{ b.end_date|date:"d/m/Y" }}</div>
-                                    {% endif %}
-                                </td>
-                                <td class="text-center">
-                                    {% if b.status == 'REQUESTED' %}
-                                        <span class="badge badge-amber">PENDIENTE</span>
-                                    {% elif b.status == 'REJECTED' %}
-                                        <span class="badge badge-red">RECHAZADA</span>
+                            </td>
+
+                            <!-- ESTADO -->
+                            <td style="text-align: center !important;">
+                                {% if b.status == 'REQUESTED' %}
+                                    <span class="badge badge-amber">PENDIENTE</span>
+                                {% elif b.status == 'REJECTED' %}
+                                    <span class="badge badge-red">RECHAZADA</span>
+                                {% else %}
+                                    <span class="badge badge-gray">{{ b.get_status_display }}</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- JUSTIFICACIÓN -->
+                            <td style="text-align: left !important;" class="small">
+                                <span style="display:block; max-width:210px; white-space:normal; word-break:break-word; line-height:1.3;">
+                                    {% if b.response_note %}
+                                        {{ b.response_note|safe }}
                                     {% else %}
-                                        <span class="badge badge-gray">{{ b.get_status_display }}</span>
+                                        <span class="text-muted fst-italic">Sin justificación</span>
                                     {% endif %}
-                                </td>
-                                <td class="small">
-                                    <span style="display:block; max-width:240px; white-space:normal; word-break:break-word; line-height:1.35;">
-                                        {% if b.response_note %}
-                                            {{ b.response_note|safe }}
-                                        {% else %}
-                                            <span class="text-muted fst-italic">Sin justificación</span>
-                                        {% endif %}
-                                    </span>
-                                </td>
-                                <td class="text-center">
-                                    {% if b.justification_file %}
-                                        <a href="{{ b.justification_file.url }}" target="_blank"
-                                           class="btn-red-circle" title="Ver archivo PDF adjunto">
-                                            <i class="fa-solid fa-file-pdf"></i>
-                                        </a>
-                                    {% else %}
-                                        <span class="text-muted small">—</span>
-                                    {% endif %}
-                                </td>
-                                <td class="small text-secondary">
-                                    {{ b.created_by.get_full_name|default:b.created_by.username|default:"Sistema" }}
-                                </td>
-                                <td class="actions text-center">
-                                    <div class="actions-wrapper justify-content-center">
-                                        <button type="button" class="btn-yellow-circle"
-                                                onclick="openEditBitacoraModal({{ b.id }}, '{{ b.start_time|time:'H:i'|default:'' }}', '{{ b.end_time|time:'H:i'|default:'' }}')"
-                                                title="Editar horario de bitácora">
-                                            <i class="fa-solid fa-pen-to-square"></i>
-                                        </button>
-                                        <button type="button" class="btn-red-circle"
-                                                onclick="deleteBinnacleSingle({{ b.id }})"
-                                                title="Eliminar bitácora">
-                                            <i class="fa-solid fa-trash-can"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        {% empty %}
-                            <tr id="binnacle-empty-tr">
-                                <td colspan="10">
-                                    <div class="empty-state-container py-5">
-                                        <i class="fa-solid fa-calendar-xmark empty-state-icon fa-2x text-muted opacity-50 mb-2"></i>
-                                        <p class="empty-state-text text-muted mb-0">No existen bitácoras pendientes
-                                            registradas.</p>
-                                    </div>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+                                </span>
+                            </td>
+
+                            <!-- PDF -->
+                            <td style="text-align: center !important;">
+                                {% if b.justification_file %}
+                                    <a href="{{ b.justification_file.url }}" target="_blank"
+                                       class="btn-red-circle mx-auto" title="Ver PDF adjunto"
+                                       style="width: 30px; height: 30px; font-size: 0.75rem; display: inline-flex; align-items: center; justify-content: center; margin: 0 auto;">
+                                        <i class="fa-solid fa-file-pdf"></i>
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted small">—</span>
+                                {% endif %}
+                            </td>
+
+                            <td class="binnacle-registered-column small text-secondary">
+                                {{ b.created_by.get_full_name|default:b.created_by.username|default:"Sistema" }}
+                            </td>
+
+                            <!-- ACCIONES -->
+                            <td class="actions binnacle-actions-column">
+                                <div class="actions-wrapper binnacle-row-actions">
+                                    <button type="button" class="btn-yellow-circle"
+                                            onclick="openEditBitacoraModal({{ b.id }}, '{{ b.start_time|time:'H:i'|default:'' }}', '{{ b.end_time|time:'H:i'|default:'' }}')"
+                                            title="Editar"
+                                            style="width: 28px; height: 28px; font-size: 0.7rem; display: inline-flex; align-items: center; justify-content: center;">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </button>
+                                    <button type="button" class="btn-red-circle"
+                                            onclick="deleteBinnacleSingle({{ b.id }})"
+                                            title="Eliminar"
+                                            style="width: 28px; height: 28px; font-size: 0.7rem; display: inline-flex; align-items: center; justify-content: center;">
+                                        <i class="fa-solid fa-trash-can"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <tr id="binnacle-empty-tr">
+                            <td colspan="10" style="text-align: center !important;">
+                                <div class="empty-state-container py-5 text-center">
+                                    <i class="fa-solid fa-calendar-xmark empty-state-icon fa-2x text-muted opacity-50 mb-2"></i>
+                                    <p class="empty-state-text text-muted mb-0">No existen bitácoras pendientes
+                                        registradas.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
 
@@ -203,7 +208,6 @@
 </div>
 
 <script>
-    // Inicialización del script de sincronización de scroll y filtrado en vivo
     (function () {
         const searchInput = document.getElementById('binnacleSearchInput');
         const fromInput = document.getElementById('binnacle-filter-from');
@@ -245,16 +249,135 @@
             window.filterBinnacles();
         };
 
-        if (searchInput) {
-            searchInput.addEventListener('input', window.filterBinnacles);
-        }
+        if (searchInput) searchInput.addEventListener('input', window.filterBinnacles);
         if (fromInput) fromInput.addEventListener('change', window.filterBinnacles);
         if (toInput) toInput.addEventListener('change', window.filterBinnacles);
-
-        // Inicializar sincronización del scroll superior si existe TableManager o scroll listener
-        const scrollTopContainer = document.querySelector('.table-scroll-top');
-        if (scrollTopContainer && window.initTableScrollTop) {
-            window.initTableScrollTop(scrollTopContainer);
-        }
     })();
 </script>
+
+<style>
+    .modal-binnacle-container {
+        width: min(1050px, calc(100vw - 24px));
+        max-width: 1050px;
+    }
+
+    .binnacle-bulk-btn {
+        align-items: center;
+        border: 0;
+        border-radius: 6px;
+        color: #fff;
+        cursor: pointer;
+        display: inline-flex;
+        font-size: 0.78rem;
+        font-weight: 700;
+        gap: 5px;
+        height: 34px;
+        padding: 0 12px;
+        transition: filter 0.2s ease, transform 0.2s ease;
+    }
+
+    .binnacle-bulk-btn:hover {
+        filter: brightness(0.94);
+        transform: translateY(-1px);
+    }
+
+    .binnacle-bulk-btn-approve { background: #059669; }
+    .binnacle-bulk-btn-reject { background: #d97706; }
+    .binnacle-bulk-btn-delete { background: #dc2626; }
+
+    .binnacle-table-scroll {
+        max-height: 52vh;
+        overflow: auto;
+        position: relative;
+    }
+
+    .binnacle-toolbar {
+        align-items: center;
+        display: grid;
+        gap: 10px;
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    #binnacle-bulk-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        min-width: 0;
+    }
+
+    .binnacle-toolbar .search-filter-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: flex-end;
+        left: auto;
+        margin: 0;
+        position: static;
+        transform: none;
+        width: auto;
+    }
+
+    #binnacle-pending-table {
+        min-width: 1040px;
+        table-layout: auto;
+    }
+
+    #binnacle-pending-table .binnacle-registered-column {
+        min-width: 190px !important;
+        width: 190px !important;
+        white-space: normal !important;
+        word-break: break-word !important;
+        overflow-wrap: anywhere;
+        line-height: 1.15;
+    }
+
+    #binnacle-pending-table .binnacle-actions-column {
+        background: #fff !important;
+        position: sticky;
+        right: 0;
+        width: 120px !important;
+        min-width: 120px !important;
+        text-align: center !important;
+        white-space: nowrap !important;
+        z-index: 3;
+        box-shadow: -4px 0 8px rgba(15, 23, 42, 0.08);
+    }
+
+    #binnacle-pending-table thead th.binnacle-actions-column {
+        background: #11628f !important;
+        color: #fff !important;
+        display: table-cell !important;
+        position: sticky !important;
+        right: 0 !important;
+        text-align: center !important;
+        vertical-align: middle !important;
+        white-space: nowrap !important;
+        width: 120px !important;
+        min-width: 120px !important;
+        z-index: 25 !important;
+    }
+
+    #binnacle-pending-table thead th.binnacle-registered-column {
+        white-space: normal !important;
+    }
+
+    .binnacle-row-actions {
+        display: inline-flex;
+        justify-content: center;
+        gap: 4px;
+    }
+
+    @media (max-width: 700px) {
+        .modal-binnacle-container {
+            width: calc(100vw - 12px);
+        }
+
+        .binnacle-toolbar {
+            grid-template-columns: 1fr;
+        }
+
+        .binnacle-toolbar .search-filter-actions {
+            justify-content: flex-start;
+        }
+    }
+</style>
