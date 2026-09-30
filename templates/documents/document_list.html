@@ -14,108 +14,61 @@
             <p>Gestión de documentos, como memorandos, oficios, informes técnicos</p>
         </div>
         {% if perms.documents.add_document %}
-            <button id="btn-add-document" type="button" class="btn-white-rectangle" onclick="openCreateDocumentModal()">
+            <button id="btn-add-document" type="button" class="btn-blue-rectangle" onclick="openCreateDocumentModal()">
                 <i class="fas fa-plus-circle"></i> Nuevo Documento
             </button>
         {% endif %}
     </div>
 
     <!-- 2. Estadísticas (Stat Cards) -->
-    <div class="stats-row" id="document-stats-row">
-        <!-- Tarjeta Total: Limpia el filtro y deshabilita el botón nuevo -->
-        <div class="stat-card color-one" id="stat-card-total" onclick="filterByRegime('', '')">
-            <div class="stat-left">
-                <h3>TOTAL ACTIVOS</h3>
-                <div class="number" id="stat-display-total">{{ stats.total|default:0 }}</div>
-            </div>
-            <i class="fas fa-users-check stat-icon"></i>
-        </div>
-
-        <!-- Tarjetas por tipo -->
-        {% for regime in stats.regimes %}
-            <div class="stat-card color-{{ forloop.counter|add:1 }}"
-                 data-code="{{ regime.code }}"
-                 data-name="{{ regime.name }}"
-                 onclick="filterByRegime('{{ regime.code }}', '{{ regime.name|escapejs }}')">
-                <div class="stat-left">
-                    <h3>{{ regime.name }}</h3>
-                    <div class="number stat-regime-count">{{ regime.count|default:0 }}</div>
-                </div>
-                <i class="fa-solid fa-file-lines stat-icon"></i>
-            </div>
-        {% endfor %}
+    <div class="stats-row" id="documentStatsRow">
+        {% include 'documents/partials/partial_document_stats.html' %}
     </div>
 
-    <div id="table-app">
-        <div class="content-table">
-            <div class="table-controls toolbar-row">
-                <div class="toolbar-center">
-                    {% now "Y" as current_year %}
-                    <div class="d-flex align-items-center gap-1">
-                        <label for="stats-date-from" class="label-muted m-0 bold"></label>
-                        <input type="date" id="stats-date-from" class="table-search-input table-search-input--small"
-                               value="{{ current_year }}-01-01" title="Fecha desde">
+    <!-- 3. Contenedor principal Tabla -->
+    <div class="content-table">
+        <form id="documentFiltersForm" onsubmit="return false;">
+            <input type="hidden" name="documents" id="filter_document_type" value="">
+            {% now "Y" as current_year %}
+            <div class="search-panel">
+                <div class="search-grid">
+                    <input type="text" id="searchInput" name="q" class="input-field"
+                           placeholder="Buscar por número, responsable o asunto..." autocomplete="off">
+
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="label-muted m-0 small font-weight-bold">Desde:</label>
+                        <input type="date" id="stats-date-from" name="date_from" class="input-field"
+                               value="{{ current_year }}-01-01">
                     </div>
-                    <div class="d-flex align-items-center gap-1">
-                        <label for="stats-date-to" class="label-muted m-0 bold"></label>
-                        <input type="date" id="stats-date-to" class="table-search-input table-search-input--small"
-                               value="{{ current_year }}-12-31" title="Fecha hasta">
+
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="label-muted m-0 small font-weight-bold">Hasta:</label>
+                        <input type="date" id="stats-date-to" name="date_to" class="input-field"
+                               value="{{ current_year }}-12-31">
                     </div>
                 </div>
-
-                <div class="toolbar-right">
-                    <input type="text" id="table-search-document"
-                           class="table-search-input table-search-input--large"
-                           placeholder="Buscar por número, responsable">
-                </div>
             </div>
+        </form>
 
-            <!-- Contenedor donde se inyecta la tabla parcial -->
-            <div id="table-content-wrapper">
-                {% include 'documents/partials/partial_document_table.html' %}
+        <div class="search-toolbar">
+            <div class="table-controls"></div>
+            <div class="search-filter-actions">
+                <button type="submit" form="documentFiltersForm" class="btn-blue-rectangle">
+                    <i class="fas fa-search"></i> Buscar
+                </button>
+                <button type="button" id="documentFiltersClear" class="btn-blue-rectangle-outline">
+                    <i class="fas fa-eraser"></i> Limpiar
+                </button>
             </div>
+        </div>
 
-            <!-- Paginación Global -->
-            <div class="pagination-container" id="documents-pagination">
-                <span class="pagination-info">
-                    Mostrando {{ page_obj.start_index|default:"0" }}-{{ page_obj.end_index|default:"0" }} de {{ paginator.count|default:"0" }}
-                </span>
-                <div class="pagination-controls" {% if paginator.num_pages <= 1 %}style="visibility:hidden;"{% endif %}>
-                    <button type="button" class="page-btn page-first" title="Primera"
-                            {% if not page_obj.has_previous %}disabled{% endif %}
-                            onclick="changeDocumentPage(1)">
-                        <i class="fas fa-angle-double-left"></i>
-                    </button>
-                    <button type="button" class="page-btn page-prev" title="Anterior"
-                            {% if not page_obj.has_previous %}disabled{% endif %}
-                            onclick="changeDocumentPage(
-                                    {% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% else %}1{% endif %})">
-                        <i class="fas fa-angle-left"></i>
-                    </button>
-                    <div class="page-input-wrapper">
-                        <input type="number" class="page-input" value="{{ page_obj.number|default:1 }}" min="1"
-                               max="{{ paginator.num_pages|default:1 }}"
-                               onchange="changeDocumentPage(parseInt(this.value)||1)"
-                               onkeypress="if(event.key==='Enter') changeDocumentPage(parseInt(this.value)||1)">
-                        <span class="total-pages-badge">de {{ paginator.num_pages|default:1 }}</span>
-                    </div>
-                    <button type="button" class="page-btn page-next" title="Siguiente"
-                            {% if not page_obj.has_next %}disabled{% endif %}
-                            onclick="changeDocumentPage(
-                                    {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages|default:1 }}{% endif %})">
-                        <i class="fas fa-angle-right"></i>
-                    </button>
-                    <button type="button" class="page-btn page-last" title="Última"
-                            {% if not page_obj.has_next %}disabled{% endif %}
-                            onclick="changeDocumentPage({{ paginator.num_pages|default:1 }})">
-                        <i class="fas fa-angle-double-right"></i>
-                    </button>
-                </div>
-            </div>
+        <!-- Contenedor donde se reemplaza tabla + paginador en un solo bloque -->
+        <div id="tableContainer">
+            {% include 'documents/partials/partial_document_table.html' %}
         </div>
     </div>
 
-    <!-- Contenedor dinámico obligatorio de main.js para todos los modales AJAX -->
+    <!-- Modal Root estándar -->
     <div id="modal-root"></div>
 {% endblock %}
 

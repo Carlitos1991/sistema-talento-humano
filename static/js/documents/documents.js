@@ -1,72 +1,105 @@
-/* static/js/documents/documents.js
-   Gestión Documental integrada al 100% con main.js
-*/
-
+/* static/js/documents/documents.js */
 (function () {
     'use strict';
 
-    const docState = {
-        selectedTypeId: '',
-        dateFrom: null,
-        dateTo: null
+    window.applyDocumentFilters = async function (page = 1) {
+        const form = document.getElementById('documentFiltersForm');
+        if (!form) return;
+
+        const params = new URLSearchParams();
+        params.set('page', page);
+
+        const q = form.querySelector('input[name="q"]')?.value.trim();
+        const dateFrom = form.querySelector('input[name="date_from"]')?.value;
+        const dateTo = form.querySelector('input[name="date_to"]')?.value;
+        const documentType = form.querySelector('input[name="documents"]')?.value;
+
+        if (q) params.set('q', q);
+        if (dateFrom) params.set('date_from', dateFrom);
+        if (dateTo) params.set('date_to', dateTo);
+        if (documentType) params.set('documents', documentType);
+
+        if (window._currentTableSort) {
+            const ths = document.querySelectorAll('.managed-table thead th');
+            const th = ths[window._currentTableSort.col];
+            if (th && th.dataset.field) {
+                params.set('sort_field', th.dataset.field);
+                params.set('sort_dir', window._currentTableSort.asc ? 'asc' : 'desc');
+            }
+        }
+
+        const listUrl = document.querySelector('.managed-table')?.dataset.listUrl || window.location.pathname;
+        const tableContainer = document.getElementById('tableContainer');
+
+        if (tableContainer) {
+            tableContainer.style.opacity = '0.4';
+            tableContainer.style.pointerEvents = 'none';
+        }
+
+        try {
+            const res = await fetch(`${listUrl}?${params.toString()}`, {
+                headers: {'X-Requested-With': 'XMLHttpRequest'}
+            });
+
+            const contentType = res.headers.get("content-type");
+            let htmlToInject = "";
+            let statsToInject = "";
+
+            if (contentType && contentType.includes("application/json")) {
+                const data = await res.json();
+                htmlToInject = data.html || '';
+                statsToInject = data.stats_html || '';
+            } else {
+                htmlToInject = await res.text();
+            }
+
+            if (tableContainer && htmlToInject) {
+                tableContainer.innerHTML = htmlToInject;
+            }
+
+            if (statsToInject) {
+                const statsRow = document.getElementById('documentStatsRow');
+                if (statsRow) statsRow.innerHTML = statsToInject;
+            }
+
+            setTimeout(() => {
+                const newTable = document.querySelector('.managed-table');
+                if (newTable) {
+                    new TableManager(newTable);
+                    if (window._currentTableSort) {
+                        const sortedTh = newTable.querySelectorAll('thead th')[window._currentTableSort.col];
+                        if (sortedTh) {
+                            sortedTh.classList.add(window._currentTableSort.asc ? 'sorted-asc' : 'sorted-desc');
+                            const arrow = sortedTh.querySelector('.sort-arrow');
+                            if (arrow) arrow.innerText = window._currentTableSort.asc ? '↑' : '↓';
+                        }
+                    }
+                }
+            }, 50);
+
+        } catch (e) {
+            console.error('Error AJAX:', e);
+        } finally {
+            if (tableContainer) {
+                tableContainer.style.opacity = '1';
+                tableContainer.style.pointerEvents = 'auto';
+            }
+        }
     };
 
-    document.addEventListener('DOMContentLoaded', () => {
-        const fromInput = document.getElementById('stats-date-from');
-        const toInput = document.getElementById('stats-date-to');
-        if (fromInput) docState.dateFrom = fromInput.value || null;
-        if (toInput) docState.dateTo = toInput.value || null;
+    window.filterByRegime = function (typeId) {
+        const hiddenInput = document.getElementById('filter_document_type');
+        const codeStr = String(typeId || '');
 
-        [fromInput, toInput].forEach(input => {
-            if (!input) return;
-            input.addEventListener('change', () => {
-                docState.dateFrom = fromInput ? fromInput.value : null;
-                docState.dateTo = toInput ? toInput.value : null;
-                applyFilters(1);
-            });
-        });
+        if (hiddenInput.value === codeStr) {
+            hiddenInput.value = '';
+        } else {
+            hiddenInput.value = codeStr;
+        }
 
-        setAddButtonEnabled(false);
-    });
-
-    function applyFilters(page = 1) {
-        const params = {
-            page: page,
-            documents: docState.selectedTypeId || ''
-        };
-        if (docState.dateFrom) params.date_from = docState.dateFrom;
-        if (docState.dateTo) params.date_to = docState.dateTo;
-
-        // Recarga de tabla universal de main.js
-        window.refreshCurrentTable(params, updateStats);
-    }
-
-    function updateStats() {
-        const params = new URLSearchParams();
-        if (docState.dateFrom) params.append('date_from', docState.dateFrom);
-        if (docState.dateTo) params.append('date_to', docState.dateTo);
-
-        fetch(`${window.location.pathname}?${params.toString()}`, {
-            headers: {'X-Requested-With': 'XMLHttpRequest'}
-        })
-            .then(res => res.json())
-            .then(data => {
-                if (!data.stats) return;
-                const totalEl = document.getElementById('stat-display-total');
-                if (totalEl) totalEl.textContent = data.stats.total || 0;
-
-                if (Array.isArray(data.stats.regimes)) {
-                    data.stats.regimes.forEach(r => {
-                        const card = document.querySelector(`.stat-card[data-code="${r.code}"]`);
-                        if (card) {
-                            const countEl = card.querySelector('.stat-regime-count');
-                            if (countEl) countEl.textContent = r.count || 0;
-                        }
-                    });
-                }
-            })
-            .catch(err => console.error('Error al actualizar estadísticas:', err));
-    }
+        setAddButtonEnabled(hiddenInput.value !== '');
+        window.applyDocumentFilters(1);
+    };
 
     function setAddButtonEnabled(enabled) {
         const btn = document.getElementById('btn-add-document');
@@ -77,37 +110,53 @@
         btn.style.cursor = enabled ? 'pointer' : 'not-allowed';
     }
 
-    // Filtrar por tarjeta superior
-    window.filterByRegime = function (regimeCode) {
-        const codeStr = String(regimeCode || '');
-        const cards = document.querySelectorAll('#document-stats-row .stat-card');
+    document.addEventListener('DOMContentLoaded', () => {
+        setAddButtonEnabled(false);
 
-        if (docState.selectedTypeId === codeStr) {
-            docState.selectedTypeId = '';
-            cards.forEach(c => c.classList.remove('opacity-low'));
+        // Envío de búsqueda y filtros
+        document.getElementById('documentFiltersForm')?.addEventListener('submit', (e) => {
+            e.preventDefault();
+            window.applyDocumentFilters(1);
+        });
+
+        // Búsqueda en tiempo real con debounce
+        let searchTimer = null;
+        document.getElementById('searchInput')?.addEventListener('input', () => {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(() => {
+                window.applyDocumentFilters(1);
+            }, 350);
+        });
+
+        // Limpiar formulario
+        document.getElementById('documentFiltersClear')?.addEventListener('click', () => {
+            const form = document.getElementById('documentFiltersForm');
+            if (form) form.reset();
+            const hiddenType = document.getElementById('filter_document_type');
+            if (hiddenType) hiddenType.value = '';
             setAddButtonEnabled(false);
-        } else {
-            docState.selectedTypeId = codeStr;
-            cards.forEach(c => {
-                if (!codeStr) {
-                    c.classList.remove('opacity-low');
-                } else {
-                    c.classList.toggle('opacity-low', c.dataset.code !== codeStr);
-                }
-            });
-            setAddButtonEnabled(codeStr !== '');
+            window.applyDocumentFilters(1);
+        });
+    });
+
+    // Paginador delegado: escucha los clics en los botones .page-btn de la tabla
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('#tableContainer .page-btn');
+        if (!btn) return;
+
+        if (btn.disabled || btn.classList.contains('disabled')) return;
+        e.preventDefault();
+        e.stopPropagation();
+
+        const page = btn.dataset.page;
+        if (page) {
+            window.applyDocumentFilters(parseInt(page) || 1);
         }
+    });
 
-        applyFilters(1);
-    };
-
-    window.changeDocumentPage = function (page) {
-        applyFilters(page);
-    };
-
-    // Apertura del modal crear usando openAjaxModal de main.js
     window.openCreateDocumentModal = function () {
-        if (!docState.selectedTypeId) {
+        const currentType = document.getElementById('filter_document_type')?.value;
+        if (!currentType) {
             Swal.fire({
                 icon: 'info',
                 title: 'Atención',
@@ -115,10 +164,9 @@
             });
             return;
         }
-        window.openAjaxModal(`/documents/create/?category_id=${docState.selectedTypeId}`);
+        window.openAjaxModal(`/documents/create/?category_id=${currentType}`);
     };
 
-    // Subida rápida de PDF desde la tabla
     window.uploadDocumentFile = function (id) {
         if (!id) return;
         const fileInput = document.createElement('input');
@@ -149,7 +197,7 @@
                 const data = await res.json();
                 if (data.success) {
                     window.showToast(data.message || 'Archivo subido con éxito.', 'success');
-                    applyFilters();
+                    window.applyDocumentFilters();
                 } else {
                     Swal.fire({icon: 'error', title: 'Error', text: data.message || 'Error al subir archivo.'});
                 }
@@ -163,12 +211,4 @@
 
         fileInput.click();
     };
-
-    // Toggle reutilizando toggleStatusAjax de main.js
-    window.toggleTypeStatus = function (url, typeName, currentStatus) {
-        window.toggleStatusAjax(url, typeName, currentStatus, () => {
-            applyFilters();
-        });
-    };
-
 })();

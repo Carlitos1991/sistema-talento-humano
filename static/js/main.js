@@ -130,7 +130,11 @@ window.refreshCurrentTable = function (extraParams = {}, callback = null) {
 
     const requestUrl = new URL(window.location.href);
     Object.keys(extraParams).forEach(key => {
-        requestUrl.searchParams.set(key, extraParams[key]);
+        if (extraParams[key] !== null && extraParams[key] !== undefined && extraParams[key] !== '') {
+            requestUrl.searchParams.set(key, extraParams[key]);
+        } else {
+            requestUrl.searchParams.delete(key);
+        }
     });
 
     fetch(requestUrl.toString(), {
@@ -140,11 +144,12 @@ window.refreshCurrentTable = function (extraParams = {}, callback = null) {
             const contentType = response.headers.get("content-type");
             if (contentType && contentType.includes("application/json")) {
                 const data = await response.json();
-                return data.html || '';
+                return {html: data.html || '', fullData: data};
             }
-            return await response.text();
+            const text = await response.text();
+            return {html: text, fullData: null};
         })
-        .then(html => {
+        .then(({html, fullData}) => {
             if (!html) return;
             wrapper.innerHTML = html;
 
@@ -153,11 +158,12 @@ window.refreshCurrentTable = function (extraParams = {}, callback = null) {
                 if (table) new TableManager(table);
             }
 
-            if (typeof callback === 'function') callback();
+            if (typeof callback === 'function') {
+                callback(fullData);
+            }
         })
         .catch(err => {
             console.error("Error al refrescar la tabla parcial:", err);
-            location.reload();
         });
 };
 

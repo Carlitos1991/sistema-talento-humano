@@ -1,3 +1,4 @@
+{% load static %}
 <div class="table-container">
     <div class="table-scroll-top">
         <table class="managed-table exportable-table table-documents"
@@ -22,7 +23,7 @@
             <tbody>
             {% for doc in documents %}
                 <tr>
-                    <td class="text-center">{{ doc.global_index|default:'-' }}</td>
+                    <td class="text-center">{{ doc.global_index|default:forloop.counter }}</td>
                     <td><span class="badge badge-gray">{{ doc.filing_code }}</span></td>
                     <td><span class="badge badge-blue">{{ doc.category.name }}</span></td>
                     <td class="cell-wrap">{{ doc.subject|linebreaksbr }}</td>
@@ -49,7 +50,6 @@
                     </td>
                     <td class="actions text-center">
                         <div class="actions-wrapper">
-                            <!-- Edición directa mediante openAjaxModal de main.js -->
                             <button type="button" class="btn-yellow-circle"
                                     onclick="openAjaxModal('{% url 'documents:document_update' doc.id %}')"
                                     title="Actualizar Documento">
@@ -73,17 +73,55 @@
                     </td>
                 </tr>
             {% endfor %}
-            {% if documents %}
-                <tr id="frontend-no-results" class="hidden">
-                    <td colspan="9">
-                        <div class="empty-state-container">
-                            <i class="fa-solid fa-search empty-state-icon"></i>
-                            <p class="empty-state-text">No se encontraron registros</p>
-                        </div>
-                    </td>
-                </tr>
-            {% endif %}
             </tbody>
         </table>
     </div>
 </div>
+
+<!-- PAGINACIÓN ESTANDARIZADA (IGUAL A PERSON) -->
+{% if paginator.num_pages > 0 %}
+    <div id="js-pagination" class="pagination-container">
+    <span class="pagination-info">
+        Mostrando {{ page_obj.start_index|default:"0" }}-{{ page_obj.end_index|default:"0" }} de {{ paginator.count|default:"0" }}
+    </span>
+        <div class="pagination-controls">
+            <!-- Primera -->
+            <button type="button" class="page-btn {% if not page_obj.has_previous %}disabled{% endif %}"
+                    title="Primera" data-page="1"
+                    {% if not page_obj.has_previous %}disabled{% endif %}>
+                <i class="fas fa-angle-double-left"></i>
+            </button>
+
+            <!-- Anterior -->
+            <button type="button" class="page-btn {% if not page_obj.has_previous %}disabled{% endif %}"
+                    title="Anterior"
+                    data-page="{% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% else %}1{% endif %}"
+                    {% if not page_obj.has_previous %}disabled{% endif %}>
+                <i class="fas fa-angle-left"></i>
+            </button>
+
+            <!-- Indicador de página -->
+            <div class="page-input-wrapper">
+                <input type="number" class="page-input" value="{{ page_obj.number }}" readonly style="cursor: default;">
+                <span class="total-pages-badge">de {{ paginator.num_pages }}</span>
+            </div>
+
+            <!-- Siguiente -->
+            <button type="button" class="page-btn {% if not page_obj.has_next %}disabled{% endif %}"
+                    title="Siguiente"
+                    data-page="
+                            {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages }}{% endif %}"
+                    {% if not page_obj.has_next %}disabled{% endif %}>
+                <i class="fas fa-angle-right"></i>
+            </button>
+
+            <!-- Última -->
+            <button type="button" class="page-btn {% if not page_obj.has_next %}disabled{% endif %}"
+                    title="Última"
+                    data-page="{{ paginator.num_pages }}"
+                    {% if not page_obj.has_next %}disabled{% endif %}>
+                <i class="fas fa-angle-double-right"></i>
+            </button>
+        </div>
+    </div>
+{% endif %}

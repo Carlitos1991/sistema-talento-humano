@@ -1,0 +1,22 @@
+<!-- Tarjeta Total -->
+<div class="stat-card color-one {% if not current_filters.documents %}active-card{% endif %}" id="stat-card-total"
+     onclick="filterByRegime('')">
+    <div class="stat-left">
+        <h3>TOTAL ACTIVOS</h3>
+        <div class="number" id="stat-display-total">{{ stats.total|default:0 }}</div>
+    </div>
+    <i class="fas fa-users-check stat-icon"></i>
+</div>
+
+<!-- Tarjetas por tipo -->
+{% for regime in stats.regimes %}
+    <div class="stat-card color-{{ forloop.counter|add:1 }} {% if current_filters.documents == regime.code|stringformat:'s' %}active-card{% endif %}"
+         data-code="{{ regime.code }}"
+         onclick="filterByRegime('{{ regime.code }}')">
+        <div class="stat-left">
+            <h3>{{ regime.name }}</h3>
+            <div class="number stat-regime-count">{{ regime.count|default:0 }}</div>
+        </div>
+        <i class="fa-solid fa-file-lines stat-icon"></i>
+    </div>
+{% endfor %}
