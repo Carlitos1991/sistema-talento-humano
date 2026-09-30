@@ -1111,3 +1111,882 @@
     color: #94a3b8;
     font-weight: bold;
 }
+
+/* ==========================================================================
+   PESTAÑA: HISTORIA LABORAL / CONTRATOS (BROWN THEME)
+   ========================================================================== */
+.history-border {
+    border-left: 4px solid #78350f !important;
+}
+
+.text-brown {
+    color: #78350f !important;
+}
+
+/* Enlace estilizado del título del contrato */
+.contract-title-link {
+    background: transparent;
+    border: none;
+    padding: 0;
+    color: #78350f;
+    font-weight: 800;
+    font-size: 1.05rem;
+    text-align: left;
+    cursor: pointer;
+    transition: color 0.15s ease, text-decoration 0.15s ease;
+}
+
+.contract-title-link:hover {
+    color: #451a03;
+    text-decoration: underline;
+}
+
+/* Layout del Contrato Vigente */
+.contract-current-layout {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #fdfbf7;
+    border: 1px solid #fed7aa;
+    border-radius: 10px;
+    padding: 1.25rem 1.5rem;
+    gap: 1.5rem;
+}
+
+@media (max-width: 850px) {
+    .contract-current-layout {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+.contract-main-data {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.contract-tags-group {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.contract-side-actions {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    flex-shrink: 0;
+}
+
+@media (max-width: 850px) {
+    .contract-side-actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+}
+
+.contract-dates-box {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0.65rem 1rem;
+    text-align: right;
+}
+
+.contract-dates-label {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    margin-bottom: 0.2rem;
+}
+
+.contract-dates-range {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Contenedor del Historial de Contratos */
+.contract-history-container {
+    background: #f8fafc;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    padding: 0.75rem;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.contract-timeline-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.contract-history-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0.9rem 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.contract-history-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+/* ==========================================================================
+   PESTAÑAS: PERMISOS, ACCIONES Y SANCIONES (COLORES Y TOOLBARS)
+   ========================================================================== */
+.permissions-border {
+    border-left: 4px solid #e11d48 !important;
+}
+
+.actions-border {
+    border-left: 4px solid #9333ea !important;
+}
+
+.sanctions-border {
+    border-left: 4px solid #475569 !important;
+}
+
+.text-rose {
+    color: #e11d48 !important;
+}
+
+.text-purple {
+    color: #9333ea !important;
+}
+
+.text-slate {
+    color: #475569 !important;
+}
+
+/* Barra de filtros horizontal */
+.wizard-filter-toolbar {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 0.85rem 1rem;
+    flex-wrap: wrap;
+}
+
+.filter-field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 140px;
+}
+
+.filter-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    margin: 0;
+}
+
+.filter-input-control {
+    height: 38px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    padding: 0.35rem 0.65rem;
+}
+
+.filter-btn-group {
+    display: flex;
+    align-items: flex-end;
+}
+
+.cell-break-word {
+    display: block;
+    max-width: 280px;
+    white-space: normal;
+    word-break: break-word;
+    line-height: 1.35;
+    font-size: 0.82rem;
+    color: #475569;
+}
+
+/* Tarjetas de Sanciones */
+.sanctions-history-container {
+    background: #f8fafc;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    padding: 0.75rem;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.sanctions-timeline-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.sanction-history-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0.9rem 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1.25rem;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.sanction-history-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.sanction-card-left {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.sanction-title {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #1e293b;
+}
+
+.sanction-description {
+    font-size: 0.85rem;
+    color: #334155;
+    line-height: 1.4;
+}
+
+.sanction-card-right {
+    flex-shrink: 0;
+}
+
+@media (max-width: 800px) {
+    .sanction-history-card {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .sanction-card-right {
+        width: 100%;
+        display: flex;
+        justify-content: flex-end;
+    }
+}
+
+/* ==========================================================================
+   PESTAÑAS: ROLES DE PAGO, HORARIO, TELETRABAJO Y VACACIONES
+   ========================================================================== */
+.payments-border {
+    border-left: 4px solid #16a34a !important;
+}
+
+.schedule-border {
+    border-left: 4px solid #7c3aed !important;
+}
+
+.vacations-amber-border {
+    border-left: 4px solid #f59e0b !important;
+}
+
+.vacations-teal-border {
+    border-left: 4px solid #0ea5a4 !important;
+}
+
+.vacations-cyan-border {
+    border-left: 4px solid #06b6d4 !important;
+}
+
+.text-teal {
+    color: #0ea5a4 !important;
+}
+
+.text-cyan {
+    color: #0891b2 !important;
+}
+
+/* 1. Roles de Pago */
+.payments-history-container {
+    background: #f8fafc;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    padding: 0.75rem;
+    max-height: 420px;
+    overflow-y: auto;
+}
+
+.payments-timeline-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.payment-role-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0.85rem 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.payment-role-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.payment-period-title {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.payment-breakdown-row {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.payment-card-right {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    flex-shrink: 0;
+}
+
+.payment-net-box {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 8px;
+    padding: 0.4rem 0.85rem;
+    text-align: right;
+}
+
+.payment-net-label {
+    display: block;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #166534;
+    text-transform: uppercase;
+}
+
+.payment-net-amount {
+    font-size: 1.15rem;
+    font-weight: 800;
+}
+
+/* 2. Horario Laboral */
+.schedule-summary-banner {
+    background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+    border: 1px solid #ddd6fe;
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.schedule-badge-pill {
+    display: inline-block;
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: #7c3aed;
+    background: #ede9fe;
+    padding: 2px 10px;
+    border-radius: 9999px;
+    margin-bottom: 0.35rem;
+}
+
+.schedule-title {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #4c1d95;
+    margin: 0.15rem 0 0.25rem 0;
+}
+
+.schedule-period-text {
+    font-size: 0.85rem;
+    color: #6b21a8;
+}
+
+/* 3. Teletrabajo - Alerta */
+.alert-telework-readonly {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-left: 4px solid #3b82f6;
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-size: 0.85rem;
+    color: #1e40af;
+    display: flex;
+    align-items: center;
+}
+
+/* 4. Vacaciones */
+.action-sublabel {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    margin: 0;
+}
+
+.btn-blue-link {
+    background: transparent;
+    border: none;
+    padding: 0;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #2563eb;
+    cursor: pointer;
+}
+
+.btn-blue-link:hover {
+    text-decoration: underline;
+}
+
+.vacation-chart-period-wrapper {
+    display: flex;
+    gap: 2rem;
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
+
+.vacation-donut-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    flex-shrink: 0;
+}
+
+.vacation-chart-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 160px;
+    font-size: 0.75rem;
+}
+
+.legend-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #334155;
+}
+
+.legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+
+.legend-dot.bg-cyan {
+    background: #06b6d4;
+}
+
+.legend-dot.bg-amber {
+    background: #f59e0b;
+}
+
+.legend-dot.bg-teal {
+    background: #0ea5a4;
+}
+
+.legend-total-row {
+    border-top: 1px solid #e2e8f0;
+    padding-top: 5px;
+    margin-top: 3px;
+    font-size: 0.75rem;
+    color: #64748b;
+}
+
+.vacation-periods-col {
+    flex: 1;
+    min-width: 280px;
+}
+
+.vacation-periods-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+.vacation-period-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0.65rem 1rem;
+}
+
+.period-title {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.period-tags-row {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+}
+
+/* ==========================================================================
+   PESTAÑA DE VACACIONES (ESTILO IDÉNTICO A LA CAPTURA)
+   ========================================================================== */
+
+/* Grilla Superior de 3 Columnas */
+.vacations-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.25rem;
+    margin-top: 1rem;
+}
+
+@media (max-width: 992px) {
+    .vacations-metrics-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Tarjeta General Superior */
+.vacation-top-card {
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
+    padding: 1.25rem 1.4rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 195px;
+}
+
+/* Bordes Superiores de Color */
+.border-top-amber {
+    border-top: 3.5px solid #f59e0b !important;
+}
+
+.border-top-teal {
+    border-top: 3.5px solid #0d9488 !important;
+}
+
+.border-top-cyan {
+    border-top: 3.5px solid #06b6d4 !important;
+}
+
+/* Títulos con Icono */
+.vacation-card-header {
+    margin-bottom: 0.85rem;
+}
+
+.vacation-header-title {
+    font-size: 0.8rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin: 0;
+    display: flex;
+    align-items: center;
+}
+
+.text-amber {
+    color: #d97706 !important;
+}
+
+.text-teal {
+    color: #0d9488 !important;
+}
+
+.text-cyan {
+    color: #0891b2 !important;
+}
+
+/* Filas de Información */
+.vacation-row-metric {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 0.75rem;
+}
+
+.metric-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.metric-number {
+    font-size: 1.55rem;
+    font-weight: 800;
+    color: #0f172a;
+    font-family: inherit;
+    line-height: 1;
+}
+
+.vacation-row-action {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.5rem;
+    min-height: 32px;
+}
+
+.spacer-action {
+    visibility: hidden;
+}
+
+/* Botones Dorados (Horas / Días) */
+.btn-vacation-gold {
+    background: #f59e0b;
+    color: #000000;
+    font-weight: 700;
+    font-size: 0.73rem;
+    padding: 3px 12px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    transition: background 0.15s ease;
+}
+
+.btn-vacation-gold:hover {
+    background: #d97706;
+    color: #ffffff;
+}
+
+/* Botón Pastilla Turquesa (Nueva) */
+.btn-vacation-pill-teal {
+    background: #ccfbf1;
+    color: #0f766e;
+    border: 1px solid #14b8a6;
+    font-weight: 700;
+    font-size: 0.73rem;
+    padding: 3px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    transition: all 0.15s ease;
+}
+
+.btn-vacation-pill-teal:hover {
+    background: #14b8a6;
+    color: #ffffff;
+}
+
+/* Botones Outline de Ver Detalle */
+.btn-vacation-outline-amber {
+    background: transparent;
+    border: 1.5px solid #f59e0b;
+    color: #d97706;
+    font-weight: 700;
+    font-size: 0.73rem;
+    padding: 3px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    transition: all 0.15s ease;
+}
+
+.btn-vacation-outline-amber:hover {
+    background: #fef3c7;
+}
+
+.btn-vacation-outline-teal {
+    background: transparent;
+    border: 1.5px solid #0d9488;
+    color: #0d9488;
+    font-weight: 700;
+    font-size: 0.73rem;
+    padding: 3px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    transition: all 0.15s ease;
+}
+
+.btn-vacation-outline-teal:hover {
+    background: #f0fdfa;
+}
+
+/* Pastillas de Estado General */
+.badge-status-available {
+    background: #cffafe;
+    color: #0891b2;
+    font-weight: 700;
+    font-size: 0.78rem;
+    padding: 4px 18px;
+    border-radius: 9999px;
+    display: inline-block;
+}
+
+.badge-status-exhausted {
+    background: #fee2e2;
+    color: #b91c1c;
+    font-weight: 700;
+    font-size: 0.78rem;
+    padding: 4px 18px;
+    border-radius: 9999px;
+    display: inline-block;
+}
+
+/* Tarjeta Inferior de Distribución */
+.vacation-bottom-card {
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
+    padding: 1.25rem 1.4rem;
+}
+
+.vacation-main-content-layout {
+    display: flex;
+    gap: 2.5rem;
+    align-items: flex-start;
+}
+
+@media (max-width: 900px) {
+    .vacation-main-content-layout {
+        flex-direction: column;
+    }
+}
+
+/* Panel Donut y Leyenda */
+.vacation-chart-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 170px;
+    flex-shrink: 0;
+}
+
+.donut-wrapper {
+    width: 160px;
+    height: 160px;
+}
+
+.vacation-legend-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+    font-size: 0.75rem;
+    color: #334155;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.dot-square {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    flex-shrink: 0;
+}
+
+.dot-square.bg-cyan {
+    background: #06b6d4;
+}
+
+.dot-square.bg-amber {
+    background: #f59e0b;
+}
+
+.dot-square.bg-teal {
+    background: #0d9488;
+}
+
+.legend-item-total {
+    border-top: 1px solid #e2e8f0;
+    padding-top: 4px;
+    margin-top: 2px;
+    font-size: 0.73rem;
+    color: #64748b;
+}
+
+/* Panel Derecho de Periodos */
+.vacation-periods-panel {
+    flex: 1;
+    width: 100%;
+}
+
+.vacation-periods-scroll {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    max-height: 280px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.vacation-period-banner {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0.85rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+.period-name-label {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.period-pill-row {
+    background: #f0fdfa;
+    border: 1px solid #ccfbf1;
+    border-radius: 6px;
+    padding: 4px 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.78rem;
+    color: #0f766e;
+    width: fit-content;
+}
+
+.period-pill-data strong {
+    color: #134e4a;
+    font-weight: 800;
+}
+
+.period-pill-separator {
+    color: #99f6e4;
+    font-weight: bold;
+}

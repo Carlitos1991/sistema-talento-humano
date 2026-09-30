@@ -1,239 +1,64 @@
-<div class="animate__animated animate__fadeIn">
-    <!-- Encabezado Estilizado -->
-    <div class="institutional-header"
-         style="background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%); border-left: 4px solid #8b5cf6; margin-bottom: 20px;">
-        <div class="institutional-header-content">
-            <span class="level-name"
-                  style="color: #8b5cf6; font-weight: 700; font-size: 0.7rem; text-transform: uppercase;">Planificación Actual</span>
-            <h4 style="color: #4c1d95; font-weight: 800; margin: 5px 0;">
-                {% if current_schedule_assignment %}
-                    <i class="fa-solid fa-clock me-2"></i> {{ current_schedule_assignment.schedule.name }}
-                {% else %}
-                    <i class="fa-solid fa-circle-exclamation me-2"></i> Sin Horario Asignado
-                {% endif %}
-            </h4>
-            <p style="color: #6b21a8; font-size: 0.85rem; margin-bottom: 0;">
-                {% if current_schedule_assignment %}
-                    Vigente desde el <b>{{ current_schedule_assignment.start_date|date:"d/m/Y" }}</b>
-                    {% if current_schedule_assignment.end_date %} hasta el
-                        <b>{{ current_schedule_assignment.end_date|date:"d/m/Y" }}</b>{% endif %}
-                {% else %}
-                    No se ha definido una jornada laboral para este empleado.
-                {% endif %}
-            </p>
-        </div>
-
-        {% if can_edit_person %}
-            <button @click="openScheduleChangeModal({{ person.id }})"
-                    class="btn-institutional-action">
-                <i class="fa-solid fa-calendar-plus me-2"></i> Cambiar Horario
-            </button>
+<!-- PESTAÑA: ROLES DE PAGO -->
+<div class="info-box-styled payments-border">
+    <div class="card-header-flex">
+        <h6 class="section-title mb-0">
+            <i class="fa-solid fa-file-invoice-dollar text-green me-2"></i> HISTORIAL DE ROLES DE PAGO
+        </h6>
+        {% if payment_roles_history and payment_roles_history|length > 0 %}
+            <span class="badge badge-green">{{ payment_roles_history|length }} EMITIDO{{ payment_roles_history|length|pluralize:"S" }}</span>
+        {% else %}
+            <span class="badge badge-gray">SIN REGISTROS</span>
         {% endif %}
     </div>
 
-    <!-- Grid de Horarios -->
-    {% if current_schedule_assignment %}
-        <div class="schedule-container">
-            <div class="schedule-grid">
-                {% with s=current_schedule_assignment.schedule %}
-                    <!-- Lunes -->
-                    <div class="day-card {% if not s.monday %}weekend{% endif %}">
-                        <span class="day-label">Lunes</span>
-                        <div class="time-container">
-                            {% if s.monday %}
-                                <!-- Primera Jornada -->
-                                <div class="time-slot">
-                                    {{ s.morning_start|time:"H:i" }} - {{ s.morning_end|time:"H:i" }}
-                                </div>
-                                <!-- Segunda Jornada (Si existe) -->
-                                {% if s.afternoon_start %}
-                                    <div class="time-slot afternoon">
-                                        {{ s.afternoon_start|time:"H:i" }} - {{ s.afternoon_end|time:"H:i" }}
-                                    </div>
-                                {% endif %}
+    <div class="payments-history-container mt-3">
+        {% if payment_roles_history and payment_roles_history|length > 0 %}
+            <div class="payments-timeline-list">
+                {% for role in payment_roles_history %}
+                    <div class="payment-role-card">
+                        <div class="payment-card-left">
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <span class="payment-period-title">
+                                    <i class="fa-regular fa-calendar-check text-green me-1"></i>
+                                    {{ role.period_month }} {{ role.period_year }}
+                                </span>
+                            </div>
 
-                            {% else %}
-                                <div class="time-slot">LIBRE</div>
-                            {% endif %}
+                            <div class="payment-breakdown-row mt-2">
+                                <span class="badge badge-gray font-monospace">
+                                    <strong>Ingresos:</strong> ${{ role.total_income|floatformat:2 }}
+                                </span>
+                                <span class="badge badge-amber font-monospace">
+                                    <strong>Deducciones:</strong> ${{ role.total_deduction|floatformat:2 }}
+                                </span>
+                            </div>
                         </div>
-                        <span class="time-sub">
-                            {% if s.monday %}
-                                {% if s.afternoon_start %}Jornada Completa{% else %}Jornada Única{% endif %}
-                            {% else %}
-                                Descanso
-                            {% endif %}
-                        </span>
-                    </div>
-                    <!-- Martes -->
-                    <div class="day-card {% if not s.tuesday %}weekend{% endif %}">
-                        <span class="day-label">Martes</span>
-                        <div class="time-container">
-                            {% if s.tuesday %}
-                                <!-- Primera Jornada -->
-                                <div class="time-slot">
-                                    {{ s.morning_start|time:"H:i" }} - {{ s.morning_end|time:"H:i" }}
+
+                        <div class="payment-card-right">
+                            <div class="payment-net-box">
+                                <span class="payment-net-label">Líquido a Cobrar</span>
+                                <div class="payment-net-amount font-monospace text-green">
+                                    ${{ role.net_pay|floatformat:2 }}
                                 </div>
-                                <!-- Segunda Jornada (Si existe) -->
-                                {% if s.afternoon_start %}
-                                    <div class="time-slot afternoon">
-                                        {{ s.afternoon_start|time:"H:i" }} - {{ s.afternoon_end|time:"H:i" }}
-                                    </div>
-                                {% endif %}
-                            {% else %}
-                                <div class="time-slot">LIBRE</div>
+                            </div>
+
+                            {% if role.print_url %}
+                                <a href="{{ role.print_url }}"
+                                   target="_blank"
+                                   class="btn-red-circle flex-shrink-0"
+                                   title="Imprimir Rol de Pago en PDF">
+                                    <i class="fa-solid fa-print"></i>
+                                </a>
                             {% endif %}
                         </div>
-                        <span class="time-sub">
-                            {% if s.tuesday %}
-                                {% if s.afternoon_start %}Jornada Completa{% else %}Jornada Única{% endif %}
-                            {% else %}
-                                Descanso
-                            {% endif %}
-                        </span>
                     </div>
-                    <!-- Miércoles -->
-                    <div class="day-card {% if not s.wednesday %}weekend{% endif %}">
-                        <span class="day-label">Miércoles</span>
-                        <div class="time-container">
-                            {% if s.wednesday %}
-                                <!-- Primera Jornada -->
-                                <div class="time-slot">
-                                    {{ s.morning_start|time:"H:i" }} - {{ s.morning_end|time:"H:i" }}
-                                </div>
-                                <!-- Segunda Jornada (Si existe) -->
-                                {% if s.afternoon_start %}
-                                    <div class="time-slot afternoon">
-                                        {{ s.afternoon_start|time:"H:i" }} - {{ s.afternoon_end|time:"H:i" }}
-                                    </div>
-                                {% endif %}
-                            {% else %}
-                                <div class="time-slot">LIBRE</div>
-                            {% endif %}
-                        </div>
-                        <span class="time-sub">
-                            {% if s.wednesday %}
-                                {% if s.afternoon_start %}Jornada Completa{% else %}Jornada Única{% endif %}
-                            {% else %}
-                                Descanso
-                            {% endif %}
-                        </span>
-                    </div>
-                    <!-- Jueves -->
-                    <div class="day-card {% if not s.thursday %}weekend{% endif %}">
-                        <span class="day-label">Jueves</span>
-                        <div class="time-container">
-                            {% if s.thursday %}
-                                <!-- Primera Jornada -->
-                                <div class="time-slot">
-                                    {{ s.morning_start|time:"H:i" }} - {{ s.morning_end|time:"H:i" }}
-                                </div>
-                                <!-- Segunda Jornada (Si existe) -->
-                                {% if s.afternoon_start %}
-                                    <div class="time-slot afternoon">
-                                        {{ s.afternoon_start|time:"H:i" }} - {{ s.afternoon_end|time:"H:i" }}
-                                    </div>
-                                {% endif %}
-                            {% else %}
-                                <div class="time-slot">LIBRE</div>
-                            {% endif %}
-                        </div>
-                        <span class="time-sub">
-                            {% if s.thursday %}
-                                {% if s.afternoon_start %}Jornada Completa{% else %}Jornada Única{% endif %}
-                            {% else %}
-                                Descanso
-                            {% endif %}
-                        </span>
-                    </div>
-                    <!-- Viernes -->
-                    <div class="day-card {% if not s.friday %}weekend{% endif %}">
-                        <span class="day-label">Viernes</span>
-                        <div class="time-container">
-                            {% if s.friday %}
-                                <!-- Primera Jornada -->
-                                <div class="time-slot">
-                                    {{ s.morning_start|time:"H:i" }} - {{ s.morning_end|time:"H:i" }}
-                                </div>
-                                <!-- Segunda Jornada (Si existe) -->
-                                {% if s.afternoon_start %}
-                                    <div class="time-slot afternoon">
-                                        {{ s.afternoon_start|time:"H:i" }} - {{ s.afternoon_end|time:"H:i" }}
-                                    </div>
-                                {% endif %}
-                            {% else %}
-                                <div class="time-slot">LIBRE</div>
-                            {% endif %}
-                        </div>
-                        <span class="time-sub">
-                            {% if s.friday %}
-                                {% if s.afternoon_start %}Jornada Completa{% else %}Jornada Única{% endif %}
-                            {% else %}
-                                Descanso
-                            {% endif %}
-                        </span>
-                    </div>
-                    <!-- Sábado -->
-                    <div class="day-card {% if not s.saturday %}weekend{% endif %}">
-                        <span class="day-label">Sábado</span>
-                        <div class="time-container">
-                            {% if s.saturday %}
-                                <!-- Primera Jornada -->
-                                <div class="time-slot">
-                                    {{ s.morning_start|time:"H:i" }} - {{ s.morning_end|time:"H:i" }}
-                                </div>
-                                <!-- Segunda Jornada (Si existe) -->
-                                {% if s.afternoon_start %}
-                                    <div class="time-slot afternoon">
-                                        {{ s.afternoon_start|time:"H:i" }} - {{ s.afternoon_end|time:"H:i" }}
-                                    </div>
-                                {% endif %}
-                            {% else %}
-                                <div class="time-slot">LIBRE</div>
-                            {% endif %}
-                        </div>
-                        <span class="time-sub">
-                            {% if s.saturday %}
-                                {% if s.afternoon_start %}Jornada Completa{% else %}Jornada Única{% endif %}
-                            {% else %}
-                                Descanso
-                            {% endif %}
-                        </span>
-                    </div>
-                    <!-- Domingo -->
-                    <div class="day-card {% if not s.sunday %}weekend{% endif %}">
-                        <span class="day-label">Domingo</span>
-                        <div class="time-container">
-                            {% if s.sunday %}
-                                <!-- Primera Jornada -->
-                                <div class="time-slot">
-                                    {{ s.morning_start|time:"H:i" }} - {{ s.morning_end|time:"H:i" }}
-                                </div>
-                                <!-- Segunda Jornada (Si existe) -->
-                                {% if s.afternoon_start %}
-                                    <div class="time-slot afternoon">
-                                        {{ s.afternoon_start|time:"H:i" }} - {{ s.afternoon_end|time:"H:i" }}
-                                    </div>
-                                {% endif %}
-                            {% else %}
-                                <div class="time-slot">LIBRE</div>
-                            {% endif %}
-                        </div>
-                        <span class="time-sub">
-                            {% if s.sunday %}
-                                {% if s.afternoon_start %}Jornada Completa{% else %}Jornada Única{% endif %}
-                            {% else %}
-                                Descanso
-                            {% endif %}
-                        </span>
-                    </div>
-                {% endwith %}
+                {% endfor %}
             </div>
-        </div>
-    {% else %}
-        <!-- Estado Vacío -->
-        <div class="text-center py-5 bg-light rounded-4 border-2 border-dashed">
-            <i class="fa-solid fa-calendar-xmark fa-4x text-muted mb-3"></i>
-            <h5 class="text-muted">No hay información de horario disponible</h5>
-        </div>
-    {% endif %}
+        {% else %}
+            <div class="empty-state-notice py-4">
+                <i class="fa-solid fa-file-invoice-dollar fa-2x mb-2 text-secondary opacity-50"></i>
+                <p class="mb-0 text-muted">No existen roles de pago registrados en el expediente.</p>
+            </div>
+        {% endif %}
+    </div>
 </div>

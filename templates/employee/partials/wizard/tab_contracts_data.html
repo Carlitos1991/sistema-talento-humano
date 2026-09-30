@@ -1,101 +1,159 @@
-<!-- CONTRATO ACTUAL -->
-<div class="grid-general">
-    <div class="card-large brown-border">
-        <h6 class="section-title">
-            <i class="fa-solid fa-file-contract"></i> Contrato Vigente
+<!-- 1. CONTRATO VIGENTE -->
+<div class="info-box-styled history-border">
+    <div class="card-header-flex">
+        <h6 class="section-title mb-0">
+            <i class="fa-solid fa-file-contract text-brown me-2"></i> CONTRATO VIGENTE
         </h6>
         {% if current_contract %}
-            <div class="budget-history-item">
-                <div class="budget-history-left">
-                    <div class="budget-history-title">
-                        <button type="button"
-                                class="contract-title-btn"
-                                onclick="openAjaxModal('{% url 'employee:contract_detail_modal' current_contract.id %}')">
-                            {{ current_contract.position_name }}
-                        </button>
-                    </div>
-                    <div class="budget-history-sub">
-                        Tipo: {{ current_contract.contract_type_name|default:'—' }} &nbsp;|&nbsp;
-                        Unidad: {{ current_contract.administrative_unit|default:'—' }}
-                    </div>
-                </div>
-                <div class="budget-history-right">
-                    <div class="d-flex align-items-center gap-2">
-                        {% if current_contract.signed_document_url %}
-                            <a href="{{ current_contract.signed_document_url }}"
-                               class="btn-icon btn-action-yellow"
-                               target="_blank"
-                               download
-                               title="Descargar contrato firmado">
-                                <i class="fa-solid fa-download"></i>
-                            </a>
-                        {% endif %}
-                    </div>
-                    <div class="budget-history-cat">
-                        Período: {{ current_contract.start_date|default:'—' }}{% if current_contract.end_date %} al
-                        {{ current_contract.end_date }}{% endif %}
-                    </div>
-                </div>
-            </div>
+            <span class="badge badge-green">ACTIVO</span>
         {% else %}
-            <div class="text-center py-4 opacity-60">
-                <i class="fa-solid fa-file-circle-xmark fa-2x mb-2 text-secondary"></i>
-                <p class="text-muted mb-0 small">Sin contrato vigente registrado.</p>
-            </div>
+            <span class="badge badge-gray">SIN CONTRATO VIGENTE</span>
         {% endif %}
     </div>
-</div>
 
-<!-- HISTORIAL DE CONTRATOS -->
-<div class="grid-general mt-3">
-    <div class="card-large brown-border col-span-full">
-        <h6 class="section-title">
-            <i class="fa-solid fa-clock-rotate-left"></i> Historial de Contratos
-        </h6>
+    {% if current_contract %}
+        <div class="contract-current-layout mt-3">
+            <div class="contract-main-data">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <button type="button"
+                            class="contract-title-link"
+                            onclick="openAjaxModal('{% url 'employee:contract_detail_modal' current_contract.id %}')"
+                            title="Ver detalle del contrato">
+                        {{ current_contract.position_name }}
+                    </button>
+                </div>
 
-        {% if contract_history and contract_history|length > 0 %}
-            <div class="scrollable-history-box">
-                <div class="budget-history-list">
-                    {% for c in contract_history %}
-                        <div class="budget-history-item">
-                            <div class="budget-history-left">
-                                <div class="budget-history-title">
-                                    <button type="button"
-                                            class="contract-title-btn"
-                                            onclick="openAjaxModal('{% url 'employee:contract_detail_modal' c.id %}')">
-                                        {{ c.position_name }}
-                                    </button>
-                                </div>
-                                <div class="budget-history-sub">
-                                    Tipo: {{ c.contract_type_name|default:'—' }} &nbsp;|&nbsp;
-                                    Unidad: {{ c.administrative_unit|default:'—' }}
-                                </div>
-                            </div>
-                            <div class="budget-history-right">
-                                <div class="d-flex align-items-center gap-2">
-                                    <div class="budget-history-cat">
-                                        Período:
-                                        {{ c.start_date|default:'—' }}{% if c.end_date %} al {{ c.end_date }}{% endif %}
-                                    </div>
-                                    {% if c.signed_document_url %}
-                                        <a href="{{ c.signed_document_url }}"
-                                           class="btn-icon btn-action-yellow"
-                                           target="_blank"
-                                           download
-                                           title="Descargar contrato firmado">
-                                            <i class="fa-solid fa-download"></i>
-                                        </a>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                    {% endfor %}
+                <div class="contract-tags-group mt-2">
+                    <span class="badge badge-blue">
+                        <i class="fa-solid fa-file-signature me-1"></i> {{ current_contract.contract_type_name|default:"Tipo no especificado" }}
+                    </span>
+                    <span class="badge badge-gray">
+                        <i class="fa-solid fa-building me-1"></i> {{ current_contract.administrative_unit|default:"Sin unidad asignada" }}
+                    </span>
+                    {% if current_contract.document_number %}
+                        <span class="badge badge-gray font-monospace">
+                            N° {{ current_contract.document_number }}
+                        </span>
+                    {% endif %}
+                    {% if current_contract.status_name %}
+                        <span class="badge badge-green">
+                            {{ current_contract.status_name }}
+                        </span>
+                    {% endif %}
                 </div>
             </div>
+
+            <div class="contract-side-actions">
+                <div class="contract-dates-box">
+                    <span class="contract-dates-label">Vigencia del Contrato</span>
+                    <div class="contract-dates-range">
+                        <i class="fa-regular fa-calendar-days text-muted me-1"></i>
+                        <span>{{ current_contract.start_date|default:"—" }}</span>
+                        <span class="dates-separator">→</span>
+                        <span>
+                            {% if current_contract.end_date %}
+                                {{ current_contract.end_date }}
+                            {% else %}
+                                <strong class="text-brown">Indefinido</strong>
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+
+                {% if current_contract.signed_document_url %}
+                    <a href="{{ current_contract.signed_document_url }}"
+                       class="btn-dark-blue-rectangle"
+                       target="_blank"
+                       download
+                       title="Descargar documento firmado">
+                        <i class="fa-solid fa-file-pdf me-1"></i> DESCARGAR
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    {% else %}
+        <div class="empty-state-notice py-4">
+            <i class="fa-solid fa-file-circle-xmark fa-2x mb-2 text-secondary opacity-50"></i>
+            <p class="mb-0 text-muted">No se registra un contrato laboral vigente para este servidor.</p>
+        </div>
+    {% endif %}
+</div>
+
+<!-- 2. HISTORIAL DE CONTRATOS ANTERIORES -->
+<div class="info-box-styled history-border mt-3">
+    <h6 class="section-title">
+        <i class="fa-solid fa-clock-rotate-left text-brown me-2"></i> HISTORIAL DE CONTRATOS Y PERÍODOS
+    </h6>
+
+    <div class="contract-history-container">
+        {% if contract_history and contract_history|length > 0 %}
+            <div class="contract-timeline-list">
+                {% for c in contract_history %}
+                    <div class="contract-history-card">
+                        <!-- Columna Izquierda: Puesto, Número y Etiquetas -->
+                        <div class="history-card-left">
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <button type="button"
+                                        class="contract-title-link"
+                                        onclick="openAjaxModal('{% url 'employee:contract_detail_modal' c.id %}')"
+                                        title="Ver detalle del contrato">
+                                    {{ c.position_name }}
+                                </button>
+                            </div>
+
+                            <div class="history-meta-row mt-2">
+                                <span class="badge badge-blue">
+                                    {{ c.contract_type_name|default:"Contrato" }}
+                                </span>
+                                <span class="badge badge-gray">
+                                    {{ c.administrative_unit|default:"Sin Unidad" }}
+                                </span>
+                                {% if c.status_name %}
+                                    <span class="badge badge-gray">{{ c.status_name }}</span>
+                                {% endif %}
+                                {% if c.document_number %}
+                                    <span class="badge badge-gray font-monospace">
+                                        N° {{ c.document_number }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Columna Derecha: Cuadrito de Vigencia + Botón Descarga -->
+                        <div class="contract-side-actions">
+                            <div class="contract-dates-box">
+                                <span class="contract-dates-label">Período de Contrato</span>
+                                <div class="contract-dates-range">
+                                    <i class="fa-regular fa-calendar-days text-muted me-1"></i>
+                                    <span>{{ c.start_date|default:"—" }}</span>
+                                    <span class="dates-separator">→</span>
+                                    <span>
+                                        {% if c.end_date %}
+                                            {{ c.end_date }}
+                                        {% else %}
+                                            <strong class="text-brown">Actualidad</strong>
+                                        {% endif %}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {% if c.signed_document_url %}
+                                <a href="{{ c.signed_document_url }}"
+                                   class="btn-blue-circle flex-shrink-0"
+                                   target="_blank"
+                                   download
+                                   title="Descargar contrato firmado en PDF">
+                                    <i class="fa-solid fa-download"></i>
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
         {% else %}
-            <div class="text-center py-4 opacity-50">
-                <i class="fa-solid fa-folder-open fa-2x mb-2 text-secondary"></i>
-                <p class="text-muted mb-0 small">No registra historial de contratos anteriores.</p>
+            <div class="empty-state-notice py-4">
+                <i class="fa-solid fa-folder-open fa-2x mb-2 text-secondary opacity-50"></i>
+                <p class="mb-0 text-muted">No existen contratos o períodos laborales registrados anteriormente.</p>
             </div>
         {% endif %}
     </div>

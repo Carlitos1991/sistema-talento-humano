@@ -1,43 +1,45 @@
+<!-- PESTAÑA: TELETRABAJO -->
 <div class="tab-pane-telework" data-person-id="{{ person.id }}">
 
-    <!-- BANNER DE AVISO (PERFIL DE OTRO FUNCIONARIO) -->
+    <!-- BANNER DE AVISO (VISTA PARA TERCEROS) -->
     <div id="teleworkReadOnlyAlert"
-         class="alert-telework-readonly {% if request.user == person.user %}hidden{% endif %}"
-         style="{% if request.user == person.user %}display: none;{% endif %}">
-        <i class="fa-solid fa-circle-info"></i>
-        <span>Usted está visualizando el módulo de teletrabajo de otro empleado. Las opciones de marcación están deshabilitadas.</span>
+         class="alert-telework-readonly {% if request.user == person.user %}hidden{% endif %}">
+        <i class="fa-solid fa-circle-info me-2"></i>
+        <span>Está visualizando el módulo de teletrabajo de otro empleado. Las opciones de marcación interactiva se encuentran desactivadas.</span>
     </div>
 
-    <div class="telework-dashboard-grid">
+    <div class="telework-dashboard-grid mt-2">
 
         <!-- PANEL 1: CONTROL DE ASISTENCIA -->
         <div class="telework-panel">
-            <h5 class="telework-panel-title-center blue">
-                <i class="fa-solid fa-fingerprint"></i> Control de Asistencia
-            </h5>
-            <hr class="telework-divider">
+            <div class="telework-panel-header-centered">
+                <h5 class="telework-panel-title-centered">
+                    <i class="fa-solid fa-fingerprint text-blue me-1"></i> Control de Asistencia
+                </h5>
 
-            <!-- Botones de Marcación (Ocultos por defecto si no es perfil propio) -->
-            <div id="teleworkAttendanceGroup"
-                 class="telework-center-actions"
-                 style="{% if request.user != person.user %}display: none;{% endif %}">
-                <button type="button"
-                        id="btnPunchIncome"
-                        class="btn-telework-square green"
-                        onclick="markTeleworkAttendance('INCOME', '{{ person.id }}')">
-                    <i class="fa-solid fa-plus"></i>
-                    <span>Entrada</span>
-                </button>
-                <button type="button"
-                        id="btnPunchExit"
-                        class="btn-telework-square red"
-                        onclick="markTeleworkAttendance('EXIT', '{{ person.id }}')">
-                    <i class="fa-solid fa-right-from-bracket"></i>
-                    <span>Salida</span>
-                </button>
+                <!-- Botones de Marcación (Disponibles solo si es el propio perfil) -->
+                <div id="teleworkAttendanceGroup"
+                     class="attendance-btn-group-centered {% if request.user != person.user %}hidden{% endif %}">
+                    <button type="button"
+                            id="btnPunchIncome"
+                            class="btn-attendance income"
+                            onclick="markTeleworkAttendance('INCOME', '{{ person.id }}')"
+                            title="Marcar Ingreso de Teletrabajo">
+                        <i class="fa-solid fa-right-to-bracket"></i>
+                        <span>Entrada</span>
+                    </button>
+                    <button type="button"
+                            id="btnPunchExit"
+                            class="btn-attendance exit"
+                            onclick="markTeleworkAttendance('EXIT', '{{ person.id }}')"
+                            title="Marcar Salida de Teletrabajo">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                        <span>Salida</span>
+                    </button>
+                </div>
             </div>
 
-            <!-- Listado de Marcaciones -->
+            <!-- Listado de Marcaciones del Día -->
             <div class="telework-scroll-area" id="teleworkPunchesContainer">
                 <div class="text-center py-4 text-muted small">
                     <i class="fa-solid fa-spinner fa-spin me-1"></i> Cargando marcaciones...
@@ -47,22 +49,27 @@
 
         <!-- PANEL 2: REPORTE DE ACTIVIDADES -->
         <div class="telework-panel">
-            <h5 class="telework-panel-title-center green">
-                <i class="fa-solid fa-list-check"></i> Reporte de Actividades
-            </h5>
-            <hr class="telework-divider">
+            <div class="telework-panel-header-centered">
+                <h5 class="telework-panel-title-centered">
+                    <i class="fa-solid fa-list-check text-green me-1"></i> Reporte de Actividades
+                </h5>
 
-            <!-- Acción Central / Vista Solo Lectura -->
-            <div id="teleworkActivityActionContainer" class="telework-center-actions">
-                {% if request.user != person.user %}
-                    <div class="telework-readonly-indicator">
-                        <i class="fa-solid fa-eye"></i>
-                        <span>Vista de solo lectura</span>
-                    </div>
-                {% endif %}
+                <div id="teleworkActivityActionContainer" class="attendance-btn-group-centered">
+                    {% if request.user != person.user %}
+                        <span class="badge badge-gray font-monospace">
+                            <i class="fa-solid fa-eye me-1"></i> MODO LECTURA
+                        </span>
+                    {% else %}
+                        <button type="button"
+                                class="btn-dark-blue-rectangle"
+                                onclick="openAddTeleworkActivityModal('{{ person.id }}')">
+                            <i class="fa-solid fa-plus me-1"></i> AGREGAR ACTIVIDAD
+                        </button>
+                    {% endif %}
+                </div>
             </div>
 
-            <!-- Listado de Actividades -->
+            <!-- Listado de Actividades Registradas -->
             <div class="telework-scroll-area" id="teleworkActivitiesContainer">
                 <div class="text-center py-4 text-muted small">
                     <i class="fa-solid fa-spinner fa-spin me-1"></i> Cargando actividades...

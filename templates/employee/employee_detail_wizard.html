@@ -13,8 +13,9 @@
 {% block content %}
     <div id="employeeWizardContainer"
          data-person-id="{{ person.id }}"
+         data-tab-visibilities='{{ tab_visibilities|safe }}'
          data-can-edit-person="{{ can_edit_person|yesno:'true,false' }}">
-
+        <script id="tab-visibilities-data" type="application/json">{{ tab_visibilities|safe }}</script>
         <!-- 1. BANNER INSTITUCIONAL -->
         <div class="banner-employee-detail">
             <div class="banner-info-employee-detail">
@@ -62,9 +63,7 @@
                         <i class="fa-solid fa-user"></i>
                     </div>
                     <span class="employee-detail-button-label">Datos Personales</span>
-                    <span class="mini-check visible">
-                        <i class="fa-solid fa-check"></i>
-                    </span>
+                    <span class="mini-check" data-tab-id="personal" title="Habilitar/Deshabilitar pestaña"></span>
                 </div>
 
                 <div class="employee-detail-button employee-detail-button-curriculum" data-tab-target="curriculum">
@@ -72,10 +71,7 @@
                         <i class="fa-solid fa-file-invoice"></i>
                     </div>
                     <span class="employee-detail-button-label">Currículum Vitae</span>
-                    <span class="mini-check {% if curriculum_titles_count or curriculum_courses_count %}visible{% endif %}">
-                        {% if curriculum_titles_count or curriculum_courses_count %}
-                            <i class="fa-solid fa-check"></i>{% endif %}
-                    </span>
+                    <span class="mini-check" data-tab-id="curriculum" title="Habilitar/Deshabilitar pestaña"></span>
                 </div>
 
                 <div class="employee-detail-button employee-detail-button-institutional"
@@ -84,9 +80,7 @@
                         <i class="fa-solid fa-building"></i>
                     </div>
                     <span class="employee-detail-button-label">Datos Inst.</span>
-                    <span class="mini-check {% if employee_area_name %}visible{% endif %}">
-                        {% if employee_area_name %}<i class="fa-solid fa-check"></i>{% endif %}
-                    </span>
+                    <span class="mini-check" data-tab-id="institutional" title="Habilitar/Deshabilitar pestaña"></span>
                 </div>
 
                 <div class="employee-detail-button employee-detail-button-economic" data-tab-target="economic">
@@ -94,9 +88,7 @@
                         <i class="fa-solid fa-money-bill-1-wave"></i>
                     </div>
                     <span class="employee-detail-button-label">Datos Económicos</span>
-                    <span class="mini-check {% if bank_account or payroll_info %}visible{% endif %}">
-                        {% if bank_account or payroll_info %}<i class="fa-solid fa-check"></i>{% endif %}
-                    </span>
+                    <span class="mini-check" data-tab-id="economic" title="Habilitar/Deshabilitar pestaña"></span>
                 </div>
 
                 <div class="employee-detail-button employee-detail-button-budget" data-tab-target="budget">
@@ -104,7 +96,7 @@
                         <i class="fa-solid fa-address-book"></i>
                     </div>
                     <span class="employee-detail-button-label">Partida Presup.</span>
-                    <span class="mini-check"></span>
+                    <span class="mini-check" data-tab-id="budget" title="Habilitar/Deshabilitar pestaña"></span>
                 </div>
 
                 <div class="employee-detail-button employee-detail-button-history" data-tab-target="contracts">
@@ -112,7 +104,7 @@
                         <i class="fa-solid fa-clock-rotate-left"></i>
                     </div>
                     <span class="employee-detail-button-label">Historia Lab.</span>
-                    <span class="mini-check"></span>
+                    <span class="mini-check" data-tab-id="contracts" title="Habilitar/Deshabilitar pestaña"></span>
                 </div>
 
                 <div class="employee-detail-button employee-detail-button-permissions" data-tab-target="permissions">
@@ -120,7 +112,7 @@
                         <i class="fa-solid fa-calendar-check"></i>
                     </div>
                     <span class="employee-detail-button-label">Permisos</span>
-                    <span class="mini-check"></span>
+                    <span class="mini-check" data-tab-id="permissions" title="Habilitar/Deshabilitar pestaña"></span>
                 </div>
 
                 <div class="employee-detail-button employee-detail-button-actions" data-tab-target="actions">
@@ -128,7 +120,7 @@
                         <i class="fa-solid fa-file-invoice"></i>
                     </div>
                     <span class="employee-detail-button-label">Acciones Pers.</span>
-                    <span class="mini-check"></span>
+                    <span class="mini-check" data-tab-id="actions" title="Habilitar/Deshabilitar pestaña"></span>
                 </div>
 
                 <div class="employee-detail-button employee-detail-button-sanctions" data-tab-target="sanctions">
@@ -136,7 +128,7 @@
                         <i class="fa-solid fa-gavel"></i>
                     </div>
                     <span class="employee-detail-button-label">Sanciones</span>
-                    <span class="mini-check"></span>
+                    <span class="mini-check" data-tab-id="sanctions" title="Habilitar/Deshabilitar pestaña"></span>
                 </div>
 
                 <div class="employee-detail-button employee-detail-button-vacations" data-tab-target="vacations">
@@ -144,7 +136,7 @@
                         <i class="fa-solid fa-plane"></i>
                     </div>
                     <span class="employee-detail-button-label">Vacaciones</span>
-                    <span class="mini-check"></span>
+                    <span class="mini-check" data-tab-id="vacations" title="Habilitar/Deshabilitar pestaña"></span>
                 </div>
 
                 <div class="employee-detail-button employee-detail-button-payments" data-tab-target="payments">
@@ -152,7 +144,7 @@
                         <i class="fa-solid fa-money-bill"></i>
                     </div>
                     <span class="employee-detail-button-label">Roles de pago</span>
-                    <span class="mini-check"></span>
+                    <span class="mini-check" data-tab-id="payments" title="Habilitar/Deshabilitar pestaña"></span>
                 </div>
 
                 <div class="employee-detail-button employee-detail-button-schedule" data-tab-target="schedule">
@@ -160,7 +152,7 @@
                         <i class="fa-solid fa-clock"></i>
                     </div>
                     <span class="employee-detail-button-label">Horario</span>
-                    <span class="mini-check"></span>
+                    <span class="mini-check" data-tab-id="schedule" title="Habilitar/Deshabilitar pestaña"></span>
                 </div>
 
                 <div class="employee-detail-button employee-detail-button-telework" data-tab-target="telework">
@@ -168,7 +160,7 @@
                         <i class="fa-solid fa-house-laptop"></i>
                     </div>
                     <span class="employee-detail-button-label">Teletrabajo</span>
-                    <span class="mini-check"></span>
+                    <span class="mini-check" data-tab-id="telework" title="Habilitar/Deshabilitar pestaña"></span>
                 </div>
             </div>
         </div>

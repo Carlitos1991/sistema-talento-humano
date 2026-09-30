@@ -1,63 +1,72 @@
-<!-- Pestaña: Acciones de Personal -->
-<div class="content-table mt-3" data-action-history-table>
-    <div class="table-controls"
-         style="display:flex;justify-content:center;align-items:flex-end;gap:8px;flex-wrap:nowrap; margin-bottom: 15px;">
-        <div class="form-group mb-0" style="min-width:320px;">
-            <label class="form-label" style="font-size:0.72rem;">Buscar Acción</label>
-            <input type="text" class="input-field" id="action-search-input" placeholder="Buscar por número o tipo..."
-                   style="height:34px;padding:0.35rem 0.55rem;font-size:0.82rem;">
+<!-- PESTAÑA: ACCIONES DE PERSONAL -->
+<div class="info-box-styled actions-border" data-action-history-table>
+    <div class="card-header-flex">
+        <h6 class="section-title mb-0">
+            <i class="fa-solid fa-file-signature text-purple me-2"></i> HISTORIAL DE ACCIONES DE PERSONAL
+        </h6>
+    </div>
+
+    <!-- Barra de Búsqueda -->
+    <div class="wizard-filter-toolbar mt-3">
+        <div class="filter-field-group flex-grow-1">
+            <label class="filter-label">Buscar Acción</label>
+            <input type="text" class="form-control filter-input-control" id="action-search-input"
+                   placeholder="Buscar por número de acción o tipo..." autocomplete="off">
         </div>
-        <div class="form-group mb-0" style="min-width:90px;">
-            <button type="button" class="btn btn-cancel" id="action-clear-btn"
-                    style="height:34px;padding:0.35rem 0.7rem;font-size:0.76rem;">
-                <i class="fa-solid fa-eraser"></i> Limpiar
+        <div class="filter-btn-group">
+            <button type="button" class="btn-dark-blue-rectangle-outline" id="action-clear-btn"
+                    title="Limpiar búsqueda">
+                <i class="fa-solid fa-eraser me-1"></i> LIMPIAR
             </button>
         </div>
     </div>
 
-    <div class="mt-2 mb-3">
-        <div class="text-muted small">
-            <i class="fa-solid fa-clipboard-list"></i>
-            Historial de Acciones de Personal
-        </div>
+    <div class="meta-section-info mt-3 mb-2">
+        <span class="text-muted small">
+            <i class="fa-solid fa-clipboard-list me-1"></i> Resoluciones y Movimientos Administrativos
+        </span>
     </div>
 
+    <!-- Tabla con data-external-pagination="true" -->
     <div class="table-container">
-        <table class="table" id="actions-personal-table">
+        <table class="managed-table"
+               id="actions-personal-table"
+               data-external-pagination="true"
+               data-external-search="true">
             <thead>
             <tr>
-                <th class="width-5">Nº</th>
-                <th>Número</th>
+                <th class="width-5 text-center">Nº</th>
+                <th class="width-15">Número</th>
                 <th class="width-25">Tipo de Acción</th>
-                <th>Fecha Emisión</th>
-                <th>Vigencia</th>
-                <th class="actions no-sort">Acciones</th>
+                <th class="width-15 text-center">Fecha Emisión</th>
+                <th class="width-15 text-center">Vigencia</th>
+                <th class="actions width-12 no-sort text-center">Acciones</th>
             </tr>
             </thead>
             <tbody data-action-tbody>
             {% if actions_list %}
                 {% for a in actions_list %}
                     <tr data-action-row>
-                        <td>{{ forloop.counter }}</td>
-                        <td>{{ a.number }}</td>
+                        <td class="text-center font-monospace">{{ forloop.counter }}</td>
+                        <td class="font-monospace fw-bold text-dark">{{ a.number }}</td>
                         <td>
                             <span class="badge badge-blue">
                                 {{ a.action_name }}
                             </span>
                         </td>
-                        <td>{{ a.issued_date|date:"d/m/Y" }}</td>
-                        <td>{{ a.effective_date|date:"d/m/Y" }}</td>
-                        <td class="actions">
-                            <div class="actions-wrapper">
-                                <!-- USAMOS data-url QUE YA TRAE LA URL CORRECTA DE DJANGO -->
+                        <td class="text-center font-monospace">{{ a.issued_date|date:"d/m/Y"|default:"—" }}</td>
+                        <td class="text-center font-monospace">{{ a.effective_date|date:"d/m/Y"|default:"—" }}</td>
+                        <td class="actions text-center">
+                            <div class="actions-wrapper justify-content-center">
                                 <button type="button"
                                         class="btn-blue-circle js-view-action-detail"
                                         data-url="{% url 'personnel_actions:action_detail' a.id %}"
-                                        title="Ver Detalle">
+                                        title="Ver Detalle de la Acción">
                                     <i class="fa-solid fa-eye"></i>
                                 </button>
                                 {% if a.document_url %}
-                                    <a href="{{ a.document_url }}" target="_blank" class="btn-third" title="PDF">
+                                    <a href="{{ a.document_url }}" target="_blank" class="btn-red-circle"
+                                       title="Descargar documento PDF">
                                         <i class="fa-solid fa-file-pdf"></i>
                                     </a>
                                 {% endif %}
@@ -67,9 +76,9 @@
                 {% endfor %}
             {% else %}
                 <tr data-action-empty-row>
-                    <td colspan="6" class="text-center py-5">
-                        <i class="fas fa-inbox" style="font-size: 2.5rem; color: #cbd5e1;"></i>
-                        <p class="text-muted mt-3">No hay acciones registradas.</p>
+                    <td colspan="6" class="text-center py-5 text-muted">
+                        <i class="fas fa-inbox fa-2x mb-2 opacity-50"></i>
+                        <p class="mb-0">No hay acciones de personal registradas en este expediente.</p>
                     </td>
                 </tr>
             {% endif %}
@@ -77,18 +86,26 @@
         </table>
     </div>
 
-    <!-- Paginador idéntico al de Permisos -->
+    <!-- Paginador Único -->
     <div class="pagination-container" data-action-pagination>
-        <div class="pagination-info" data-action-page-info>Mostrando 0-0 de 0</div>
+        <span class="pagination-info" data-action-page-info>Mostrando 0-0 de 0</span>
         <div class="pagination-controls">
-            <button type="button" class="page-btn" data-action-first><i class="fas fa-angle-double-left"></i></button>
-            <button type="button" class="page-btn" data-action-prev><i class="fas fa-angle-left"></i></button>
+            <button type="button" class="page-btn" data-action-first title="Primera">
+                <i class="fas fa-angle-double-left"></i>
+            </button>
+            <button type="button" class="page-btn" data-action-prev title="Anterior">
+                <i class="fas fa-angle-left"></i>
+            </button>
             <div class="page-input-wrapper">
                 <input type="number" class="page-input" min="1" value="1" data-action-page-input>
                 <span class="total-pages-badge" data-action-total-pages>de 1</span>
             </div>
-            <button type="button" class="page-btn" data-action-next><i class="fas fa-angle-right"></i></button>
-            <button type="button" class="page-btn" data-action-last><i class="fas fa-angle-double-right"></i></button>
+            <button type="button" class="page-btn" data-action-next title="Siguiente">
+                <i class="fas fa-angle-right"></i>
+            </button>
+            <button type="button" class="page-btn" data-action-last title="Última">
+                <i class="fas fa-angle-double-right"></i>
+            </button>
         </div>
     </div>
 </div>

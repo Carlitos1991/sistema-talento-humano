@@ -48,6 +48,22 @@ from .models import (
 User = get_user_model()
 logger = logging.getLogger(__name__)
 
+TAB_SECTION_MAPPING = {
+    'personal': 'Datos Personales',
+    'curriculum': 'Currículum Vitae',
+    'institutional': 'Datos Institucionales',
+    'economic': 'Datos Económicos',
+    'budget': 'Partida Presupuestaria',
+    'contracts': 'Historia Laboral y Contratos',
+    'permissions': 'Permisos Institucionales',
+    'actions': 'Acciones de Personal',
+    'sanctions': 'Sanciones Disciplinarias',
+    'vacations': 'Vacaciones y Liquidaciones',
+    'payments': 'Roles de Pago',
+    'schedule': 'Horario Laboral',
+    'telework': 'Teletrabajo'
+}
+
 
 def _safe_related(instance, attr_name, default=None):
     if instance is None:
@@ -157,33 +173,43 @@ def log_tab_audit_api(request, person_id):
     except Exception:
         data = request.POST
 
+    tab_id = data.get('tab_id', '').strip().lower()
     tab_name = data.get('tab_name', '').strip()
 
-    # Si no viene un nombre de pestaña válido, no registrar nada
-    if not tab_name or tab_name.lower() == 'sección':
-        return JsonResponse({'success': False, 'message': 'Pestaña no especificada.'}, status=400)
+    # Si viene tab_id conocido, usar su nombre formal; de lo contrario el enviado
+    human_name = TAB_SECTION_MAPPING.get(tab_id) or tab_name or 'Datos Personales'
 
-    detail_text = f'Revisó {tab_name}'
+    # Detalle que se reflejará en la columna "MOVIMIENTO / DETALLE"
+    detail_text = f"Revisó pestaña {human_name}"
 
-    # PREVENCIÓN DE DUPLICADOS: Verificar si se acaba de registrar exactamente lo mismo hace menos de 2 segundos
+    # PREVENCIÓN DE DUPLICADOS: Si se acaba de registrar en menos de 2 segundos, omitir
     last_log = PersonAuditLog.objects.filter(
         person=person,
         user=request.user
     ).order_by('-created_at', '-id').first()
 
-    if last_log and last_log.action_detail == detail_text:
-        time_diff = (timezone.now() - last_log.created_at).total_seconds()
-        if time_diff < 2:
-            return JsonResponse({'success': True, 'message': 'Registro omitido por duplicidad.'})
+    if last_log:
+        last_detail = (
+                getattr(last_log, 'action_detail', None) or
+                getattr(last_log, 'detail', None) or
+                getattr(last_log, 'description', None) or
+                getattr(last_log, 'action', '')
+        )
+        if last_detail == detail_text:
+            time_diff = (timezone.now() - last_log.created_at).total_seconds()
+            if time_diff < 2:
+                return JsonResponse({'success': True, 'message': 'Registro omitido por duplicidad.'})
 
-    tab_id = data.get('tab_id', 'general')
-    section = PERSON_AUDIT_SECTIONS.get(tab_id, tab_id) if isinstance(PERSON_AUDIT_SECTIONS, dict) else tab_id
+    # Sección interna del sistema (debe coincidir con las secciones del modelo de auditoría)
+    section_code = tab_id if tab_id else 'personal'
+    if isinstance(PERSON_AUDIT_SECTIONS, dict):
+        section_code = PERSON_AUDIT_SECTIONS.get(tab_id, section_code)
 
     log_person_audit(
         request,
         person,
         PersonAuditLog.Action.VIEW,
-        section,
+        section_code,
         detail_text
     )
     return JsonResponse({'success': True})
@@ -301,18 +327,38 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
             ).values_list('tab_id', 'is_visible')
 
         visibility_dict = {v[0]: v[1] for v in visibilities}
+        # Visibilidad de pestañas (Corregido: target_user antes de la consulta)
         all_tabs = [
-            'personal', 'curriculum', 'economic', 'institutional',
-            'budget', 'contracts', 'actions', 'permissions',
-            'payments', 'sanctions', 'vacations', 'schedule', 'telework'
+            'personal', 'curriculum', 'institutional', 'economic',
+            'budget', 'contracts', 'permissions', 'actions',
+            'sanctions', 'vacations', 'payments', 'schedule', 'telework'
         ]
+        default_enabled_tabs = ['personal', 'curriculum', 'economic', 'institutional']
 
+        # 1. Obtener el usuario asociado a la persona (por relación directa o cédula)
+        target_user = getattr(self.object, 'user', None)
+        if not target_user and self.object.document_number:
+            target_user = User.objects.filter(username=self.object.document_number).first()
+            if target_user and not self.object.user:
+                # Enlazar permanentemente para futuras consultas
+                self.object.user = target_user
+                self.object.save(update_fields=['user'])
+
+        # 2. Consultar visibilidades guardadas
+        visibility_dict = {}
+        if target_user:
+            visibilities = EmployeeProfileVisibility.objects.filter(
+                user=target_user
+            ).values_list('tab_id', 'is_visible')
+            visibility_dict = {v[0]: v[1] for v in visibilities}
+
+        # 3. Construir diccionario final booleano
         final_visibility = {}
         for tab_id in all_tabs:
             if tab_id in visibility_dict:
-                final_visibility[tab_id] = str(visibility_dict[tab_id]).lower()
+                final_visibility[tab_id] = bool(visibility_dict[tab_id])
             else:
-                final_visibility[tab_id] = str(tab_id in default_enabled_tabs).lower()
+                final_visibility[tab_id] = (tab_id in default_enabled_tabs)
 
         context['tab_visibilities'] = json.dumps(final_visibility)
         context['can_edit_person'] = self.request.user.has_perm('person.change_person')
@@ -329,44 +375,129 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
         # Partida presupuestaria
         try:
             if employee:
+                # 1. Partida Actual
                 current = BudgetLine.objects.filter(current_employee=employee).select_related('position_item',
                                                                                               'category_item').first()
-                current_assignment = BudgetAssignmentHistory.objects.filter(
-                    employee=employee,
-                    budget_line=current,
-                    unassignment_date__isnull=True
-                ).order_by('-assignment_date', '-id').first() if current else None
+
+                start_date_val = None
+                if current:
+                    # Buscar en los campos más comunes de BudgetLine
+                    start_date_val = getattr(current, 'start_date', None) or getattr(current, 'created_at', None)
 
                 context['current_partida'] = {
-                    'code': current.number_individual,
-                    'budget': current.code,
-                    'name': (current.position_item.name if current.position_item else '') or str(current),
-                    'remuneration': str(current.remuneration) if current.remuneration is not None else '—',
-                    'category': (current.category_item.name if getattr(current, 'category_item', None) else ''),
-                    'start_date': current_assignment.assignment_date if current_assignment and getattr(
-                        current_assignment, 'assignment_date', None) else getattr(current, 'assignment_date', None),
+                    'code': current.number_individual if current else '',
+                    'budget': current.code if current else '',
+                    'name': (current.position_item.name if (current and current.position_item) else '') or str(
+                        current or ''),
+                    'remuneration': str(current.remuneration) if (
+                            current and current.remuneration is not None) else '—',
+                    'category': (
+                        current.category_item.name if (current and getattr(current, 'category_item', None)) else ''),
+                    'start_date': start_date_val,
                 } if current else None
 
+                # 2. Historial de Partidas
                 assignments = BudgetAssignmentHistory.objects.filter(employee=employee).select_related('budget_line',
-                                                                                                       'budget_line__position_item').order_by(
-                    '-assignment_date', '-id')
-                context['partida_history'] = [{
-                    'partida_code': a.budget_line.number_individual or a.budget_line.code,
-                    'position_name': (a.budget_line.position_item.name if a.budget_line.position_item else ''),
-                    'remuneration': str(a.budget_line.remuneration),
-                    'partida_name': str(a.budget_line),
-                    'code': a.budget_line.code,
-                    'category': getattr(getattr(a.budget_line, 'category_item', None), 'name', ''),
-                    'start_date': getattr(a, 'assignment_date', None) or getattr(a, 'start_date', None),
-                    'end_date': getattr(a, 'unassignment_date', None) or getattr(a, 'end_date', None),
-                } for a in assignments]
+                                                                                                       'budget_line__position_item')
+
+                history_list = []
+                for a in assignments:
+                    b_line = a.budget_line
+                    if not b_line:
+                        continue
+
+                    # Inspeccionar dinámicamente las fechas del modelo de asignación sin que truene
+                    f_start = getattr(a, 'start_date', None) or getattr(a, 'assignment_date', None) or getattr(a,
+                                                                                                               'date_start',
+                                                                                                               None) or getattr(
+                        a, 'created_at', None)
+                    f_end = getattr(a, 'end_date', None) or getattr(a, 'unassignment_date', None) or getattr(a,
+                                                                                                             'date_end',
+                                                                                                             None)
+
+                    history_list.append({
+                        'partida_code': b_line.number_individual or b_line.code,
+                        'position_name': b_line.position_item.name if b_line.position_item else '',
+                        'remuneration': str(b_line.remuneration or '0.00'),
+                        'partida_name': str(b_line),
+                        'code': b_line.code,
+                        'category': getattr(getattr(b_line, 'category_item', None), 'name', ''),
+                        'start_date': f_start,
+                        'end_date': f_end,
+                    })
+
+                context['partida_history'] = history_list
             else:
                 context['current_partida'] = None
                 context['partida_history'] = []
         except Exception as e:
-            logger.error(f"Error cargando partidas presupuestarias: {e}")
+            logger.error(f"Error detallado cargando partidas presupuestarias: {e}", exc_info=True)
             context['current_partida'] = None
             context['partida_history'] = []
+
+        # Permisos del Empleado
+        try:
+            today = timezone.now().date()
+            first_day_of_month = today.replace(day=1)
+            next_month = today.replace(day=28) + timezone.timedelta(days=4)
+            last_day_of_month = next_month - timezone.timedelta(days=next_month.day)
+
+            context['filter_date_from'] = first_day_of_month.strftime('%Y-%m-%d')
+            context['filter_date_to'] = last_day_of_month.strftime('%Y-%m-%d')
+            context[
+                'permissions_month_label'] = f"Listado de {first_day_of_month.strftime('%d/%m/%Y')} hasta {last_day_of_month.strftime('%d/%m/%Y')}"
+
+            if employee:
+                context['permission_filter_types'] = [
+                    (pt.id, pt.name) for pt in PermitType.objects.filter(is_active=True).order_by('name')
+                ]
+                permits_qs = PermitRequest.objects.filter(employee=employee).select_related(
+                    'permit_type'
+                ).order_by('-start_date', '-id')[:500]
+
+                history = []
+                for p in permits_qs:
+                    status_display = p.get_status_display() if hasattr(p, 'get_status_display') else str(
+                        getattr(p, 'status', '—'))
+                    raw_status = str(getattr(p, 'status', '')).upper()
+
+                    if 'APROB' in status_display.upper() or raw_status == 'APPROVED':
+                        status_code = 'APPROVED'
+                    elif 'RECHAZ' in status_display.upper() or raw_status == 'REJECTED':
+                        status_code = 'REJECTED'
+                    else:
+                        status_code = 'PENDING'
+                    duration = getattr(p, 'duration_display', None)
+                    if not duration:
+                        dias = getattr(p, 'days_requested', getattr(p, 'total_days', 0)) or 0
+                        horas = getattr(p, 'hours_requested', getattr(p, 'total_hours', 0)) or 0
+                    obs = getattr(p, 'response_observation', None) or getattr(p, 'observation', None) or getattr(p,
+                                                                                                                 'reason',
+                                                                                                                 '') or '—'
+
+                    history.append({
+                        'id': p.pk,
+                        'start_date': getattr(p, 'start_date', None) or getattr(p, 'request_date', None),
+                        'start_time': getattr(p, 'start_time', None),
+                        'permit_type': p.permit_type.name if p.permit_type else '—',
+                        'permit_type_id': str(p.permit_type_id) if p.permit_type_id else '',
+                        'duration_text': duration,
+                        'status': status_display,
+                        'status_code': status_code,
+                        'response_note': obs,
+                    })
+
+                context['permissions_history'] = history
+            else:
+                context['permission_filter_types'] = []
+                context['permissions_history'] = []
+        except Exception as e:
+            logger.error(f"Error cargando permisos en Wizard: {e}", exc_info=True)
+            context['permission_filter_types'] = []
+            context['permissions_history'] = []
+            context['filter_date_from'] = timezone.now().date().replace(day=1).strftime('%Y-%m-%d')
+            context['filter_date_to'] = timezone.now().date().strftime('%Y-%m-%d')
+            context['permissions_month_label'] = "Listado de permisos"
 
         # Contratos
         try:
@@ -1068,20 +1199,30 @@ def get_cv_stats_api(request, person_id):
 
 @require_POST
 def bulk_update_tab_visibility(request):
-    tab_id = request.POST.get('tab_id')
-    is_visible = request.POST.get('is_visible') == 'true'
+    tab_id = request.POST.get('tab_id', '').strip()
+    is_visible_raw = request.POST.get('is_visible')
+    is_visible = is_visible_raw in ['true', 'True', True, '1', 1]
 
     if not tab_id:
-        return JsonResponse({'success': False, 'message': 'ID de pestaña no válido.'})
+        return JsonResponse({'success': False, 'message': 'ID de pestaña no válido.'}, status=400)
 
     try:
         with transaction.atomic():
-            users = User.objects.filter(person__isnull=False)
-            for u in users:
-                EmployeeProfileVisibility.objects.update_or_create(user=u, tab_id=tab_id,
-                                                                   defaults={'is_visible': is_visible})
+            # Obtener todos los usuarios que tienen un perfil de Persona o Empleado
+            users_with_person = User.objects.filter(
+                id__in=Person.objects.filter(user__isnull=False).values_list('user_id', flat=True)
+            )
+
+            # Actualizar o crear visibilidad para todos
+            for u in users_with_person:
+                EmployeeProfileVisibility.objects.update_or_create(
+                    user=u,
+                    tab_id=tab_id,
+                    defaults={'is_visible': is_visible}
+                )
         return JsonResponse({'success': True, 'message': f'Pestaña "{tab_id}" actualizada para todos los empleados.'})
     except Exception as e:
+        logger.error(f"Error en bulk_update_tab_visibility: {e}", exc_info=True)
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
 
@@ -1092,24 +1233,37 @@ class UpdateProfileVisibilityView(LoginRequiredMixin, PermissionRequiredMixin, V
     def post(self, request, *args, **kwargs):
         try:
             data = json.loads(request.body)
-            person_id = data.get('user_id')
-            tab_id = data.get('tab_id')
-            is_visible = data.get('is_visible')
+            person_id = data.get('user_id') or data.get('person_id')
+            tab_id = data.get('tab_id', '').strip()
+            is_visible = bool(data.get('is_visible'))
 
-            if not all([person_id, tab_id, isinstance(is_visible, bool)]):
-                return JsonResponse({'success': False, 'message': 'Faltan datos o son incorrectos.'}, status=400)
+            if not person_id or not tab_id:
+                return JsonResponse({'success': False, 'message': 'Faltan parámetros obligatorios.'}, status=400)
 
             person = get_object_or_404(Person, pk=person_id)
-            user = person.user
-            if not user:
-                return JsonResponse({'success': False, 'message': 'La persona no tiene un usuario asociado.'},
-                                    status=400)
+            user = getattr(person, 'user', None)
 
-            visibility, created = EmployeeProfileVisibility.objects.update_or_create(
-                user=user, tab_id=tab_id, defaults={'is_visible': is_visible}
+            # Si la persona no tiene usuario asignado directamente, intentar buscar por username=document_number
+            if not user and person.document_number:
+                user = User.objects.filter(username=person.document_number).first()
+                if user:
+                    person.user = user
+                    person.save(update_fields=['user'])
+
+            if not user:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Esta persona no tiene una cuenta de usuario asociada en el sistema.'
+                }, status=400)
+
+            EmployeeProfileVisibility.objects.update_or_create(
+                user=user,
+                tab_id=tab_id,
+                defaults={'is_visible': is_visible}
             )
             return JsonResponse({'success': True, 'message': 'Visibilidad actualizada correctamente.'})
         except Exception as e:
+            logger.error(f"Error en UpdateProfileVisibilityView: {e}", exc_info=True)
             return JsonResponse({'success': False, 'message': str(e)}, status=500)
 
 

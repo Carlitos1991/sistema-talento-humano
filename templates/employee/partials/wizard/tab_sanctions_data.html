@@ -1,35 +1,59 @@
-<!-- Pestaña Sanciones - Historial de sanciones del empleado -->
-<div class="grid-general mt-3">
-    <div class="info-box-styled info-box-accent-red" style="grid-column: span 3;">
-        <h6 class="section-title section-title-accent-red" style="margin:0"><i class="fa-solid fa-scale-balanced"></i>
-            Historial de Sanciones</h6>
-        <div class="p-3 bg-light rounded" style="max-height: 320px; overflow-y: auto;">
-            {% if sanctions_history and sanctions_history|length > 0 %}
-                <div class="budget-history-list">
-                    {% for s in sanctions_history %}
-                        <div class="budget-history-item">
-                            <div class="budget-history-left">
-                                <div class="budget-history-title">{{ s.type|default:'Sanción' }}</div>
-                                <div class="budget-history-sub">{{ s.description|default:'' }}</div>
-                                <div class="budget-history-cat">Motivo: {{ s.reason|default:'—' }}</div>
+<!-- PESTAÑA: SANCIONES DISCIPLINARIAS -->
+<div class="info-box-styled sanctions-border">
+    <div class="card-header-flex">
+        <h6 class="section-title mb-0">
+            <i class="fa-solid fa-scale-balanced text-slate me-2"></i> HISTORIAL DE SANCIONES DISCIPLINARIAS
+        </h6>
+        {% if sanctions_history and sanctions_history|length > 0 %}
+            <span class="badge badge-red">{{ sanctions_history|length }} REGISTRADA{{ sanctions_history|length|pluralize:"S" }}</span>
+        {% else %}
+            <span class="badge badge-green">SIN SANCIONES</span>
+        {% endif %}
+    </div>
+
+    <div class="sanctions-history-container mt-3">
+        {% if sanctions_history and sanctions_history|length > 0 %}
+            <div class="sanctions-timeline-list">
+                {% for s in sanctions_history %}
+                    <div class="sanction-history-card">
+                        <div class="sanction-card-left">
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <span class="sanction-title">{{ s.type|default:"Sanción Disciplinaria" }}</span>
+                                <span class="badge {% if s.severity_code == 'ADMINISTRATIVE_SUMMARY' or s.severity_code == 'GRAVE' %}badge-red{% elif s.severity_code == 'VERBAL_WARNING' or s.severity_code == 'LEVE' %}badge-amber{% else %}badge-gray{% endif %}">
+                                    {{ s.severity|default:"Severidad no especificada" }}
+                                </span>
                             </div>
-                            <div class="budget-history-right" style="display:flex; flex-direction:column; align-items:flex-end; text-align:right; gap:0.25rem;">
-                                <div>
-                                    <span class="status-badge status-badge-mini {% if s.severity_code == 'ADMINISTRATIVE_SUMMARY' %}inactive{% elif s.severity_code == 'VERBAL_WARNING' %}active{% else %}neutral{% endif %}">
-                                        {{ s.severity|default:'—' }}
-                                    </span>
-                                </div>
-                                <div class="small text-muted">{{ s.date|date:"d/m/Y" }}</div>
+
+                            {% if s.description %}
+                                <p class="sanction-description mt-2 mb-1">
+                                    {{ s.description }}
+                                </p>
+                            {% endif %}
+
+                            <div class="sanction-meta-row mt-1">
+                                <span class="text-muted small">
+                                    <strong>Base Legal / Motivo:</strong> {{ s.reason|default:"No especificado" }}
+                                </span>
                             </div>
                         </div>
-                    {% endfor %}
-                </div>
-            {% else %}
-                <div style="min-height:140px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;" class="opacity-50">
-                    <i class="fa-solid fa-box-open fa-2x text-secondary"></i>
-                    <p class="text-muted mb-0 small">No hay historial de sanciones.</p>
-                </div>
-            {% endif %}
-        </div>
+
+                        <div class="sanction-card-right">
+                            <div class="contract-dates-box">
+                                <span class="contract-dates-label">Fecha de Sanción</span>
+                                <div class="contract-dates-range font-monospace">
+                                    <i class="fa-regular fa-calendar-xmark text-danger me-1"></i>
+                                    <span>{{ s.date|date:"d/m/Y"|default:"—" }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state-notice py-4">
+                <i class="fa-solid fa-shield-heart fa-2x mb-2 text-success opacity-75"></i>
+                <p class="mb-0 text-muted">El servidor no registra sanciones disciplinarias en su expediente.</p>
+            </div>
+        {% endif %}
     </div>
 </div>

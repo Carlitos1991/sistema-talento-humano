@@ -1,6 +1,6 @@
 /**
  * SIGETH - Employee Wizard Master Controller
- * Versión: 3.0 (Vanilla JS Puro - 100% Sin Vue.js)
+ * Versión: 3.4 (Control Estricto de Visibilidad de Pestañas por Administrador)
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -27,7 +27,7 @@ function getCookie(name) {
 window.getCookie = getCookie;
 
 /**
- * 1. Control de Pestañas con Vanilla JS
+ * 1. Control de Pestañas con Aplicación de Permisos del Administrador
  */
 function initWizardTabs() {
     const navContainer = document.getElementById('wizardTabsNavigation');
@@ -35,29 +35,88 @@ function initWizardTabs() {
     if (!navContainer || !wizardRoot) return;
 
     const personId = wizardRoot.dataset.personId;
-    let lastAuditedTab = 'Datos Personales';
+    const isDashboard = wizardRoot.dataset.isDashboard === 'true'; // True si es el portal del empleado propio
+    let lastAuditedTab = '';
 
-    // Recuperar pestaña guardada
-    const savedPersonId = localStorage.getItem('wizardPersonId');
-    let activeTabId = 'personal';
-
-    let isReload = false;
-    const navEntries = window.performance?.getEntriesByType?.("navigation");
-    if (navEntries && navEntries.length > 0) {
-        isReload = navEntries[0].type === "reload";
+    // 1. Obtener el diccionario de visibilidades configurado por el Administrador
+    let visibilities = {};
+    const visibilitiesScript = document.getElementById('tab-visibilities-data');
+    if (visibilitiesScript) {
+        try {
+            visibilities = JSON.parse(visibilitiesScript.textContent || '{}');
+        } catch (e) {
+            console.error('Error parseando tab_visibilities:', e);
+        }
+    } else if (wizardRoot.dataset.tabVisibilities) {
+        try {
+            visibilities = JSON.parse(wizardRoot.dataset.tabVisibilities);
+        } catch (e) {
+            console.error('Error parseando dataset tabVisibilities:', e);
+        }
     }
+
+    // 2. Aplicar restricciones de visibilidad a los botones y paneles
+    const tabButtons = navContainer.querySelectorAll('.employee-detail-button');
+    let firstVisibleTabId = null;
+
+    tabButtons.forEach(btn => {
+        const tabId = btn.dataset.tabTarget;
+        const miniCheck = btn.querySelector('.mini-check');
+
+        // Determinar si está permitida (en visibilities los valores vienen como boolean o string "true"/"false")
+        const isAllowed = visibilities[tabId] === true || visibilities[tabId] === 'true';
+
+        // Actualizar el estado visual del mini-check si existe (para vista admin)
+        if (miniCheck) {
+            miniCheck.classList.toggle('visible', isAllowed);
+            miniCheck.innerHTML = isAllowed ? '<i class="fa-solid fa-check"></i>' : '';
+        }
+
+        // SI ES EL DASHBOARD DEL EMPLEADO (o usuario sin permiso de editar):
+        // Si el administrador deshabilitó la pestaña, se oculta completamente el botón
+        if (isDashboard) {
+            if (!isAllowed) {
+                btn.style.setProperty('display', 'none', 'important');
+                const pane = document.getElementById(`tab-pane-${tabId}`);
+                if (pane) pane.style.setProperty('display', 'none', 'important');
+            } else {
+                btn.style.display = '';
+                if (!firstVisibleTabId) {
+                    firstVisibleTabId = tabId;
+                }
+            }
+        } else {
+            // En vista administrativa siempre se ven los botones para poder gestionarlos
+            if (!firstVisibleTabId) {
+                firstVisibleTabId = tabId;
+            }
+        }
+    });
+
+    // 3. Determinar pestaña inicial asegurando que sea una permitida
+    const savedPersonId = localStorage.getItem('wizardPersonId');
+    let activeTabId = firstVisibleTabId || 'personal';
+
+    const navEntries = window.performance?.getEntriesByType?.("navigation");
+    const isReload = navEntries && navEntries.length > 0 && navEntries[0].type === "reload";
 
     if (savedPersonId === personId && isReload) {
-        activeTabId = localStorage.getItem('wizardActiveTab') || 'personal';
+        const candidateTab = localStorage.getItem('wizardActiveTab');
+        // Validar que la pestaña en caché esté permitida
+        if (candidateTab && (!isDashboard || visibilities[candidateTab] === true || visibilities[candidateTab] === 'true')) {
+            activeTabId = candidateTab;
+        }
     } else {
         localStorage.setItem('wizardPersonId', personId || '');
-        localStorage.setItem('wizardActiveTab', 'personal');
+        localStorage.setItem('wizardActiveTab', activeTabId);
     }
 
-    // Activar pestaña inicial
-    switchTab(activeTabId, false);
+    // Activar pestaña inicial permitida
+    if (activeTabId) {
+        switchTab(activeTabId, false);
+    }
 
-    // Click delegado en los botones de pestañas
+    // 4. Click delegado en los botones de pestañas
     navContainer.addEventListener('click', (e) => {
         const miniCheck = e.target.closest('.mini-check');
         if (miniCheck) {
@@ -72,6 +131,11 @@ function initWizardTabs() {
         const targetTab = btn.dataset.tabTarget;
         if (!targetTab) return;
 
+        // Bloqueo de seguridad: no permitir activar si no está visible en el dashboard
+        if (isDashboard && visibilities[targetTab] !== true && visibilities[targetTab] !== 'true') {
+            return;
+        }
+
         switchTab(targetTab, true);
     });
 
@@ -81,11 +145,9 @@ function initWizardTabs() {
 
         if (!targetBtn || !targetPane) return;
 
-        // 1. Botón activo en navegación
         navContainer.querySelectorAll('.employee-detail-button').forEach(b => b.classList.remove('active'));
         targetBtn.classList.add('active');
 
-        // 2. Panel visible (display block) y ocultar los demás
         document.querySelectorAll('.wizard-tab-pane').forEach(p => {
             p.classList.remove('active');
         });
@@ -93,16 +155,14 @@ function initWizardTabs() {
 
         localStorage.setItem('wizardActiveTab', tabId);
 
-        // 3. Auditoría
         if (shouldAudit) {
-            const label = targetBtn.querySelector('.employee-detail-button-label')?.textContent?.trim();
-            if (label && label !== lastAuditedTab) {
+            const label = targetBtn.querySelector('.employee-detail-button-label')?.textContent?.trim() || tabId;
+            if (label !== lastAuditedTab) {
                 lastAuditedTab = label;
-                auditTabAccess(personId, label);
+                auditTabAccess(personId, tabId, label);
             }
         }
 
-        // 4. Si es la pestaña de acciones o teletrabajo, refrescar
         if (tabId === 'actions') {
             initActionsLocalPagination();
         }
@@ -114,7 +174,7 @@ function initWizardTabs() {
 /**
  * 2. Auditoría de Pestañas
  */
-function auditTabAccess(personId, tabName) {
+function auditTabAccess(personId, tabId, tabName) {
     if (!personId) return;
     const csrf = getCookie('csrftoken') || document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
 
@@ -125,12 +185,15 @@ function auditTabAccess(personId, tabName) {
             'X-Requested-With': 'XMLHttpRequest',
             'X-CSRFToken': csrf
         },
-        body: JSON.stringify({tab_name: tabName})
+        body: JSON.stringify({
+            tab_id: tabId,
+            tab_name: tabName
+        })
     }).catch(err => console.error('Error auditoría tab:', err));
 }
 
 /**
- * 3. Mini-Check de Visibilidad
+ * 3. Mini-Check de Visibilidad (Configuración del Administrador)
  */
 async function handleTabVisibilityToggle(checkElement) {
     const btn = checkElement.closest('.employee-detail-button');
@@ -162,17 +225,34 @@ async function handleTabVisibilityToggle(checkElement) {
         try {
             const res = await fetch('/employee/api/profile-visibility/', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')},
-                body: JSON.stringify({user_id: personId, tab_id: tabId, is_visible: !isCurrentlyVisible})
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({
+                    person_id: personId,
+                    user_id: personId,
+                    tab_id: tabId,
+                    is_visible: !isCurrentlyVisible
+                })
             });
             const data = await res.json();
             if (data.success) {
                 checkElement.classList.toggle('visible', !isCurrentlyVisible);
                 checkElement.innerHTML = !isCurrentlyVisible ? '<i class="fa-solid fa-check"></i>' : '';
-                if (window.Toast) window.Toast.fire({icon: 'success', title: 'Actualizado para este usuario'});
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Actualizado!',
+                    text: `Pestaña actualizada para este empleado.`,
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+            } else {
+                Swal.fire('Atención', data.message || 'No se pudo actualizar.', 'warning');
             }
         } catch (e) {
-            Swal.fire('Error', 'Problema de conexión', 'error');
+            Swal.fire('Error', 'Problema de conexión con el servidor', 'error');
         }
     } else if (selection === false) {
         try {
@@ -198,15 +278,16 @@ async function handleTabVisibilityToggle(checkElement) {
 }
 
 /**
- * 4. Paginación Local para Acciones
+ * 4. Paginación Local para Acciones de Personal
  */
 function initActionsLocalPagination() {
-    const $allRows = $('[data-action-row]');
-    if (!$allRows.length) return;
+    const $container = $('[data-action-history-table]');
+    if (!$container.length) return;
 
     const rowsPerPage = 10;
     let currentPage = 1;
     let searchQuery = ($('#action-search-input').val() || '').toLowerCase();
+    const $allRows = $container.find('[data-action-row]');
 
     const updateTable = () => {
         const $filteredRows = $allRows.filter(function () {
@@ -272,7 +353,7 @@ function initActionsLocalPagination() {
     });
 
     $('[data-action-page-input]').off('change').on('change', function () {
-        let val = parseInt($(this).val());
+        let val = parseInt($(this).val(), 10);
         if (!isNaN(val)) {
             currentPage = val;
             updateTable();
