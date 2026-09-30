@@ -518,13 +518,28 @@
         const isAction = selectedContractType.category === 'ACCION_PERSONAL';
 
         const manual = document.getElementById('wizard-manual-compensation-section');
-        if (manual) manual.classList.toggle('hidden', !(isProf && !isAction));
+        if (manual) {
+            const showManual = isProf && !isAction;
+            manual.classList.toggle('hidden', !showManual);
+            manual.querySelectorAll('input, select, textarea').forEach(el => {
+                el.disabled = !showManual;
+            });
+        }
 
         const actionFields = document.getElementById('wizard-action-specific-fields');
         const contractFields = document.getElementById('wizard-contract-specific-fields');
+
         if (actionFields && contractFields) {
             actionFields.classList.toggle('hidden', !isAction);
             contractFields.classList.toggle('hidden', isAction);
+
+            // Deshabilitar inputs del bloque inactivo para que FormData NO los envíe
+            actionFields.querySelectorAll('input, select, textarea').forEach(el => {
+                el.disabled = !isAction;
+            });
+            contractFields.querySelectorAll('input, select, textarea').forEach(el => {
+                el.disabled = isAction;
+            });
         }
     }
 

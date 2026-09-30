@@ -3618,12 +3618,26 @@ th.sorted-desc .sort-arrow {
 .modal-overlay {
     position: fixed !important;
     inset: 0 !important;
-    background-color: rgba(0, 0, 0, 0.7) !important;
+    width: 100% !important;
+    height: 100% !important;
+    background-color: rgba(15, 23, 42, 0.6) !important;
     backdrop-filter: blur(4px);
     display: flex !important;
     align-items: center;
     justify-content: center;
     z-index: 99999 !important;
+    padding: 1rem;
+    box-sizing: border-box;
+}
+
+.modal-body-scrolled .table-container,
+.modal-container-large .table-container,
+.modal-container-medium .table-container,
+#bitacora-list-app .table-container {
+    min-height: 200px !important;
+    max-height: min(42vh, 380px) !important; /* Altura calculada según el tamaño de pantalla */
+    height: auto !important;
+    overflow-y: auto !important;
 }
 
 

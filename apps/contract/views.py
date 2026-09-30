@@ -1354,8 +1354,16 @@ class ManagementPeriodCreateView(LoginRequiredMixin, PermissionRequiredMixin, Vi
                 action_motivation = data.get('action_motivation', '').strip().upper()
                 action_explanation = data.get('action_explanation', '').strip()
 
-                if is_action_document and (not elaboration_date or not data.get(
-                        'start_date') or not action_motivation or not action_explanation):
+                # Resolución de fechas según el tipo de documento (soporta nombres diferenciados y fallback)
+                if is_action_document:
+                    start_date = data.get('action_start_date') or data.get('start_date')
+                    end_date = data.get('action_end_date') or data.get('end_date') or None
+                else:
+                    start_date = data.get('start_date')
+                    end_date = data.get('end_date') or None
+
+                if is_action_document and (
+                        not elaboration_date or not start_date or not action_motivation or not action_explanation):
                     return JsonResponse({
                         'success': False,
                         'message': 'Para ACCIÓN DE PERSONAL debe completar fecha de elaboración, rige desde, motivación y explicación.'
@@ -1399,8 +1407,8 @@ class ManagementPeriodCreateView(LoginRequiredMixin, PermissionRequiredMixin, Vi
                     workplace=workplace,
                     job_functions=job_functions,
                     elaboration_date=elaboration_date or None,
-                    start_date=data.get('start_date'),
-                    end_date=data.get('end_date') if data.get('end_date') else None,
+                    start_date=start_date,
+                    end_date=end_date,
                     action_motivation=action_motivation or None,
                     action_explanation=action_explanation or None,
                     created_by=request.user
@@ -1436,7 +1444,6 @@ class ManagementPeriodCreateView(LoginRequiredMixin, PermissionRequiredMixin, Vi
                 })
 
         except ValidationError as e:
-            # Esto le dirá EXACTAMENTE qué campo falla en la consola de PyCharm
             return JsonResponse({'success': False, 'errors': e.message_dict}, status=400)
         except Exception as e:
             return JsonResponse({'success': False, 'message': str(e)}, status=500)
