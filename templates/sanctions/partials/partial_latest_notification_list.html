@@ -87,22 +87,22 @@
                         <div class="actions-wrapper">
                             <a href="{% url 'sanctions:notification_pdf' notification.pk %}"
                                target="_blank" rel="noopener noreferrer"
-                               class="btn-icon btn-red-circle" title="Ver Documento PDF">
+                               class="btn-red-circle" title="Ver Documento PDF">
                                 <i class="fa-solid fa-file-pdf"></i>
                             </a>
 
                             {% if notification.status == 'GENERADO' %}
-                                <button type="button" class="btn-icon btn-green-circle js-sanction-modal-btn"
+                                <button type="button" class="btn-green-circle js-sanction-modal-btn"
                                         data-url="{% url 'sanctions:set_notification_date' notification.pk %}"
                                         title="Registrar Fecha de Notificación">
                                     <i class="fa-solid fa-envelope-circle-check"></i>
                                 </button>
-                                <button type="button" class="btn-icon btn-red-circle js-btn-archive"
+                                <button type="button" class="btn-red-circle js-btn-archive"
                                         data-id="{{ notification.pk }}" title="Archivar Trámite">
                                     <i class="fa-solid fa-box-archive"></i>
                                 </button>
                                 {% if perms.sanctions.change_sanctionnotification %}
-                                    <button type="button" class="btn-icon btn-blue-circle js-sanction-modal-btn"
+                                    <button type="button" class="btn-blue-circle js-sanction-modal-btn"
                                             data-url="{% url 'sanctions:generate_notification' %}?employee_id={{ notification.employee_id }}&notification_id={{ notification.pk }}"
                                             title="Editar Notificación">
                                         <i class="fa-solid fa-pen-to-square"></i>

@@ -85,9 +85,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const notifYear = document.getElementById('notifications-year');
 
     function fetchNotifications(page = 1) {
+        // Limpiar el número de página de cualquier espacio o caracter extraño
+        const cleanPage = parseInt(String(page).trim(), 10) || 1;
+
         const params = new URLSearchParams();
         params.set('section', 'notifications');
-        params.set('notifications_page', page);
+        params.set('notifications_page', cleanPage);
 
         if (currentStatusFilter && currentStatusFilter !== 'all') {
             params.set('status_filter', currentStatusFilter);
@@ -165,57 +168,98 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     /* =========================================================================
-       4. CHECKBOXES Y ASIGNACIÓN MASIVA
-       ========================================================================= */
+        4. CONTROL DE CHECKBOXES CON PERSISTENCIA ENTRE PÁGINAS (SET GLOBAL)
+        ========================================================================= */
+    // Almacena todos los IDs seleccionados a través de las diferentes páginas
+    const selectedNotificationIds = new Set();
+
     function updateBulkActionVisibility() {
         const bulkBar = document.getElementById('bulk-assign-actions');
         const countSpan = document.getElementById('selected-notifications-count');
-        const checkedBoxes = document.querySelectorAll('.js-notification-checkbox:checked');
-        const allBoxes = document.querySelectorAll('.js-notification-checkbox');
         const masterCheck = document.getElementById('check-all-notifications');
+        const currentCheckboxes = document.querySelectorAll('.js-notification-checkbox');
 
-        const totalSelected = checkedBoxes.length;
+        // 1. Re-marcar los checkboxes que pertenecen a la página actual según el Set
+        currentCheckboxes.forEach(chk => {
+            const id = String(chk.dataset.id);
+            chk.checked = selectedNotificationIds.has(id);
+        });
 
+        // 2. Actualizar el estado del checkbox maestro en la vista actual
+        if (masterCheck && currentCheckboxes.length > 0) {
+            const totalInPage = currentCheckboxes.length;
+            const checkedInPage = Array.from(currentCheckboxes).filter(chk => chk.checked).length;
+
+            masterCheck.checked = (checkedInPage === totalInPage);
+            masterCheck.indeterminate = (checkedInPage > 0 && checkedInPage < totalInPage);
+        } else if (masterCheck) {
+            masterCheck.checked = false;
+            masterCheck.indeterminate = false;
+        }
+
+        // 3. Mostrar u ocultar la barra con el contador global persistente
+        const totalSelected = selectedNotificationIds.size;
         if (bulkBar) {
             if (totalSelected > 0) {
                 bulkBar.classList.remove('hidden');
-                if (countSpan) countSpan.textContent = `${totalSelected} seleccionado${totalSelected !== 1 ? 's' : ''}`;
+                if (countSpan) {
+                    countSpan.textContent = `${totalSelected} seleccionado${totalSelected !== 1 ? 's' : ''}`;
+                }
             } else {
                 bulkBar.classList.add('hidden');
             }
         }
-
-        if (masterCheck && allBoxes.length > 0) {
-            masterCheck.checked = (totalSelected === allBoxes.length);
-            masterCheck.indeterminate = (totalSelected > 0 && totalSelected < allBoxes.length);
-        }
     }
 
+    // Escuchador de cambios en checkboxes
     document.addEventListener('change', (e) => {
+        // 4.1 Checkbox maestro (Seleccionar / Deseleccionar todos los de la página actual)
         if (e.target && e.target.id === 'check-all-notifications') {
             const isChecked = e.target.checked;
-            document.querySelectorAll('.js-notification-checkbox').forEach(chk => chk.checked = isChecked);
+            document.querySelectorAll('.js-notification-checkbox').forEach(chk => {
+                const id = String(chk.dataset.id);
+                chk.checked = isChecked;
+                if (isChecked) {
+                    selectedNotificationIds.add(id);
+                } else {
+                    selectedNotificationIds.delete(id);
+                }
+            });
             updateBulkActionVisibility();
             return;
         }
 
+        // 4.2 Checkbox individual
         if (e.target && e.target.classList.contains('js-notification-checkbox')) {
+            const id = String(e.target.dataset.id);
+            if (e.target.checked) {
+                selectedNotificationIds.add(id);
+            } else {
+                selectedNotificationIds.delete(id);
+            }
             updateBulkActionVisibility();
         }
     });
 
+    // 4.3 Clic en el botón "Asignar Trámites" (Envía todos los IDs acumulados)
     document.addEventListener('click', (e) => {
         const btnBulk = e.target.closest('.js-btn-bulk-assign');
         if (!btnBulk) return;
 
         e.preventDefault();
-        const selectedIds = Array.from(document.querySelectorAll('.js-notification-checkbox:checked'))
-            .map(chk => chk.dataset.id)
-            .filter(Boolean);
+        const allSelectedIds = Array.from(selectedNotificationIds);
 
-        if (selectedIds.length === 0) return;
+        if (allSelectedIds.length === 0) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Atención',
+                text: 'Seleccione al menos una notificación para asignar.'
+            });
+            return;
+        }
 
-        const url = `/sanctions/notifications/assign/?ids=${selectedIds.join(',')}`;
+        // Abrir modal pasando la lista total de IDs persistidos
+        const url = `/sanctions/notifications/assign/?ids=${allSelectedIds.join(',')}`;
         if (typeof window.openAjaxModal === 'function') {
             window.openAjaxModal(url);
         }
@@ -365,6 +409,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (form.matches('#generateSanctionForm, #generateNotificationForm, #form-set-notified, #sanctionTypeForm, #assignNotificationForm, .ajax-sanction-form')) {
             if (typeof window.submitAjaxForm === 'function') {
                 window.submitAjaxForm(e, () => {
+                    // Limpiar la selección tras guardar la asignación
+                    if (form.id === 'assignNotificationForm') {
+                        selectedNotificationIds.clear();
+                    }
+
                     const activeTab = window.localStorage.getItem('sanctions-active-tab') || 'employees';
                     if (activeTab === 'notifications') {
                         fetchNotifications(1);
