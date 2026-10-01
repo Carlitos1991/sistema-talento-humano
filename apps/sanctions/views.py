@@ -2520,72 +2520,71 @@ class AssignNotificationAjaxView(LoginRequiredMixin, View):
         if not notification_ids:
             return HttpResponse("<div class='p-4'>No se seleccionaron registros.</div>", status=400)
 
+        # Cargar lista de usuarios con su persona
+        users = User.objects.filter(is_active=True).select_related('person').order_by('person__first_name',
+                                                                                      'person__last_name', 'username')
+        users_list = []
+        for u in users:
+            person = getattr(u, 'person', None)
+            full_name = f"{person.first_name or ''} {person.last_name or ''}".strip() if person else ""
+            label = u.custom_name or full_name or u.get_full_name().strip() or u.username
+            if u.custom_position:
+                label = f"{label} - {u.custom_position}"
+            users_list.append({'id': str(u.id), 'label': label})
+
         context = {
             'notification_ids': ','.join(notification_ids),
             'count': len(notification_ids),
+            'users_list': users_list,
         }
         html = render_to_string('sanctions/modals/modal_assign_notification.html', context, request=request)
         return HttpResponse(html)
 
-    def post(self, request, pk=None):
-        # Obtenemos los IDs del campo oculto del formulario
-        ids_raw = request.POST.get('notification_ids', '')
-        notification_ids = [id for id in ids_raw.split(',') if id]
-        user_to_id = request.POST.get('assigned_to')
-        observation = request.POST.get('observation')
-
-        if not notification_ids:
-            return JsonResponse({'success': False, 'message': 'No hay notificaciones seleccionadas.'}, status=400)
-        if not user_to_id:
-            return JsonResponse({'success': False, 'message': 'Debe seleccionar un responsable.'}, status=400)
-
-        try:
-            with transaction.atomic():
-                notifications = SanctionNotification.objects.filter(id__in=notification_ids)
-
-                for notification in notifications:
-                    # 1. Finalizar asignación actual
-                    SanctionAssignment.objects.filter(notification=notification, is_current=True).update(
-                        is_current=False,
-                        end_date=timezone.now()
-                    )
-
-                    # 2. Crear nueva asignación
-                    SanctionAssignment.objects.create(
-                        notification=notification,
-                        assigned_to_id=user_to_id,
-                        assigned_by=request.user,
-                        observation=observation,
-                        is_current=True
-                    )
-
-                    # 3. Cambiar estado
-                    notification.status = 'EN_PROCESO'
-                    notification.save()
-
-            return JsonResponse({
-                'success': True,
-                'message': f'Se han asignado {len(notification_ids)} notificaciones correctamente.'
-            })
-        except Exception as e:
-            return JsonResponse({'success': False, 'message': str(e)}, status=500)
-
 
 class UserSearchAjaxView(LoginRequiredMixin, View):
     def get(self, request):
-        q = request.GET.get('q', '')
-        users = User.objects.filter(is_active=True).filter(
-            Q(first_name__icontains=q) |
-            Q(last_name__icontains=q) |
-            Q(username__icontains=q)
-        ).distinct()
+        # Acepta tanto 'term' como 'q' enviados por Select2
+        q = (request.GET.get('term') or request.GET.get('q') or '').strip()
 
-        results = [
-            {
-                "id": user.id,
-                "text": f"{user.get_full_name()} ({user.username})"  # Select2 espera 'text'
-            } for user in users[:15]
-        ]
+        users = User.objects.filter(is_active=True).select_related('person')
+
+        if q:
+            tokens = [t for t in q.split() if t]
+            for part in tokens:
+                users = users.filter(
+                    Q(person__first_name__icontains=part)
+                    | Q(person__last_name__icontains=part)
+                    | Q(person__document_number__icontains=part)
+                    | Q(first_name__icontains=part)
+                    | Q(last_name__icontains=part)
+                    | Q(username__icontains=part)
+                    | Q(email__icontains=part)
+                    | Q(custom_name__icontains=part)
+                    | Q(custom_position__icontains=part)
+                )
+
+        users = users.order_by('person__first_name', 'person__last_name', 'username')[:20]
+
+        results = []
+        for user in users:
+            person = getattr(user, 'person', None)
+            full_name = f"{person.first_name or ''} {person.last_name or ''}".strip() if person else ""
+            label = user.custom_name or full_name or user.get_full_name().strip() or user.username
+
+            position = user.custom_position or ''
+            if not position and person and getattr(person, 'employee_profile', None):
+                budget_line = person.employee_profile.current_budget_line.select_related('position_item').first()
+                if budget_line and budget_line.position_item:
+                    position = budget_line.position_item.name or ''
+
+            if position:
+                label = f"{label} - {position}"
+
+            results.append({
+                "id": str(user.id),
+                "text": label
+            })
+
         return JsonResponse({"results": results})
 
 

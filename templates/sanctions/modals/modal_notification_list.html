@@ -1,10 +1,11 @@
 {% load static %}
 <div class="modal-overlay">
     <div class="modal-container-large">
+        <!-- Header -->
         <div class="modal-header-medium">
             <div class="header-content-group">
                 <div class="header-icon-circle">
-                    <i class="fas fa-list-ul"></i>
+                    <i class="fas fa-bell"></i>
                 </div>
                 <h3 class="header-title">
                     {% if filtered_employee %}Notificaciones de {{ filtered_employee.person.full_name }}{% else %}
@@ -16,19 +17,19 @@
             </button>
         </div>
 
+        <!-- Body -->
         <div class="modal-body modal-body-custom">
             {% if notifications %}
-                <div class="modal-table-container">
-                    <table class="modal-table">
+                <div class="table-container" style="min-height: 250px; max-height: 440px;">
+                    <table class="managed-table">
                         <thead>
                         <tr>
-                            <th>Código</th>
-                            <th>Empleado</th>
-                            <th>Tipo</th>
-                            <th>Fecha</th>
-                            <th>Régimen</th>
-                            <th>Usuario</th>
-                            <th class="text-center actions">PDF</th>
+                            <th class="width-13">Código</th>
+                            <th class="width-25">Empleado</th>
+                            <th class="width-20">Tipo</th>
+                            <th class="width-12">Fecha</th>
+                            <th class="width-15">Régimen</th>
+                            <th class="width-10 text-center actions">PDF</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -36,18 +37,20 @@
                             <tr>
                                 <td><strong>{{ notification.sequential_code }}</strong></td>
                                 <td>
-                                    {{ notification.employee.person.full_name }}<br>
+                                    <span class="bold">{{ notification.employee.person.full_name }}</span><br>
                                     <small class="text-muted">{{ notification.employee.person.document_number }}</small>
                                 </td>
                                 <td>{{ notification.notification_type.name }}</td>
                                 <td>{{ notification.registration_date|date:'d/m/Y' }}</td>
                                 <td>{{ notification.labor_regime.name|default:"--" }}</td>
-                                <td>{{ notification.user_code|default:'-' }}</td>
-                                <td class="text-center">
-                                    <a href="{% url 'sanctions:notification_pdf' notification.pk %}"
-                                       class="btn-tenth" target="_blank" rel="noopener" title="Ver Documento PDF">
-                                        <i class="fa-solid fa-file-pdf text-red"></i>
-                                    </a>
+                                <td class="actions">
+                                    <div class="actions-wrapper">
+                                        <a href="{% url 'sanctions:notification_pdf' notification.pk %}"
+                                           class="btn-icon btn-red-circle" target="_blank" rel="noopener"
+                                           title="Ver Documento PDF">
+                                            <i class="fa-solid fa-file-pdf"></i>
+                                        </a>
+                                    </div>
                                 </td>
                             </tr>
                         {% endfor %}
@@ -62,8 +65,11 @@
             {% endif %}
         </div>
 
+        <!-- Footer -->
         <div class="modal-footer-fixed">
-            <button type="button" class="btn-default-outline" onclick="closeModal()">Cerrar</button>
+            <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">
+                Cerrar
+            </button>
         </div>
     </div>
 </div>

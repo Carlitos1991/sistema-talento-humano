@@ -1,52 +1,85 @@
 {% load static %}
 <div class="modal-overlay">
     <div class="modal-container-medium">
-        <div class="modal-header-medium">
-            <div class="header-content-group">
-                <div class="header-icon-circle">
-                    <i class="fas fa-user-check"></i>
+        <form method="post" action="{% url 'sanctions:assign_notification_ajax' %}" id="assignNotificationForm"
+              onsubmit="submitAjaxForm(event)">
+            {% csrf_token %}
+            <input type="hidden" name="notification_ids" value="{{ notification_ids }}">
+
+            <!-- HEADER -->
+            <div class="modal-header-medium">
+                <div class="header-content-group">
+                    <div class="header-icon-circle">
+                        <i class="fa-solid fa-user-plus"></i>
+                    </div>
+                    <h3 class="header-title">Asignar Responsable a {{ count }} Trámite{{ count|pluralize }}</h3>
                 </div>
-                <h3 class="header-title">Asignar Responsable de Trámite</h3>
-            </div>
-            <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-
-        <div class="modal-body modal-body-custom">
-            <div class="alert alert-info">
-                <i class="fas fa-circle-info"></i>
-                <div>Asignando <strong>{{ count }}</strong> notificación(es) seleccionada(s).</div>
+                <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
 
-            <form id="assignNotificationForm" action="{% url 'sanctions:assign_notification_bulk' %}" method="post"
-                  autocomplete="off">
-                {% csrf_token %}
-                <input type="hidden" name="notification_ids" value="{{ notification_ids }}">
+            <!-- BODY -->
+            <div class="modal-body-content modal-body-custom">
+                <div class="alert alert-info">
+                    <i class="fas fa-circle-info"></i>
+                    <div>Seleccione el funcionario que se encargará del seguimiento o sanción para los trámites
+                        seleccionados.
+                    </div>
+                </div>
 
-                <div class="form-section-card">
-                    <div class="form-group">
-                        <label class="form-label" for="select-responsible-ajax">Buscar Responsable *</label>
-                        <select id="select-responsible-ajax" name="assigned_to" class="input-field select2" required
-                                style="width: 100%;">
-                            <option value="">Escriba para buscar usuario...</option>
+                <div class="form-section-card mt-3">
+                    <div class="form-group form-group-compact mb-3">
+                        <label class="form-label" for="select-assign-user">
+                            Funcionario Responsable <span class="text-danger">*</span>
+                        </label>
+                        <select id="select-assign-user" name="assigned_to" class="form-control" style="width: 100%;"
+                                required>
+                            <option value="">Seleccione o escriba el nombre del funcionario...</option>
+                            {% for u in users_list %}
+                                <option value="{{ u.id }}">{{ u.label }}</option>
+                            {% endfor %}
                         </select>
                     </div>
 
-                    <div class="form-group mt-3">
-                        <label class="form-label" for="id_observation">Observaciones / Instrucciones</label>
-                        <textarea name="observation" id="id_observation" class="input-field" rows="3"
-                                  placeholder="Ej: Revisar descargos del empleado..."></textarea>
+                    <div class="form-group form-group-compact">
+                        <label class="form-label" for="assign-observation">
+                            Observación / Instrucción
+                        </label>
+                        <textarea id="assign-observation" name="observation" class="form-control" rows="3"
+                                  placeholder="Instrucciones para la gestión del trámite..."></textarea>
                     </div>
                 </div>
+            </div>
 
-                <div class="modal-footer-fixed">
-                    <button type="button" class="btn-default-outline" onclick="closeModal()">Cancelar</button>
-                    <button type="submit" class="btn-success">
-                        <i class="fas fa-check-circle me-1"></i> Confirmar Asignación
-                    </button>
-                </div>
-            </form>
-        </div>
+            <!-- FOOTER -->
+            <div class="modal-footer-medium modal-footer-spaced">
+                <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">
+                    Cancelar
+                </button>
+                <button type="submit" class="btn-dark-blue-rectangle">
+                    <i class="fas fa-save me-1"></i> Confirmar Asignación
+                </button>
+            </div>
+        </form>
     </div>
 </div>
+
+<script>
+    (function () {
+        const $select = $('#select-assign-user');
+        const $modal = $('#assignNotificationForm').closest('.modal-container-medium');
+
+        // Si main.js ya lo inicializó, destruirlo para configurarlo con búsqueda
+        if ($select.hasClass('select2-hidden-accessible')) {
+            $select.select2('destroy');
+        }
+
+        $select.select2({
+            dropdownParent: $modal,
+            width: '100%',
+            placeholder: 'Seleccione o escriba el nombre del funcionario...',
+            allowClear: true
+        });
+    })();
+</script>

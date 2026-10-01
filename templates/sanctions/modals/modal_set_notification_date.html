@@ -1,33 +1,35 @@
 {% load static %}
 <div class="modal-overlay">
     <div class="modal-container-small">
+        <form id="form-set-notified" action="{{ request.path }}" method="post" autocomplete="off"
+              onsubmit="submitAjaxForm(event)">
+            {% csrf_token %}
 
-        <!-- HEADER -->
-        <div class="modal-header-medium">
-            <div class="header-content-group">
-                <div class="header-icon-circle">
-                    <i class="fas fa-calendar-check"></i>
+            <!-- HEADER -->
+            <div class="modal-header-medium">
+                <div class="header-content-group">
+                    <div class="header-icon-circle">
+                        <i class="fas fa-calendar-check"></i>
+                    </div>
+                    <h3 class="header-title">Registrar Notificación</h3>
                 </div>
-                <h3 class="header-title">Registrar Notificación</h3>
-            </div>
-            <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-
-        <!-- BODY -->
-        <div class="modal-body modal-body-custom">
-            <div class="alert alert-info mb-3">
-                <i class="fas fa-circle-info"></i>
-                <div>
-                    Indique la fecha en la que el empleado <strong>{{ notification.employee.person.full_name }}</strong>
-                    firmó la recepción de la notificación.
-                </div>
+                <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
 
-            <form id="form-set-notified" action="{{ request.path }}" method="post" autocomplete="off">
-                {% csrf_token %}
-                <div class="form-section-card">
+            <!-- BODY CON SCROLL INTERNO CONTROLADO -->
+            <div class="modal-body modal-body-custom">
+                <div class="alert alert-info">
+                    <i class="fas fa-circle-info"></i>
+                    <div>
+                        Indique la fecha en la que el empleado
+                        <strong>{{ notification.employee.person.full_name }}</strong>
+                        firmó la recepción de la notificación.
+                    </div>
+                </div>
+
+                <div class="form-section-card mt-3">
                     <div class="form-group mb-0">
                         <label class="form-label" for="{{ form.notification_date.id_for_label }}">
                             {{ form.notification_date.label }} *
@@ -38,16 +40,15 @@
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <!-- FOOTER -->
-                <div class="modal-footer-fixed">
-                    <button type="button" class="btn-default-outline" onclick="closeModal()">Cancelar</button>
-                    <button type="submit" class="btn-success">
-                        <i class="fas fa-check-circle me-1"></i> Confirmar Recepción
-                    </button>
-                </div>
-            </form>
-        </div>
-
+            <!-- FOOTER FIJO VISIBLE SIEMPRE -->
+            <div class="modal-footer modal-footer-spaced">
+                <button type="button" class="btn-secondary-outline" onclick="closeModal()">Cancelar</button>
+                <button type="submit" class="btn-success">
+                    <i class="fas fa-check-circle me-1"></i> Confirmar Recepción
+                </button>
+            </div>
+        </form>
     </div>
 </div>

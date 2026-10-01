@@ -8,8 +8,11 @@
 {% endblock %}
 
 {% block content %}
+    <!-- Evita que main.js intercepte la paginación con su comportamiento global -->
+    <form id="filtersForm" style="display:none;"></form>
+
     <div class="header-card">
-        <div>
+        <div class="header-card-body">
             <h1><i class="fa-solid fa-gavel me-2"></i> Generar Sanciones</h1>
             <p>Seleccione un empleado para generar sanciones o revise las últimas notificaciones registradas.</p>
         </div>
@@ -28,11 +31,15 @@
     <!-- Pestaña 1: Empleados -->
     <div class="sanctions-tab-pane is-active" data-sanctions-pane="employees">
         <div class="content-table">
-            <div class="table-controls toolbar-row">
+            <div class="toolbar-row">
+                <div class="toolbar-left"></div>
                 <div class="toolbar-center"></div>
                 <div class="toolbar-right">
-                    <input type="text" id="employee-search" class="table-search-input table-search-input--large"
-                           placeholder="Buscar por nombres, apellidos o cédula...">
+                    <div class="search-box">
+                        <input type="text" id="employee-search" class="table-search-input"
+                               placeholder="Buscar por nombres, apellidos o cédula...">
+                        <button type="button" class="search-btn"><i class="fas fa-search"></i></button>
+                    </div>
                 </div>
             </div>
 
@@ -48,8 +55,8 @@
             <div class="stats-row">
                 {% for stat in stats_cards_notifications %}
                     <div class="stat-card {{ stat.class }} js-notification-stat-filter"
-                         data-filter-val="{{ stat.filter_val }}" style="cursor: pointer;">
-                        <div class="stat-left">
+                         data-filter-val="{{ stat.filter_val }}">
+                        <div>
                             <h3>{{ stat.label }}</h3>
                             <div class="number">{{ stat.count }}</div>
                         </div>
@@ -60,28 +67,29 @@
         {% endif %}
 
         <div class="content-table">
-            <div class="table-controls toolbar-row">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="d-flex align-items-center gap-2">
-                        <label class="form-label mb-0" for="notifications-month">Mes:</label>
-                        <select id="notifications-month" class="input-field" style="width: 140px;">
+            <div class="toolbar-row mb-2">
+                <div class="toolbar-left"></div>
+                <div class="toolbar-center">
+                    <div class="filter-date-group">
+                        <span class="filter-label">Mes:</span>
+                        <select id="notifications-month">
                             <option value="">Todos</option>
                             {% for value, label in notification_month_choices %}
                                 <option value="{{ value }}"
                                         {% if selected_notifications_month == value|stringformat:'s' %}selected{% endif %}>{{ label }}</option>
                             {% endfor %}
                         </select>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <label class="form-label mb-0" for="notifications-year">Año:</label>
-                        <input type="number" id="notifications-year" class="input-field" style="width: 100px;"
-                               min="2000" max="2100" value="{{ selected_notifications_year|default:'2026' }}">
+                        <span class="filter-label">Año:</span>
+                        <input type="number" id="notifications-year" min="2000" max="2100"
+                               value="{{ selected_notifications_year|default:'2026' }}" style="width: 60px;">
                     </div>
                 </div>
-
                 <div class="toolbar-right">
-                    <input type="text" id="notifications-search" class="table-search-input table-search-input--large"
-                           placeholder="Buscar notificación por empleado o cédula...">
+                    <div class="search-box">
+                        <input type="text" id="notifications-search" class="table-search-input"
+                               placeholder="Buscar notificación por empleado o cédula...">
+                        <button type="button" class="search-btn"><i class="fas fa-search"></i></button>
+                    </div>
                 </div>
             </div>
 
@@ -91,7 +99,6 @@
         </div>
     </div>
 
-    <!-- Contenedor único para modales AJAX de main.js -->
     <div id="modal-root"></div>
 {% endblock %}
 

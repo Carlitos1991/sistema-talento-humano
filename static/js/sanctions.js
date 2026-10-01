@@ -1,7 +1,6 @@
 /**
  * SIGETH - Módulo de Sanciones
- * Manejo de pestañas, búsqueda reactiva de empleados, filtros de fecha,
- * filtrado por tarjetas estadísticas (stats) y modales AJAX universales.
+ * Pestañas, búsqueda reactiva, selección masiva y paginación limpia.
  */
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -45,7 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /* =========================================================================
-       2. BÚSQUEDA REACTIVA - PESTAÑA EMPLEADOS
+       2. BÚSQUEDA REACTIVA - EMPLEADOS
        ========================================================================= */
     const employeeSearch = document.getElementById('employee-search');
 
@@ -79,7 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /* =========================================================================
-       3. FILTROS, BÚSQUEDA Y STATS - PESTAÑA NOTIFICACIONES
+       3. FILTROS, BÚSQUEDA Y STATS - NOTIFICACIONES
        ========================================================================= */
     const notifSearch = document.getElementById('notifications-search');
     const notifMonth = document.getElementById('notifications-month');
@@ -87,7 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function fetchNotifications(page = 1) {
         const params = new URLSearchParams();
-        params.set('section', 'notifications'); // Requerido por EmployeeSanctionListView
+        params.set('section', 'notifications');
         params.set('notifications_page', page);
 
         if (currentStatusFilter && currentStatusFilter !== 'all') {
@@ -116,10 +115,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     wrapper.innerHTML = data.html;
                 }
 
-                // Actualizar tarjetas de estadísticas numéricas superiores
                 if (data.stats && Array.isArray(data.stats)) {
                     updateStatsCards(data.stats);
                 }
+
+                updateBulkActionVisibility();
             })
             .catch(err => console.error('Error cargando notificaciones:', err));
     }
@@ -133,17 +133,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const card = document.createElement('div');
             card.className = `stat-card ${stat.class || ''} js-notification-stat-filter`.trim();
             card.dataset.filterVal = stat.filter_val;
-            card.style.cursor = 'pointer';
-
-            // Destacar visualmente la tarjeta activa
-            if (stat.filter_val === currentStatusFilter || (currentStatusFilter === 'all' && stat.filter_val === 'all')) {
-                card.style.transform = 'translateY(-3px)';
-                card.style.boxShadow = '0 8px 24px rgba(15, 23, 42, 0.12)';
-                card.style.borderColor = '#10b981';
-            }
 
             card.innerHTML = `
-                <div class="stat-left">
+                <div>
                     <h3>${stat.label}</h3>
                     <div class="number">${stat.count}</div>
                 </div>
@@ -153,7 +145,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Input de búsqueda de notificaciones con debounce
     if (notifSearch) {
         let notifTimer;
         notifSearch.addEventListener('input', () => {
@@ -165,7 +156,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (notifMonth) notifMonth.addEventListener('change', () => fetchNotifications(1));
     if (notifYear) notifYear.addEventListener('change', () => fetchNotifications(1));
 
-    // Clic en tarjetas de estadísticas
     document.addEventListener('click', (e) => {
         const statCard = e.target.closest('.js-notification-stat-filter');
         if (!statCard) return;
@@ -175,41 +165,112 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     /* =========================================================================
-       4. PAGINACIÓN DE AMBAS TABLAS (DELEGACIÓN)
+       4. CHECKBOXES Y ASIGNACIÓN MASIVA
        ========================================================================= */
-    document.addEventListener('click', (e) => {
-        const pageBtn = e.target.closest('.page-btn');
-        if (!pageBtn || pageBtn.disabled) return;
+    function updateBulkActionVisibility() {
+        const bulkBar = document.getElementById('bulk-assign-actions');
+        const countSpan = document.getElementById('selected-notifications-count');
+        const checkedBoxes = document.querySelectorAll('.js-notification-checkbox:checked');
+        const allBoxes = document.querySelectorAll('.js-notification-checkbox');
+        const masterCheck = document.getElementById('check-all-notifications');
 
-        const targetPage = parseInt(pageBtn.dataset.page, 10);
-        if (isNaN(targetPage)) return;
+        const totalSelected = checkedBoxes.length;
 
-        const inNotifications = pageBtn.closest('#latest-notifications-wrapper') || pageBtn.closest('#js-pagination-notifications');
-        if (inNotifications) {
-            e.preventDefault();
-            fetchNotifications(targetPage);
-        } else {
-            e.preventDefault();
-            fetchEmployees(targetPage);
+        if (bulkBar) {
+            if (totalSelected > 0) {
+                bulkBar.classList.remove('hidden');
+                if (countSpan) countSpan.textContent = `${totalSelected} seleccionado${totalSelected !== 1 ? 's' : ''}`;
+            } else {
+                bulkBar.classList.add('hidden');
+            }
+        }
+
+        if (masterCheck && allBoxes.length > 0) {
+            masterCheck.checked = (totalSelected === allBoxes.length);
+            masterCheck.indeterminate = (totalSelected > 0 && totalSelected < allBoxes.length);
+        }
+    }
+
+    document.addEventListener('change', (e) => {
+        if (e.target && e.target.id === 'check-all-notifications') {
+            const isChecked = e.target.checked;
+            document.querySelectorAll('.js-notification-checkbox').forEach(chk => chk.checked = isChecked);
+            updateBulkActionVisibility();
+            return;
+        }
+
+        if (e.target && e.target.classList.contains('js-notification-checkbox')) {
+            updateBulkActionVisibility();
         }
     });
 
-    document.addEventListener('change', (e) => {
-        if (!e.target.matches('.page-input')) return;
+    document.addEventListener('click', (e) => {
+        const btnBulk = e.target.closest('.js-btn-bulk-assign');
+        if (!btnBulk) return;
 
-        const targetPage = parseInt(e.target.value, 10);
-        if (isNaN(targetPage) || targetPage < 1) return;
+        e.preventDefault();
+        const selectedIds = Array.from(document.querySelectorAll('.js-notification-checkbox:checked'))
+            .map(chk => chk.dataset.id)
+            .filter(Boolean);
 
-        const inNotifications = e.target.closest('#latest-notifications-wrapper') || e.target.closest('#js-pagination-notifications');
-        if (inNotifications) {
-            fetchNotifications(targetPage);
-        } else {
-            fetchEmployees(targetPage);
+        if (selectedIds.length === 0) return;
+
+        const url = `/sanctions/notifications/assign/?ids=${selectedIds.join(',')}`;
+        if (typeof window.openAjaxModal === 'function') {
+            window.openAjaxModal(url);
         }
     });
 
     /* =========================================================================
-       5. GESTIÓN DE MODALES VÍA MAIN.JS (openAjaxModal)
+       5. PAGINACIÓN ÚNICA (SIN DUPLICACIONES)
+       ========================================================================= */
+    document.addEventListener('click', (e) => {
+        const pageBtn = e.target.closest('.page-btn');
+        if (!pageBtn || pageBtn.disabled || pageBtn.classList.contains('disabled')) return;
+
+        const rawPage = pageBtn.dataset.page;
+        if (!rawPage) return;
+
+        const targetPage = parseInt(rawPage.trim(), 10);
+        if (isNaN(targetPage) || targetPage < 1) return;
+
+        e.preventDefault();
+        e.stopImmediatePropagation();
+
+        const inNotifications = pageBtn.closest('#latest-notifications-wrapper') ||
+            pageBtn.closest('#js-pagination-notifications');
+
+        if (inNotifications) {
+            fetchNotifications(targetPage);
+        } else {
+            fetchEmployees(targetPage);
+        }
+    }, true);
+
+    document.addEventListener('change', (e) => {
+        if (!e.target.matches('.page-input')) return;
+
+        const targetPage = parseInt(e.target.value.trim(), 10);
+        if (isNaN(targetPage) || targetPage < 1) return;
+
+        const inNotifications = e.target.closest('#latest-notifications-wrapper') ||
+            e.target.closest('#js-pagination-notifications');
+
+        if (inNotifications) {
+            fetchNotifications(targetPage);
+        } else {
+            fetchEmployees(targetPage);
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (!e.target.matches('.page-input') || e.key !== 'Enter') return;
+        e.preventDefault();
+        e.target.dispatchEvent(new Event('change', {bubbles: true}));
+    });
+
+    /* =========================================================================
+       6. MODALES Y EVENTOS AJAX
        ========================================================================= */
     document.addEventListener('click', (e) => {
         const btnModal = e.target.closest('.js-sanction-modal-btn');
@@ -222,11 +283,9 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Toggle respuesta (¿Ha respondido?)
-        const btnToggleResponse = e.target.closest('.js-toggle-response');
-        if (btnToggleResponse) {
-            e.preventDefault();
-            const notifId = btnToggleResponse.dataset.id;
+        const switchResponse = e.target.closest('.js-toggle-response');
+        if (switchResponse && e.target.type === 'checkbox') {
+            const notifId = switchResponse.dataset.id;
             const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
 
             fetch(`/sanctions/notifications/${notifId}/toggle-response/`, {
@@ -239,19 +298,71 @@ document.addEventListener('DOMContentLoaded', () => {
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {
-                        const textSpan = btnToggleResponse.querySelector('.modern-toggle-text');
+                        const textSpan = switchResponse.nextElementSibling?.querySelector('.switch-text');
                         if (textSpan) textSpan.textContent = data.label;
-                        btnToggleResponse.classList.toggle('modern-toggle-green', data.has_responded);
+                    } else {
+                        switchResponse.checked = !switchResponse.checked;
                     }
                 })
-                .catch(err => console.error('Error toggling response:', err));
+                .catch(err => {
+                    console.error('Error:', err);
+                    switchResponse.checked = !switchResponse.checked;
+                });
+            return;
+        }
+
+        const btnArchive = e.target.closest('.js-btn-archive');
+        if (btnArchive) {
+            e.preventDefault();
+            const notifId = btnArchive.dataset.id;
+
+            Swal.fire({
+                title: '¿Archivar trámite?',
+                input: 'textarea',
+                inputLabel: 'Motivo del archivado',
+                inputPlaceholder: 'Ingrese las razones por las cuales se archiva este trámite...',
+                showCancelButton: true,
+                confirmButtonText: 'Archivar',
+                cancelButtonText: 'Cancelar',
+                customClass: {
+                    confirmButton: 'swal2-confirm btn-swal-danger',
+                    cancelButton: 'swal2-cancel btn-swal-cancel'
+                },
+                inputValidator: (value) => {
+                    if (!value || !value.trim()) return 'Debe ingresar un motivo para archivar.';
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+                    const formData = new FormData();
+                    formData.append('observation', result.value.trim());
+
+                    fetch(`/sanctions/notifications/${notifId}/archive/`, {
+                        method: 'POST',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRFToken': csrfToken
+                        },
+                        body: formData
+                    })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) {
+                                showToast(data.message || 'Trámite archivado con éxito.', 'success');
+                                fetchNotifications(1);
+                            } else {
+                                Swal.fire('Error', data.message || 'No se pudo archivar.', 'error');
+                            }
+                        })
+                        .catch(err => console.error('Error archivando:', err));
+                }
+            });
         }
     });
 
-    // Envío de formularios dentro de modales (refresca la pestaña que esté activa)
     document.addEventListener('submit', (e) => {
         const form = e.target;
-        if (form.matches('#generateSanctionForm, #generateNotificationForm, #form-set-notified, #sanctionTypeForm, .ajax-sanction-form')) {
+        if (form.matches('#generateSanctionForm, #generateNotificationForm, #form-set-notified, #sanctionTypeForm, #assignNotificationForm, .ajax-sanction-form')) {
             if (typeof window.submitAjaxForm === 'function') {
                 window.submitAjaxForm(e, () => {
                     const activeTab = window.localStorage.getItem('sanctions-active-tab') || 'employees';
@@ -264,5 +375,4 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
-
 });

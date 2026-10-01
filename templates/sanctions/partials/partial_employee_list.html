@@ -10,12 +10,11 @@
             <thead>
             <tr>
                 <th class="width-3 no-sort">#</th>
-                <th class="width-25" data-field="person__last_name">Empleado</th>
-                <th class="width-10" data-field="person__document_number">Cédula</th>
-                <th class="width-22" data-field="budget__position_item__name">Cargo</th>
+                <th class="width-20" data-field="person__last_name">Empleado</th>
+                <th class="width-20" data-field="budget__position_item__name">Cargo</th>
                 <th class="width-18" data-field="area__name">Área / Dependencia</th>
                 <th class="width-10 text-center" data-field="employment_status__name">Régimen</th>
-                <th class="width-12 no-sort text-center actions">Acciones</th>
+                <th class="width-20 no-sort text-center actions">Acciones</th>
             </tr>
             </thead>
             <tbody id="table-body">
@@ -40,11 +39,12 @@
                                 </div>
                                 <div class="person-details">
                                     <h4>{{ item.employee.person.last_name }} {{ item.employee.person.first_name }}</h4>
+                                    <div class="text-muted small">{{ item.employee.person.document_number|default:"--" }}</div>
                                 </div>
+
+
                             </div>
                         </td>
-
-                        <td>{{ item.employee.person.document_number|default:"--" }}</td>
 
                         <td>
                             {% if item.budget and item.budget.position_item %}
@@ -74,12 +74,12 @@
                             <div class="actions-wrapper">
                                 <!-- Generar Notificación -->
                                 {% if perms.sanctions.add_sanctionnotification or perms.sanctions.add_sanction %}
-                                    <button type="button" class="btn-yellow-circle js-sanction-modal-btn"
+                                    <button type="button" class="btn-blue-circle js-sanction-modal-btn"
                                             data-url="{% url 'sanctions:generate_notification' %}?employee_id={{ item.employee.pk }}"
                                             title="Generar Notificación">
                                         <i class="fa-solid fa-bell"></i>
                                     </button>
-                                    <button type="button" class="btn-tenth js-sanction-modal-btn"
+                                    <button type="button" class="btn-dark-blue-circle js-sanction-modal-btn"
                                             data-url="{% url 'sanctions:notification_list' %}?employee_id={{ item.employee.pk }}"
                                             title="Listado de Notificaciones">
                                         <i class="fa-solid fa-list-check"></i>
@@ -98,7 +98,7 @@
                                 <!-- Ver Historial -->
                                 {% if perms.sanctions.view_sanction %}
                                     <a href="{% url 'sanctions:sanction_admin_by_employee' item.employee.pk %}"
-                                       class="btn-tenth"
+                                       class="btn-yellow-circle"
                                        title="Ver Historial de Sanciones">
                                         <i class="fa-solid fa-list-ul"></i>
                                     </a>
@@ -152,6 +152,12 @@
             <button type="button" class="page-btn page-next {% if not page_obj.has_next %}disabled{% endif %}"
                     title="Siguiente"
                     data-page="
+
+
+
+
+
+
 
 
                             {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages }}{% endif %}"
