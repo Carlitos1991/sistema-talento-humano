@@ -49,7 +49,7 @@
         <h6 class="section-title"><i class="fa-solid fa-user me-2"></i> IDENTIDAD</h6>
         <div class="info-data-row">
             <label>GÉNERO:</label>
-            <span class="value-text">{{ person.gender.name|default:"Masculino" }}</span>
+            <span class="value-text">{{ person.gender.name|default:"SN" }}</span>
         </div>
         <div class="info-data-row">
             <label>NACIMIENTO:</label>
@@ -62,11 +62,11 @@
         <h6 class="section-title"><i class="fa-solid fa-circle-info me-2"></i> INFORMACIÓN ADICIONAL</h6>
         <div class="info-data-row">
             <label>ESTADO CIVIL:</label>
-            <span class="value-text">{{ person.marital_status.name|default:"Casado/a" }}</span>
+            <span class="value-text">{{ person.marital_status.name|default:"SN" }}</span>
         </div>
         <div class="info-data-row">
             <label>TIPO DE SANGRE:</label>
-            <span class="value-text bold">{{ person.blood_type.name|default:"ORH +" }}</span>
+            <span class="value-text bold">{{ person.blood_type.name|default:"SN" }}</span>
         </div>
     </div>
 
@@ -79,7 +79,7 @@
         </div>
         <div class="info-data-row align-start">
             <label>DIRECCIÓN:</label>
-            <span class="value-text bold text-uppercase text-right">{{ person.address_reference|default:"CDLA. DANIEL ALVAREZ.- ARCA DE NOE Y MOISES" }}</span>
+            <span class="value-text bold text-uppercase text-right">{{ person.address_reference|default:"SN" }}</span>
         </div>
     </div>
 </div>
@@ -91,11 +91,11 @@
         <h6 class="section-title"><i class="fa-solid fa-phone me-2"></i> CONTACTO</h6>
         <div class="info-data-row">
             <label>EMAIL:</label>
-            <span class="value-text">{{ person.email|default:"carloschacha138@gmail.com" }}</span>
+            <span class="value-text">{{ person.email|default:"Sin datos" }}</span>
         </div>
         <div class="info-data-row">
             <label>CELULAR:</label>
-            <span class="value-text bold">{{ person.phone_number|default:"0983078524" }}</span>
+            <span class="value-text bold">{{ person.phone_number|default:"Sin datos" }}</span>
         </div>
     </div>
 
@@ -122,14 +122,14 @@
         <div class="info-data-row">
             <label>NOMBRE:</label>
             <span class="value-text bold text-uppercase">
-                {{ person.emergency_contact_name|default:"SANDRA BALCAZAR" }}
+                {{ person.emergency_contact_name|default:"Sin datos" }}
                         {% if person.emergency_contact_relationship %}/
                             {{ person.emergency_contact_relationship.name }}{% else %}/ESPOSA(O)/CONYUGE{% endif %}
             </span>
         </div>
         <div class="info-data-row">
             <label>TELÉFONO:</label>
-            <span class="value-text bold">{{ person.emergency_contact_phone|default:"0980024414" }}</span>
+            <span class="value-text bold">{{ person.emergency_contact_phone|default:"Sin Datos" }}</span>
         </div>
     </div>
 </div>
