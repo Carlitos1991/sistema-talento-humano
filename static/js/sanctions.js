@@ -1,11 +1,12 @@
 /**
  * SIGETH - Módulo de Sanciones
- * Pestañas, búsqueda reactiva, selección masiva y paginación limpia.
+ * Pestañas, búsqueda reactiva, selección masiva, paginación y envío Ajax seguro.
  */
 document.addEventListener('DOMContentLoaded', () => {
 
     const listUrl = window.location.pathname;
     let currentStatusFilter = 'all';
+    let isSubmitting = false;
 
     /* =========================================================================
        1. MANEJO DE PESTAÑAS (TABS)
@@ -67,6 +68,8 @@ document.addEventListener('DOMContentLoaded', () => {
             .catch(err => console.error('Error cargando empleados:', err));
     }
 
+    window.fetchEmployees = fetchEmployees;
+
     if (employeeSearch) {
         let debounceTimer;
         employeeSearch.addEventListener('input', (e) => {
@@ -85,7 +88,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const notifYear = document.getElementById('notifications-year');
 
     function fetchNotifications(page = 1) {
-        // Limpiar el número de página de cualquier espacio o caracter extraño
         const cleanPage = parseInt(String(page).trim(), 10) || 1;
 
         const params = new URLSearchParams();
@@ -126,6 +128,8 @@ document.addEventListener('DOMContentLoaded', () => {
             })
             .catch(err => console.error('Error cargando notificaciones:', err));
     }
+
+    window.fetchNotifications = fetchNotifications;
 
     function updateStatsCards(statsList) {
         const statsContainer = document.querySelector('[data-sanctions-pane="notifications"] .stats-row');
@@ -168,9 +172,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     /* =========================================================================
-        4. CONTROL DE CHECKBOXES CON PERSISTENCIA ENTRE PÁGINAS (SET GLOBAL)
-        ========================================================================= */
-    // Almacena todos los IDs seleccionados a través de las diferentes páginas
+       4. CONTROL DE CHECKBOXES CON PERSISTENCIA ENTRE PÁGINAS (SET GLOBAL)
+       ========================================================================= */
     const selectedNotificationIds = new Set();
 
     function updateBulkActionVisibility() {
@@ -179,13 +182,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const masterCheck = document.getElementById('check-all-notifications');
         const currentCheckboxes = document.querySelectorAll('.js-notification-checkbox');
 
-        // 1. Re-marcar los checkboxes que pertenecen a la página actual según el Set
         currentCheckboxes.forEach(chk => {
             const id = String(chk.dataset.id);
             chk.checked = selectedNotificationIds.has(id);
         });
 
-        // 2. Actualizar el estado del checkbox maestro en la vista actual
         if (masterCheck && currentCheckboxes.length > 0) {
             const totalInPage = currentCheckboxes.length;
             const checkedInPage = Array.from(currentCheckboxes).filter(chk => chk.checked).length;
@@ -197,7 +198,6 @@ document.addEventListener('DOMContentLoaded', () => {
             masterCheck.indeterminate = false;
         }
 
-        // 3. Mostrar u ocultar la barra con el contador global persistente
         const totalSelected = selectedNotificationIds.size;
         if (bulkBar) {
             if (totalSelected > 0) {
@@ -211,9 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Escuchador de cambios en checkboxes
     document.addEventListener('change', (e) => {
-        // 4.1 Checkbox maestro (Seleccionar / Deseleccionar todos los de la página actual)
         if (e.target && e.target.id === 'check-all-notifications') {
             const isChecked = e.target.checked;
             document.querySelectorAll('.js-notification-checkbox').forEach(chk => {
@@ -229,7 +227,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // 4.2 Checkbox individual
         if (e.target && e.target.classList.contains('js-notification-checkbox')) {
             const id = String(e.target.dataset.id);
             if (e.target.checked) {
@@ -241,7 +238,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // 4.3 Clic en el botón "Asignar Trámites" (Envía todos los IDs acumulados)
     document.addEventListener('click', (e) => {
         const btnBulk = e.target.closest('.js-btn-bulk-assign');
         if (!btnBulk) return;
@@ -258,7 +254,6 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Abrir modal pasando la lista total de IDs persistidos
         const url = `/sanctions/notifications/assign/?ids=${allSelectedIds.join(',')}`;
         if (typeof window.openAjaxModal === 'function') {
             window.openAjaxModal(url);
@@ -266,7 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     /* =========================================================================
-       5. PAGINACIÓN ÚNICA (SIN DUPLICACIONES)
+       5. PAGINACIÓN DE AMBAS TABLAS
        ========================================================================= */
     document.addEventListener('click', (e) => {
         const pageBtn = e.target.closest('.page-btn');
@@ -282,7 +277,8 @@ document.addEventListener('DOMContentLoaded', () => {
         e.stopImmediatePropagation();
 
         const inNotifications = pageBtn.closest('#latest-notifications-wrapper') ||
-            pageBtn.closest('#js-pagination-notifications');
+            pageBtn.closest('#js-pagination-notifications') ||
+            (pageBtn.closest('.sanctions-tab-pane') && pageBtn.closest('.sanctions-tab-pane').dataset.sanctionsPane === 'notifications');
 
         if (inNotifications) {
             fetchNotifications(targetPage);
@@ -298,7 +294,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isNaN(targetPage) || targetPage < 1) return;
 
         const inNotifications = e.target.closest('#latest-notifications-wrapper') ||
-            e.target.closest('#js-pagination-notifications');
+            e.target.closest('#js-pagination-notifications') ||
+            (e.target.closest('.sanctions-tab-pane') && e.target.closest('.sanctions-tab-pane').dataset.sanctionsPane === 'notifications');
 
         if (inNotifications) {
             fetchNotifications(targetPage);
@@ -392,7 +389,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         .then(res => res.json())
                         .then(data => {
                             if (data.success) {
-                                showToast(data.message || 'Trámite archivado con éxito.', 'success');
+                                if (typeof showToast === 'function') {
+                                    showToast(data.message || 'Trámite archivado con éxito.', 'success');
+                                }
                                 fetchNotifications(1);
                             } else {
                                 Swal.fire('Error', data.message || 'No se pudo archivar.', 'error');
@@ -404,24 +403,81 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    /* =========================================================================
+       7. ENVÍO DE FORMULARIOS AJAX (UN SOLO LISTENER SIN CONFLICTOS)
+       ========================================================================= */
     document.addEventListener('submit', (e) => {
         const form = e.target;
-        if (form.matches('#generateSanctionForm, #generateNotificationForm, #form-set-notified, #sanctionTypeForm, #assignNotificationForm, .ajax-sanction-form')) {
-            if (typeof window.submitAjaxForm === 'function') {
-                window.submitAjaxForm(e, () => {
-                    // Limpiar la selección tras guardar la asignación
-                    if (form.id === 'assignNotificationForm') {
-                        selectedNotificationIds.clear();
-                    }
+        if (!form.matches('#generateNotificationForm, #generateSanctionForm, #form-set-notified, #sanctionTypeForm, #assignNotificationForm, .ajax-sanction-form')) {
+            return;
+        }
 
-                    const activeTab = window.localStorage.getItem('sanctions-active-tab') || 'employees';
-                    if (activeTab === 'notifications') {
-                        fetchNotifications(1);
-                    } else {
-                        fetchEmployees(1);
-                    }
+        e.preventDefault();
+        e.stopImmediatePropagation();
+
+        if (isSubmitting) return;
+
+        // Validación preventiva de tipo de notificación
+        if (form.id === 'generateNotificationForm') {
+            const notifTypeSelect = form.querySelector('[name="notification_type"]');
+            const notifTypeValue = notifTypeSelect ? notifTypeSelect.value.trim() : '';
+
+            if (!notifTypeValue) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Campo Requerido',
+                    text: 'Debe seleccionar el Tipo de Notificación antes de continuar.',
+                    confirmButtonText: 'Entendido'
                 });
+
+                if (notifTypeSelect) {
+                    notifTypeSelect.classList.add('is-invalid');
+                    notifTypeSelect.scrollIntoView({behavior: 'smooth', block: 'center'});
+                    notifTypeSelect.focus();
+                }
+                return;
             }
         }
+
+        const submitBtn = form.querySelector('[type="submit"]');
+        let originalBtnHtml = '';
+        if (submitBtn) {
+            originalBtnHtml = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Guardando...';
+        }
+
+        isSubmitting = true;
+
+        if (typeof window.submitAjaxForm === 'function') {
+            window.submitAjaxForm(e, (data) => {
+                isSubmitting = false;
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalBtnHtml;
+                }
+
+                if (form.id === 'assignNotificationForm') {
+                    selectedNotificationIds.clear();
+                }
+
+                const activeTab = window.localStorage.getItem('sanctions-active-tab') || 'employees';
+                if (activeTab === 'notifications') {
+                    fetchNotifications(1);
+                } else {
+                    fetchEmployees(1);
+                }
+            });
+        }
+
+        // Recuperar botón por si ocurre algún fallo de red
+        setTimeout(() => {
+            isSubmitting = false;
+            if (submitBtn && submitBtn.disabled) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnHtml;
+            }
+        }, 1500);
     });
+
 });

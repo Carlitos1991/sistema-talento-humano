@@ -30,7 +30,7 @@
 
                 <div class="form-section-card mt-3">
                     <div class="form-group form-group-compact mb-3">
-                        <label class="form-label" for="select-assign-user">
+                        <label class="form-label font-weight-700" for="select-assign-user">
                             Funcionario Responsable <span class="text-danger">*</span>
                         </label>
                         <select id="select-assign-user" name="assigned_to" class="form-control" style="width: 100%;"
@@ -57,7 +57,7 @@
                 <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">
                     Cancelar
                 </button>
-                <button type="submit" class="btn-dark-blue-rectangle">
+                <button type="submit" class="btn-dark-blue-rectangle" id="btnSubmitAssignModal">
                     <i class="fas fa-save me-1"></i> Confirmar Asignación
                 </button>
             </div>
@@ -70,7 +70,6 @@
         const $select = $('#select-assign-user');
         const $modal = $('#assignNotificationForm').closest('.modal-container-medium');
 
-        // Si main.js ya lo inicializó, destruirlo para configurarlo con búsqueda
         if ($select.hasClass('select2-hidden-accessible')) {
             $select.select2('destroy');
         }
@@ -80,6 +79,11 @@
             width: '100%',
             placeholder: 'Seleccione o escriba el nombre del funcionario...',
             allowClear: true
+        });
+
+        // Asegurar que el cambio en Select2 sincronice el valor del select nativo
+        $select.on('change', function () {
+            this.dispatchEvent(new Event('change', {bubbles: true}));
         });
     })();
 </script>

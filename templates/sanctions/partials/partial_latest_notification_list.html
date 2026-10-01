@@ -24,13 +24,13 @@
                 <input type="checkbox" id="check-all-notifications" class="custom-checkbox" title="Seleccionar todos">
             </th>
             <th class="width-7" data-field="sequence_number">Código</th>
-            <th class="width-23" data-field="employee__person__last_name">Empleado</th>
-            <th class="width-7 text-center" data-field="month">Mes</th>
-            <th class="width-16">Inconsistencias</th>
-            <th class="width-15" data-field="registration_date">Fechas</th>
-            <th class="width-10 text-center" data-field="status">Estado</th>
-            <th class="width-7 text-center">Respuesta</th>
-            <th class="width-12 no-sort text-center actions">Acciones</th>
+            <th class="width-15" data-field="employee__person__last_name">Empleado</th>
+            <th class="width-7 no-sort" data-field="month">Mes</th>
+            <th class="width-16 no-sort">Inconsistencias</th>
+            <th class="width-15 no-sort" data-field="registration_date">Fechas</th>
+            <th class="width-8 text-center" data-field="status">Estado</th>
+            <th class="width-10 text-center">Respuesta</th>
+            <th class="width-18 no-sort text-center actions">Acciones</th>
         </tr>
         </thead>
         <tbody id="table-body">
@@ -48,7 +48,7 @@
                         <div class="bold text-primary">{{ notification.employee.person.full_name }}</div>
                         <small class="text-muted">{{ notification.employee.person.document_number|default:"--" }}</small>
                     </td>
-                    <td class="text-center">{{ notification.month_label }}</td>
+                    <td>{{ notification.month_label }}</td>
                     <td>
                         <div class="small"><strong>Atrasos:</strong> {{ notification.minutes_late }} min</div>
                         <div class="small text-muted"><strong>Sin marcar:</strong> {{ notification.regs_without_mark }}
@@ -61,7 +61,7 @@
                                 <strong>Notif:</strong> {{ notification.notification_date|date:"d/m/Y" }}</div>
                         {% endif %}
                     </td>
-                    <td class="text-center">
+                    <td>
                         <span class="badge {% if notification.status == 'GENERADO' %}badge-amber{% elif notification.status == 'EN_PROCESO' %}badge-blue{% elif notification.status == 'SANCIONADO' %}badge-red{% else %}badge-green{% endif %}">
                             {{ notification.get_status_display }}
                         </span>
@@ -143,6 +143,8 @@
             <button type="button"
                     class="page-btn page-prev {% if not latest_notifications_page_obj.has_previous %}disabled{% endif %}"
                     title="Anterior" data-page="
+
+
                     {% if latest_notifications_page_obj.has_previous %}{{ latest_notifications_page_obj.previous_page_number }}{% else %}1{% endif %}"
                     {% if not latest_notifications_page_obj.has_previous %}disabled{% endif %}>
                 <i class="fas fa-angle-left"></i>
@@ -156,6 +158,8 @@
             <button type="button"
                     class="page-btn page-next {% if not latest_notifications_page_obj.has_next %}disabled{% endif %}"
                     title="Siguiente" data-page="
+
+
                     {% if latest_notifications_page_obj.has_next %}{{ latest_notifications_page_obj.next_page_number }}{% else %}{{ latest_notifications_page_obj.paginator.num_pages }}{% endif %}"
                     {% if not latest_notifications_page_obj.has_next %}disabled{% endif %}>
                 <i class="fas fa-angle-right"></i>

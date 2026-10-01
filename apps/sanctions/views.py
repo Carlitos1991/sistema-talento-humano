@@ -2515,12 +2515,12 @@ class AssignNotificationView(LoginRequiredMixin, View):
 class AssignNotificationAjaxView(LoginRequiredMixin, View):
     def get(self, request):
         ids_str = request.GET.get('ids', '')
-        notification_ids = [id for id in ids_str.split(',') if id]
+        notification_ids = [id.strip() for id in ids_str.split(',') if id.strip()]
 
         if not notification_ids:
-            return HttpResponse("<div class='p-4'>No se seleccionaron registros.</div>", status=400)
+            return JsonResponse({'success': False, 'message': 'No se seleccionaron trámites para asignar.'}, status=400)
 
-        # Cargar lista de usuarios con su persona
+        # Cargar lista de funcionarios con su persona
         users = User.objects.filter(is_active=True).select_related('person').order_by('person__first_name',
                                                                                       'person__last_name', 'username')
         users_list = []
@@ -2539,6 +2539,56 @@ class AssignNotificationAjaxView(LoginRequiredMixin, View):
         }
         html = render_to_string('sanctions/modals/modal_assign_notification.html', context, request=request)
         return HttpResponse(html)
+
+    def post(self, request, pk=None):
+        ids_raw = request.POST.get('notification_ids', '')
+        notification_ids = [id.strip() for id in ids_raw.split(',') if id.strip()]
+
+        # Aceptar tanto assigned_to como user_id
+        user_to_id = request.POST.get('assigned_to') or request.POST.get('user_id')
+        observation = request.POST.get('observation', '').strip()
+
+        if not notification_ids:
+            return JsonResponse({'success': False, 'message': 'No se recibieron notificaciones para asignar.'},
+                                status=400)
+
+        if not user_to_id:
+            return JsonResponse(
+                {'success': False, 'message': 'Debe seleccionar un funcionario responsable obligatorio.'}, status=400)
+
+        try:
+            target_user = get_object_or_404(User, pk=user_to_id)
+
+            with transaction.atomic():
+                notifications = SanctionNotification.objects.filter(id__in=notification_ids)
+
+                for notification in notifications:
+                    # 1. Finalizar asignación activa previa
+                    SanctionAssignment.objects.filter(notification=notification, is_current=True).update(
+                        is_current=False,
+                        end_date=timezone.now()
+                    )
+
+                    # 2. Crear nueva asignación
+                    SanctionAssignment.objects.create(
+                        notification=notification,
+                        assigned_to=target_user,
+                        assigned_by=request.user,
+                        observation=observation or f"Trámite asignado por {request.user.get_full_name() or request.user.username}.",
+                        is_current=True
+                    )
+
+                    # 3. Actualizar estado
+                    notification.status = 'EN_PROCESO'
+                    notification.save(update_fields=['status'])
+
+            return JsonResponse({
+                'success': True,
+                'status': 'success',
+                'message': f'Se asignaron {len(notification_ids)} trámite(s) a {target_user.get_full_name() or target_user.username} exitosamente.'
+            })
+        except Exception as e:
+            return JsonResponse({'success': False, 'message': f'Error al asignar: {str(e)}'}, status=500)
 
 
 class UserSearchAjaxView(LoginRequiredMixin, View):

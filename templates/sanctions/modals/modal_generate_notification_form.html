@@ -2,7 +2,7 @@
 <div class="modal-overlay">
     <div class="modal-container-medium">
         <form method="post" action="{% url 'sanctions:generate_notification' %}" id="generateNotificationForm"
-              autocomplete="off" onsubmit="submitAjaxForm(event)">
+              autocomplete="off" novalidate>
             {% csrf_token %}
             <input type="hidden" name="employee_id" value="{{ employee.id }}">
             <input type="hidden" name="notification_id" value="{{ notification.id|default:'' }}">
@@ -33,43 +33,51 @@
                     </div>
                 {% endif %}
 
-                <!-- Banner Superior Compacto -->
-                <div class="quick-view-banner-compact">
-                    <div class="quick-view-avatar-col">
+                <!-- FICHA DE EMPLEADO CENTRADA Y COMPACTA (style.css) -->
+                <div class="employee-card-badge"
+                     style="justify-content: center; text-align: left; padding: 0.65rem 1.25rem;">
+                    <div class="employee-avatar-wrapper" style="width: 52px; height: 52px;">
                         {% if employee.person.photo %}
                             <img src="{{ employee.person.photo.url }}" alt="{{ employee.person.full_name }}"
-                                 class="avatar-md">
+                                 class="employee-avatar-img">
                         {% else %}
-                            <div class="avatar-placeholder-md">
+                            <div class="employee-avatar-placeholder" style="font-size: 1.05rem;">
                                 {{ employee.person.last_name|first }}{{ employee.person.first_name|first }}
                             </div>
                         {% endif %}
                     </div>
-                    <div class="quick-view-header-col">
-                        <h2 class="quick-view-name">{{ employee.person.last_name }} {{ employee.person.first_name }}</h2>
-                        <div class="quick-view-subrow">
-                            <span class="text-muted bold small">
-                                <i class="fa-regular fa-id-card me-1"></i>{{ employee.person.document_number|default:"--" }}
+                    <div class="employee-card-details">
+                        <span class="employee-card-name" style="font-size: 0.95rem;">
+                            {{ employee.person.last_name }} {{ employee.person.first_name }}
+                        </span>
+                        <div class="d-flex align-items-center gap-2 mt-1">
+                            <span class="employee-card-doc" style="font-size: 0.8rem;">
+                                <i class="fa-regular fa-id-card me-1 text-muted"></i>{{ employee.person.document_number|default:"--" }}
                             </span>
-                            <span class="badge badge-blue">Régimen: {{ regime_context.regime.name|default:'Sin definir' }}</span>
+                            <span class="badge badge-blue" style="font-size: 0.68rem; padding: 2px 8px;">
+                                Régimen: {{ regime_context.regime.name|default:'Sin definir' }}
+                            </span>
                         </div>
                     </div>
                 </div>
 
                 <!-- Bloque 1: Datos de Notificación -->
                 <div class="form-section-card mt-3">
-                    <div class="section-title"><i class="fas fa-file-signature text-green"></i> Datos de la Notificación
+                    <div class="section-title">
+                        <i class="fas fa-file-signature text-green"></i> Datos de la Notificación
                     </div>
                     <div class="grid-2-cols">
-                        <div class="form-group">
-                            <label class="form-label" for="{{ form.notification_type.id_for_label }}">Tipo de
-                                Notificación *</label>
+                        <div class="form-group" id="group-notification-type">
+                            <label class="form-label" for="{{ form.notification_type.id_for_label }}">
+                                Tipo de Notificación *
+                            </label>
                             {{ form.notification_type }}
                             <div class="invalid-feedback" id="error-notification_type"></div>
                         </div>
                         <div class="form-group">
-                            <label class="form-label" for="{{ form.registration_date.id_for_label }}">Fecha Registro
-                                *</label>
+                            <label class="form-label" for="{{ form.registration_date.id_for_label }}">
+                                Fecha Registro *
+                            </label>
                             {{ form.registration_date }}
                             <div class="invalid-feedback" id="error-registration_date"></div>
                         </div>
@@ -90,7 +98,8 @@
 
                 <!-- Bloque 2: Firmas -->
                 <div class="form-section-card mt-3">
-                    <div class="section-title"><i class="fas fa-signature text-green"></i> Firmas de Responsabilidad
+                    <div class="section-title">
+                        <i class="fas fa-signature text-green"></i> Firmas de Responsabilidad
                     </div>
                     <div class="grid-2-cols">
                         <div class="form-group">
@@ -121,7 +130,9 @@
 
                 <!-- Bloque 3: Métricas y Observaciones -->
                 <div class="form-section-card mt-3">
-                    <div class="section-title"><i class="fas fa-list-ol text-green"></i> Métricas y Observaciones</div>
+                    <div class="section-title">
+                        <i class="fas fa-list-ol text-green"></i> Métricas y Observaciones
+                    </div>
                     <div class="grid-3-cols">
                         <div class="form-group">
                             <label class="form-label" for="{{ form.minutes_late.id_for_label }}">Minutos Atraso</label>
@@ -149,10 +160,11 @@
                 </div>
             </div>
 
-            <!-- FOOTER FIJO (Siempre anclado al fondo) -->
+            <!-- FOOTER FIJO -->
             <div class="modal-footer-fixed">
                 <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">Cancelar</button>
-                <button type="submit" class="btn-success" {% if not regime_context.regime %}disabled{% endif %}>
+                <button type="submit" id="btnSubmitGenerateNotification" class="btn-success"
+                        {% if not regime_context.regime %}disabled{% endif %}>
                     <i class="fas fa-save me-1"></i> {% if is_edit %}Actualizar{% else %}Generar{% endif %} Notificación
                 </button>
             </div>
