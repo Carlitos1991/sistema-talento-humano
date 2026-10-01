@@ -1,162 +1,180 @@
 {% load static %}
-<div class="table-container">
-    <div class="table-scroll-top">
-        <table class="managed-table exportable-table"
-               data-title="Bandeja de Sanciones"
-               data-filename="Reporte_Bandeja_Sanciones"
-               data-list-url="{% url 'sanctions:sanction_history' %}"
-               data-external-pagination="true"
-               data-external-search="true">
-            <thead>
-            <tr>
-                <th class="width-3 no-sort text-center">
-                    <label class="custom-checkbox">
-                        <input type="checkbox" id="check-all-notifications">
-                        <span class="checkmark"></span>
-                    </label>
-                </th>
-                <th class="width-5 no-sort">#</th>
-                <th class="width-22" data-field="employee__person__last_name">Empleado</th>
-                <th class="width-10 text-center" data-field="status">Estado</th>
-                <th class="width-18">Responsable Actual</th>
-                <th class="width-10 text-center">Semáforo</th>
-                <th class="width-12 no-sort text-center">Historial</th>
-                <th class="width-20 no-sort text-center actions">Acciones</th>
-            </tr>
-            </thead>
-            <tbody id="table-body">
-            {% if notifications %}
-                {% for notification in notifications %}
-                    {% with current_assign=notification.current_assignment %}
-                        <tr class="location-row" id="row-assignment-{{ notification.pk }}">
-                            <td class="text-center">
-                                <label class="custom-checkbox">
-                                    <input type="checkbox" class="js-notification-checkbox"
-                                           value="{{ notification.pk }}">
-                                    <span class="checkmark"><i class="fa-solid fa-check"></i></span>
-                                </label>
-                            </td>
-                            <td>{{ page_obj.start_index|add:forloop.counter0 }}</td>
-                            <td>
-                                <div class="bold text-primary">{{ notification.employee.person.full_name }}</div>
-                                <small class="text-muted">{{ notification.month_label }} {{ notification.year }}</small>
-                            </td>
-                            <td class="text-center">
-                                <span class="badge {% if notification.status == 'GENERADO' %}badge-amber{% elif notification.status == 'EN_PROCESO' %}badge-blue{% elif notification.status == 'SANCIONADO' %}badge-red{% else %}badge-green{% endif %}">
-                                    {{ notification.get_status_display }}
-                                </span>
-                            </td>
-                            <td>
-                                {% if current_assign %}
-                                    <div class="bold small">{{ current_assign.assigned_to.get_full_name }}</div>
-                                    <small class="text-muted">Desde: {{ current_assign.start_date|date:"d/m/Y H:i" }}</small>
-                                {% else %}
-                                    <span class="text-muted small italic">Sin asignar</span>
-                                {% endif %}
-                            </td>
-                            <td class="text-center">
-                                {% if current_assign %}
-                                    {% with info=current_assign.get_status_info %}
-                                        <div class="d-inline-flex flex-column align-items-center">
-                                            <span class="badge"
-                                                  style="background-color: {{ info.color }}; color: #fff;">{{ info.label }}</span>
-                                            <small class="text-muted bold mt-1">{{ info.days }}d {{ info.hours }}h</small>
-                                        </div>
-                                    {% endwith %}
-                                {% else %}
-                                    <span class="text-muted">--</span>
-                                {% endif %}
-                            </td>
-                            <td class="text-center">
-                                <div class="actions-wrapper justify-content-center">
-                                    <!-- Historial de Notificaciones con Badge Contador -->
-                                    <button type="button" class="btn-tenth js-sanction-modal-btn position-relative"
-                                            data-url="{% url 'sanctions:notification_list' %}?employee_id={{ notification.employee_id }}"
-                                            title="Historial de Notificaciones">
-                                        <i class="fa-solid fa-bell text-blue"></i>
-                                        <span class="badge-counter">{{ notification.employee_notifications_total|default:0 }}</span>
-                                    </button>
-
-                                    <!-- Historial de Acciones de Personal con Badge Contador -->
-                                    <button type="button" class="btn-tenth js-sanction-modal-btn position-relative"
-                                            data-url="{% url 'sanctions:actions_history_ajax' %}?employee_id={{ notification.employee_id }}"
-                                            title="Historial de Acciones">
-                                        <i class="fa-solid fa-list-check text-green"></i>
-                                        <span class="badge-counter">{{ notification.employee_sanction_actions_total|default:0 }}</span>
-                                    </button>
-                                </div>
-                            </td>
-                            <td class="actions text-center">
-                                <div class="actions-wrapper">
-                                    {% if notification.status == 'EN_PROCESO' %}
-                                        <button type="button" class="btn-red-circle js-sanction-modal-btn"
-                                                data-url="{% url 'sanctions:generate_sanction' %}?employee_id={{ notification.employee_id }}&notification_id={{ notification.pk }}"
-                                                title="Generar Sanción">
-                                            <i class="fa-solid fa-gavel"></i>
-                                        </button>
-                                        <button type="button" class="btn-yellow-circle js-btn-archive"
-                                                data-id="{{ notification.pk }}" title="Archivar Trámite">
-                                            <i class="fa-solid fa-box-archive"></i>
-                                        </button>
-                                    {% elif notification.status == 'SANCIONADO' %}
-                                        {% with action=notification.linked_action %}
-                                            {% if action %}
-                                                {% if not action.motivation or not action.explanation %}
-                                                    <button type="button" class="btn-green-circle js-sanction-modal-btn"
-                                                            data-url="{% url 'sanctions:edit_sanction_personnel_action' action.id %}"
-                                                            title="Completar Elaboración de Acción">
-                                                        <i class="fa-solid fa-file-circle-plus"></i>
-                                                    </button>
-                                                {% else %}
-                                                    {% if not action.is_registered %}
-                                                        <button type="button" class="btn-tenth js-sanction-modal-btn"
-                                                                data-url="{% url 'sanctions:edit_sanction_personnel_action' action.id %}"
-                                                                title="Editar Acción de Personal">
-                                                            <i class="fa-solid fa-pen-to-square"></i>
-                                                        </button>
-                                                    {% endif %}
-                                                    <a href="{% url 'personnel_actions:action_pdf' action.id %}"
-                                                       target="_blank" rel="noopener noreferrer"
-                                                       class="btn-tenth" title="Imprimir Acción de Personal">
-                                                        <i class="fa-solid fa-print text-blue"></i>
-                                                    </a>
-                                                {% endif %}
-                                            {% endif %}
-                                        {% endwith %}
-                                    {% endif %}
-
-                                    <!-- Ver Ruta del Trámite -->
-                                    <button type="button" class="btn-tenth js-sanction-modal-btn"
-                                            data-url="{% url 'sanctions:notification_route_history' notification.pk %}"
-                                            title="Ver Ruta del Trámite">
-                                        <i class="fa-solid fa-timeline"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    {% endwith %}
-                {% endfor %}
-            {% else %}
-                <tr>
-                    <td colspan="8">
-                        <div class="empty-state-container">
-                            <i class="fas fa-inbox empty-state-icon"></i>
-                            <p class="empty-state-text">No hay trámites en este estado.</p>
-                        </div>
-                    </td>
-                </tr>
-            {% endif %}
-            </tbody>
-        </table>
+<!-- Barra flotante de asignación y devolución masiva -->
+<div id="bulk-assign-actions" class="hidden">
+    <div class="d-flex align-items-center gap-2">
+        <span class="badge badge-indigo" id="selected-notifications-count">0 seleccionados</span>
+        <small class="text-muted">Trámites listos para gestión masiva.</small>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <button type="button" class="btn-dark-blue-rectangle js-btn-bulk-assign"
+                style="padding: 0.4rem 1rem; font-size: 0.82rem;">
+            <i class="fa-solid fa-user-plus me-1"></i> Asignar Trámites
+        </button>
+        <button type="button" class="btn-warning js-btn-bulk-return" style="padding: 0.4rem 1rem; font-size: 0.82rem;">
+            <i class="fa-solid fa-rotate-left me-1"></i> Devolver Trámites
+        </button>
     </div>
 </div>
 
-{% if paginator.num_pages > 0 %}
-    <div id="js-pagination" class="pagination-container">
+<div class="table-container">
+    <table class="managed-table exportable-table"
+           data-title="Bandeja de Sanciones"
+           data-filename="Reporte_Bandeja_Sanciones"
+           data-list-url="{% url 'sanctions:sanction_history' %}"
+           data-external-pagination="true"
+           data-external-search="true">
+        <thead>
+        <tr>
+            <th class="width-3 no-sort text-center">
+                <input type="checkbox" id="check-all-notifications" class="custom-checkbox" title="Seleccionar todos">
+            </th>
+            <th class="width-5 no-sort">#</th>
+            <th class="width-23" data-field="employee__person__last_name">Empleado</th>
+            <th class="width-10 text-center" data-field="status">Estado</th>
+            <th class="width-17">Responsable Actual</th>
+            <th class="width-10 text-center">Semáforo</th>
+            <th class="width-12 no-sort text-center">Historial</th>
+            <th class="width-20 no-sort text-center actions">Acciones</th>
+        </tr>
+        </thead>
+        <tbody id="table-body">
+        {% if notifications %}
+            {% for notification in notifications %}
+                {% with current_assign=notification.current_assignment %}
+                    <tr class="location-row" id="row-assignment-{{ notification.pk }}">
+                        <td class="text-center">
+                            <input type="checkbox" class="custom-checkbox js-notification-checkbox"
+                                   data-id="{{ notification.pk }}" value="{{ notification.pk }}">
+                        </td>
+                        <td>{{ page_obj.start_index|add:forloop.counter0 }}</td>
+                        <td>
+                            <div class="bold text-primary">{{ notification.employee.person.full_name }}</div>
+                            <small class="text-muted">{{ notification.month_label }} {{ notification.year }}</small>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge {% if notification.status == 'GENERADO' %}badge-amber{% elif notification.status == 'EN_PROCESO' %}badge-blue{% elif notification.status == 'SANCIONADO' %}badge-red{% else %}badge-green{% endif %}">
+                                {{ notification.get_status_display }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if current_assign %}
+                                <div class="bold small">{{ current_assign.assigned_to.get_full_name }}</div>
+                                <small class="text-muted">Desde: {{ current_assign.start_date|date:"d/m/Y H:i" }}</small>
+                            {% else %}
+                                <span class="text-muted small italic">Sin asignar</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if current_assign %}
+                                {% with info=current_assign.get_status_info %}
+                                    <div class="semaphore-container">
+                                    <span class="badge" style="background-color: {{ info.color }}; color: #ffffff;">
+                                        {{ info.label }}
+                                    </span>
+                                        <span class="semaphore-subtime">{{ info.days }}d {{ info.hours }}h</span>
+                                    </div>
+                                {% endwith %}
+                            {% else %}
+                                <span class="text-muted small">--</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <div class="actions-wrapper justify-content-center" style="gap: 12px; overflow: visible;">
+                                <!-- Historial de Notificaciones con Badge Contador Permanente -->
+                                <div class="badge-icon-btn-container">
+                                    <button type="button" class="btn-blue-circle js-sanction-modal-btn"
+                                            data-url="{% url 'sanctions:notification_list' %}?employee_id={{ notification.employee_id }}"
+                                            title="Historial de Notificaciones">
+                                        <i class="fa-solid fa-bell"></i>
+                                    </button>
+                                    <span class="badge-notification-fixed">{{ notification.employee_notifications_total|default:0 }}</span>
+                                </div>
+
+                                <!-- Historial de Acciones de Personal con Badge Contador Permanente -->
+                                <div class="badge-icon-btn-container">
+                                    <button type="button" class="btn-green-circle js-sanction-modal-btn"
+                                            data-url="{% url 'sanctions:actions_history_ajax' %}?employee_id={{ notification.employee_id }}"
+                                            title="Historial de Acciones">
+                                        <i class="fa-solid fa-list-check"></i>
+                                    </button>
+                                    <span class="badge-notification-fixed">{{ notification.employee_sanction_actions_total|default:0 }}</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="actions text-center">
+                            <div class="actions-wrapper">
+                                {% if notification.status == 'EN_PROCESO' %}
+                                    <button type="button" class="btn-red-circle js-sanction-modal-btn"
+                                            data-url="{% url 'sanctions:generate_sanction' %}?employee_id={{ notification.employee_id }}&notification_id={{ notification.pk }}"
+                                            title="Generar Sanción">
+                                        <i class="fa-solid fa-gavel"></i>
+                                    </button>
+                                    <button type="button" class="btn-yellow-circle js-btn-archive"
+                                            data-id="{{ notification.pk }}" title="Archivar Trámite">
+                                        <i class="fa-solid fa-box-archive"></i>
+                                    </button>
+                                {% elif notification.status == 'SANCIONADO' %}
+                                    {% with action=notification.linked_action %}
+                                        {% if action %}
+                                            {% if not action.motivation or not action.explanation %}
+                                                <button type="button"
+                                                        class="btn-green-circle js-sanction-modal-btn"
+                                                        data-url="{% url 'sanctions:edit_sanction_personnel_action' action.id %}"
+                                                        title="Completar Elaboración de Acción">
+                                                    <i class="fa-solid fa-file-circle-plus"></i>
+                                                </button>
+                                            {% else %}
+                                                {% if not action.is_registered %}
+                                                    <button type="button"
+                                                            class="btn-blue-circle js-sanction-modal-btn"
+                                                            data-url="{% url 'sanctions:edit_sanction_personnel_action' action.id %}"
+                                                            title="Editar Acción de Personal">
+                                                        <i class="fa-solid fa-pen-to-square"></i>
+                                                    </button>
+                                                {% endif %}
+                                                <a href="{% url 'personnel_actions:action_pdf' action.id %}"
+                                                   target="_blank" rel="noopener noreferrer"
+                                                   class="btn-dark-blue-circle"
+                                                   title="Imprimir Acción de Personal">
+                                                    <i class="fa-solid fa-print"></i>
+                                                </a>
+                                            {% endif %}
+                                        {% endif %}
+                                    {% endwith %}
+                                {% endif %}
+
+                                <!-- Ver Ruta del Trámite -->
+                                <button type="button" class="btn-dark-blue-circle js-sanction-modal-btn"
+                                        data-url="{% url 'sanctions:notification_route_history' notification.pk %}"
+                                        title="Ver Ruta del Trámite">
+                                    <i class="fa-solid fa-timeline"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                {% endwith %}
+            {% endfor %}
+        {% else %}
+            <tr>
+                <td colspan="8">
+                    <div class="empty-state-container">
+                        <i class="fas fa-inbox empty-state-icon"></i>
+                        <p class="empty-state-text">No hay trámites en este estado.</p>
+                    </div>
+                </td>
+            </tr>
+        {% endif %}
+        </tbody>
+    </table>
+</div>
+
+{% if page_obj.paginator.num_pages > 0 %}
+    <div id="js-pagination-assignments" class="pagination-container">
         <span class="pagination-info">
-            Mostrando {{ page_obj.start_index|default:"0" }}-{{ page_obj.end_index|default:"0" }} de {{ paginator.count|default:"0" }}
+            Mostrando {{ page_obj.start_index|default:"0" }}–{{ page_obj.end_index|default:"0" }} de {{ page_obj.paginator.count|default:"0" }}
         </span>
-        <div class="pagination-controls" {% if paginator.num_pages <= 1 %}style="visibility:hidden;"{% endif %}>
+        <div class="pagination-controls"
+             {% if page_obj.paginator.num_pages <= 1 %}style="visibility:hidden;"{% endif %}>
             <button type="button" class="page-btn page-first {% if not page_obj.has_previous %}disabled{% endif %}"
                     title="Primera" data-page="1" {% if not page_obj.has_previous %}disabled{% endif %}>
                 <i class="fas fa-angle-double-left"></i>
@@ -169,18 +187,20 @@
             </button>
             <div class="page-input-wrapper">
                 <input type="number" class="page-input" value="{{ page_obj.number }}"
-                       min="1" max="{{ paginator.num_pages }}"
-                       data-max-page="{{ paginator.num_pages }}">
-                <span class="total-pages-badge">de {{ paginator.num_pages }}</span>
+                       min="1" max="{{ page_obj.paginator.num_pages }}"
+                       data-max-page="{{ page_obj.paginator.num_pages }}">
+                <span class="total-pages-badge">de {{ page_obj.paginator.num_pages }}</span>
             </div>
             <button type="button" class="page-btn page-next {% if not page_obj.has_next %}disabled{% endif %}"
                     title="Siguiente" data-page="
-                    {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages }}{% endif %}"
+
+
+                    {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ page_obj.paginator.num_pages }}{% endif %}"
                     {% if not page_obj.has_next %}disabled{% endif %}>
                 <i class="fas fa-angle-right"></i>
             </button>
             <button type="button" class="page-btn page-last {% if not page_obj.has_next %}disabled{% endif %}"
-                    title="Última" data-page="{{ paginator.num_pages }}"
+                    title="Última" data-page="{{ page_obj.paginator.num_pages }}"
                     {% if not page_obj.has_next %}disabled{% endif %}>
                 <i class="fas fa-angle-double-right"></i>
             </button>

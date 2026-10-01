@@ -8,18 +8,13 @@
 {% endblock %}
 
 {% block content %}
+    <!-- Evita que main.js intercepte la paginación con su comportamiento global -->
+    <form id="filtersForm" style="display:none;"></form>
+
     <div class="header-card">
-        <div>
+        <div class="header-card-body">
             <h1><i class="fa-solid fa-timeline me-2"></i> Historial de Asignaciones</h1>
             <p>Supervisa el estado y la trazabilidad de los trámites y sanciones asignados.</p>
-        </div>
-        <div class="d-flex align-items-center gap-2 flex-wrap">
-            <button id="btn-massive-assign" type="button" class="btn-blue-rectangle hidden">
-                <i class="fa-solid fa-user-check"></i> Asignar Seleccionados (<span id="count-assign">0</span>)
-            </button>
-            <button id="btn-massive-return" type="button" class="btn-warning hidden">
-                <i class="fa-solid fa-rotate-left"></i> Devolver Seleccionados (<span id="count-return">0</span>)
-            </button>
         </div>
     </div>
 
@@ -29,7 +24,7 @@
             {% for stat in stats_cards %}
                 <div class="stat-card {{ stat.class }} js-notification-stat-filter"
                      data-filter-val="{{ stat.filter_val }}" style="cursor: pointer;">
-                    <div class="stat-left">
+                    <div>
                         <h3>{{ stat.label }}</h3>
                         <div class="number">{{ stat.count }}</div>
                     </div>
@@ -40,25 +35,23 @@
     {% endif %}
 
     <div class="content-table">
-        <div class="table-controls toolbar-row">
-            <div class="d-flex align-items-center gap-3">
-                <div class="d-flex align-items-center gap-2">
-                    <label class="form-label mb-0" for="notifications-month">Mes:</label>
-                    <select id="notifications-month" class="input-field" style="width: 140px;">
+        <div class="toolbar-row mb-2">
+            <div class="toolbar-left"></div>
+            <div class="toolbar-center">
+                <div class="filter-date-group">
+                    <span class="filter-label">Mes:</span>
+                    <select id="notifications-month">
                         <option value="">Todos</option>
                         {% for value, label in notification_month_choices %}
                             <option value="{{ value }}"
                                     {% if selected_notifications_month == value|stringformat:'s' %}selected{% endif %}>{{ label }}</option>
                         {% endfor %}
                     </select>
-                </div>
-                <div class="d-flex align-items-center gap-2">
-                    <label class="form-label mb-0" for="notifications-year">Año:</label>
-                    <input type="number" id="notifications-year" class="input-field" style="width: 100px;"
-                           value="{{ selected_notifications_year|default:'2026' }}">
+                    <span class="filter-label">Año:</span>
+                    <input type="number" id="notifications-year" min="2000" max="2100"
+                           value="{{ selected_notifications_year|default:'2026' }}" style="width: 60px;">
                 </div>
             </div>
-
             <div class="toolbar-right">
                 <input type="text" id="notifications-search" class="table-search-input table-search-input--large"
                        placeholder="Buscar por empleado o cédula...">
@@ -70,7 +63,6 @@
         </div>
     </div>
 
-    <!-- Contenedor único para modales AJAX de main.js -->
     <div id="modal-root"></div>
 {% endblock %}
 

@@ -1,12 +1,15 @@
 /**
  * SIGETH - Módulo de Sanciones
- * Pestañas, búsqueda reactiva, selección masiva, paginación y envío Ajax seguro.
+ * Pestañas, búsqueda reactiva, selección masiva persistente, paginación y envío Ajax seguro.
  */
 document.addEventListener('DOMContentLoaded', () => {
 
     const listUrl = window.location.pathname;
     let currentStatusFilter = 'all';
     let isSubmitting = false;
+
+    // Detectar si estamos en la vista de historial de asignaciones
+    const isHistoryView = window.location.pathname.includes('/history/');
 
     /* =========================================================================
        1. MANEJO DE PESTAÑAS (TABS)
@@ -81,7 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /* =========================================================================
-       3. FILTROS, BÚSQUEDA Y STATS - NOTIFICACIONES
+       3. FILTROS, BÚSQUEDA Y STATS - NOTIFICACIONES / ASIGNACIONES
        ========================================================================= */
     const notifSearch = document.getElementById('notifications-search');
     const notifMonth = document.getElementById('notifications-month');
@@ -89,25 +92,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function fetchNotifications(page = 1) {
         const cleanPage = parseInt(String(page).trim(), 10) || 1;
-
         const params = new URLSearchParams();
-        params.set('section', 'notifications');
-        params.set('notifications_page', cleanPage);
 
-        if (currentStatusFilter && currentStatusFilter !== 'all') {
-            params.set('status_filter', currentStatusFilter);
+        if (isHistoryView) {
+            // SanctionHistoryListView usa 'page' normal
+            params.set('page', cleanPage);
+            if (currentStatusFilter && currentStatusFilter !== 'all') {
+                params.set('status_filter', currentStatusFilter);
+            }
+            const q = notifSearch ? notifSearch.value.trim() : '';
+            if (q) params.set('search_q', q);
+            if (notifMonth && notifMonth.value) params.set('notifications_month', notifMonth.value);
+            if (notifYear && notifYear.value) params.set('notifications_year', notifYear.value);
         } else {
-            params.set('status_filter', 'all');
-        }
-
-        const q = notifSearch ? notifSearch.value.trim() : '';
-        if (q) params.set('notifications_q', q);
-
-        if (notifMonth && notifMonth.value) {
-            params.set('notifications_month', notifMonth.value);
-        }
-        if (notifYear && notifYear.value) {
-            params.set('notifications_year', notifYear.value);
+            // EmployeeSanctionListView usa 'notifications_page'
+            params.set('section', 'notifications');
+            params.set('notifications_page', cleanPage);
+            if (currentStatusFilter && currentStatusFilter !== 'all') {
+                params.set('status_filter', currentStatusFilter);
+            } else {
+                params.set('status_filter', 'all');
+            }
+            const q = notifSearch ? notifSearch.value.trim() : '';
+            if (q) params.set('notifications_q', q);
+            if (notifMonth && notifMonth.value) params.set('notifications_month', notifMonth.value);
+            if (notifYear && notifYear.value) params.set('notifications_year', notifYear.value);
         }
 
         fetch(`${listUrl}?${params.toString()}`, {
@@ -132,7 +141,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.fetchNotifications = fetchNotifications;
 
     function updateStatsCards(statsList) {
-        const statsContainer = document.querySelector('[data-sanctions-pane="notifications"] .stats-row');
+        const statsContainer = document.querySelector('.stats-row');
         if (!statsContainer) return;
 
         statsContainer.innerHTML = '';
@@ -140,6 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const card = document.createElement('div');
             card.className = `stat-card ${stat.class || ''} js-notification-stat-filter`.trim();
             card.dataset.filterVal = stat.filter_val;
+            card.style.cursor = 'pointer';
 
             card.innerHTML = `
                 <div>
@@ -172,7 +182,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     /* =========================================================================
-       4. CONTROL DE CHECKBOXES CON PERSISTENCIA ENTRE PÁGINAS (SET GLOBAL)
+       4. CHECKBOXES PERSISTENTES Y ACCIONES MASIVAS
        ========================================================================= */
     const selectedNotificationIds = new Set();
 
@@ -182,15 +192,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const masterCheck = document.getElementById('check-all-notifications');
         const currentCheckboxes = document.querySelectorAll('.js-notification-checkbox');
 
+        // 1. Re-marcar checkboxes en la página actual según el Set
         currentCheckboxes.forEach(chk => {
-            const id = String(chk.dataset.id);
+            const id = String(chk.dataset.id || chk.value);
             chk.checked = selectedNotificationIds.has(id);
         });
 
+        // 2. Estado del checkbox maestro
         if (masterCheck && currentCheckboxes.length > 0) {
             const totalInPage = currentCheckboxes.length;
             const checkedInPage = Array.from(currentCheckboxes).filter(chk => chk.checked).length;
-
             masterCheck.checked = (checkedInPage === totalInPage);
             masterCheck.indeterminate = (checkedInPage > 0 && checkedInPage < totalInPage);
         } else if (masterCheck) {
@@ -198,13 +209,13 @@ document.addEventListener('DOMContentLoaded', () => {
             masterCheck.indeterminate = false;
         }
 
+        // 3. Contadores y visibilidad
         const totalSelected = selectedNotificationIds.size;
+
         if (bulkBar) {
             if (totalSelected > 0) {
                 bulkBar.classList.remove('hidden');
-                if (countSpan) {
-                    countSpan.textContent = `${totalSelected} seleccionado${totalSelected !== 1 ? 's' : ''}`;
-                }
+                if (countSpan) countSpan.textContent = `${totalSelected} seleccionado${totalSelected !== 1 ? 's' : ''}`;
             } else {
                 bulkBar.classList.add('hidden');
             }
@@ -215,7 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target && e.target.id === 'check-all-notifications') {
             const isChecked = e.target.checked;
             document.querySelectorAll('.js-notification-checkbox').forEach(chk => {
-                const id = String(chk.dataset.id);
+                const id = String(chk.dataset.id || chk.value);
                 chk.checked = isChecked;
                 if (isChecked) {
                     selectedNotificationIds.add(id);
@@ -228,7 +239,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (e.target && e.target.classList.contains('js-notification-checkbox')) {
-            const id = String(e.target.dataset.id);
+            const id = String(e.target.dataset.id || e.target.value);
             if (e.target.checked) {
                 selectedNotificationIds.add(id);
             } else {
@@ -238,6 +249,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Clic en Asignar Trámites Masivo
     document.addEventListener('click', (e) => {
         const btnBulk = e.target.closest('.js-btn-bulk-assign');
         if (!btnBulk) return;
@@ -260,8 +272,60 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Clic en Devolver Trámites Masivo
+    document.addEventListener('click', (e) => {
+        const btnReturn = e.target.closest('.js-btn-bulk-return');
+        if (!btnReturn) return;
+
+        e.preventDefault();
+        const allSelectedIds = Array.from(selectedNotificationIds);
+
+        if (allSelectedIds.length === 0) return;
+
+        Swal.fire({
+            title: `¿Devolver ${allSelectedIds.length} trámite(s)?`,
+            text: 'Los trámites regresarán al estado inicial GENERADO.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, devolver',
+            cancelButtonText: 'Cancelar',
+            customClass: {
+                confirmButton: 'swal2-confirm btn-swal-danger',
+                cancelButton: 'swal2-cancel btn-swal-cancel'
+            }
+        }).then(result => {
+            if (result.isConfirmed) {
+                const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+                const formData = new FormData();
+                formData.append('notification_ids', allSelectedIds.join(','));
+
+                fetch('/sanctions/notifications/massive-return/', {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: formData
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            if (typeof showToast === 'function') {
+                                showToast(data.message || 'Trámite(s) devuelto(s) con éxito.', 'success');
+                            }
+                            selectedNotificationIds.clear();
+                            fetchNotifications(1);
+                        } else {
+                            Swal.fire('Error', data.message || 'No se pudieron devolver los trámites.', 'error');
+                        }
+                    })
+                    .catch(err => console.error('Error en devolución masiva:', err));
+            }
+        });
+    });
+
     /* =========================================================================
-       5. PAGINACIÓN DE AMBAS TABLAS
+       5. PAGINACIÓN ÚNICA (ADAPTABLE A CADA VISTA)
        ========================================================================= */
     document.addEventListener('click', (e) => {
         const pageBtn = e.target.closest('.page-btn');
@@ -276,14 +340,16 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         e.stopImmediatePropagation();
 
-        const inNotifications = pageBtn.closest('#latest-notifications-wrapper') ||
-            pageBtn.closest('#js-pagination-notifications') ||
-            (pageBtn.closest('.sanctions-tab-pane') && pageBtn.closest('.sanctions-tab-pane').dataset.sanctionsPane === 'notifications');
-
-        if (inNotifications) {
+        if (isHistoryView) {
             fetchNotifications(targetPage);
         } else {
-            fetchEmployees(targetPage);
+            const inNotifications = pageBtn.closest('#latest-notifications-wrapper') ||
+                pageBtn.closest('#js-pagination-notifications');
+            if (inNotifications) {
+                fetchNotifications(targetPage);
+            } else {
+                fetchEmployees(targetPage);
+            }
         }
     }, true);
 
@@ -293,14 +359,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const targetPage = parseInt(e.target.value.trim(), 10);
         if (isNaN(targetPage) || targetPage < 1) return;
 
-        const inNotifications = e.target.closest('#latest-notifications-wrapper') ||
-            e.target.closest('#js-pagination-notifications') ||
-            (e.target.closest('.sanctions-tab-pane') && e.target.closest('.sanctions-tab-pane').dataset.sanctionsPane === 'notifications');
-
-        if (inNotifications) {
+        if (isHistoryView) {
             fetchNotifications(targetPage);
         } else {
-            fetchEmployees(targetPage);
+            const inNotifications = e.target.closest('#latest-notifications-wrapper') ||
+                e.target.closest('#js-pagination-notifications');
+            if (inNotifications) {
+                fetchNotifications(targetPage);
+            } else {
+                fetchEmployees(targetPage);
+            }
         }
     });
 
@@ -404,7 +472,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     /* =========================================================================
-       7. ENVÍO DE FORMULARIOS AJAX (UN SOLO LISTENER SIN CONFLICTOS)
+       7. ENVÍO DE FORMULARIOS AJAX
        ========================================================================= */
     document.addEventListener('submit', (e) => {
         const form = e.target;
@@ -417,7 +485,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (isSubmitting) return;
 
-        // Validación preventiva de tipo de notificación
         if (form.id === 'generateNotificationForm') {
             const notifTypeSelect = form.querySelector('[name="notification_type"]');
             const notifTypeValue = notifTypeSelect ? notifTypeSelect.value.trim() : '';
@@ -461,16 +528,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     selectedNotificationIds.clear();
                 }
 
-                const activeTab = window.localStorage.getItem('sanctions-active-tab') || 'employees';
-                if (activeTab === 'notifications') {
+                if (isHistoryView) {
                     fetchNotifications(1);
                 } else {
-                    fetchEmployees(1);
+                    const activeTab = window.localStorage.getItem('sanctions-active-tab') || 'employees';
+                    if (activeTab === 'notifications') {
+                        fetchNotifications(1);
+                    } else {
+                        fetchEmployees(1);
+                    }
                 }
             });
         }
 
-        // Recuperar botón por si ocurre algún fallo de red
         setTimeout(() => {
             isSubmitting = false;
             if (submitBtn && submitBtn.disabled) {

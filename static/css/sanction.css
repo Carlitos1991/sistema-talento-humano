@@ -154,3 +154,68 @@
     color: #334155;
     line-height: 1.45;
 }
+
+/* Contenedor relativo que previene que los badges se oculten o desborden */
+.badge-icon-btn-container {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    overflow: visible !important;
+}
+
+/* Badge rojo que SIEMPRE se muestra en la esquina superior */
+.badge-notification-fixed {
+    position: absolute !important;
+    top: -4px !important;
+    right: -4px !important;
+    background: #e11d48 !important; /* Rojo corporativo */
+    color: #ffffff !important;
+    font-size: 0.65rem !important;
+    font-weight: 800 !important;
+    padding: 1px 4px !important;
+    min-width: 17px !important;
+    height: 17px !important;
+    line-height: 15px !important;
+    text-align: center !important;
+    border-radius: 999px !important;
+    border: 2px solid #ffffff !important;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.25) !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    pointer-events: none !important;
+    z-index: 10 !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Contenedor apilado para el semáforo */
+.semaphore-container {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    line-height: 1.1;
+}
+
+/* Badge de estado del semáforo */
+.semaphore-container .badge {
+    min-width: 68px;
+    padding: 3px 8px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    border-radius: 999px;
+}
+
+/* Texto del tiempo transcurrido debajo del badge */
+.semaphore-subtime {
+    display: block;
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: #64748b;
+    letter-spacing: -0.01em;
+    margin-top: 2px;
+}
