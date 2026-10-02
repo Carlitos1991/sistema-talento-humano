@@ -9,8 +9,9 @@
             <tr>
                 <th class="width-12">Tipo</th>
                 <th class="width-20">Nombre del Rubro</th>
-                <th class="width-38">Matriz de Cuentas Mapeadas</th>
-                <th class="width-12 center text-center">Cod. Presupuesto</th>
+                <th class="width-30">Matriz de Cuentas Mapeadas</th>
+                <th class="width-10 center text-center">Partida Presup.</th>
+                <th class="width-10 center text-center no-sort">Carga Masiva</th>
                 <th class="width-8 center text-center no-sort">Estado</th>
                 <th class="width-10 center text-center actions no-sort"><i class="fas fa-cogs"></i> Acciones</th>
             </tr>
@@ -71,11 +72,23 @@
                             {% endif %}
                         </td>
 
-                        <td class="center text-center bold text-secondary">
+                        <td class="center text-center bold">
                             {% if r.has_mapping and r.dynamic_suffix %}
                                 <span class="badge badge-gray">{{ r.dynamic_suffix }}</span>
                             {% else %}
-                                —
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+
+                        <td class="center text-center">
+                            {% if r.is_upload %}
+                                <span class="badge badge-blue" title="Permite importación por Excel">
+                                    <i class="fas fa-file-excel me-1"></i> Sí
+                                </span>
+                            {% else %}
+                                <span class="badge badge-gray text-muted">
+                                    No
+                                </span>
                             {% endif %}
                         </td>
 
