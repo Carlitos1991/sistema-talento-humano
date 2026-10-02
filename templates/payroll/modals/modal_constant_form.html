@@ -1,62 +1,98 @@
-<div class="modal-overlay" id="payrollModal">
+<div class="modal-overlay" id="constantModalOverlay">
     <div class="modal-container-medium">
-
-        <div class="modal-header">
+        <!-- HEADER -->
+        <div class="modal-header-medium">
             <div class="header-content-group">
-                <div class="header-icon-circle"><i class="fas fa-calculator"></i></div>
-                <h3 class="header-title-main">
-                    {% if form.instance.pk %}Editar{% else %}Nueva{% endif %} Constante
-                </h3>
+                <div class="header-icon-circle">
+                    <i class="fas fa-coins"></i>
+                </div>
+                <h3 class="header-title">{% if form.instance.pk %}Editar{% else %}Nueva{% endif %} Constante</h3>
             </div>
-            <button type="button" class="btn-close-circle" @click="closeModal">
+            <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
                 <i class="fas fa-times"></i>
             </button>
         </div>
 
-        <form action="{{ request.path }}" method="POST" id="constantForm" onsubmit="submitPayrollForm(event)">
+        <!-- FORMULARIO AJAX -->
+        <form method="post" id="constantForm" autocomplete="off" novalidate
+              action="
+                      {% if form.instance.pk %}{% url 'payroll:constant_update' form.instance.pk %}{% else %}{% url 'payroll:constant_create' %}{% endif %}"
+              onsubmit="submitAjaxForm(event)">
             {% csrf_token %}
+
             <div class="modal-body-custom">
                 <div class="form-section-card">
-                    <div class="row g-3">
-                        <div class="col-md-12 form-group">
-                            <label class="form-label">Nombre</label>
+                    <div class="section-title">
+                        <i class="fas fa-info-circle text-primary"></i> Información de la Constante
+                    </div>
+
+                    <div class="grid-2-cols">
+                        <div class="form-group">
+                            <label class="form-label" for="id_constant_name">
+                                Nombre <span class="text-red">*</span>
+                            </label>
                             {{ form.name }}
                         </div>
 
-                        <div class="col-md-6 form-group">
-                            <label class="form-label">Código</label>
+                        <div class="form-group">
+                            <label class="form-label" for="{{ form.code.id_for_label }}">
+                                Código (Autogenerado) <span class="text-red">*</span>
+                            </label>
                             {{ form.code }}
-                            <div class="form-text text-muted">Usado internamente (ej: SBU,
-                                IESS). No espacios.
-                            </div>
                         </div>
+                    </div>
 
-                        <div class="col-md-6 form-group">
-                            <label class="form-label">Valor</label>
+                    <div class="grid-2-cols mt-3">
+                        <div class="form-group">
+                            <label class="form-label" for="{{ form.value.id_for_label }}">
+                                Valor <span class="text-red">*</span>
+                            </label>
                             {{ form.value }}
                         </div>
 
-                        <div class="col-md-12 form-group">
-                            <label class="form-label">Descripción</label>
-                            {{ form.description }}
+                        <div class="form-group d-flex justify-content-center align-items-center">
+                            {{ form.is_active }}
+                            <label class="switch-wrapper mb-0" for="{{ form.is_active.id_for_label }}">
+                                <div class="switch-circle"></div>
+                                <span class="switch-text">Constante Activa</span>
+                            </label>
                         </div>
-                        <div class="col-md-12 form-group mt-3">
-                            <div class="d-flex align-items-center justify-content-center">
-                                {{ form.is_active }}
-                                <label class="switch-wrapper mb-0" for="{{ form.is_active.id_for_label }}">
-                                    <div class="switch-circle"></div>
-                                    <span class="switch-text">Activo en el Sistema</span>
-                                </label>
-                            </div>
-                        </div>
+                    </div>
+
+                    <div class="form-group mt-3">
+                        <label class="form-label" for="{{ form.description.id_for_label }}">Descripción</label>
+                        {{ form.description }}
                     </div>
                 </div>
             </div>
 
+            <!-- FOOTER FIJO -->
             <div class="modal-footer-fixed">
-                <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeAjaxModal()">Cancelar</button>
-                <button type="submit" class="btn-dark-blue-rectangle"><i class="fas fa-save"></i> Guardar</button>
+                <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">Cancelar</button>
+                <button type="submit" class="btn-dark-blue-rectangle">
+                    <i class="fas fa-save me-1"></i> Guardar Constante
+                </button>
             </div>
         </form>
     </div>
 </div>
+
+<script>
+    // Autogenerar código en mayúsculas y con guiones bajos en tiempo real
+    (function () {
+        const nameInput = document.getElementById('id_constant_name');
+        const codeInput = document.getElementById('id_code');
+        if (!nameInput || !codeInput) return;
+
+        nameInput.addEventListener('input', function () {
+            const clean = this.value
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/[^a-zA-Z0-9 ]/g, '')
+                .trim()
+                .replace(/\s+/g, '_')
+                .toUpperCase();
+            codeInput.value = clean;
+        });
+    })();
+</script>

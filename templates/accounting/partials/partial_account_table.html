@@ -1,0 +1,61 @@
+{% load static %}
+<div class="table-container">
+    <div class="table-scroll-top">
+        <table class="managed-table exportable-table table-hover"
+               data-title="Reporte de Cuentas Contables"
+               data-filename="Reporte_Cuentas_Contables"
+               data-page-size="10">
+            <thead>
+            <tr>
+                <th class="width-20" data-field="code">Código</th>
+                <th class="width-35" data-field="name">Nombre de la Cuenta</th>
+                <th class="width-10 center text-center" data-field="order">Orden</th>
+                <th class="width-15" data-field="type">Tipo</th>
+                <th class="width-10 center text-center no-sort">Estado</th>
+                <th class="width-10 center text-center actions no-sort"><i class="fas fa-cogs"></i> Acciones</th>
+            </tr>
+            </thead>
+            <tbody id="table-body">
+            {% if accounts %}
+                {% for a in accounts %}
+                    <tr id="row-{{ a.id }}" data-status="{{ a.is_active|yesno:'true,false' }}">
+                        <td>
+                            <span class="badge badge-gray bold">{{ a.code }}</span>
+                        </td>
+                        <td class="bold">{{ a.name }}</td>
+                        <td class="center text-center bold">{{ a.order|default:"—" }}</td>
+                        <td>{{ a.get_type_display }}</td>
+                        <td class="center text-center">
+                            <span id="badge-{{ a.id }}"
+                                  class="badge {% if a.is_active %}badge-green{% else %}badge-red{% endif %}">
+                                {% if a.is_active %}Activo{% else %}Inactivo{% endif %}
+                            </span>
+                        </td>
+                        <td class="actions center text-center">
+                            <div class="actions-wrapper">
+                                <button type="button" class="btn-yellow-circle" title="Editar"
+                                        onclick="openAjaxModal('{% url 'accounting:account_edit' a.pk %}')">
+                                    <i class="fas fa-pencil"></i>
+                                </button>
+                                {% if a.is_active %}
+                                    <button type="button" class="btn-red-circle"
+                                            onclick="toggleStatusAjax('{% url 'accounting:account_toggle' a.pk %}', 'la cuenta {{ a.name|escapejs }}', true)"
+                                            title="Desactivar">
+                                        <i class="fas fa-toggle-off"></i>
+                                    </button>
+                                {% else %}
+                                    <button type="button" class="btn-green-circle"
+                                            onclick="toggleStatusAjax('{% url 'accounting:account_toggle' a.pk %}', 'la cuenta {{ a.name|escapejs }}', false)"
+                                            title="Activar">
+                                        <i class="fas fa-toggle-on"></i>
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+            {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>

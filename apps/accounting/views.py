@@ -1,14 +1,14 @@
 import csv
-
-from django.http import HttpResponse
+from django.db.models import F
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404
+from django.template.loader import render_to_string
 from django.urls import reverse_lazy
 from django.views import View
-from django.views.generic import DetailView
-from django.views.generic import ListView, CreateView, UpdateView, DeleteView
+from django.views.generic import ListView, DetailView, CreateView, UpdateView
 
 from .forms import AccountForm
 from .models import Account, Journal
-from django.db.models import F
 
 
 class JournalListView(ListView):
@@ -29,8 +29,10 @@ class JournalExportView(View):
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = f'attachment; filename=journal_{pk}.csv'
         writer = csv.writer(response)
-        writer.writerow(
-            ['account_code', 'account_name', 'debit', 'credit', 'budget_line_code', 'budget_line_number', 'reference'])
+        writer.writerow([
+            'account_code', 'account_name', 'debit', 'credit',
+            'budget_line_code', 'budget_line_number', 'reference'
+        ])
         for it in journal.items.all():
             writer.writerow([
                 it.account.code,
@@ -51,14 +53,19 @@ class AccountListView(ListView):
 
     def get_queryset(self):
         qs = Account.objects.all().order_by(F('order').asc(nulls_last=True), 'code')
-
         show_inactive = self.request.GET.get('show_inactive')
 
-        if show_inactive is not None and show_inactive.lower() in ['true', '1']:
-            qs = qs.filter(is_active=False)
-        else:
-            qs = qs.filter(is_active=True)
-        return qs
+        if show_inactive is not None and str(show_inactive).lower() in ['true', '1', 'on']:
+            return qs.filter(is_active=False)
+        return qs.filter(is_active=True)
+
+    def get(self, request, *args, **kwargs):
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            self.object_list = self.get_queryset()
+            context = self.get_context_data()
+            html = render_to_string('accounting/partials/partial_account_table.html', context, request=request)
+            return JsonResponse({'html': html})
+        return super().get(request, *args, **kwargs)
 
 
 class AccountCreateView(CreateView):
@@ -68,21 +75,18 @@ class AccountCreateView(CreateView):
     success_url = reverse_lazy('accounting:account_list')
 
     def get_template_names(self):
-        # Si la petición es AJAX, devolvemos la plantilla modal
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return ['accounting/modal_account_form.html']
+            return ['accounting/modals/modal_account_form.html']
         return [self.template_name]
 
     def form_valid(self, form):
-        response = super().form_valid(form)
+        self.object = form.save()
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            from django.http import JsonResponse
-            return JsonResponse({'status': 'success', 'message': 'Cuenta creada correctamente'})
-        return response
+            return JsonResponse({'status': 'success', 'message': 'Cuenta creada correctamente.'})
+        return super().form_valid(form)
 
     def form_invalid(self, form):
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            from django.http import JsonResponse
             return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
         return super().form_invalid(form)
 
@@ -95,24 +99,33 @@ class AccountUpdateView(UpdateView):
 
     def get_template_names(self):
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return ['accounting/modal_account_form.html']
+            return ['accounting/modals/modal_account_form.html']
         return [self.template_name]
 
     def form_valid(self, form):
-        response = super().form_valid(form)
+        self.object = form.save()
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            from django.http import JsonResponse
-            return JsonResponse({'status': 'success', 'message': 'Cuenta actualizada correctamente'})
-        return response
+            return JsonResponse({'status': 'success', 'message': 'Cuenta actualizada correctamente.'})
+        return super().form_valid(form)
 
     def form_invalid(self, form):
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            from django.http import JsonResponse
             return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
         return super().form_invalid(form)
 
 
-class AccountDeleteView(DeleteView):
-    model = Account
-    template_name = 'accounting/account_confirm_delete.html'
-    success_url = reverse_lazy('accounting:account_list')
+class AccountToggleView(View):
+    """Alterna el estado is_active sin eliminar la cuenta físicamente."""
+
+    def post(self, request, pk):
+        account = get_object_or_404(Account, pk=pk)
+        account.is_active = not account.is_active
+        # save() dispara la lógica de asignación/liberación de 'order' de models.py
+        account.save()
+
+        action_word = "activada" if account.is_active else "desactivada"
+        return JsonResponse({
+            'success': True,
+            'message': f'La cuenta {account.name} ha sido {action_word} correctamente.',
+            'is_active': account.is_active
+        })

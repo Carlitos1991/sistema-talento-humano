@@ -1,124 +1,64 @@
-<!-- Barra de scroll superior sincronizada -->
-<div class="top-scrollbar-wrapper"
-     style="width: 100%; overflow-x: auto; overflow-y: hidden; height: 14px; margin-bottom: 4px;">
-    <div class="top-scrollbar-dummy" style="height: 1px;"></div>
-</div>
-
+{% load static %}
 <div class="table-container">
-    <table class="table managed-table exportable-table" data-page-size="10" data-title="Fondos de Reserva"
-           data-external-pagination="true">
-        <thead>
-        <tr>
-            <th class="no-sort" style="width:5%">N°</th>
-            <th style="width:25%">Empleado</th>
-            <th style="width:20%">Cargo</th>
-            <th style="width:20%">Unidad Administrativa</th>
-            <th style="width:15%" class="text-center no-sort">Fondos Reserva</th>
-            <th style="width:15%" class="text-center no-sort">Mensualiza Décimos</th>
-        </tr>
-        </thead>
-        <tbody>
-        {% for emp in employees %}
+    <div class="table-scroll-top">
+        <table class="managed-table exportable-table table-hover"
+               data-title="Reporte de Fondos de Reserva y Décimos"
+               data-filename="Reporte_Fondos_Reserva"
+               data-external-pagination="true"
+               data-page-size="10">
+            <thead>
             <tr>
-                <td>{% if page_obj %}{{ forloop.counter0|add:page_obj.start_index }}{% else %}
-                    {{ forloop.counter }}{% endif %}</td>
-                <td><strong>{{ emp.person.name_and_last_name }}</strong>
-                    <div class="small mt-1 text-muted">
-                        {{ emp.person.document_number }}
-                    </div>
-                </td>
-                <td>
-                    {% with cb=emp.current_budget_line.first %}
-                        {% if cb and cb.position_item %}
-                            {{ cb.position_item.name }}
-                        {% else %}
-                            <span style="color:#999;">No position assigned</span>
-                        {% endif %}
+                <th class="width-15">Identificación</th>
+                <th class="width-35">Servidor / Funcionario</th>
+                <th class="width-20">Área / Cargo</th>
+                <th class="width-15 center text-center">Fondos de Reserva</th>
+                <th class="width-15 center text-center">Décimos</th>
+            </tr>
+            </thead>
+            <tbody id="table-body">
+            {% if employees %}
+                {% for emp in employees %}
+                    {% with info=emp.person.economic_data.payroll_info %}
+                        <tr id="row-emp-{{ emp.id }}">
+                            <td>
+                                <span class="badge badge-gray bold">{{ emp.person.document_number }}</span>
+                            </td>
+                            <td class="bold">
+                                {{ emp.person.last_name }} {{ emp.person.first_name }}
+                            </td>
+                            <td>
+                                <div class="small bold text-secondary">
+                                    {{ emp.area.name|default:"Sin Área Asignada" }}
+                                </div>
+                                <small class="text-muted">
+                                    {{ emp.current_budget_line.position_item.name|default:"Sin Cargo" }}
+                                </small>
+                            </td>
+                            <td class="center text-center">
+                                {% if info and info.reserve_funds %}
+                                    <span class="badge badge-green"><i class="fas fa-check-circle me-1"></i> Mensualiza</span>
+                                {% else %}
+                                    <span class="badge badge-blue"><i class="fas fa-piggy-bank me-1"></i> Acumula</span>
+                                {% endif %}
+                            </td>
+                            <td class="center text-center">
+                                {% if info and info.monthly_payment %}
+                                    <span class="badge badge-green"><i class="fas fa-check-circle me-1"></i> Mensualiza</span>
+                                {% else %}
+                                    <span class="badge badge-blue"><i class="fas fa-piggy-bank me-1"></i> Acumula</span>
+                                {% endif %}
+                            </td>
+                        </tr>
                     {% endwith %}
-                </td>
-                <td>
-                    {% if emp.area %}
-                        {{ emp.area.name }}
-                    {% else %}
-                        <span style="color:#999;">No unit</span>
-                    {% endif %}
-                </td>
-
-                <!-- COLUMNA: FONDOS RESERVA -->
-                <td class="text-center">
-                    {% if emp.person.economic_data %}
-                        {% with pi=emp.person.economic_data.payroll_info %}
-                            <div class="d-flex align-items-center justify-content-center">
-                                <input id="rf_{{ emp.person.id|stringformat:"d" }}_reserve"
-                                       class="switch-input switch-green fr-checkbox" type="checkbox"
-                                       data-person-id="{{ emp.person.id|stringformat:"d" }}" data-field="reserve_funds"
-                                       data-update-url="{% url 'employee:payroll_info_update' emp.person.id|stringformat:"d" %}"
-                                       {% if pi and pi.reserve_funds %}checked{% endif %}>
-
-                                <label class="switch-wrapper mb-0"
-                                       for="rf_{{ emp.person.id|stringformat:"d" }}_reserve">
-                                    <div class="switch-circle"></div>
-                                    <span class="switch-text modern-toggle-text">{% if pi and pi.reserve_funds %}
-                                        Mensualiza{% else %}Acumula{% endif %}</span>
-                                </label>
-                            </div>
-                        {% endwith %}
-                    {% else %}
-                        <div class="d-flex align-items-center justify-content-center">
-                            <input id="rf_{{ emp.person.id|stringformat:"d" }}_reserve_disabled"
-                                   class="switch-input switch-green fr-checkbox" type="checkbox" disabled>
-
-                            <label class="switch-wrapper mb-0"
-                                   for="rf_{{ emp.person.id|stringformat:"d" }}_reserve_disabled">
-                                <div class="switch-circle"></div>
-                                <span class="switch-text modern-toggle-text">Acumula</span>
-                            </label>
-                        </div>
-                    {% endif %}
-                </td>
-
-                <!-- COLUMNA: MENSUALIZA DÉCIMOS -->
-                <td class="text-center">
-                    {% if emp.person.economic_data %}
-                        {% with pi=emp.person.economic_data.payroll_info %}
-                            <div class="d-flex align-items-center justify-content-center">
-                                <input id="rf_{{ emp.person.id|stringformat:"d" }}_monthly"
-                                       class="switch-input switch-blue fr-checkbox" type="checkbox"
-                                       data-person-id="{{ emp.person.id|stringformat:"d" }}"
-                                       data-field="monthly_payment"
-                                       data-update-url="{% url 'employee:payroll_info_update' emp.person.id|stringformat:"d" %}"
-                                       {% if pi and pi.monthly_payment %}checked{% endif %}>
-
-                                <label class="switch-wrapper mb-0"
-                                       for="rf_{{ emp.person.id|stringformat:"d" }}_monthly">
-                                    <div class="switch-circle"></div>
-                                    <span class="switch-text modern-toggle-text">{% if pi and pi.monthly_payment %}
-                                        Mensualiza{% else %}Acumula{% endif %}</span>
-                                </label>
-                            </div>
-                        {% endwith %}
-                    {% else %}
-                        <div class="d-flex align-items-center justify-content-center">
-                            <input id="rf_{{ emp.person.id|stringformat:"d" }}_monthly_disabled"
-                                   class="switch-input switch-blue fr-checkbox" type="checkbox" disabled>
-
-                            <label class="switch-wrapper mb-0"
-                                   for="rf_{{ emp.person.id|stringformat:"d" }}_monthly_disabled">
-                                <div class="switch-circle"></div>
-                                <span class="switch-text modern-toggle-text">Acumula</span>
-                            </label>
-                        </div>
-                    {% endif %}
-                </td>
-            </tr>
-        {% empty %}
-            <tr>
-                <td colspan="7" class="text-center">No active employees found.</td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+                {% endfor %}
+            {% else %}
+                <!-- TableManager maneja el estado vacío automáticamente -->
+            {% endif %}
+            </tbody>
+        </table>
+    </div>
 </div>
+
 {% if is_paginated %}
     <div class="pagination-container" id="js-pagination">
         <div class="pagination-info" id="page-info">
@@ -128,6 +68,7 @@
                 Mostrando 0 de 0
             {% endif %}
         </div>
+
         <div class="pagination-controls">
             <button id="btn-first" class="page-btn" data-page="1" {% if not page_obj.has_previous %}disabled{% endif %}>
                 <i class="fas fa-angle-double-left"></i>
@@ -137,13 +78,14 @@
                     {% if not page_obj.has_previous %}disabled{% endif %}>
                 <i class="fas fa-chevron-left"></i>
             </button>
+
             <div class="page-input-wrapper">
                 <input type="number" id="page-input" class="page-input" min="1"
-                       value="{% if page_obj %}{{ page_obj.number }}{% else %}1{% endif %}"
-                       data-total="{% if page_obj %}{{ page_obj.paginator.num_pages }}{% else %}1{% endif %}">
+                       value="{% if page_obj %}{{ page_obj.number }}{% else %}1{% endif %}">
                 <span class="total-pages-badge">de {% if page_obj %}{{ page_obj.paginator.num_pages }}{% else %}
                     1{% endif %}</span>
             </div>
+
             <button id="btn-next" class="page-btn"
                     data-page="{% if page_obj.has_next %}{{ page_obj.next_page_number }}{% endif %}"
                     {% if not page_obj.has_next %}disabled{% endif %}>

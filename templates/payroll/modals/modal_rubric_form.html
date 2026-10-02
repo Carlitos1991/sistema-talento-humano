@@ -1,61 +1,44 @@
 <div class="modal-overlay" id="rubricModalOverlay">
-    <div class="modal-container-medium" style="max-width: 950px; width: 95%;">
-
+    <div class="modal-container-large">
         <form method="post" id="rubricForm" action="{{ request.path }}"
               onsubmit="submitAjaxForm(event, () => reloadTableData(window.location.href, '#table-content-wrapper'))">
             {% csrf_token %}
 
-            <div class="modal-header-refined">
+            <div class="modal-header-medium">
                 <div class="header-content-group">
-                    <div class="header-icon-circle"><i class="fa-solid fa-sliders-h"></i></div>
-                    <h3 class="header-title-main">{% if form.instance.pk %}Editar{% else %}Nuevo{% endif %} Rubro
-                        Contable</h3>
+                    <div class="header-icon-circle"><i class="fa-solid fa-sliders"></i></div>
+                    <h3 class="header-title">{% if form.instance.pk %}Editar{% else %}Nuevo{% endif %} Rubro</h3>
                 </div>
-                <button type="button" class="btn-close-circle" onclick="closeAjaxModal()">
+                <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
 
             <div class="modal-body-custom">
-                {% if form.errors %}
-                    <div class="alert alert-danger mb-3">
-                        <div><i class="fa-solid fa-triangle-exclamation me-1"></i> Errores de Validación:</div>
-                        <ul>
-                            {% for field, errors in form.errors.items %}
-                                <li><strong>{{ field|upper }}:</strong> {{ errors|striptags }}</li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                {% endif %}
-
-                <!-- SECCIÓN 1: Información General -->
+                <!-- Información General -->
                 <div class="form-section-card mb-3">
-                    <h4 class="section-title"><i class="fa-solid fa-info-circle text-primary"></i> Información General
-                    </h4>
+                    <div class="section-title">
+                        <i class="fa-solid fa-circle-info"></i> Información General
+                    </div>
 
                     <div class="row g-3">
-                        <!-- Fila 1: 33% c/u -->
                         <div class="col-md-4 form-group">
-                            <label class="form-label">Tipo de Rubro <span class="text-danger">*</span></label>
+                            <label class="form-label">Tipo de Rubro <span class="text-red">*</span></label>
                             {{ form.rubric_type }}
                         </div>
                         <div class="col-md-4 form-group">
-                            <label class="form-label">Contexto de Gasto <span class="text-danger">*</span></label>
+                            <label class="form-label">Contexto de Gasto <span class="text-red">*</span></label>
                             {{ form.spending_context }}
                         </div>
                         <div class="col-md-4 form-group" id="divOrder">
-                            <label class="form-label">Orden (Presupuesto)</label>
+                            <label class="form-label">Orden Presupuestario</label>
                             {{ form.order }}
                         </div>
 
-                        <!-- Oculto para el sistema (fuera de la grilla visual) -->
-                        <div class="hidden-field" id="divCodeContainer">
-                            {{ form.code }}
-                        </div>
+                        <div class="hidden" id="divCodeContainer">{{ form.code }}</div>
 
-                        <!-- Fila 2: Nombre (66% por defecto) y Abreviación (33%) -->
                         <div class="col-md-8 form-group" id="divName">
-                            <label class="form-label">Nombre del Rubro <span class="text-danger">*</span></label>
+                            <label class="form-label">Nombre del Rubro <span class="text-red">*</span></label>
                             {{ form.name }}
                         </div>
                         <div class="col-md-4 form-group">
@@ -63,21 +46,19 @@
                             {{ form.abbreviation }}
                         </div>
 
-                        <!-- Prioridad: Aparecerá a la derecha de la abreviación si es Descuento (33%) -->
-                        <div class="col-md-4 form-group hidden-field" id="divPriority">
-                            <label class="form-label">Prioridad Cobro</label>
+                        <div class="col-md-4 form-group hidden" id="divPriority">
+                            <label class="form-label">Prioridad de Cobro</label>
                             {{ form.priority }}
                         </div>
 
-                        <!-- Fila 3: Contenedor dinámico (INCOME) -->
-                        <div id="divIncomeSwitches" class="col-md-12 hidden-field m-0 p-0 mt-2">
+                        <div id="divIncomeSwitches" class="col-md-12 hidden mt-2">
                             <div class="row g-3">
                                 <div class="col-md-4 form-group">
                                     <div class="d-flex justify-content-center">
                                         {{ form.is_taxable }}
                                         <label class="switch-wrapper" for="{{ form.is_taxable.id_for_label }}">
                                             <div class="switch-circle"></div>
-                                            <span class="switch-text">¿Suma para IESS / Fondos?</span>
+                                            <span class="switch-text">¿Suma IESS / Fondos?</span>
                                         </label>
                                     </div>
                                 </div>
@@ -104,151 +85,107 @@
                     </div>
                 </div>
 
-                <!-- SECCIÓN 2: Matriz Contable -->
+                <!-- Matriz Contable -->
                 <div class="form-section-card mb-3">
-                    <h4 class="section-title"
-                        style="font-size: 1.05rem; font-weight: 700; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 15px; color: var(--primary-color);">
-                        <i class="fa-solid fa-table text-primary me-1"></i> Matriz de Enrutamiento Contable
-                    </h4>
+                    <div class="section-title">
+                        <i class="fa-solid fa-table"></i> Matriz de Enrutamiento Contable
+                    </div>
 
                     <div class="row g-3">
-                        <!-- 5.1 CORRIENTE -->
                         <div class="col-md-4">
-                            <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; height: 100%; display: flex; flex-direction: column; gap: 12px;">
-                                <h5 class="rubric-col-header rubric-col-corriente m-0">5.1 - CORRIENTE</h5>
-                                <div class="form-group m-0">
-                                    <label class="form-label mb-1">Cuenta DEBE</label>
+                            <div class="section-card-standard">
+                                <span class="label-muted bold text-blue">5.1 — Corriente</span>
+                                <div class="form-group mb-2">
+                                    <label class="form-label">Cuenta DEBE</label>
                                     {{ form.debit_account }}
                                 </div>
-                                <div class="form-group m-0">
-                                    <label class="form-label mb-1">Cuenta HABER</label>
+                                <div class="form-group mb-0">
+                                    <label class="form-label">Cuenta HABER</label>
                                     {{ form.credit_account }}
                                 </div>
                             </div>
                         </div>
 
-                        <!-- 6.1 PRODUCCIÓN -->
                         <div class="col-md-4">
-                            <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; height: 100%; display: flex; flex-direction: column; gap: 12px;">
-                                <h5 class="rubric-col-header rubric-col-produccion m-0">6.1 - PRODUCCIÓN</h5>
-                                <div class="form-group m-0">
-                                    <label class="form-label mb-1">Cuenta DEBE</label>
+                            <div class="section-card-standard">
+                                <span class="label-muted bold text-blue">6.1 — Producción</span>
+                                <div class="form-group mb-2">
+                                    <label class="form-label">Cuenta DEBE</label>
                                     {{ form.debit_account_prod }}
                                 </div>
-                                <div class="form-group m-0">
-                                    <label class="form-label mb-1">Cuenta HABER</label>
+                                <div class="form-group mb-0">
+                                    <label class="form-label">Cuenta HABER</label>
                                     {{ form.credit_account_prod }}
                                 </div>
                             </div>
                         </div>
 
-                        <!-- 7.1 INVERSIÓN -->
                         <div class="col-md-4">
-                            <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; height: 100%; display: flex; flex-direction: column; gap: 12px;">
-                                <h5 class="rubric-col-header rubric-col-inversion m-0">7.1 - INVERSIÓN</h5>
-                                <div class="form-group m-0">
-                                    <label class="form-label mb-1">Cuenta DEBE</label>
+                            <div class="section-card-standard">
+                                <span class="label-muted bold text-blue">7.1 — Inversión</span>
+                                <div class="form-group mb-2">
+                                    <label class="form-label">Cuenta DEBE</label>
                                     {{ form.debit_account_inv }}
                                 </div>
-                                <div class="form-group m-0">
-                                    <label class="form-label mb-1">Cuenta HABER</label>
+                                <div class="form-group mb-0">
+                                    <label class="form-label">Cuenta HABER</label>
                                     {{ form.credit_account_inv }}
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Cuenta de Contrapartida -->
-                    <div class="form-group mt-4 pt-3 rubric-devengado-section">
-                        <label class="form-label mb-1" style="font-weight: bold;">
-                            <i class="fa-solid fa-university text-info me-1"></i> Cuenta de Contrapartida / Devengado
-                            (Banco o Ingreso)
+                    <div class="form-group mt-3">
+                        <label class="form-label bold">
+                            <i class="fa-solid fa-landmark text-blue me-1"></i> Contrapartida / Banco (Devengado Espejo)
                         </label>
                         {{ form.income_account }}
-                        <small style="color: #64748b; font-size: 0.85rem; margin-top: 4px; display: block;">
-                            Asigne la cuenta de Banco Central para la Remuneración Base, o la cuenta de Ingresos espejo
-                            para el Devengado automático de Descuentos.
-                        </small>
                     </div>
                 </div>
 
-                <!-- SECCIÓN 3: Presupuesto y Estado -->
+                <!-- Presupuesto y Flags -->
                 <div class="form-section-card mb-3">
-                    <h4 class="section-title"><i class="fa-solid fa-coins text-warning"></i> Presupuesto y Estado</h4>
+                    <div class="section-title">
+                        <i class="fa-solid fa-coins"></i> Configuración Presupuestaria y Operativa
+                    </div>
                     <div class="row g-3">
-
-                        <!-- Columna 1 -->
                         <div class="col-md-4 form-group">
-                            <label class="form-label mb-2 justify-content-center text-center">Afectación
-                                Presupuestaria</label>
-                            <div class="d-flex justify-content-center align-items-center">
+                            <div class="d-flex justify-content-center">
                                 {{ form.has_mapping }}
-                                <label class="switch-wrapper m-0" for="{{ form.has_mapping.id_for_label }}">
+                                <label class="switch-wrapper" for="{{ form.has_mapping.id_for_label }}">
                                     <div class="switch-circle"></div>
-                                    <span class="switch-text">Afecta al Presupuesto</span>
+                                    <span class="switch-text">Afecta Presupuesto</span>
                                 </label>
                             </div>
                         </div>
-
-                        <!-- Columna 2 -->
                         <div class="col-md-4 form-group">
-                            <label class="form-label mb-2 justify-content-center text-center">Estado del Rubro</label>
-                            <div class="d-flex justify-content-center align-items-center">
+                            <div class="d-flex justify-content-center">
                                 {{ form.is_active }}
-                                <label class="switch-wrapper m-0" for="{{ form.is_active.id_for_label }}">
+                                <label class="switch-wrapper" for="{{ form.is_active.id_for_label }}">
                                     <div class="switch-circle"></div>
                                     <span class="switch-text">Rubro Activo</span>
                                 </label>
                             </div>
                         </div>
-
-                        <!-- Columna 3 -->
                         <div class="col-md-4 form-group">
-                            <label class="form-label mb-2 justify-content-center text-center">Tiene carga
-                                masiva?</label>
-                            <div class="d-flex justify-content-center align-items-center">
+                            <div class="d-flex justify-content-center">
                                 {{ form.is_upload }}
-                                <label class="switch-wrapper m-0" for="{{ form.is_upload.id_for_label }}">
+                                <label class="switch-wrapper" for="{{ form.is_upload.id_for_label }}">
                                     <div class="switch-circle"></div>
                                     <span class="switch-text">Carga Masiva</span>
                                 </label>
                             </div>
                         </div>
-
-                        <div id="budgetMappingFields" class="col-md-12 hidden-field mt-3">
-                            <div class="budget-mapping-box">
-                                <div class="row g-3">
-                                    <div class="col-md-8 form-group">
-                                        <label class="form-label">Sufijo Presupuestario</label>
-                                        {{ form.dynamic_suffix }}
-                                    </div>
-                                    <div class="col-md-4 form-group mb-0">
-                                        <label class="form-label d-block">¿Partida Fija?</label>
-                                        <div class="mt-2" style="display: flex; align-items: center;">
-
-                                            <!-- El checkbox renderizado por Django -->
-                                            {{ form.is_fixed }}
-
-                                            <!-- El nuevo wrapper del switch -->
-                                            <label class="switch-wrapper m-0" for="{{ form.is_fixed.id_for_label }}">
-                                                <div class="switch-circle"></div>
-                                                <!-- Opcional: Puedes ponerle un texto al lado, o borrar el span si lo quieres solo -->
-                                                <span class="switch-text">Fija</span>
-                                            </label>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
                     </div>
                 </div>
+            </div>
 
-                <!-- Botones -->
-                <div class="modal-footer-fixed">
-                    <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeAjaxModal()">Cancelar</button>
-                    <button type="submit" class="btn-dark-blue-rectangle"><i class="fa-solid fa-save"></i> Guardar Rubro</button>
-                </div>
+            <div class="modal-footer-fixed">
+                <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">Cancelar</button>
+                <button type="submit" class="btn-dark-blue-rectangle"><i class="fa-solid fa-save me-1"></i> Guardar
+                    Rubro
+                </button>
+            </div>
         </form>
     </div>
 </div>

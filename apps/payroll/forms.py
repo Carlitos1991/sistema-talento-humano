@@ -1,7 +1,11 @@
+import re
+
+import unicodedata
 from django import forms
 
 from accounting.models import Account
-from .models import PayrollPeriod, PayrollConstant, PayrollRubric
+from .models import PayrollConstant
+from .models import PayrollPeriod, PayrollRubric
 
 
 class PayrollPeriodForm(forms.ModelForm):
@@ -57,25 +61,53 @@ class PayrollPeriodForm(forms.ModelForm):
 
 
 class PayrollConstantForm(forms.ModelForm):
+    code = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control bg-readonly',
+            'readonly': 'readonly',
+            'placeholder': 'Se autogenera...'
+        })
+    )
+
     class Meta:
         model = PayrollConstant
         fields = ['name', 'code', 'value', 'description', 'is_active']
         widgets = {
-            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Salario Básico'}),
-            'code': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: SBU'}),
-            'value': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ej: 482,00', 'step': '0.0001'}),
+            'name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ej: Salario Básico Unificado',
+                'id': 'id_constant_name'
+            }),
+            'value': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ej: 460.0000',
+                'step': '0.0001'
+            }),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'is_active': forms.CheckboxInput(attrs={'class': 'switch-input switch-green'}),
         }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        name = cleaned_data.get('name')
+        if name:
+            clean_name = ''.join(
+                c for c in unicodedata.normalize('NFD', name) if unicodedata.category(c) != 'Mn'
+            )
+            generated_code = re.sub(r'[^a-zA-Z0-9_]', '', clean_name.replace(' ', '_')).upper()
+            cleaned_data['code'] = generated_code
+            self.instance.code = generated_code
+
+        return cleaned_data
 
 
 class PayrollRubricForm(forms.ModelForm):
     code = forms.CharField(
         required=False,
         widget=forms.TextInput(attrs={
-            'class': 'form-control',
+            'class': 'form-control bg-readonly',
             'readonly': True,
-            'style': 'background-color: #f1f5f9; cursor: not-allowed; font-weight: bold;',
             'placeholder': 'Se autogenera...'
         })
     )

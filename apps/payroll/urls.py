@@ -2,7 +2,7 @@ from django.urls import path
 from .views import (
     PeriodListView, PeriodCreateView, GeneratePayrollView,
     GeneratePayrollUIView, GeneratePayrollSelectedView,
-    ConstantListView, ConstantCreateView, ConstantUpdateView, ConstantDeleteView,
+    ConstantListView, ConstantCreateView, ConstantUpdateView,
     PayrollListView, PayslipListView, PayslipDetailView,
     FondosReservaListView,
     InstitutionalReportView, NoveltyMassLoadView, ParseNoveltyExcelView,
@@ -10,7 +10,8 @@ from .views import (
     MarkPeriodAsPaidAPIView,
     GenerateMissingPayrollView, BankTransferReportView, PeriodUpdateView, api_calculate_working_days,
     RecalculatePayslipsView, export_negative_balances_report, MassUpdateReserveFundsView, PrintablePayslipView,
-    SendPayslipEmailView, PublicPayslipValidationView, RubricListView, RubricCreateView, RubricUpdateView
+    SendPayslipEmailView, PublicPayslipValidationView, RubricListView, RubricCreateView, RubricUpdateView,
+    ConstantToggleView, RubricToggleView
 )
 
 app_name = 'payroll'
@@ -27,12 +28,11 @@ urlpatterns = [
     path('constants/', ConstantListView.as_view(), name='constant_list'),
     path('constants/create/', ConstantCreateView.as_view(), name='constant_create'),
     path('constants/update/<int:pk>/', ConstantUpdateView.as_view(), name='constant_update'),
-    path('constants/delete/<int:pk>/', ConstantDeleteView.as_view(), name='constant_delete'),
     path('payslips/list/', PayrollListView.as_view(), name='payslip_list'),
     path('payslips/', PayslipListView.as_view(), name='payslip_list'),
     path('payslips/detail/<int:pk>/', PayslipDetailView.as_view(), name='payslip_detail'),
     # Mapeos contables para rubros
-
+    path('rubrics/<int:pk>/toggle/', RubricToggleView.as_view(), name='rubric_toggle'),
     path('reports/institutional/<int:period_id>/', InstitutionalReportView.as_view(), name='report_institutional'),
     path('reports/grouped/<int:pk>/', GroupedPayrollReportView.as_view(), name='grouped_report'),
     # --- NOVEDADES DE NÓMINA ---
@@ -47,7 +47,7 @@ urlpatterns = [
     # API para Retener/Liberar el pago
     path('payslip/<int:pk>/toggle-withhold/', PayslipToggleWithholdView.as_view(),
          name='payslip_toggle_withhold'),
-
+    path('constants/toggle/<int:pk>/', ConstantToggleView.as_view(), name='constant_toggle'),
     # API para Modificar un rubro individual manualmente
     path('payslip-item/<int:item_id>/update/', PayslipItemUpdateAPIView.as_view(), name='payslip_item_update'),
     path('payslips/recalculate/', RecalculatePayslipsView.as_view(), name='payslip_recalculate'),

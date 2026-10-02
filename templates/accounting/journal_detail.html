@@ -1,24 +1,62 @@
 {% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Asiento Contable #{{ journal.id }} | SIGETH{% endblock %}
+
 {% block content %}
-<div class="container">
-  <h2>Asiento {{ journal.id }}</h2>
-  <p>Fecha: {{ journal.date }} - {{ journal.description }}</p>
-  <a class="btn btn-sm btn-white-rectangle" href="{% url 'accounting:journal_export' journal.pk %}">Exportar CSV</a>
-  <table class="table mt-3">
-    <thead><tr><th>Cuenta</th><th>Débito</th><th>Crédito</th><th>Partida</th><th>Ref</th></tr></thead>
-    <tbody>
-      {% for it in journal.items.all %}
-      <tr>
-        <td>{{ it.account.code }} - {{ it.account.name }}</td>
-        <td>{{ it.debit }}</td>
-        <td>{{ it.credit }}</td>
-        <td>{{ it.budget_line.number_individual if it.budget_line else '' }}</td>
-        <td>{{ it.reference }}</td>
-      </tr>
-      {% empty %}
-      <tr><td colspan="5">No hay líneas.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+    <div class="header-card">
+        <div>
+            <h1>Asiento Contable #{{ journal.id }}</h1>
+            <p>{{ journal.date|date:"d/m/Y" }} — {{ journal.description|default:"Sin descripción" }}</p>
+        </div>
+        <div class="header-actions-group">
+            <a class="btn-white-rectangle" href="{% url 'accounting:journal_list' %}">
+                <i class="fas fa-arrow-left me-1"></i> Volver
+            </a>
+            <a class="btn-white-rectangle" href="{% url 'accounting:journal_export' journal.pk %}">
+                <i class="fas fa-file-csv me-1"></i> Exportar CSV
+            </a>
+        </div>
+    </div>
+
+    <div class="content-table">
+        <div class="table-container">
+            <table class="managed-table table-hover" data-page-size="25">
+                <thead>
+                <tr>
+                    <th class="width-15">Código</th>
+                    <th class="width-35">Cuenta Contable</th>
+                    <th class="width-15 center text-center">Débito</th>
+                    <th class="width-15 center text-center">Crédito</th>
+                    <th class="width-20">Partida / Referencia</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for it in journal.items.all %}
+                    <tr>
+                        <td><span class="badge badge-gray bold">{{ it.account.code }}</span></td>
+                        <td class="bold">{{ it.account.name }}</td>
+                        <td class="center text-center text-green bold">$ {{ it.debit }}</td>
+                        <td class="center text-center text-blue bold">$ {{ it.credit }}</td>
+                        <td>
+                            {% if it.budget_line %}
+                                <span class="badge badge-blue">{{ it.budget_line.number_individual }}</span>
+                            {% else %}
+                                <span class="text-muted small">{{ it.reference|default:"—" }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="5" class="center text-muted py-4">No existen movimientos en este asiento.</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/payroll/payroll.js' %}"></script>
 {% endblock %}

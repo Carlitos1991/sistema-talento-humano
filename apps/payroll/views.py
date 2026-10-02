@@ -271,11 +271,37 @@ class RubricListView(ListView):
     context_object_name = 'rubrics'
 
     def get_queryset(self):
-        qs = super().get_queryset()
-        tipo = self.request.GET.get('tipo')  # Para que puedas filtrar en la tabla si quieres
+        qs = super().get_queryset().select_related(
+            'debit_account', 'credit_account', 'income_account'
+        ).order_by('order', 'name')
+        tipo = self.request.GET.get('tipo')
         if tipo:
             qs = qs.filter(rubric_type=tipo)
         return qs
+
+    def get(self, request, *args, **kwargs):
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            self.object_list = self.get_queryset()
+            context = self.get_context_data()
+            html = render_to_string('payroll/partials/partial_rubric_table.html', context, request=request)
+            return JsonResponse({'html': html})
+        return super().get(request, *args, **kwargs)
+
+
+class RubricToggleView(LoginRequiredMixin, View):
+    """Activa o desactiva un rubro sin eliminarlo físicamente."""
+
+    def post(self, request, pk):
+        rubric = get_object_or_404(PayrollRubric, pk=pk)
+        rubric.is_active = not rubric.is_active
+        rubric.save(update_fields=['is_active'])
+
+        estado = "activado" if rubric.is_active else "desactivado"
+        return JsonResponse({
+            'success': True,
+            'message': f'El rubro {rubric.name} ha sido {estado} correctamente.',
+            'is_active': rubric.is_active
+        })
 
 
 class RubricCreateView(CreateView):
@@ -400,22 +426,16 @@ class ConstantListView(ListView):
         qs = super().get_queryset().order_by('name')
         show_inactive = self.request.GET.get('show_inactive')
 
-        try:
-            if show_inactive and str(show_inactive).lower() in ['true', '1', 'on']:
-                return qs.filter(is_active=False)
-            return qs.filter(is_active=True)
-        except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.warning('Error al filtrar PayrollConstant.is_active: %s', e)
-            return qs
+        if show_inactive and str(show_inactive).lower() in ['true', '1', 'on']:
+            return qs.filter(is_active=False)
+        return qs.filter(is_active=True)
 
     def get(self, request, *args, **kwargs):
-        # Si es petición AJAX devolvemos sólo las filas (partial)
+        # Si es petición AJAX devolvemos el contenedor y tabla estandarizada completa
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            constants = self.get_queryset()
-            html = render_to_string('payroll/partials/_constant_rows.html', {'constants': constants})
-            from django.http import HttpResponse
+            self.object_list = self.get_queryset()
+            context = self.get_context_data()
+            html = render_to_string('payroll/partials/partial_constants_table.html', context, request=request)
             return HttpResponse(html)
         return super().get(request, *args, **kwargs)
 
@@ -446,16 +466,20 @@ class ConstantUpdateView(UpdateView):
         return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
 
 
-class ConstantDeleteView(DeleteView):
-    model = PayrollConstant
+class ConstantToggleView(LoginRequiredMixin, View):
+    """Activa o desactiva la constante (Soft-Delete) sin borrarla de la base de datos."""
 
-    def post(self, request, *args, **kwargs):
-        self.object = self.get_object()
-        try:
-            self.object.delete()
-            return JsonResponse({'status': 'success', 'message': 'Constante eliminada.'})
-        except Exception as e:
-            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+    def post(self, request, pk):
+        constant = get_object_or_404(PayrollConstant, pk=pk)
+        constant.is_active = not constant.is_active
+        constant.save(update_fields=['is_active'])
+
+        estado = "activada" if constant.is_active else "desactivada"
+        return JsonResponse({
+            'success': True,
+            'message': f'La constante {constant.name} ha sido {estado} correctamente.',
+            'is_active': constant.is_active
+        })
 
 
 class PayslipListView(LoginRequiredMixin, ListView):

@@ -1,88 +1,73 @@
 {% extends 'base.html' %}
 {% load static %}
+
 {% block title %}Mapeo de Rubros | SIGETH{% endblock %}
 
-{% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/payroll.css' %}">
-{% endblock %}
-
 {% block content %}
-    <div class="container-fluid">
-        <div class="header-card">
-            <div>
-                <h1><i class="fa-solid fa-list-check"></i> Mapeo de Rubros</h1>
-                <p>Configuración unificada de la matriz contable y presupuestaria.</p>
+    <div class="header-card">
+        <div>
+            <h1>Mapeo de Rubros</h1>
+            <p>Configuración unificada de la matriz contable y presupuestaria.</p>
+        </div>
+        {% if perms.payroll.add_payrollrubric %}
+            <button id="btn-add-rubric" type="button" class="btn-white-rectangle"
+                    onclick="openAjaxModal('{% url 'payroll:rubric_create' %}', window.initializeRubricModal)">
+                <i class="fas fa-plus"></i> Nuevo Rubro
+            </button>
+        {% endif %}
+    </div>
+
+    <div class="content-table">
+        <form id="rubricFiltersForm" onsubmit="return false;"
+              data-global-table-filter data-row-selector="[data-filter-row]">
+            <div class="search-panel">
+                <div class="search-grid">
+                    <input type="text" id="searchRubric" class="input-field"
+                           placeholder="Buscar por rubro o código"
+                           autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
+                           data-filter-search>
+
+                    <div class="person-filter-field">
+                        <select id="filterRubricType" class="input-field select2"
+                                data-filter-select data-filter-attr="type">
+                            <option value="">Todos los tipos</option>
+                            <option value="INCOME">Ingresos</option>
+                            <option value="DEDUCTION">Descuentos</option>
+                            <option value="CONTRIBUTION">Aportes Institucionales</option>
+                        </select>
+                    </div>
+
+                    <div class="person-filter-field">
+                        <select id="filterRubricStatus" class="input-field select2"
+                                data-filter-select data-filter-attr="status">
+                            <option value="">Todos los estados</option>
+                            <option value="true">Activo</option>
+                            <option value="false">Inactivo</option>
+                        </select>
+                    </div>
+                </div>
             </div>
-            {% if perms.payroll.add_payrollrubric %}
-                <button id="btn-add-rubric" type="button" class="btn-blue-rectangle"
-                        onclick="openAjaxModal('{% url 'payroll:rubric_create' %}', '.modal-overlay', 'initializeRubricModal')">
-                    <i class="fas fa-plus"></i> Nuevo Rubro
+        </form>
+
+        <div class="search-toolbar">
+            <div class="table-controls person-filter-controls"></div>
+            <div class="search-filter-actions">
+                <button type="button" class="btn-blue-rectangle" data-filter-apply>
+                    <i class="fa-solid fa-magnifying-glass me-1"></i> Buscar
                 </button>
-            {% endif %}
+                <button type="button" class="btn-blue-rectangle-outline" data-filter-clear>
+                    <i class="fa-solid fa-eraser me-1"></i> Limpiar
+                </button>
+            </div>
         </div>
 
-        <div class="content-table mt-4">
-            <form id="rubricFiltersForm" class="global-table-filter-form" data-global-table-filter
-                  data-row-selector="[data-filter-row]" onsubmit="return false;">
-                <div class="global-table-filter-panel">
-                    <div class="global-table-filter-grid">
-                        <div class="global-table-filter-field">
-                            <label for="searchRubric">Buscar</label>
-                            <div class="search-box">
-                                <input type="text" id="searchRubric" class="table-search-input"
-                                       placeholder="Buscar por rubro o código"
-                                       autocomplete="off" data-filter-search>
-                            </div>
-                        </div>
-
-                        <div class="global-table-filter-field">
-                            <label for="filterRubricType">Tipo</label>
-                            <select id="filterRubricType" class="form-control select2" data-filter-select
-                                    data-filter-attr="type">
-                                <option value="">Todos los tipos</option>
-                                <option value="INCOME">Ingresos</option>
-                                <option value="DEDUCTION">Descuentos</option>
-                                <option value="CONTRIBUTION">Aportes Institucionales</option>
-                            </select>
-                        </div>
-
-                        <div class="global-table-filter-field">
-                            <label for="filterRubricStatus">Estado</label>
-                            <select id="filterRubricStatus" class="form-control select2" data-filter-select
-                                    data-filter-attr="active">
-                                <option value="">Todos los estados</option>
-                                <option value="true">Activo</option>
-                                <option value="false">Inactivo</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="toolbar-row">
-                    <div class="toolbar-left">
-                        <div class="table-controls rubric-export-controls"></div>
-                    </div>
-
-                    <div class="toolbar-center">
-                        <button type="button" class="btn-blue-rectangle" data-filter-apply>
-                            <i class="fa-solid fa-magnifying-glass"></i> Buscar
-                        </button>
-                        <button type="button" class="btn-blue-rectangle-outline" data-filter-clear>
-                            <i class="fa-solid fa-eraser"></i> Limpiar
-                        </button>
-                    </div>
-
-                    <div class="toolbar-right"></div>
-                </div>
-            </form>
-
-            <div id="rubrics-table-container">
-                {% include 'payroll/partials/partial_rubric_table.html' %}
-            </div>
+        <div id="table-content-wrapper">
+            {% include 'payroll/partials/partial_rubric_table.html' %}
         </div>
     </div>
 
     <div id="modal-root"></div>
+    {% csrf_token %}
 {% endblock %}
 
 {% block extra_js %}
@@ -94,8 +79,7 @@
                     $(this).select2({
                         width: '100%',
                         minimumResultsForSearch: Infinity,
-                        allowClear: true,
-                        dropdownAutoWidth: true
+                        allowClear: true
                     });
                 });
             }

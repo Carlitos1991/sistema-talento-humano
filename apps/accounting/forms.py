@@ -10,7 +10,7 @@ class AccountForm(forms.ModelForm):
         widgets = {
             'code': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: 1.1.1'}),
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre de la cuenta'}),
-            'type': forms.Select(attrs={'class': 'form-select'}),
+            'type': forms.Select(attrs={'class': 'input-field'}),
             'order': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'Automático si se deja en blanco'

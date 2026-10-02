@@ -1189,3 +1189,45 @@ document.addEventListener('click', (e) => {
         );
     }
 });
+window.uploadMassExcel = function (input, url, label) {
+    if (!input.files || !input.files[0]) return;
+
+    const file = input.files[0];
+    const formData = new FormData();
+    formData.append('file', file);
+
+    Swal.fire({
+        title: `Procesando ${label}`,
+        text: 'Leyendo archivo Excel y actualizando nómina...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
+
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getPayrollCSRF(),
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData
+    })
+        .then(safeJsonParse)
+        .then(data => {
+            showToast(data.message || 'Configuración actualizada exitosamente.', 'success');
+            if (typeof refreshCurrentTable === 'function') {
+                refreshCurrentTable();
+            } else {
+                location.reload();
+            }
+        })
+        .catch(err => {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error al procesar archivo',
+                text: err.message || 'Ocurrió un error inesperado al subir el Excel.'
+            });
+        })
+        .finally(() => {
+            input.value = '';
+        });
+};

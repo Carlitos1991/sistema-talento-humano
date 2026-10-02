@@ -1,77 +1,66 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/payroll.css' %}">
-{% endblock %}
+{% block title %}Fondos de Reserva y Décimos | SIGETH{% endblock %}
 
 {% block content %}
     <div class="header-card">
         <div>
-            <h1><i class="fas fa-piggy-bank me-2"></i> Fondos de Reserva y Décimos</h1>
-            <p>Configuración de acumulación o mensualización masiva.</p>
+            <h1>Fondos de Reserva y Décimos</h1>
+            <p>Configuración masiva de acumulación o mensualización.</p>
         </div>
 
-        <!-- Botones de Acción integrados en el diseño limpio -->
-        <div class="header-actions">
-
-            <!-- 1. Botón IESS -->
-            <button type="button" class="btn-white-rectangle" onclick="document.getElementById('fileMassReserve').click();">
-                <i class="fas fa-file-excel"></i> Excel IESS
+        <div class="header-actions-group">
+            <!-- 1. Carga Masiva IESS -->
+            <button type="button" class="btn-white-rectangle"
+                    onclick="document.getElementById('fileMassReserve').click();">
+                <i class="fas fa-file-excel text-green me-1"></i> Excel IESS
             </button>
             <input type="file" id="fileMassReserve" accept=".xlsx, .xls" class="hidden"
-                   onchange="uploadMassExcel(this, '{% url 'payroll:reserve_funds_mass_update' %}', 'Configurando fondos de reserva...')">
+                   onchange="uploadMassExcel(this, '{% url 'payroll:reserve_funds_mass_update' %}', 'fondos de reserva')">
 
-            <!-- 2. Botón Décimos -->
-            <button type="button" class="btn-white-rectangle" onclick="document.getElementById('fileMassTenths').click();">
-                <i class="fas fa-file-excel"></i> Excel Décimos
+            <!-- 2. Carga Masiva Décimos -->
+            <button type="button" class="btn-white-rectangle"
+                    onclick="document.getElementById('fileMassTenths').click();">
+                <i class="fas fa-file-excel text-green me-1"></i> Excel Décimos
             </button>
-            <!-- Nota: Le agregué "?tipo=decimos" a la URL como sugerencia, puedes cambiar la URL a tu nueva vista en Django -->
             <input type="file" id="fileMassTenths" accept=".xlsx, .xls" class="hidden"
-                   onchange="uploadMassExcel(this, '{% url 'payroll:reserve_funds_mass_update' %}?tipo=decimos', 'Configurando décimos...')">
-
+                   onchange="uploadMassExcel(this, '{% url 'payroll:reserve_funds_mass_update' %}?tipo=decimos', 'décimos')">
         </div>
     </div>
 
-    <div class="content-table mt-4">
-        <!-- Buscador alineado a la derecha como en el resto del sistema -->
-        <div class="table-controls">
-            <div class="search-box">
-                <input id="reserve-search-input" type="text" class="table-search-input"
-                       placeholder="Buscar por nombre o cédula...">
+    <div class="content-table">
+        <div class="table-controls toolbar-row">
+            <div class="toolbar-left"></div>
+            <div class="toolbar-right">
+                    <input id="reserve-search-input" type="text" class="table-search-input table-search-input--large"
+                           placeholder="Buscar por nombre o cédula...">
             </div>
         </div>
 
-        <div id="reserve-container">
-            <div id="reserve-table-content">
-                {% include 'payroll/partials/partial_reserve_funds_table.html' %}
-            </div>
+        <div id="table-content-wrapper">
+            {% include 'payroll/partials/partial_reserve_funds_table.html' %}
         </div>
     </div>
+
+    <div id="modal-root"></div>
+    {% csrf_token %}
 {% endblock %}
 
 {% block extra_js %}
     <script src="{% static 'js/payroll/payroll.js' %}"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // Observador para que funcione incluso si el paginador AJAX recarga la tabla
-            const scrollObserver = new MutationObserver(() => {
-                const topWrapper = document.querySelector('.top-scrollbar-wrapper');
-                const topDummy = document.querySelector('.top-scrollbar-dummy');
-                const tableContainer = document.querySelector('.table-container');
-                const table = document.querySelector('.managed-table');
-
-                if (topWrapper && topDummy && tableContainer && table) {
-                    // Sincronizamos el ancho ficticio con el ancho real de la tabla
-                    topDummy.style.width = table.offsetWidth + 'px';
-
-                    // Efecto espejo bi-direccional
-                    topWrapper.onscroll = () => tableContainer.scrollLeft = topWrapper.scrollLeft;
-                    tableContainer.onscroll = () => topWrapper.scrollLeft = tableContainer.scrollLeft;
-                }
-            });
-
-            scrollObserver.observe(document.body, {childList: true, subtree: true});
+            const searchInput = document.getElementById('reserve-search-input');
+            if (searchInput) {
+                let debounceTimer = null;
+                searchInput.addEventListener('input', function () {
+                    clearTimeout(debounceTimer);
+                    debounceTimer = setTimeout(() => {
+                        refreshCurrentTable({q: this.value.trim(), page: 1});
+                    }, 300);
+                });
+            }
         });
     </script>
 {% endblock %}

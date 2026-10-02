@@ -1,98 +1,40 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/payroll.css' %}">
-{% endblock %}
+{% block title %}Cuentas Contables | SIGETH{% endblock %}
 
 {% block content %}
-    <div class="container-fluid">
-        <div class="header-card">
-            <div>
-                <h1>Cuentas Contables</h1>
-                <p>Gestión del plan de cuentas y configuración contable</p>
+    <div class="header-card">
+        <div>
+            <h1>Cuentas Contables</h1>
+            <p>Gestión del plan de cuentas y parametrización contable del sistema.</p>
+        </div>
+        <button type="button" class="btn-white-rectangle"
+                onclick="openAjaxModal('{% url 'accounting:account_add' %}')">
+            <i class="fas fa-plus"></i> Nueva Cuenta
+        </button>
+    </div>
+
+    <div class="content-table">
+        <div class="table-controls toolbar-row">
+            <input class="switch-input switch-red" type="checkbox" id="toggleInactiveAccounts">
+            <label class="switch-wrapper" for="toggleInactiveAccounts">
+                <div class="switch-circle"></div>
+                <span class="switch-text">Mostrar Inactivos</span>
+            </label>
+            <div class="toolbar-right">
+                    <input type="text" class="table-search-input table-search-input--large"
+                           placeholder="Buscar por código o nombre...">
             </div>
-            <button type="button" class="btn-white-rectangle"
-                    onclick="openAjaxModal('{% url 'accounting:account_add' %}')">
-                <i class="fas fa-plus"></i> Nueva Cuenta
-            </button>
         </div>
 
-        <div class="content-table mt-4">
-            <div class="table-controls">
-                <div style="display: flex; justify-content: center;">
-                    <input type="checkbox" class="switch-input switch-blue global-inactive-switch" id="toggleInactive"
-                           onchange="toggleInactive(this.checked)">
-                    <label class="switch-wrapper mb-0" for="toggleInactive">
-                        <div class="switch-circle"></div>
-                        <span class="switch-text">Mostrar Inactivos</span>
-                    </label>
-                </div>
-
-                <div class="search-box">
-                    <input type="text" class="table-search-input" placeholder="Buscar cuenta por código o nombre...">
-                </div>
-            </div>
-
-            <div class="table-container">
-                <table class="table managed-table exportable-table" data-page-size="10"
-                       data-title="Reporte de Cuentas Contables">
-                    <thead>
-                    <tr>
-                        <th data-field="code">Código</th>
-                        <th data-field="name">Nombre</th>
-                        <th data-field="order">Orden</th>
-                        <th data-field="type">Tipo</th>
-                        <th class="center no-sort">Estado</th>
-                        <th class="center actions no-sort">Acciones</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-
-                    <!-- 3. Unificación directa de _account_rows.html con clases limpias -->
-                    {% for a in accounts %}
-                        <tr>
-                            <td>{{ a.code }}</td>
-                            <td class="bold">{{ a.name }}</td>
-                            <td class="bold">{{ a.order }}</td>
-                            <td>{{ a.get_type_display }}</td>
-
-                            <td class="center">
-                                {% if a.is_active %}
-                                    <span class="status-badge active"><i class="fas fa-check-circle"></i> Activo</span>
-                                {% else %}
-                                    <span class="status-badge inactive"><i
-                                            class="fas fa-times-circle"></i> Inactivo</span>
-                                {% endif %}
-                            </td>
-
-                            <td class="center actions">
-                                <div class="actions-wrapper">
-                                    <button class="btn-yellow-circle" title="Editar" type="button"
-                                            onclick="openAjaxModal('{% url 'accounting:account_edit' a.pk %}')">
-                                        <i class="fas fa-pen"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    {% empty %}
-                        <tr>
-                            <td colspan="6">
-                                <!-- Diseño estándar global para estado vacío -->
-                                <div class="empty-state-container">
-                                    <i class="fas fa-folder-open empty-state-icon"></i>
-                                    <div class="empty-state-text">No hay cuentas definidas.</div>
-                                </div>
-                            </td>
-                        </tr>
-                    {% endfor %}
-
-                    </tbody>
-                </table>
-            </div>
+        <div id="table-content-wrapper">
+            {% include 'accounting/partials/partial_account_table.html' %}
         </div>
     </div>
+
     <div id="modal-root"></div>
+    {% csrf_token %}
 {% endblock content %}
 
 {% block extra_js %}

@@ -1,0 +1,75 @@
+<div class="modal-overlay" id="accountModalOverlay">
+    <div class="modal-container-medium">
+        <div class="modal-header-medium">
+            <div class="header-content-group">
+                <div class="header-icon-circle">
+                    <i class="fas fa-book-open"></i>
+                </div>
+                <h3 class="header-title">
+                    {% if form.instance.pk %}Editar{% else %}Nueva{% endif %} Cuenta Contable
+                </h3>
+            </div>
+            <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <form method="post" id="accountForm" autocomplete="off" novalidate
+              action="{{ request.path }}"
+              onsubmit="submitAjaxForm(event)">
+            {% csrf_token %}
+            <div class="modal-body-custom">
+                <div class="form-section-card">
+                    <div class="section-title">
+                        <i class="fas fa-info-circle text-primary"></i> Datos de la Cuenta
+                    </div>
+
+                    <div class="grid-2-cols">
+                        <div class="form-group">
+                            <label class="form-label" for="{{ form.code.id_for_label }}">
+                                Código <span class="text-red">*</span>
+                            </label>
+                            {{ form.code }}
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="{{ form.name.id_for_label }}">
+                                Nombre <span class="text-red">*</span>
+                            </label>
+                            {{ form.name }}
+                        </div>
+                    </div>
+
+                    <div class="grid-2-cols mt-3">
+                        <div class="form-group">
+                            <label class="form-label" for="{{ form.order.id_for_label }}">
+                                Orden de Reporte (Prioridad)
+                            </label>
+                            {{ form.order }}
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="{{ form.type.id_for_label }}">
+                                Tipo de Cuenta <span class="text-red">*</span>
+                            </label>
+                            {{ form.type }}
+                        </div>
+                    </div>
+
+                    <div class="form-group mt-3 d-flex justify-content-center align-items-center">
+                        {{ form.is_active }}
+                        <label class="switch-wrapper mb-0" for="{{ form.is_active.id_for_label }}">
+                            <div class="switch-circle"></div>
+                            <span class="switch-text">Activo en el Sistema</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer-fixed">
+                <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">Cancelar</button>
+                <button type="submit" class="btn-dark-blue-rectangle">
+                    <i class="fas fa-save me-1"></i> Guardar Cuenta
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

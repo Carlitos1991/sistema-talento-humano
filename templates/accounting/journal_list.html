@@ -1,24 +1,58 @@
 {% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Asientos Contables | SIGETH{% endblock %}
+
 {% block content %}
-<div class="container">
-  <h2>Asientos</h2>
-  <table class="table mt-3">
-    <thead><tr><th>ID</th><th>Fecha</th><th>Descripción</th><th></th></tr></thead>
-    <tbody>
-      {% for j in journals %}
-      <tr>
-        <td>{{ j.id }}</td>
-        <td>{{ j.date }}</td>
-        <td>{{ j.description }}</td>
-        <td>
-          <a class="btn btn-sm btn-blue-rectangle" href="{% url 'accounting:journal_detail' j.pk %}">Ver</a>
-          <a class="btn btn-sm btn-white-rectangle" href="{% url 'accounting:journal_export' j.pk %}">Exportar CSV</a>
-        </td>
-      </tr>
-      {% empty %}
-      <tr><td colspan="4">No hay asientos.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+    <div class="header-card">
+        <div>
+            <h1>Libro Diario y Asientos</h1>
+            <p>Registro histórico de asientos contables generados por nómina y operaciones.</p>
+        </div>
+    </div>
+
+    <div class="content-table">
+        <div class="table-container">
+            <table class="managed-table exportable-table table-hover" data-page-size="15"
+                   data-title="Reporte de Asientos Contables">
+                <thead>
+                <tr>
+                    <th class="width-10 center text-center">N° Asiento</th>
+                    <th class="width-15 center text-center">Fecha</th>
+                    <th class="width-55">Descripción</th>
+                    <th class="width-20 center text-center actions no-sort"><i class="fas fa-cogs"></i> Acciones</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for j in journals %}
+                    <tr>
+                        <td class="center text-center bold">
+                            <span class="badge badge-gray">{{ j.id }}</span>
+                        </td>
+                        <td class="center text-center">{{ j.date|date:"d/m/Y" }}</td>
+                        <td class="bold">{{ j.description|default:"Sin descripción" }}</td>
+                        <td class="actions center text-center">
+                            <div class="actions-wrapper">
+                                <a href="{% url 'accounting:journal_detail' j.pk %}" class="btn-blue-circle"
+                                   title="Ver Detalle">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{% url 'accounting:journal_export' j.pk %}" class="btn-green-circle"
+                                   title="Exportar CSV">
+                                    <i class="fas fa-file-csv"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <!-- TableManager maneja el estado vacío automáticamente -->
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/payroll/payroll.js' %}"></script>
 {% endblock %}
