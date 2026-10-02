@@ -889,15 +889,29 @@ window.initNoveltyEvents = function () {
     }
 };
 /* =================================================================================
-   7. LISTADO Y BÚSQUEDA DE ROLES (PAYSLIP LIST)
+   7. LISTADO Y BÚSQUEDA DE ROLES (CON PERSISTENCIA TRAS F5 / URL STATE)
    ================================================================================= */
 (function () {
     const container = document.getElementById('payslip-table-container');
     const searchInput = document.getElementById('searchInput');
     const regimeFilter = document.getElementById('regimeFilter');
+    const checkboxWithheld = document.getElementById('toggleWithheld');
     if (!container || !searchInput) return;
 
     let debounceTimer = null;
+
+    // 1. Recuperar filtros desde la URL al cargar la página (Soporte F5)
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('q')) {
+        searchInput.value = urlParams.get('q');
+    }
+    if (urlParams.has('regime') && regimeFilter) {
+        regimeFilter.value = urlParams.get('regime');
+        if (window.jQuery) $(regimeFilter).val(urlParams.get('regime')).trigger('change.select2');
+    }
+    if (urlParams.has('show_withheld') && checkboxWithheld) {
+        checkboxWithheld.checked = (urlParams.get('show_withheld') === 'only' || urlParams.get('show_withheld') === 'true');
+    }
 
     function initPaginationControls(root) {
         const pagination = (root || document).querySelector('#js-pagination');
@@ -928,15 +942,26 @@ window.initNoveltyEvents = function () {
         const periodId = window.CURRENT_PERIOD_ID || new URLSearchParams(window.location.search).get('period_id');
         if (!periodId) return;
 
-        const checkbox = document.getElementById('toggleWithheld');
-        const showWithheld = checkbox && checkbox.checked ? 'only' : 'exclude';
+        const qVal = searchInput.value.trim();
+        const regimeVal = regimeFilter ? regimeFilter.value : '';
+        const showWithheld = checkboxWithheld && checkboxWithheld.checked ? 'only' : 'exclude';
+        const pageVal = options.page || 1;
+
+        // Persistir en los query params del navegador sin recargar la página (Para soportar F5)
+        const currentUrl = new URL(window.location.href);
+        currentUrl.searchParams.set('period_id', periodId);
+        if (qVal) currentUrl.searchParams.set('q', qVal); else currentUrl.searchParams.delete('q');
+        if (regimeVal) currentUrl.searchParams.set('regime', regimeVal); else currentUrl.searchParams.delete('regime');
+        if (checkboxWithheld && checkboxWithheld.checked) currentUrl.searchParams.set('show_withheld', 'only'); else currentUrl.searchParams.delete('show_withheld');
+        currentUrl.searchParams.set('page', pageVal);
+        window.history.replaceState({}, '', currentUrl.toString());
 
         const params = new URLSearchParams({
             period_id: periodId,
-            q: searchInput.value.trim(),
-            regime: regimeFilter ? regimeFilter.value : '',
+            q: qVal,
+            regime: regimeVal,
             show_withheld: showWithheld,
-            page: options.page || 1
+            page: pageVal
         });
 
         container.style.opacity = '0.5';
@@ -968,7 +993,7 @@ window.initNoveltyEvents = function () {
             });
     }
 
-    // Escuchadores del buscador con debounce
+    // Buscador con debounce reactivo
     searchInput.addEventListener('input', () => {
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => performPayslipSearch({page: 1}), 300);
@@ -983,6 +1008,10 @@ window.initNoveltyEvents = function () {
 
     if (regimeFilter) {
         regimeFilter.addEventListener('change', () => performPayslipSearch({page: 1}));
+    }
+
+    if (checkboxWithheld) {
+        checkboxWithheld.addEventListener('change', () => performPayslipSearch({page: 1}));
     }
 
     window.performSearchWithOptions = () => performPayslipSearch({page: 1});
@@ -1020,31 +1049,8 @@ window.initNoveltyEvents = function () {
     initPaginationControls(container);
 })();
 
-window.downloadFilteredReport = function (type) {
-    const searchInput = document.getElementById('searchInput');
-    const regimeFilter = document.getElementById('regimeFilter');
-    const checkbox = document.getElementById('toggleWithheld');
-
-    const periodId = window.CURRENT_PERIOD_ID || new URLSearchParams(window.location.search).get('period_id');
-    if (!periodId) return alert('Seleccione un periodo.');
-
-    const q = searchInput ? searchInput.value.trim() : '';
-    const regime = regimeFilter ? regimeFilter.value : '';
-    const show_withheld = checkbox && checkbox.checked ? 'only' : 'exclude';
-
-    let url = '';
-    if (type === 'banco') {
-        url = `/payroll/reports/bank/${periodId}/?q=${encodeURIComponent(q)}&regime=${encodeURIComponent(regime)}&show_withheld=${show_withheld}`;
-    } else if (type === 'negativos') {
-        url = `/payroll/reports/negative-balances/${periodId}/`;
-    } else {
-        url = `/payroll/reports/grouped/${periodId}/?q=${encodeURIComponent(q)}&regime=${encodeURIComponent(regime)}&show_withheld=${show_withheld}`;
-    }
-
-    window.open(url, '_blank');
-};
 /* =================================================================================
-   8. ACCIONES DE ROLES (Recálculo filtrado, Ver Detalle y Envío por Correo)
+   8. ACCIONES DE ROLES (Recálculo filtrado y modales)
    ================================================================================= */
 window.recalculateCurrentFilter = function () {
     const periodId = window.CURRENT_PERIOD_ID || new URLSearchParams(window.location.search).get('period_id');
@@ -1063,9 +1069,8 @@ window.recalculateCurrentFilter = function () {
         text: 'Se actualizarán las fórmulas y sueldos para los roles visibles en este filtro.',
         icon: 'question',
         showCancelButton: true,
-        confirmButtonText: '<i class="fas fa-sync-alt me-1"></i> Sí, recalcular',
-        cancelButtonText: 'Cancelar',
-        confirmButtonColor: '#10b981'
+        confirmButtonText: 'Sí, recalcular',
+        cancelButtonText: 'Cancelar'
     }).then(result => {
         if (result.isConfirmed) {
             Swal.fire({
@@ -1080,7 +1085,6 @@ window.recalculateCurrentFilter = function () {
             formData.append('regime', regime);
             formData.append('show_withheld', show_withheld);
 
-            // CORREGIDO: Ruta exacta registrada en urls.py
             fetch('/payroll/payslips/recalculate/', {
                 method: 'POST',
                 headers: {
@@ -1095,73 +1099,16 @@ window.recalculateCurrentFilter = function () {
                         icon: 'success',
                         title: '¡Completado!',
                         text: data.message || 'Roles recalculados correctamente.',
-                        timer: 2000,
+                        timer: 1500,
                         showConfirmButton: false
                     }).then(() => {
+                        // Refresca la tabla manteniendo los filtros activos
                         if (typeof window.performSearchWithOptions === 'function') {
                             window.performSearchWithOptions();
-                        } else {
-                            location.reload();
                         }
                     });
                 })
                 .catch(err => Swal.fire('Error', err.message, 'error'));
-        }
-    });
-};
-
-window.openPayslipDetail = function (url) {
-    if (typeof openAjaxModal === 'function') {
-        openAjaxModal(url);
-    } else {
-        fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
-            .then(res => res.text())
-            .then(html => {
-                const root = document.getElementById('modal-root') || document.body;
-                root.innerHTML = html;
-                const modal = root.querySelector('.modal-overlay');
-                if (modal) {
-                    modal.style.display = 'flex';
-                }
-            });
-    }
-};
-
-window.sendPayslipEmail = function (payslipId) {
-    Swal.fire({
-        title: '¿Enviar rol por correo institucional?',
-        text: 'Se generará el archivo oficial en PDF con código QR y se enviará a la cuenta de correo del funcionario.',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonText: '<i class="fas fa-paper-plane me-1"></i> Enviar Correo',
-        cancelButtonText: 'Cancelar',
-        confirmButtonColor: '#eab308'
-    }).then(res => {
-        if (res.isConfirmed) {
-            Swal.fire({
-                title: 'Enviando notificación...',
-                text: 'Generando PDF y conectando con el servidor de correo...',
-                allowOutsideClick: false,
-                didOpen: () => Swal.showLoading()
-            });
-
-            // CORREGIDO: Ruta en plural 'payslips' según urls.py
-            fetch(`/payroll/payslips/${payslipId}/send-email/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': getPayrollCSRF(),
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-                .then(safeJsonParse)
-                .then(data => {
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Enviado!',
-                        text: data.message || 'Notificación enviada correctamente al funcionario.'
-                    });
-                })
-                .catch(err => Swal.fire('Error al enviar', err.message, 'error'));
         }
     });
 };

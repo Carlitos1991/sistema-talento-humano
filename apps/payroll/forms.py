@@ -155,13 +155,19 @@ class PayrollRubricForm(forms.ModelForm):
     def clean(self):
         cleaned_data = super().clean()
 
-        # Generación automática del código basada en el nombre
+        # 1. Si el registro ya existe en BD, preservar su código original
+        if self.instance and self.instance.pk:
+            cleaned_data['code'] = self.instance.code
+            return cleaned_data
+
+        # 2. Solo al crear: autogenerar si no viene definido
         if not cleaned_data.get('code') and cleaned_data.get('name'):
-            import unicodedata, re
             clean_name = ''.join(
-                (c for c in unicodedata.normalize('NFD', cleaned_data['name']) if unicodedata.category(c) != 'Mn')
+                c for c in unicodedata.normalize('NFD', cleaned_data['name'])
+                if unicodedata.category(c) != 'Mn'
             )
-            cleaned_data['code'] = re.sub(r'[^a-zA-Z0-9_]', '', clean_name.replace(' ', '_')).upper()
-            self.instance.code = cleaned_data['code']
+            generated_code = re.sub(r'[^a-zA-Z0-9_]', '', clean_name.replace(' ', '_')).upper()
+            cleaned_data['code'] = generated_code
+            self.instance.code = generated_code
 
         return cleaned_data

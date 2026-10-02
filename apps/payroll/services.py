@@ -28,21 +28,13 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 def _resolve_accounts_for_rubric(rubric: PayrollRubric, spending_type: str) -> dict:
-    """
-    Devuelve las IDs de cuenta (debit / credit) correctas para un rubro dado el
-    tipo de gasto del empleado, aplicando el fallback a la cuenta base (corriente)
-    cuando la cuenta específica está vacía.
-
-    Retorna:
-        {'debit': <int|None>, 'credit': <int|None>}
-    """
     if spending_type.startswith('7'):  # INVERSIÓN
         debit = rubric.debit_account_inv_id or rubric.debit_account_id
         credit = rubric.credit_account_inv_id or rubric.credit_account_id
     elif spending_type.startswith('6'):  # PRODUCCIÓN
         debit = rubric.debit_account_prod_id or rubric.debit_account_id
         credit = rubric.credit_account_prod_id or rubric.credit_account_id
-    else:  # CORRIENTE (5.1) — es el fallback universal
+    else:  # CORRIENTE (5.1)
         debit = rubric.debit_account_id
         credit = rubric.credit_account_id
 
@@ -50,13 +42,6 @@ def _resolve_accounts_for_rubric(rubric: PayrollRubric, spending_type: str) -> d
 
 
 def _resolve_bridge_account_id(salary_rubric: PayrollRubric, spending_type: str) -> int | None:
-    """
-    Devuelve el ID de la CUENTA PUENTE (credit_account) del rubro de sueldo
-    según el tipo de gasto, con fallback a la cuenta base.
-
-    La cuenta puente es la "bisagra" del asiento: es el HABER en los ingresos
-    y el DEBE en los descuentos y en la liquidación de bancos.
-    """
     if spending_type.startswith('7'):
         return salary_rubric.credit_account_inv_id or salary_rubric.credit_account_id
     elif spending_type.startswith('6'):
@@ -66,10 +51,6 @@ def _resolve_bridge_account_id(salary_rubric: PayrollRubric, spending_type: str)
 
 
 def _get_employee_spending_type(segments: list) -> str:
-    """
-    Extrae el código de tipo de gasto (ej. '5.1', '7.1', '6.1') del primer
-    segmento presupuestario del empleado.  Fallback = '5.1'.
-    """
     if not segments:
         return '5.1'
     bl = segments[0].get('budget_line')
@@ -79,14 +60,6 @@ def _get_employee_spending_type(segments: list) -> str:
 
 
 def _filter_rubrics_by_context(rubrics: list, spending_type: str) -> list:
-    """
-    Devuelve solo los rubros cuyo spending_context es 'TODOS' o coincide
-    exactamente con el tipo de gasto del empleado.
-
-    Esto evita, por ejemplo, que el rubro RMU marcado como '5.1' se aplique
-    a un empleado de inversión (7.1), lo que generaría un doble cómputo
-    del sueldo base.
-    """
     return [
         r for r in rubrics
         if r.spending_context == 'TODOS' or r.spending_context == spending_type
@@ -118,10 +91,6 @@ class PayrollCalculatorService:
         if 'SBU' not in self.config:
             raise ValueError("Falta configurar la constante 'SBU' (Salario Básico Unificado).")
 
-    # ------------------------------------------------------------------
-    # Métodos de soporte (sin cambios respecto al original)
-    # ------------------------------------------------------------------
-
     def _prepare_mass_data(self, emp_ids):
         holidays_qs = ScheduleObservation.objects.filter(
             is_holiday=True, is_active=True,
@@ -145,13 +114,6 @@ class PayrollCalculatorService:
             prev_year -= 1
         prev_start = date(prev_year, prev_month, 1)
         prev_end = date(prev_year, prev_month, calendar.monthrange(prev_year, prev_month)[1])
-
-        prev_period = PayrollPeriod.objects.filter(start_date=prev_start, end_date=prev_end).first()
-        if not prev_period:
-            print(
-                f"[PAYROLL][BENEFITS] prev payroll period missing for calendar range {prev_start}-{prev_end}; "
-                f"using calendar month dates directly"
-            )
 
         if emp_ids:
             prev_holiday_dates = set()
@@ -208,7 +170,6 @@ class PayrollCalculatorService:
                         curr += timedelta(days=1)
 
             prev_worked_holidays_map = self._get_worked_holidays_map(emp_ids, prev_holiday_dates)
-            # Precalculado UNA sola vez para todos los empleados (no por empleado).
             prev_business_days_set = self._build_business_days_set(prev_start, prev_end, prev_holiday_dates)
             prev_effective_days_map = {
                 eid: self._count_valid_benefit_days(
@@ -244,12 +205,7 @@ class PayrollCalculatorService:
             .values('employee_id', 'start_date', 'end_date', 'days', 'hours')
         )
 
-        # Jornada completa en horas (configurable). Un permiso con menos horas
-        # que esto es PARCIAL: el empleado sí asistió parte del día, por lo
-        # tanto ese día NO debe descontarse de effective_worked_days (y por
-        # ende no afecta el pago de alimentación/transporte).
         full_day_hours = Decimal(str(self.config.get('JORNADA_DIARIA_HORAS', '8')))
-
         absent_dates_map = {}
         for permit in approved_permits:
             eid = permit['employee_id']
@@ -259,25 +215,14 @@ class PayrollCalculatorService:
                 permit['end_date'] or permit['start_date'],
                 self.period.end_date,
             )
-
             is_multi_day = p_start != p_end
             hours = Decimal(str(permit.get('hours') or 0))
             days = Decimal(str(permit.get('days') or 0))
-
-            # AUSENCIA DE DÍA COMPLETO (sí descuenta el día) cuando:
-            #   - el permiso abarca más de un día calendario, o
-            #   - las horas solicitadas cubren la jornada completa (>= full_day_hours), o
-            #   - el permiso está expresado solo en "días" (sin horas registradas)
-            #     y pide 1 día completo o más.
-            # Si el permiso es de pocas horas dentro de un solo día
-            # (ej. 4 horas de 8), el empleado asistió parte del día y NO se
-            # descuenta: el día sigue contando para alimentación/transporte.
             is_full_day_absence = (
                     is_multi_day
                     or hours >= full_day_hours
                     or (hours == 0 and days >= 1)
             )
-
             if is_full_day_absence:
                 curr = p_start
                 while curr <= p_end:
@@ -285,14 +230,9 @@ class PayrollCalculatorService:
                     curr += timedelta(days=1)
 
         worked_holidays_map = self._get_worked_holidays_map(emp_ids, holiday_dates)
-
         return holiday_dates, prev_effective_days_map, absent_dates_map, worked_holidays_map
 
     def _get_worked_holidays_map(self, emp_ids, holiday_dates):
-        """
-        Retorna {employee_id: set(fecha)} solo para feriados con una marcación
-        registrada en biometric.attendance_registry.
-        """
         if not emp_ids or not holiday_dates:
             return {}
 
@@ -309,16 +249,10 @@ class PayrollCalculatorService:
 
         worked_map = {}
         for item in worked_holidays:
-            employee_id = item['employee_id']
-            worked_map.setdefault(employee_id, set()).add(item['date'])
+            worked_map.setdefault(item['employee_id'], set()).add(item['date'])
         return worked_map
 
     def _build_business_days_set(self, start_date, end_date, holiday_dates):
-        """
-        Calendario de días Lun-Vie que NO son feriados para un rango dado.
-        Se calcula UNA sola vez por periodo (no por empleado) y se reutiliza
-        para todos los empleados vía operaciones de sets.
-        """
         business_days = set()
         curr = start_date
         while curr <= end_date:
@@ -337,41 +271,21 @@ class PayrollCalculatorService:
             end_date=None,
             business_days_set=None,
     ):
-        """
-        Regla de beneficios:
-        - Días normales (Lun-Vie): cuentan por defecto, salvo ausencia total.
-        - Días feriados: no cuentan por defecto; solo cuentan si hubo marcación biométrica.
-
-        OPTIMIZADO: antes hacía un bucle día-por-día por empleado (con
-        logger.info + print y sorted() en cada llamada), lo que dominaba el
-        tiempo total del cálculo. Ahora usa operaciones de sets sobre un
-        calendario base precalculado UNA sola vez por periodo
-        (business_days_set), sin logging por empleado.
-        """
         start_date = start_date or self.period.start_date
         end_date = end_date or self.period.end_date
 
         if business_days_set is None:
-            # Fallback por si se llama sin precalcular (evita romper otros usos),
-            # pero lo ideal es siempre pasar business_days_set ya armado.
             business_days_set = self._build_business_days_set(start_date, end_date, holiday_dates)
 
         employee_absences = absent_dates_map.get(employee_id, set())
         employee_worked_holidays = worked_holidays_map.get(employee_id, set())
 
-        # Días normales válidos = laborables (Lun-Vie, sin feriado) menos ausencias.
         normal_valid = len(business_days_set - employee_absences)
-        # Feriados válidos = solo si hubo marcación biométrica ese día y no hay ausencia.
         holiday_valid = len(employee_worked_holidays - employee_absences)
-
         return normal_valid + holiday_valid
 
     def _filter_employees(self, employees):
-        candidate_ids = [
-            emp.id for emp in employees
-            if getattr(emp, 'person', None)
-        ]
-
+        candidate_ids = [emp.id for emp in employees if getattr(emp, 'person', None)]
         all_assignments_qs = BudgetAssignmentHistory.objects.filter(
             employee_id__in=candidate_ids,
             start_date__lte=self.period.end_date,
@@ -386,10 +300,6 @@ class PayrollCalculatorService:
                     valid_history_emp_ids.add(a.employee_id)
 
         return [emp for emp in employees if emp.id in valid_history_emp_ids]
-
-    # ------------------------------------------------------------------
-    # Puntos de entrada públicos
-    # ------------------------------------------------------------------
 
     def generate_bulk(self):
         eligible_employees = self._filter_employees(self.employees)
@@ -416,10 +326,6 @@ class PayrollCalculatorService:
             delete_entire_period=False,
         )
 
-    # ------------------------------------------------------------------
-    # Motor de cálculo principal
-    # ------------------------------------------------------------------
-
     def _execute_payroll_calculation(self, payslip_buffer, delete_entire_period=False, employee_ids_to_delete=None):
         t0 = time.perf_counter()
         t_mark = t0
@@ -427,11 +333,9 @@ class PayrollCalculatorService:
         def _lap(label):
             nonlocal t_mark
             now = time.perf_counter()
-            print(f"[PAYROLL][PERF] {label} -> +{(now - t_mark):.3f}s (acum: {(now - t0):.3f}s)")
             t_mark = now
 
         with transaction.atomic():
-            # ── 1. Limpieza de datos previos ──────────────────────────────
             if delete_entire_period:
                 PendingDebt.objects.filter(period=self.period).delete()
                 Payslip.objects.filter(period=self.period).delete()
@@ -444,37 +348,22 @@ class PayrollCalculatorService:
                 ).delete()
             _lap("delete previous payroll data")
 
-            # ── 2. Crear roles vacíos ─────────────────────────────────────
             created_payslips = Payslip.objects.bulk_create(payslip_buffer)
             emp_ids = [p.employee.id for p in created_payslips]
             _lap("bulk_create payslips")
 
-            # ── 3. Datos masivos (feriados, permisos, etc.) ───────────────
             holiday_dates, prev_effective_days_map, absent_dates_map, worked_holidays_map = self._prepare_mass_data(
                 emp_ids)
-            # Precalculado UNA sola vez para todos los empleados del período actual.
             current_business_days_set = self._build_business_days_set(
                 self.period.start_date, self.period.end_date, holiday_dates
             )
             _lap("prepare mass data")
 
-            # ── 4. Cargar catálogo de rubros ACTIVOS (una sola vez) ───────
-            #
-            # Se cargan TODOS los rubros activos sin pre-filtrar por contexto.
-            # El filtrado se realiza POR EMPLEADO dentro del bucle usando
-            # _filter_rubrics_by_context(), porque cada empleado puede tener
-            # un tipo de gasto distinto (5.1, 7.1, 6.1).
-            #
             all_rubrics = list(PayrollRubric.objects.filter(is_active=True).order_by('order'))
             all_incomes = [r for r in all_rubrics if r.rubric_type == 'INCOME']
             all_deductions = [r for r in all_rubrics if r.rubric_type == 'DEDUCTION']
             all_contributions = [r for r in all_rubrics if r.rubric_type == 'CONTRIBUTION']
 
-            # Índices de acceso rápido por código (sobre la lista completa)
-            ded_map = {d.code.strip().upper(): d for d in all_deductions if d.code}
-            contrib_map = {c.code.strip().upper(): c for c in all_contributions if c.code}
-
-            # ── 5. Datos relacionales masivos ─────────────────────────────
             all_assignments_qs = (
                 BudgetAssignmentHistory.objects
                 .filter(
@@ -497,7 +386,6 @@ class PayrollCalculatorService:
             ).order_by('employee_id', 'start_date')
 
             for mp in management_periods:
-                # Conservamos el último contrato para el régimen y estado activo
                 curr = mp_map.get(mp.employee_id)
                 if not curr:
                     mp_map[mp.employee_id] = mp
@@ -511,7 +399,6 @@ class PayrollCalculatorService:
                         elif curr.end_date is not None and mp.end_date is None:
                             mp_map[mp.employee_id] = mp
 
-                # Acumulamos los días de servicio de todos los contratos históricos
                 if mp.start_date <= self.period.end_date:
                     contract_start = mp.start_date
                     contract_end = min(mp.end_date, self.period.end_date) if mp.end_date else self.period.end_date
@@ -519,7 +406,6 @@ class PayrollCalculatorService:
                         days_count = (contract_end - contract_start).days + 1
                         service_days_map[mp.employee_id] = service_days_map.get(mp.employee_id, 0) + days_count
 
-            # ── 6. Novedades del periodo ──────────────────────────────────
             novelties_map = {}
             for nov in (
                     PayrollNovelty.objects
@@ -536,7 +422,6 @@ class PayrollCalculatorService:
                 elif nov.rubric.rubric_type == 'DEDUCTION':
                     bucket['deductions'].append(nov)
 
-            # ── 7. Deudas pendientes de periodos anteriores ───────────────
             existing_pending_debts_map = {}
             for debt in (
                     PendingDebt.objects
@@ -549,22 +434,6 @@ class PayrollCalculatorService:
                     continue
                 existing_pending_debts_map.setdefault(debt.employee_id, []).append(debt)
 
-            _lap("load mappings and novelties")
-
-            # ── 7.1 Calendario global de días laborables (Optimización) ───
-            # Precalculamos UNA sola vez el conjunto de días lunes-viernes
-            # que no son feriados. Antes, cada empleado repetía por cada día
-            # de sus segmentos: curr_date.weekday() < 5 y curr_date not in
-            # holiday_dates. Ahora es una sola búsqueda en un set ya armado.
-            global_working_days = set()
-            curr_gwd = self.period.start_date
-            while curr_gwd <= self.period.end_date:
-                if curr_gwd.weekday() < 5 and curr_gwd not in holiday_dates:
-                    global_working_days.add(curr_gwd)
-                curr_gwd += timedelta(days=1)
-            _lap("global working days calendar")
-
-            # ── 8. Buffers de escritura diferida ──────────────────────────
             items_buffer = []
             payslips_to_update = []
             pending_debts_buffer = []
@@ -575,7 +444,6 @@ class PayrollCalculatorService:
             # ── 9. BUCLE PRINCIPAL POR EMPLEADO ───────────────────────────
             for slip in created_payslips:
                 try:
-                    # -- 9.1 Asignaciones presupuestarias del empleado ------
                     all_emp_assignments = assignment_map.get(slip.employee_id, [])
 
                     if self.is_scope_run:
@@ -590,58 +458,20 @@ class PayrollCalculatorService:
                                 assignment_copy.end_date = None
                             emp_assignments.append(assignment_copy)
 
-                    # -- 9.2 Segmentos de tiempo (por partida) --------------
                     segments = self._build_segments(emp_assignments)
-                    print(
-                        f"-> [SEGMENTS] Emp: {slip.employee_id} | Asignaciones: {emp_assignments} | Segmentos: {segments}")
                     if not segments:
-                        print(
-                            f"-> [SEGMENTS] OMITIENDO EMPLEADO {slip.employee_id}: No tiene segmentos de tiempo válidos para este periodo.")
                         payslips_to_delete.append(slip.id)
                         continue
 
-                    # -- 9.3 Tipo de gasto del empleado (UNA sola lectura) --
-                    #
-                    # FIX: La variable emp_spending_type se definía DOS veces
-                    # (líneas 345 y 351 del original) y la primera asignación
-                    # se descartaba silenciosamente.  Ahora se calcula una vez
-                    # con el helper dedicado.
                     emp_spending_type = _get_employee_spending_type(segments)
 
-                    # -- 9.4 Filtrar rubros aplicables a ESTE empleado ------
-                    #
-                    # FIX: El filtro solo se aplicaba a active_incomes en el
-                    # original; active_deductions y active_contributions se
-                    # usaban sin filtrar, lo que podía duplicar el sueldo base
-                    # cuando coexistían rubros RMU para distintos contextos.
                     emp_incomes = _filter_rubrics_by_context(all_incomes, emp_spending_type)
                     emp_deductions = _filter_rubrics_by_context(all_deductions, emp_spending_type)
                     emp_contributions = _filter_rubrics_by_context(all_contributions, emp_spending_type)
 
-                    # -- DEBUG TEMPORAL: diagnóstico de ANTIGUEDAD ----------
-                    # TODO: quitar este bloque una vez resuelto el problema.
-                    _antig_all = next((r for r in all_incomes if (r.code or '').strip().upper() == 'ANTIGUEDAD'), None)
-                    if _antig_all is not None:
-                        _survived = any((r.code or '').strip().upper() == 'ANTIGUEDAD' for r in emp_incomes)
-                        logger.info(
-                            f"[PAYROLL][DEBUG][ANTIGUEDAD] emp={slip.employee_id} "
-                            f"emp_spending_type={emp_spending_type!r} "
-                            f"rubric_spending_context={_antig_all.spending_context!r} "
-                            f"rubric_is_active={_antig_all.is_active} "
-                            f"survived_context_filter={_survived}"
-                        )
-                    else:
-                        logger.info(
-                            f"[PAYROLL][DEBUG][ANTIGUEDAD] emp={slip.employee_id} "
-                            f"NO existe ningún rubro con code='ANTIGUEDAD' en all_incomes "
-                            f"(revisar: code mal escrito, rubric_type != 'INCOME', o is_active=False)"
-                        )
-
-                    # Reconstruir índices locales ya filtrados
                     emp_ded_map = {d.code.strip().upper(): d for d in emp_deductions if d.code}
                     emp_contrib_map = {c.code.strip().upper(): c for c in emp_contributions if c.code}
 
-                    # -- 9.5 Días efectivos laborados -----------------------
                     effective_days = self._count_valid_benefit_days(
                         slip.employee_id,
                         holiday_dates,
@@ -651,19 +481,15 @@ class PayrollCalculatorService:
                     )
                     slip.effective_worked_days = effective_days
 
-                    # -- 9.6 Sueldo proporcional total (base para cálculos) -
                     salary = sum(
                         (seg['base_salary'] / Decimal('30.0')) * Decimal(str(seg['actual_days']))
                         for seg in segments
                     )
 
-                    # -- 9.7 Datos laborales del empleado -------------------
                     total_income = Decimal('0.0')
                     total_deduction = Decimal('0.0')
-
-                    # INICIALIZAMOS BASES:
-                    taxable_base = salary  # Base para IESS y Fondos
-                    thirteenth_base = salary  # Base para el Décimo Tercero (Sueldo Proporcional)
+                    taxable_base = salary
+                    thirteenth_base = salary
 
                     monthly_bonuses = False
                     monthly_reserve_funds = True
@@ -701,7 +527,6 @@ class PayrollCalculatorService:
                             last_contract_days = (c_end - c_start).days + 1
                             years_of_last_contract = last_contract_days / 365.25
 
-                    # ── 9.8 Preparar novedades de ingreso ------------------
                     emp_novelties = novelties_map.get(
                         slip.employee_id, {'incomes': [], 'deductions': []}
                     )
@@ -711,49 +536,29 @@ class PayrollCalculatorService:
                         if nov.value <= 0:
                             continue
 
-                        # El valor de la novedad ya viene listo en DÓLARES desde nuestro nuevo cargador de Excel
                         nov_val = Decimal(str(nov.value))
                         code_up = (nov.rubric.code or '').strip().upper()
 
-                        # GUARDIÁN DE FONDO DE RESERVA MANUAL
                         if 'FONDOS_RESERVA' in code_up:
                             if not monthly_reserve_funds: continue
                             if years_of_service <= 1 and not has_prior_funds_right: continue
 
-                        # Sumamos al IESS si tiene el switch activado (Subrogaciones, Horas Extras, etc.)
                         if getattr(nov.rubric, 'is_taxable', False):
                             taxable_base += nov_val
 
-                        # Sumamos al DÉCIMO TERCERO si es el rubro unificado de Horas Extras
                         if getattr(nov.rubric, 'is_overtime', False):
                             thirteenth_base += nov_val
 
                         prepared_income_novelties.append((nov, nov_val))
 
-                    # === PRINTS CORREGIDOS (FUERA DEL BUCLE) ===
-                    codigos_rubros = [f"'{inc.code}'" for inc in emp_incomes]
-                    print(f"\n-> [RUBRICAS A EVALUAR] Emp {slip.employee_id}: {codigos_rubros}")
-
-                    _antig_all = next((r for r in all_incomes if (r.code or '').strip().upper() == 'ANTIGUEDAD'),
-                                      None)
-                    if _antig_all is not None:
-                        _survived = any((r.code or '').strip().upper() == 'ANTIGUEDAD' for r in emp_incomes)
-                        print(
-                            f"-> [FILTRO CONTEXTO] Contexto del Rubro ANTIGUEDAD: {_antig_all.spending_context} | Contexto del Empleado: {emp_spending_type} | ¿Pasó el filtro?: {_survived}\n")
-                    else:
-                        print("-> [ERROR BIZARRO] No se encontró el rubro en la lista maestra.\n")
-
-                    # ── 9.9 INGRESOS ────────────────────────────────────────
+                    # ── 9.9 INGRESOS (RESTAURADO IDÉNTICO AL ORIGINAL) ────
                     for inc in emp_incomes:
                         val = Decimal('0.0')
                         code_clean = inc.code.strip().upper() if inc.code else ''
 
                         if getattr(inc, 'is_salary', False):
-                            if regime_code == 'CT' and code_clean != 'SUELDO_TRA':
-                                continue
-                            if regime_code == 'LOSEP' and code_clean != 'SUELDO_EMP':
-                                continue
-                            # Sueldo base proporcional por segmentos
+                            # Sueldo base proporcional por segmentos: toma el rubro con is_salary
+                            # asignado al contexto del empleado sin bloquear por código rígido
                             for segment in segments:
                                 segment_val = (segment['base_salary'] / Decimal('30.0')) * Decimal(
                                     str(segment['actual_days']))
@@ -765,12 +570,9 @@ class PayrollCalculatorService:
                             continue
 
                         elif code_clean == 'DECIMO_TERCERO' and monthly_bonuses:
-                            # BUG CORREGIDO: Dividimos directo para 12.
-                            # 'thirteenth_base' YA tiene el sueldo descontado por faltas + el dinero extra ganado
                             val = (thirteenth_base / Decimal('12.0')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
                         elif code_clean == 'DECIMO_CUARTO' and monthly_bonuses and self.period.working_days:
-                            # El Décimo Cuarto SÍ mantiene su fórmula proporcional al SBU
                             val = (Decimal(str(self.config.get('SBU', '460.00'))) / Decimal('12.0')) * (
                                     Decimal(str(slip.worked_days)) / Decimal(str(self.period.working_days))
                             )
@@ -779,48 +581,18 @@ class PayrollCalculatorService:
                         elif code_clean == 'FONDOS_RESERVA':
                             if monthly_reserve_funds and (years_of_service > 1 or has_prior_funds_right):
                                 tasa = Decimal(str(self.config.get('FONDOS_RESERVA', '8.33'))) / Decimal('100.0')
-                                # Se calcula sobre el gran total del mes imponible
                                 val = (taxable_base * tasa).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-                            print(f"\n[DEBUG FONDOS] Evaluando Emp: {slip.employee_id}")
-                            print(f" - monthly_reserve_funds (¿Recibe mensualizado?): {monthly_reserve_funds}")
-                            print(f" - years_of_service (¿Mayor a 1 año?): {years_of_service:.2f}")
-                            print(f" - has_prior_funds_right (¿Derecho previo?): {has_prior_funds_right}")
-                            print(f" - taxable_base (Sueldo base): {taxable_base}")
 
-                            if monthly_reserve_funds and (years_of_service > 1 or has_prior_funds_right):
-                                tasa = Decimal(str(self.config.get('FONDOS_RESERVA', '8.33'))) / Decimal('100.0')
-                                val = (taxable_base * tasa).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-                                print(f"-> [DEBUG FONDOS] EXITO. Valor calculado: {val}")
-                            else:
-                                print(
-                                    "-> [DEBUG FONDOS] FALLO LA CONDICIÓN: El empleado no cumple los requisitos para el cálculo automático este mes.")
-
-                        # -- Beneficios CT (alimentación/transporte) -------------------
-                        # Regla de negocio:
-                        #   * normales (Lun-Vie): cuentan por defecto, salvo ausencia completa
-                        #   * feriados: no cuentan por defecto; solo si hubo marcación biométrica
-                        # del empleado en la fecha.
-                        # El beneficio se paga con los días válidos del mes anterior.
                         elif code_clean == 'ALIMENTACION' and regime_code == 'CT' and years_of_service >= 1:
                             benefit_days = prev_effective_days_map.get(slip.employee_id, 0)
                             val = Decimal(str(self.config.get('ALIMENTACION_DIARIA', '4.00'))) * Decimal(
-                                str(benefit_days)
-                            )
-                            print(
-                                f"[PAYROLL][BENEFIT-BASE] emp={slip.employee_id} rubro=ALIMENTACION "
-                                f"prev_effective_days={benefit_days} daily={self.config.get('ALIMENTACION_DIARIA', '4.00')} "
-                                f"total={val}"
-                            )
+                                str(benefit_days))
+
                         elif code_clean == 'TRANSPORTE' and regime_code == 'CT' and years_of_service >= 1:
                             benefit_days = prev_effective_days_map.get(slip.employee_id, 0)
                             val = Decimal(str(self.config.get('TRANSPORTE_DIARIO', '0.50'))) * Decimal(
-                                str(benefit_days)
-                            )
-                            print(
-                                f"[PAYROLL][BENEFIT-BASE] emp={slip.employee_id} rubro=TRANSPORTE "
-                                f"prev_effective_days={benefit_days} daily={self.config.get('TRANSPORTE_DIARIO', '0.50')} "
-                                f"total={val}"
-                            )
+                                str(benefit_days))
+
                         elif (
                                 code_clean == 'SUBSIDIO_FAMILIAR'
                                 and regime_code == 'CT'
@@ -830,32 +602,12 @@ class PayrollCalculatorService:
                             val = Decimal(str(self.config.get('SBU', '460.00'))) * (
                                     Decimal('1.00') / Decimal('100.0')
                             ) * Decimal(str(valid_dependents_count))
-                        elif code_clean == 'ANTIGUEDAD':
-                            # -- DEBUG TEMPORAL MEJORADO --
-                            debug_msg = (
-                                f"[PAYROLL][DEBUG][ANTIGUEDAD] emp={slip.employee_id} "
-                                f"llegó al elif | regime_code={regime_code!r} "
-                                f"years_of_service={years_of_service:.4f} "
-                                f"salary={salary} config_SBU={self.config.get('SBU')}"
-                            )
-                            logger.info(debug_msg)
-                            print(debug_msg)  # Fuerza la salida en consola
 
-                            # Evaluamos las condiciones explícitamente para ver dónde falla
+                        elif code_clean == 'ANTIGUEDAD':
                             if regime_code == 'CT' and years_of_last_contract >= 1:
                                 if years_of_service >= 1:
                                     val = salary * (Decimal('0.25') / Decimal('100.0')) * Decimal(
                                         str(int(years_of_last_contract)))
-                                    print(
-                                        f"[PAYROLL][DEBUG][ANTIGUEDAD] emp={slip.employee_id} -> Cálculo exitoso: val={val}")
-                                else:
-                                    skip_msg = f"[PAYROLL][DEBUG][ANTIGUEDAD] emp={slip.employee_id} -> OMITIDO: years_of_service ({years_of_service:.2f}) es menor a 1 año."
-                                    logger.info(skip_msg)
-                                    print(skip_msg)
-                            else:
-                                skip_msg = f"[PAYROLL][DEBUG][ANTIGUEDAD] emp={slip.employee_id} -> OMITIDO: regime_code es {regime_code!r}, se requiere 'CT'."
-                                logger.info(skip_msg)
-                                print(skip_msg)
 
                         if val > 0:
                             items_buffer.append(
@@ -900,7 +652,7 @@ class PayrollCalculatorService:
                                 )
                             )
 
-                    # ── 9.11 NOVEDADES DE INGRESO (horas extras, etc.) ──────
+                    # ── 9.11 NOVEDADES DE INGRESO ───────────────────────────
                     for nov, nov_val in prepared_income_novelties:
                         items_buffer.append(
                             PayslipItem(payslip=slip, rubric=nov.rubric, item_type='INCOME', value=nov_val)
@@ -915,7 +667,6 @@ class PayrollCalculatorService:
                     )
                     pending_debts_list = existing_pending_debts_map.get(slip.employee_id, [])
 
-                    # Primero: cobrar deudas pendientes de periodos anteriores
                     for debt in pending_debts_list:
                         debt_val = Decimal(str(debt.pending_balance))
                         real_discount = (
@@ -933,7 +684,6 @@ class PayrollCalculatorService:
                             debt.pending_balance -= real_discount
                             debts_to_update.append(debt)
 
-                    # Luego: descuentos del periodo actual (con posible nueva deuda)
                     for nov in deduction_novelties:
                         if nov.value <= 0:
                             continue
@@ -962,25 +712,15 @@ class PayrollCalculatorService:
                                 )
                             )
 
-                    # ── 9.13 Totales del rol ─────────────────────────────────
                     slip.total_income = total_income
                     slip.total_deduction = total_deduction
                     slip.net_pay = total_income - total_deduction
                     payslips_to_update.append(slip)
 
                 except Exception as e:
-                    print(
-                        f"\n{'=' * 60}\n"
-                        f"🔥 ERROR EMPLEADO: {slip.employee_id}\n"
-                        f"Mensaje: {str(e)}\n"
-                        f"{'=' * 60}\n"
-                    )
                     traceback.print_exc()
                     raise e
 
-            _lap("calculate items loop")
-
-            # ── 10. Persistencia masiva ────────────────────────────────────
             if payslips_to_delete:
                 Payslip.objects.filter(id__in=payslips_to_delete).delete()
             PayslipItem.objects.bulk_create(items_buffer, batch_size=1000)
@@ -993,33 +733,14 @@ class PayrollCalculatorService:
                 PendingDebt.objects.bulk_update(
                     debts_to_update, ['collected_value', 'pending_balance']
                 )
-            _lap("bulk persist items and debts")
 
+            # Optimización de carga por relación (evita N+1 queries)
             self._assign_budget_lines_to_items(created_payslips, assignment_map)
-            _lap("assign budget lines")
-
             warnings = self._generate_accounting_journal(created_payslips)
-            _lap("generate accounting journal")
-
-            total_msg = (
-                f"[PAYROLL][PERF] total payroll execution: "
-                f"{(time.perf_counter() - t0):.3f}s"
-            )
-            logger.info(total_msg)
-            print(total_msg)
 
             return {"success": True, "warnings": warnings}
 
-    # ------------------------------------------------------------------
-    # Helper interno: construcción de segmentos de tiempo
-    # ------------------------------------------------------------------
-
     def _build_segments(self, emp_assignments: list) -> list:
-        """
-        A partir de las asignaciones presupuestarias del empleado construye los
-        segmentos de tiempo dentro del periodo, calculando los días comerciales
-        (base 30) de cada segmento.
-        """
         if not emp_assignments:
             return []
 
@@ -1045,7 +766,6 @@ class PayrollCalculatorService:
             if s_date > e_date:
                 continue
 
-            # Cálculo en base comercial (30 días)
             if self.period.end_date.month == 2 and e_date == self.period.end_date:
                 actual_days = (30 - s_date.day) + 1
             elif s_date.day == 31:
@@ -1054,7 +774,6 @@ class PayrollCalculatorService:
                 commercial_end_day = min(e_date.day, 30)
                 actual_days = (commercial_end_day - s_date.day) + 1
 
-            # Nunca superar 30 días en total
             if total_month_days + actual_days > 30:
                 actual_days = 30 - total_month_days
             actual_days = max(0, actual_days)
@@ -1072,15 +791,7 @@ class PayrollCalculatorService:
 
         return segments
 
-    # ------------------------------------------------------------------
-    # Asignación de partidas presupuestarias (sin cambios)
-    # ------------------------------------------------------------------
-
     def _assign_budget_lines_to_items(self, created_payslips, assignment_map):
-        # OPTIMIZACIÓN: antes solo se hacía select_related('rubric'), pero el
-        # bucle accede a item.payslip.employee_id -> sin select_related('payslip')
-        # eso dispara UNA consulta a la base de datos POR CADA ITEM (N+1 query),
-        # que es lo que dominaba el tiempo de "assign budget lines" (63-110s).
         created_items = PayslipItem.objects.filter(
             payslip__in=created_payslips
         ).select_related('rubric', 'payslip')
@@ -1127,23 +838,7 @@ class PayrollCalculatorService:
                 updates, ['budget_line', 'budget_line_code'], batch_size=1000
             )
 
-    # ------------------------------------------------------------------
-    # Generación del asiento contable
-    # ------------------------------------------------------------------
-
     def _generate_accounting_journal(self, created_payslips) -> list:
-        """
-        Genera el asiento contable de la nómina.
-
-        Estructura:
-          INGRESOS   -> Debe: cta_gasto(rubro)   / Haber: cta_puente(sueldo)
-          DESCUENTOS -> Debe: cta_puente(sueldo) / Haber: cta_pasivo(rubro)
-          APORTES    -> Debe: cta_gasto(rubro)   / Haber: cta_pasivo(rubro)
-          BANCOS     -> Debe: cta_puente(sueldo) / Haber: income_account(sueldo)
-
-        Orden: respeta rubric.order; descuentos order+800, banco order 900.
-        """
-        # aggregation: {(acc_id, mov): [order_min, importe]}
         aggregation: dict[tuple, list] = {}
         warnings: list[str] = []
 
@@ -1167,7 +862,6 @@ class PayrollCalculatorService:
             )
 
         def _add(acc_id, mov, amt, order=100):
-            """Acumula importe conservando el order minimo para ordenar el asiento."""
             if not acc_id or amt <= 0:
                 return
             key = (acc_id, mov)
@@ -1186,7 +880,6 @@ class PayrollCalculatorService:
                 account_cache[acc_id] = Account.objects.filter(id=acc_id).first()
             return account_cache[acc_id]
 
-        # -- PASO 1: Items individuales (ingresos, descuentos, aportes) ------
         items_qs = (
             PayslipItem.objects
             .filter(payslip__in=created_payslips)
@@ -1217,15 +910,12 @@ class PayrollCalculatorService:
                 _add(accounts['debit'], 'debit', val, rub_order)
                 _add(c_puente, 'credit', val, rub_order)
 
-
             elif rubric.rubric_type == 'DEDUCTION':
                 _add(c_puente, 'debit', val, 800 + rub_order)
                 _add(accounts['credit'], 'credit', val, 800 + rub_order)
                 if rubric.income_account_id:
                     _add(accounts['credit'], 'debit', val, 800 + rub_order)
-
                     _add(rubric.income_account_id, 'credit', val, 800 + rub_order)
-
 
             elif rubric.rubric_type == 'CONTRIBUTION':
                 _add(accounts['debit'], 'debit', val, rub_order)
@@ -1234,7 +924,6 @@ class PayrollCalculatorService:
                     _add(c_puente, 'debit', val, 800 + rub_order)
                 _add(accounts['credit'], 'credit', val, 800 + rub_order)
 
-        # -- PASO 2: Liquidacion de bancos -----------------
         for slip in created_payslips:
             if slip.net_pay <= 0:
                 continue
@@ -1265,11 +954,9 @@ class PayrollCalculatorService:
                     f"AVISO: Rubro sueldo '{salary_rubric_slip.name}' sin cuenta de banco (income_account)."
                 )
 
-            # Banco siempre al final del asiento (order 900)
             _add(c_puente_banco, 'debit', slip.net_pay, 900)
             _add(c_banco, 'credit', slip.net_pay, 900)
 
-            # -- PASO 3: Persistir asiento ordenado por order_min ----------------
             desc_asiento = f"Nomina {self.period.month} {self.period.year}"
             Journal.objects.filter(description=desc_asiento).delete()
             journal = Journal.objects.create(
@@ -1279,13 +966,10 @@ class PayrollCalculatorService:
             total_debits = Decimal('0.0')
             total_credits = Decimal('0.0')
 
-            # Al ordenar por x[1][0], el asiento se guarda con una estética impecable:
             for (acc_id, mov_type), (_, val) in sorted(aggregation.items(), key=lambda x: x[1][0]):
                 acc = _get_account(acc_id)
                 if acc and val > 0:
-                    # Blindaje: Forzamos redondeo a dos decimales por registro
                     val_rounded = val.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-
                     is_debit = (mov_type == 'debit')
                     debit_amt = val_rounded if is_debit else Decimal('0.0')
                     credit_amt = Decimal('0.0') if is_debit else val_rounded
@@ -1297,11 +981,9 @@ class PayrollCalculatorService:
                         credit=credit_amt,
                         reference=str(self.period),
                     )
-
                     total_debits += debit_amt
                     total_credits += credit_amt
 
-            # --- SALVACAÍDAS DE CUADRE (Por diferencias infinitesimales de redondeo) ---
             if total_debits != total_credits:
                 diff = total_debits - total_credits
                 balancing_account = Account.objects.filter(
@@ -1321,10 +1003,6 @@ class PayrollCalculatorService:
 
             return warnings
 
-
-# ---------------------------------------------------------------------------
-# Utilidades independientes
-# ---------------------------------------------------------------------------
 
 def calculate_effective_days(employee, start_date, end_date) -> int:
     effective_days = 0
