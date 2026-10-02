@@ -18,18 +18,15 @@
     </div>
 
     <div class="content-table">
-        <form id="rubricFiltersForm" onsubmit="return false;"
-              data-global-table-filter data-row-selector="[data-filter-row]">
+        <form id="rubricFiltersForm" onsubmit="return false;">
             <div class="search-panel">
                 <div class="search-grid">
                     <input type="text" id="searchRubric" class="input-field"
                            placeholder="Buscar por rubro o código"
-                           autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
-                           data-filter-search>
+                           autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
 
                     <div class="person-filter-field">
-                        <select id="filterRubricType" class="input-field select2"
-                                data-filter-select data-filter-attr="type">
+                        <select id="filterRubricType" class="input-field select2">
                             <option value="">Todos los tipos</option>
                             <option value="INCOME">Ingresos</option>
                             <option value="DEDUCTION">Descuentos</option>
@@ -38,8 +35,7 @@
                     </div>
 
                     <div class="person-filter-field">
-                        <select id="filterRubricStatus" class="input-field select2"
-                                data-filter-select data-filter-attr="status">
+                        <select id="filterRubricStatus" class="input-field select2">
                             <option value="">Todos los estados</option>
                             <option value="true">Activo</option>
                             <option value="false">Inactivo</option>
@@ -52,10 +48,10 @@
         <div class="search-toolbar">
             <div class="table-controls person-filter-controls"></div>
             <div class="search-filter-actions">
-                <button type="button" class="btn-blue-rectangle" data-filter-apply>
+                <button type="button" id="btnRubricApply" class="btn-blue-rectangle">
                     <i class="fa-solid fa-magnifying-glass me-1"></i> Buscar
                 </button>
-                <button type="button" class="btn-blue-rectangle-outline" data-filter-clear>
+                <button type="button" id="btnRubricClear" class="btn-blue-rectangle-outline">
                     <i class="fa-solid fa-eraser me-1"></i> Limpiar
                 </button>
             </div>
@@ -74,6 +70,12 @@
     <script src="{% static 'js/payroll/payroll.js' %}"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            const searchInput = document.getElementById('searchRubric');
+            const typeSelect = document.getElementById('filterRubricType');
+            const statusSelect = document.getElementById('filterRubricStatus');
+            const btnApply = document.getElementById('btnRubricApply');
+            const btnClear = document.getElementById('btnRubricClear');
+
             if (window.$ && $.fn.select2) {
                 $('#filterRubricType, #filterRubricStatus').each(function () {
                     $(this).select2({
@@ -83,8 +85,53 @@
                     });
                 });
             }
-            if (window.initGlobalTableFilters) {
-                window.initGlobalTableFilters(document.getElementById('rubricFiltersForm'));
+
+            function applyFilters() {
+                const query = (searchInput.value || '').toLowerCase().trim();
+                const typeVal = typeSelect.value || '';
+                const statusVal = statusSelect.value || '';
+
+                const table = document.querySelector('.managed-table');
+                if (!table || !table._tableManager) return;
+
+                const mgr = table._tableManager;
+
+                mgr.currentRows = mgr.originalRows.filter(row => {
+                    const rowSearch = (row.dataset.searchText || row.innerText || '').toLowerCase();
+                    const rowType = row.dataset.type || '';
+                    const rowStatus = row.dataset.status || '';
+
+                    const matchesSearch = !query || rowSearch.includes(query);
+                    const matchesType = !typeVal || rowType === typeVal;
+                    const matchesStatus = !statusVal || rowStatus === statusVal;
+
+                    return matchesSearch && matchesType && matchesStatus;
+                });
+
+                mgr.currentPage = 1;
+                mgr.render();
+            }
+
+            // Filtrado reactivo en tiempo real al escribir o seleccionar
+            if (searchInput) searchInput.addEventListener('input', applyFilters);
+            if (window.$) {
+                $('#filterRubricType, #filterRubricStatus').on('change.select2 change', applyFilters);
+            }
+
+            if (btnApply) btnApply.addEventListener('click', applyFilters);
+
+            if (btnClear) {
+                btnClear.addEventListener('click', function () {
+                    if (searchInput) searchInput.value = '';
+                    if (window.$) {
+                        $('#filterRubricType').val('').trigger('change.select2');
+                        $('#filterRubricStatus').val('').trigger('change.select2');
+                    } else {
+                        if (typeSelect) typeSelect.value = '';
+                        if (statusSelect) statusSelect.value = '';
+                    }
+                    applyFilters();
+                });
             }
         });
     </script>

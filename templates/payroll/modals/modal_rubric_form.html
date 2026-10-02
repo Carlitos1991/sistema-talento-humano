@@ -1,7 +1,7 @@
 <div class="modal-overlay" id="rubricModalOverlay">
     <div class="modal-container-large">
         <form method="post" id="rubricForm" action="{{ request.path }}"
-              onsubmit="submitAjaxForm(event, () => reloadTableData(window.location.href, '#table-content-wrapper'))">
+              onsubmit="submitAjaxForm(event)">
             {% csrf_token %}
 
             <div class="modal-header-medium">
