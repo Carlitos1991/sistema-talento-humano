@@ -449,7 +449,10 @@ window.checkAndLoad = function () {
     if (rubro_type === 'DEDUCTION' && dedEl) rubro_id = dedEl.value;
 
     const tbody = document.getElementById('novelty_tbody');
+    const tableCard = document.querySelector('.novelty-table-card');
     if (!tbody) return;
+
+    if (tableCard) tableCard.classList.remove('is-saved');
 
     if (period_id && rubro_type && rubro_id) {
         tbody.innerHTML = '<tr><td colspan="3" class="text-center py-5 text-muted"><i class="fas fa-spinner fa-spin fa-2x mb-2 text-primary"></i><br>Cargando datos guardados...</td></tr>';
@@ -459,26 +462,31 @@ window.checkAndLoad = function () {
         })
             .then(res => res.json())
             .then(res => {
-                if (res.status === 'success') {
-                    window.noveltyParsedData = res.data || [];
-                    window.renderTable();
+                if (res.status === 'success' && res.data && res.data.length > 0) {
+                    // Datos recuperados de la base de datos (sin modificaciones pendientes)
+                    window.noveltyParsedData = res.data.map(item => ({
+                        ...item,
+                        isModified: false
+                    }));
+                    window.renderTable(false, true); // true = verde
                 } else {
                     window.noveltyParsedData = [];
-                    window.renderTable(true);
+                    window.renderTable(true, false);
                 }
             })
             .catch(() => {
                 window.noveltyParsedData = [];
-                window.renderTable(true);
+                window.renderTable(true, false);
             });
     } else {
         window.noveltyParsedData = [];
-        window.renderTable(true);
+        window.renderTable(true, false);
     }
 };
 
-window.renderTable = function (isEmpty = false) {
+window.renderTable = function (isEmpty = false, isAllSaved = false) {
     const tbody = document.getElementById('novelty_tbody');
+    const tableCard = document.querySelector('.novelty-table-card');
     const btnSave = document.getElementById('btn_save_novelties');
     if (!tbody) return;
     tbody.innerHTML = '';
@@ -486,29 +494,58 @@ window.renderTable = function (isEmpty = false) {
     if (isEmpty || !window.noveltyParsedData || window.noveltyParsedData.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="3" class="text-center py-5 text-muted">
-                    <i class="fas fa-inbox fa-3x mb-2" style="opacity: 0.4;"></i>
-                    <p class="mb-0">No hay datos cargados para este rubro. Puedes subir un Excel para agregar valores.</p>
+                <td colspan="3" class="text-muted novelty-empty-cell">
+                    <div class="novelty-empty-state">
+                        <i class="fas fa-table fa-3x"></i>
+                        <span>Selecciona el Periodo y el Rubro para ver los datos.</span>
+                        <small>Pon "0" en una celda para eliminar ese descuento.</small>
+                    </div>
                 </td>
             </tr>`;
         if (btnSave) btnSave.classList.add('hidden');
+        if (tableCard) tableCard.classList.remove('is-saved');
         window.updateTotal();
         return;
     }
 
+    // Verificar si queda al menos un registro modificado pendiente
+    const hasModifications = window.noveltyParsedData.some(r => r.isModified);
+    if (tableCard) {
+        if (!hasModifications || isAllSaved) {
+            tableCard.classList.add('is-saved');
+        } else {
+            tableCard.classList.remove('is-saved');
+        }
+    }
+
+    // Ordenar alfabéticamente por nombres para que los nuevos no queden al final
+    window.noveltyParsedData.sort((a, b) => (a.nombres || '').localeCompare(b.nombres || ''));
+
     window.noveltyParsedData.forEach((row, index) => {
         const tr = document.createElement('tr');
-        if (row.valor === 0) tr.style.backgroundColor = '#fef2f2';
+        tr.id = `row-novelty-${index}`;
+
+        // Si se editó o es nuevo = AMARILLO. Si viene de BD y no cambió = VERDE
+        if (row.isModified) {
+            tr.className = 'row-modified';
+        } else {
+            tr.className = 'row-saved';
+        }
+
+        if (row.valor === 0) {
+            tr.style.backgroundColor = '#fef2f2';
+        }
 
         tr.innerHTML = `
-            <td class="text-truncate align-middle px-3 py-2"><span class="badge-code">${row.cedula}</span></td>
-            <td class="fw-bold text-secondary text-truncate align-middle px-3 py-2" title="${row.nombres}">${row.nombres}</td>
-            <td class="text-end align-middle px-3 py-1">
+            <td class="col-cedula align-middle"><span class="badge-code">${row.cedula}</span></td>
+            <td class="col-empleado fw-bold text-secondary text-truncate align-middle" title="${row.nombres}">${row.nombres}</td>
+            <td class="col-monto text-end align-middle">
                 <input type="number" step="0.01" class="input-field text-end fw-bold"
-                       style="width: 95px; padding: 4px 8px; margin: 0; display: inline-block; ${row.valor === 0 ? 'border-color: #ef4444; color: #ef4444;' : 'color: #0f4c81;'}"
+                       style="width: 95px; padding: 4px 8px; margin: 0; display: inline-block; ${row.valor === 0 ? 'border-color: #ef4444; color: #ef4444;' : ''}"
                        value="${row.valor}"
-                       onchange="window.updateValue(${index}, this.value)"
-                       onkeyup="window.updateValue(${index}, this.value)">
+                       data-index="${index}"
+                       oninput="window.updateValue(${index}, this.value)"
+                       onchange="window.updateValue(${index}, this.value)">
             </td>`;
         tbody.appendChild(tr);
     });
@@ -517,11 +554,22 @@ window.renderTable = function (isEmpty = false) {
     window.updateTotal();
     window.filterTableLocal();
 };
-
 window.updateValue = function (index, newValue) {
+    if (!window.noveltyParsedData || !window.noveltyParsedData[index]) return;
+
     let val = parseFloat(newValue);
-    if (!window.noveltyParsedData[index]) return;
-    window.noveltyParsedData[index].valor = isNaN(val) || val < 0 ? 0 : parseFloat(val.toFixed(2));
+    const numericVal = isNaN(val) || val < 0 ? 0 : parseFloat(val.toFixed(2));
+
+    window.noveltyParsedData[index].valor = numericVal;
+    window.noveltyParsedData[index].isModified = true; // Marca el registro como pendiente de guardar
+
+    // Cambiar la fila inmediatamente a amarillo sin redibujar toda la tabla
+    const rowEl = document.getElementById(`row-novelty-${index}`);
+    if (rowEl) {
+        rowEl.classList.remove('row-saved');
+        rowEl.classList.add('row-modified');
+    }
+
     window.updateTotal();
 };
 
@@ -549,12 +597,23 @@ window.uploadExcel = function () {
         return;
     }
 
-    if (!fileInput || fileInput.files.length === 0) {
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
         Swal.fire('Atención', 'Selecciona un archivo Excel (.xlsx)', 'warning');
         return;
     }
 
-    const doUpload = (mergeMode) => {
+    const resetDropzoneUI = () => {
+        if (fileInput) fileInput.value = '';
+        const zone = document.getElementById('excel_dropzone');
+        const label = document.getElementById('excel_file_name');
+        if (zone) zone.classList.remove('has-file', 'is-dragover');
+        if (label) label.textContent = 'Haz clic o arrastra tu Excel aquí';
+        if (typeof window.refreshExcelDropzone === 'function') {
+            window.refreshExcelDropzone();
+        }
+    };
+
+    const processUpload = () => {
         const formData = new FormData();
         formData.append('file', fileInput.files[0]);
         formData.append('rubro_type', rubro_type);
@@ -571,65 +630,86 @@ window.uploadExcel = function () {
             .then(safeJsonParse)
             .then(res => {
                 if (res.status === 'success') {
+                    let actualizados = 0;
+                    let agregados = 0;
+
                     res.data.forEach(newRow => {
+                        const parsedVal = parseFloat((parseFloat(newRow.valor) || 0).toFixed(2));
                         const existingIndex = window.noveltyParsedData.findIndex(r => r.emp_id === newRow.emp_id);
+
                         if (existingIndex >= 0) {
-                            if (mergeMode === 'add') {
-                                const current = parseFloat(window.noveltyParsedData[existingIndex].valor) || 0;
-                                const incoming = parseFloat(newRow.valor) || 0;
-                                window.noveltyParsedData[existingIndex].valor = parseFloat((current + incoming).toFixed(2));
-                            } else {
-                                window.noveltyParsedData[existingIndex].valor = parseFloat((parseFloat(newRow.valor) || 0).toFixed(2));
+                            // CÉDULA EXISTE: solo si el valor es diferente se marca en amarillo
+                            const prevVal = parseFloat((window.noveltyParsedData[existingIndex].valor || 0).toFixed(2));
+                            if (prevVal !== parsedVal) {
+                                window.noveltyParsedData[existingIndex].valor = parsedVal;
+                                window.noveltyParsedData[existingIndex].isModified = true; // Amarillo
+                                actualizados++;
                             }
                         } else {
-                            newRow.valor = parseFloat((parseFloat(newRow.valor) || 0).toFixed(2));
+                            // CÉDULA NUEVA: se agrega al arreglo y se marca en amarillo
+                            newRow.valor = parsedVal;
+                            newRow.isModified = true; // Amarillo
                             window.noveltyParsedData.push(newRow);
+                            agregados++;
                         }
                     });
 
-                    window.renderTable();
+                    // Renderizar tabla: preserva en verde los que no cambiaron y en amarillo los nuevos/editados
+                    window.renderTable(false, false);
 
                     if (res.not_found && res.not_found.length > 0) {
                         Swal.fire({
                             title: 'Advertencia',
-                            html: `No se encontraron <b>${res.not_found.length}</b> cédulas en la base de datos.<br><small class="text-muted">Los demás registros se cargaron en la tabla.</small>`,
+                            html: `Se procesó el archivo (${actualizados} modificados, ${agregados} agregados).<br>No se encontraron <b>${res.not_found.length}</b> cédulas en la base de datos.<br><small class="text-muted">Revisa las cédulas no registradas.</small>`,
                             icon: 'warning'
                         });
                     } else {
-                        showToast(mergeMode === 'add' ? 'Valores adicionados correctamente.' : 'Tabla actualizada con el Excel.', 'success');
+                        if (typeof showToast === 'function') {
+                            showToast(`Excel cargado: ${actualizados} modificados, ${agregados} agregados.`, 'success');
+                        }
                     }
                 }
-                fileInput.value = '';
+                resetDropzoneUI();
             })
-            .catch(err => Swal.fire('Error', err.message, 'error'));
+            .catch(err => {
+                resetDropzoneUI();
+                Swal.fire('Error', err.message, 'error');
+            });
     };
 
-    if (window.noveltyParsedData.length > 0) {
+    // Modal con confirmación directa y limpia (2 botones)
+    if (window.noveltyParsedData && window.noveltyParsedData.length > 0) {
         Swal.fire({
-            title: '¿Cómo deseas cargar el archivo?',
-            text: 'Reemplazar: sustituye los valores existentes. Adicionar: suma al valor actual.',
+            title: '¿Cargar y actualizar novedades?',
+            text: 'Las cédulas que ya existan serán sustituidas con el nuevo valor, y los empleados nuevos se agregarán a la lista.',
             icon: 'question',
             showCancelButton: true,
-            showDenyButton: true,
-            confirmButtonText: 'Reemplazar',
-            denyButtonText: 'Adicionar',
-            cancelButtonText: 'Cancelar'
+            confirmButtonText: '<i class="fas fa-check me-1"></i> Continuar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#10b981',
+            cancelButtonColor: '#64748b'
         }).then((result) => {
-            if (result.isConfirmed) doUpload('replace');
-            else if (result.isDenied) doUpload('add');
-            else fileInput.value = '';
+            if (result.isConfirmed) {
+                processUpload();
+            } else {
+                resetDropzoneUI();
+            }
         });
     } else {
-        doUpload('replace');
+        processUpload();
     }
 };
-
 window.saveNovelties = function () {
     const period_id = document.getElementById('period_id')?.value;
     const rubro_type = document.getElementById('rubro_type')?.value;
     const rubro_id = rubro_type === 'INCOME'
         ? document.getElementById('income_id')?.value
         : document.getElementById('deduction_id')?.value;
+
+    if (!period_id || !rubro_type || !rubro_id) {
+        Swal.fire('Atención', 'Selecciona el Periodo y el Rubro antes de guardar.', 'warning');
+        return;
+    }
 
     const payload = {
         period_id: period_id,
@@ -650,11 +730,21 @@ window.saveNovelties = function () {
         .then(safeJsonParse)
         .then(() => {
             showToast('Novedades guardadas exitosamente.', 'success');
-            window.checkAndLoad();
+
+            // Restablecer el estado de modificación de todos los registros y devolverlos a verde
+            if (window.noveltyParsedData) {
+                window.noveltyParsedData.forEach(row => {
+                    row.isModified = false;
+                });
+            }
+
+            const tableCard = document.querySelector('.novelty-table-card');
+            if (tableCard) tableCard.classList.add('is-saved');
+
+            window.renderTable(false, true); // Regresan todas a verde
         })
         .catch(err => Swal.fire('Error', err.message, 'error'));
 };
-
 window.deleteAllNovelties = function () {
     const period_id = document.getElementById('period_id')?.value;
     const rubro_type = document.getElementById('rubro_type')?.value;

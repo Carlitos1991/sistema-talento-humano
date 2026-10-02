@@ -467,3 +467,45 @@
     font-size: 0.72rem;
     color: #94a3b8;
 }
+
+/* =====================================================================
+   INDICADORES DE ESTADO EN FILAS DE NOVEDADES (MODIFICADO vs GUARDADO)
+   ===================================================================== */
+
+/* Estado inicial / Guardado en Base de Datos (Verde suave) */
+.novelty-page .novelty-table tbody tr.row-saved {
+    background-color: #f0fdf4 !important; /* Verde menta muy claro */
+    transition: background-color 0.25s ease;
+}
+
+.novelty-page .novelty-table tbody tr.row-saved:hover {
+    background-color: #dcfce7 !important;
+}
+
+.novelty-page .novelty-table tbody tr.row-saved input.input-field {
+    border-color: #86efac !important;
+    color: #166534 !important;
+    background-color: #ffffff !important;
+}
+
+/* Estado pendiente de guardar: MODIFICADO POR EL USUARIO (Amarillo ámbar) */
+.novelty-page .novelty-table tbody tr.row-modified {
+    background-color: #fefce8 !important; /* Amarillo tenue */
+    transition: background-color 0.25s ease;
+}
+
+.novelty-page .novelty-table tbody tr.row-modified:hover {
+    background-color: #fef9c3 !important;
+}
+
+.novelty-page .novelty-table tbody tr.row-modified input.input-field {
+    border-color: #facc15 !important; /* Borde amarillo fuerte */
+    background-color: #fffbeb !important;
+    color: #854d0e !important;
+    box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.25) !important;
+}
+
+.novelty-page .novelty-table tbody tr.row-modified .badge-code {
+    background-color: #fef08a !important;
+    color: #854d0e !important;
+}
