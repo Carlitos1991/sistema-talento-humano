@@ -1,8 +1,6 @@
 import base64
-import calendar
 import io
 import json
-from datetime import date
 from decimal import Decimal, ROUND_HALF_UP
 
 try:
@@ -16,10 +14,9 @@ from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.mail import EmailMultiAlternatives
 from django.db import transaction
-from django.db.models import Q, Sum, Case, When, IntegerField, Value
+from django.db.models import Sum, Case, When, IntegerField, Value
 from django.db.models.functions import Cast
 from django.http import HttpResponse
-from django.http import JsonResponse
 from django.http import Http404
 from django.core import signing
 from django.shortcuts import get_object_or_404
@@ -29,7 +26,11 @@ from django.urls import reverse
 from django.utils.html import strip_tags
 from django.views.generic import ListView, TemplateView, View, DeleteView, UpdateView, CreateView, DetailView
 from xhtml2pdf import pisa
-
+from datetime import date, timedelta
+import calendar
+from django.db.models import Q
+from django.http import JsonResponse
+from schedule.models import ScheduleObservation
 from accounting.models import JournalItem
 from budget.models import BudgetAssignmentHistory, BudgetGroup
 from contract.models import ManagementPeriod
@@ -164,8 +165,17 @@ class PeriodCreateView(View):
     template_name = 'payroll/modals/modal_period_form.html'
 
     def get(self, request, *args, **kwargs):
-        """Devuelve el formulario del modal (usado por el fetch GET en JS)."""
-        form = PayrollPeriodForm()
+        today = date.today()
+        months_choices = [
+            'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
+            'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'
+        ]
+        current_month_str = months_choices[today.month - 1]
+
+        form = PayrollPeriodForm(initial={
+            'month': current_month_str,
+            'year': str(today.year)
+        })
         html = render_to_string(self.template_name, {'form': form}, request=request)
         return HttpResponse(html)
 
@@ -177,14 +187,41 @@ class PeriodCreateView(View):
             period.save()
             return JsonResponse({
                 'status': 'success',
-                'message': 'Periodo creado correctamente',
-                'period': {
-                    'id': period.id,
-                    'str': str(period)
-                }
+                'message': 'Periodo creado correctamente.',
+                'period': {'id': period.id, 'str': str(period)}
             })
         else:
-            return JsonResponse({'status': 'error', 'errors': form.errors}, status=400)
+            # Limpiar el prefijo __all__ para que no se muestre al usuario
+            formatted_errors = {}
+            for field, err_list in form.errors.items():
+                if field == '__all__':
+                    formatted_errors[''] = err_list  # Sin nombre de campo
+                else:
+                    formatted_errors[field] = err_list
+
+            return JsonResponse({
+                'status': 'error',
+                'errors': formatted_errors
+            }, status=400)
+
+
+class PeriodUpdateView(UpdateView):
+    model = PayrollPeriod
+    form_class = PayrollPeriodForm
+    template_name = 'payroll/modals/modal_period_form.html'
+
+    def form_valid(self, form):
+        self.object = form.save()
+        return JsonResponse({'status': 'success', 'message': 'Periodo actualizado correctamente.'})
+
+    def form_invalid(self, form):
+        formatted_errors = {}
+        for field, err_list in form.errors.items():
+            if field == '__all__':
+                formatted_errors[''] = err_list
+            else:
+                formatted_errors[field] = err_list
+        return JsonResponse({'status': 'error', 'errors': formatted_errors}, status=400)
 
 
 class GeneratePayrollView(View):
@@ -1612,67 +1649,75 @@ class PeriodUpdateView(UpdateView):
 
 
 def api_calculate_working_days(request):
-    month_name = request.GET.get('month')
-    year = request.GET.get('year')
+    raw_month = (request.GET.get('month') or '').strip()
+    raw_year = (request.GET.get('year') or '').strip()
 
-    if not month_name or not year:
+    if not raw_month or not raw_year:
         return JsonResponse({'status': 'error', 'message': 'Faltan parámetros'}, status=400)
 
     try:
-        # Mapeo de meses
         months_map = {
             'ENERO': 1, 'FEBRERO': 2, 'MARZO': 3, 'ABRIL': 4,
             'MAYO': 5, 'JUNIO': 6, 'JULIO': 7, 'AGOSTO': 8,
             'SEPTIEMBRE': 9, 'OCTUBRE': 10, 'NOVIEMBRE': 11, 'DICIEMBRE': 12
         }
-        month_num = months_map.get(month_name.upper())
-        year_num = int(year)
 
-        # Calcular primer y último día del mes
+        if raw_month.isdigit():
+            month_num = int(raw_month)
+        else:
+            month_num = months_map.get(raw_month.upper())
+
+        if not month_num or month_num < 1 or month_num > 12:
+            return JsonResponse({'status': 'error', 'message': f'Mes inválido: {raw_month}'}, status=400)
+
+        year_num = int(raw_year)
+
+        # Rango del mes
         first_day = date(year_num, month_num, 1)
         last_day_num = calendar.monthrange(year_num, month_num)[1]
         last_day = date(year_num, month_num, last_day_num)
 
-        # Usamos un objeto temporal del modelo para aprovechar la lógica de feriados
-        temp_period = PayrollPeriod(start_date=first_day, end_date=last_day)
-        working_days = temp_period.get_working_days()  # Esta función ya existe en tu models.py
-
-        # Además, detectamos si hay feriados activos en el rango y construimos una advertencia
-        from schedule.models import ScheduleObservation
-
-        holidays = ScheduleObservation.objects.filter(
+        # 1. Búsqueda de feriados en ScheduleObservation (considerando end_date nulo)
+        holidays_qs = ScheduleObservation.objects.filter(
             is_holiday=True,
             is_active=True,
-            start_date__lte=last_day,
-            end_date__gte=first_day
+            start_date__lte=last_day
+        ).filter(
+            Q(end_date__gte=first_day) | Q(end_date__isnull=True)
         )
 
-        # Compilar conjunto de fechas de feriados
         holiday_dates = set()
-        from datetime import timedelta
-        for holiday in holidays:
-            curr = max(holiday.start_date, first_day)
-            end_limit = min(holiday.end_date, last_day)
-            while curr <= end_limit:
+        for h in holidays_qs:
+            # Soporte si start_date / end_date son DateTime o Date
+            s_date = h.start_date.date() if hasattr(h.start_date, 'date') else h.start_date
+            e_date = h.end_date.date() if h.end_date and hasattr(h.end_date, 'date') else (h.end_date or s_date)
+
+            curr = max(s_date, first_day)
+            limit = min(e_date, last_day)
+
+            while curr <= limit:
                 holiday_dates.add(curr)
                 curr += timedelta(days=1)
 
-        response = {
+        # 2. Días laborables base (Lunes a Viernes) y descuento de feriados
+        business_days = 0
+        curr = first_day
+        while curr <= last_day:
+            if curr.weekday() < 5 and curr not in holiday_dates:
+                business_days += 1
+            curr += timedelta(days=1)
+
+        holidays_count = len(holiday_dates)
+
+        return JsonResponse({
             'status': 'success',
             'start_date': first_day.strftime('%Y-%m-%d'),
             'end_date': last_day.strftime('%Y-%m-%d'),
-            'working_days': working_days
-        }
+            'working_days': business_days,
+            'holidays_count': holidays_count,
+            'message': f'{holidays_count} feriado(s) detectado(s).'
+        })
 
-        if len(holiday_dates) > 0:
-            # Formatear una advertencia legible
-            sample_dates = ', '.join(sorted([d.strftime('%d/%m/%Y') for d in list(holiday_dates)[:3]]))
-            more = '' if len(holiday_dates) <= 3 else f' y {len(holiday_dates) - 3} más'
-            response['warning'] = f'Se detectaron {len(holiday_dates)} feriado(s) en el periodo ({sample_dates}{more}).'
-        else:
-            response['info'] = 'No se detectaron feriados en el periodo seleccionado.'
-
-        return JsonResponse(response)
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 

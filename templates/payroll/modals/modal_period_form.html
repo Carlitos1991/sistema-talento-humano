@@ -1,64 +1,86 @@
+{% load static %}
 <div class="modal-overlay" id="periodModalOverlay">
-    <div class="modal-container-medium">
+    <div class="modal-container-medium modal-period-fixed">
 
-        <div class="modal-header-refined">
+        <!-- HEADER -->
+        <div class="modal-header-medium">
             <div class="header-content-group">
-                <div class="header-icon-circle"><i class="fas fa-calendar-alt"></i></div>
-                <h3 class="header-title-main">{% if form.instance.pk %}Editar{% else %}Nuevo{% endif %} Periodo</h3>
+                <div class="header-icon-circle">
+                    <i class="fas fa-calendar-alt"></i>
+                </div>
+                <h3 class="header-title">{% if form.instance.pk %}Editar{% else %}Nuevo{% endif %} Periodo</h3>
             </div>
-            <button type="button" class="btn-close-circle" onclick="closeAjaxModal()">
+            <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
                 <i class="fas fa-times"></i>
             </button>
         </div>
 
-        <form method="post" id="periodForm" action="
-                {% if form.instance.pk %}{% url 'payroll:period_edit' pk=form.instance.pk %}{% else %}{% url 'payroll:period_create' %}{% endif %}"
-              onsubmit="submitAjaxForm(event, () => reloadTableData(window.location.href, '#period-table-container'))">
+        <!-- onsubmit: Recarga solo el partial vía AJAX, dejando el Toast visible -->
+        <form method="post" id="periodForm" autocomplete="off" novalidate
+              action="
+                      {% if form.instance.pk %}{% url 'payroll:period_edit' pk=form.instance.pk %}{% else %}{% url 'payroll:period_create' %}{% endif %}"
+              onsubmit="submitAjaxForm(event, () => window.reloadPeriodTable())">
             {% csrf_token %}
-            <div class="modal-body-custom">
-                <div class="form-section-card">
-                    <div class="row g-3">
-                        <div class="col-md-6 form-group">
-                            <label class="form-label">Mes <span class="text-danger">*</span></label>
+
+            <div class="modal-body-content modal-body-custom" style="overflow: visible !important;">
+                <div class="form-section-card" style="overflow: visible !important;">
+                    <div class="section-title">
+                        <i class="fas fa-calendar-day text-green"></i> Configuración del Periodo
+                    </div>
+
+                    <!-- CAMPOS VISIBLES: MES Y AÑO -->
+                    <div class="grid-2-cols">
+                        <div class="form-group form-group-compact position-relative">
+                            <label class="form-label font-weight-700" for="{{ form.month.id_for_label }}">
+                                Mes <span class="text-danger">*</span>
+                            </label>
                             {{ form.month }}
-                        </div>
-                        <div class="col-md-6 form-group">
-                            <label class="form-label">Año <span class="text-danger">*</span></label>
-                            {{ form.year }}
-                            {% if form.year.errors %}
-                                <small class="text-danger d-block mt-1">
-                                    {% for error in form.year.errors %}{{ error }}{% endfor %}
-                                </small>
+                            {% if form.month.errors %}
+                                <div class="invalid-feedback d-block mt-1">
+                                    {{ form.month.errors.0 }}
+                                </div>
                             {% endif %}
                         </div>
 
-                        <div class="col-md-6 form-group mt-3 hidden-field">
-                            <label class="form-label">Fecha Inicio <small class="text-muted">(Auto)</small></label>
-                            {{ form.start_date }}
+                        <div class="form-group form-group-compact">
+                            <label class="form-label font-weight-700" for="{{ form.year.id_for_label }}">
+                                Año <span class="text-danger">*</span>
+                            </label>
+                            {{ form.year }}
+                            {% if form.year.errors %}
+                                <div class="invalid-feedback d-block mt-1">
+                                    {{ form.year.errors.0 }}
+                                </div>
+                            {% endif %}
                         </div>
-                        <div class="col-md-6 form-group mt-3 hidden-field">
-                            <label class="form-label">Fecha Fin <small class="text-muted">(Auto)</small></label>
-                            {{ form.end_date }}
-                        </div>
+                    </div>
 
-                        <div class="col-md-6 form-group mt-3 hidden-field">
-                            <label class="form-label">Días Laborables <small class="text-muted">(Auto)</small></label>
-                            {{ form.working_days }}
-                        </div>
+                    <!-- CAMPOS OCULTOS CALCULADOS -->
+                    <div class="hidden" aria-hidden="true" style="display: none !important;">
+                        {{ form.start_date }}
+                        {{ form.end_date }}
+                        {{ form.working_days }}
+                    </div>
 
-                        <div class="col-12 mt-3">
-                            <small class="text-muted d-block">
-                                <i class="fas fa-info-circle"></i>
-                                Los campos de fecha y días laborables se calculan automáticamente considerando feriados.
-                            </small>
+                    <!-- NOTA INFORMATIVA CON BADGE DINÁMICO DE FERIADOS -->
+                    <div class="alert alert-info mt-3 mb-0 d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fas fa-circle-info"></i>
+                            <span id="period-calc-status-text">Calculando días laborables y feriados...</span>
                         </div>
+                        <span id="period-holidays-badge" class="badge badge-blue">0 Feriados</span>
                     </div>
                 </div>
             </div>
 
+            <!-- FOOTER FIJO CENTRADO -->
             <div class="modal-footer-fixed">
-                <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeAjaxModal()">Cancelar</button>
-                <button type="submit" class="btn-dark-blue-rectangle"><i class="fas fa-save"></i> Guardar</button>
+                <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">
+                    Cancelar
+                </button>
+                <button type="submit" class="btn-dark-blue-rectangle">
+                    <i class="fas fa-save me-1"></i> Guardar Periodo
+                </button>
             </div>
         </form>
     </div>

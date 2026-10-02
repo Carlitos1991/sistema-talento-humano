@@ -1,229 +1,125 @@
 /* =====================================================================
-   MÓDULO DE NÓMINA (ESTILOS ESPECÍFICOS)
+   MÓDULO DE NÓMINA - ESTILOS CORPORATIVOS UNIFICADOS (SIGETH)
    ===================================================================== */
 
 /* --- Badges de Valores --- */
-.payroll-value-badge, .payroll-value-badge-blue,
-.payroll-value-badge-red, .payroll-value-badge-yellow, .payroll-value-badge-gray {
-    font-size: 0.9rem;
-    font-weight: 600;
-    padding: 0.35em 0.8em;
+.payroll-value-badge,
+.payroll-value-badge-blue,
+.payroll-value-badge-red,
+.payroll-value-badge-yellow,
+.payroll-value-badge-gray {
+    font-size: 0.85rem;
+    font-weight: 700;
+    padding: 0.3em 0.75em;
     border-radius: 6px;
     display: inline-block;
     border: 1px solid transparent;
 }
 
 .payroll-value-badge {
-    background-color: #e8f5e9;
-    color: #2e7d32;
-    border-color: #c8e6c9;
+    background-color: #ecfdf5;
+    color: #047857;
+    border-color: #a7f3d0;
 }
 
 .payroll-value-badge-blue {
-    background-color: #a9dfdf;
-    color: #0f34d8;
-    border-color: #a8e3e8;
+    background-color: #eff6ff;
+    color: #1d4ed8;
+    border-color: #bfdbfe;
 }
 
 .payroll-value-badge-red {
-    background-color: #dfa9ae;
-    color: #d80f0f;
-    border-color: #e8a8b7;
+    background-color: #fef2f2;
+    color: #b91c1c;
+    border-color: #fecaca;
 }
 
 .payroll-value-badge-yellow {
-    background-color: #f37f0a;
-    color: #fffffc;
-    border-color: #fad9b9;
+    background-color: #fffbeb;
+    color: #b45309;
+    border-color: #fde68a;
 }
 
 .payroll-value-badge-gray {
-    background-color: #989696;
-    color: #f6f6f6;
-    border-color: #656868;
-    display: block;
-    margin: 0 auto;
-    width: 100%;
-    box-sizing: border-box;
-    text-align: center;
+    background-color: #f8fafc;
+    color: #475569;
+    border-color: #e2e8f0;
 }
 
 .payroll-code {
     font-family: 'Consolas', 'Monaco', monospace;
-    font-weight: bold;
-    color: #c62828;
-    background-color: #ffebee;
-    padding: 2px 8px;
-    border-radius: 4px;
-    border: 1px dashed #ef9a9a;
-}
-
-/* --- Ajustes Tabla y Modal de Recálculo --- */
-
-
-.swal2-recalc-popup.swal2-popup {
-    overflow: visible !important;
-}
-
-.swal2-recalc-popup .swal2-content, .swal2-recalc-popup .swal2-html-container {
-    overflow: visible !important;
-    max-height: none !important;
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-}
-
-.swal2-recalc-popup .swal2-html-container::-webkit-scrollbar,
-.swal2-recalc-popup .swal2-content::-webkit-scrollbar {
-    display: none;
-}
-
-.swal2-recalc-popup .swal2-confirm {
-    display: none !important;
-}
-
-.swal2-recalc-popup .swal2-actions {
-    justify-content: center !important;
-    padding-top: 14px !important;
-}
-
-.swal2-recalc-popup .swal2-cancel {
-    min-width: 120px !important;
-    padding: 10px 18px !important;
-}
-
-/* --- Barra de Progreso y Spinner --- */
-.recalc-progress-wrapper {
-    width: 100%;
-    max-width: 520px;
-}
-
-.recalc-progress-title {
-    font-weight: 600;
-    margin-bottom: 12px;
-}
-
-.recalc-progress-bar {
-    height: 14px;
-    background: #e6eef7;
-    border-radius: 999px;
-    overflow: hidden;
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.06);
-    margin-bottom: 8px;
-}
-
-.recalc-progress-fill {
-    height: 100%;
-    width: 0%;
-    background: linear-gradient(90deg, #142e1d 0%, #083326 60%, #030f49 100%);
-    border-radius: 999px;
-    transition: width 400ms ease;
-}
-
-.recalc-progress-meta {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    align-items: center;
-    font-size: 0.9rem;
-    color: #374151;
-}
-
-.recalc-progress-percent {
     font-weight: 700;
-    color: #0f172a;
-}
-
-.recalc-progress-msg {
-    color: #6b7280;
-    font-size: 0.85rem;
-}
-
-.recalc-spinner {
-    display: inline-block;
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    border: 4px solid rgba(15, 23, 42, 0.08);
-    border-top-color: #2563eb;
-    animation: spin 1s linear infinite;
-    margin: 6px 0;
-}
-
-.recalc-spinner-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 14px;
+    color: #b91c1c;
+    background-color: #fef2f2;
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px dashed #fca5a5;
 }
 
 /* --- Modal Procesar Nómina --- */
-#modalGeneratePayroll {
-    z-index: 2050 !important;
-}
-
-#modalGeneratePayroll .modal-container-medium {
-    max-width: 550px;
-    z-index: 2051 !important;
+#modalGeneratePayroll,
+#modalReportOptions {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 2050;
+    display: none;
+    align-items: center;
+    justify-content: center;
 }
 
 #modalGeneratePayroll .action-card {
     text-align: left;
-    padding: 15px;
+    padding: 14px 16px;
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 14px;
     border-radius: 10px;
     cursor: pointer;
-    background: transparent;
-    border: 2px solid transparent;
+    background: #ffffff;
+    border: 2px solid #e2e8f0;
+    transition: all 0.2s ease;
+    margin-bottom: 10px;
+}
+
+#modalGeneratePayroll .action-card:hover {
+    border-color: #203c7d;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
 }
 
 #modalGeneratePayroll .action-card i {
-    font-size: 28px;
-    color: inherit;
+    font-size: 26px;
 }
 
 #modalGeneratePayroll .action-card .muted {
     display: block;
-    font-size: 0.85rem;
-    color: #6b7280;
+    font-size: 0.8rem;
+    color: #64748b;
 }
 
 #modalGeneratePayroll .action-card strong {
     display: block;
-    font-size: 1.05rem;
+    font-size: 0.98rem;
+    color: #1e293b;
 }
 
-#modalGeneratePayroll .action-card.action-card-green {
+#modalGeneratePayroll .action-card.action-card-green:hover {
     border-color: #10b981;
-    color: #047857;
 }
 
-#modalGeneratePayroll .action-card.action-card-red {
+#modalGeneratePayroll .action-card.action-card-red:hover {
     border-color: #ef4444;
-    color: #b91c1c;
 }
 
-#modalGeneratePayroll .action-card.action-card-gray {
-    border-color: #08010c;
-    color: #100101;
-}
-
-#modalGeneratePayroll .modal-footer-fixed {
-    padding: 18px 22px;
-    display: flex;
-    justify-content: center !important;
-    gap: 10px;
-    background: #fff;
-    border-top: 1px solid #eee;
-}
-
-/* --- Detalle de Rol (Payslip) --- */
+/* --- Banner Detalle de Rol (Payslip) --- */
 .payslip-summary-banner {
     background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
     border-radius: 12px;
     padding: 1.25rem 2rem;
     margin-bottom: 1.5rem;
-    color: white;
+    color: #ffffff;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -237,7 +133,7 @@
 }
 
 .payslip-banner-label {
-    font-size: 0.5rem;
+    font-size: 0.65rem;
     font-weight: 700;
     color: #94a3b8;
     text-transform: uppercase;
@@ -245,15 +141,9 @@
 }
 
 .payslip-banner-value {
-    font-size: 0.90rem;
+    font-size: 0.95rem;
     font-weight: 700;
-    color: white;
-}
-
-.payslip-banner-divider {
-    width: 1px;
-    height: 35px;
-    background: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
 }
 
 .payslip-net-box {
@@ -264,207 +154,316 @@
     text-align: right;
 }
 
-.payslip-net-label {
-    color: white;
-    margin-bottom: 2px;
-    display: block;
-}
-
 .payslip-net-box .payslip-banner-value {
     color: #34d399;
-    font-size: 1rem;
+    font-size: 1.1rem;
     font-weight: 800;
 }
 
-.payslip-list-wrapper {
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    overflow: hidden;
-    background: white;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-    height: 100%;
+/* Bloqueo rígido de dimensiones para el modal de Periodos (Cero parpadeos) */
+.modal-period-fixed {
+    width: 580px !important;
+    min-width: 580px !important;
+    max-width: 95vw !important;
+    overflow: visible !important;
+}
+
+#periodModalOverlay .modal-body-custom,
+#periodModalOverlay .form-section-card {
+    overflow: visible !important;
+}
+
+/* El menú desplegable de Select2 se superpone limpiamente sin desplazar los botones */
+.select2-container--open .select2-dropdown {
+    z-index: 999999 !important;
+    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.15) !important;
+    border: 1px solid #cbd5e1 !important;
+}
+
+
+/* =====================================================================
+   PANTALLA: CARGA DE NOVEDADES (novelty_mass_load.html)
+   Todo va dentro de .novelty-page para NO afectar otras pantallas
+   ni chocar con style.css (.form-group, .search-input-wrapper, etc.)
+   ===================================================================== */
+
+.novelty-page {
+    --novelty-height: calc(100vh - 260px); /* alto de ambos paneles */
+}
+
+/* --- Panel izquierdo --- */
+.novelty-page .novelty-form-card {
     display: flex;
     flex-direction: column;
+    height: var(--novelty-height);
+    margin-bottom: 0;
+    padding-bottom: 1.25rem;
 }
 
-.payslip-list-header {
-    padding: 14px 16px;
-    font-weight: 800;
-    font-size: 0.9rem;
+.novelty-page .novelty-form-card .section-title {
+    flex-shrink: 0;
+    margin-top: 0.5rem;
+}
+
+.novelty-page .novelty-form-scroll {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 5px;
+}
+
+/* style.css define .form-group { height: 100% }: aquí lo anulamos */
+.novelty-page .novelty-form-scroll .form-group {
+    height: auto;
+}
+
+.novelty-page .novelty-form-scroll .form-label {
+    margin-bottom: 0.25rem;
+}
+
+.novelty-page .novelty-file-group {
+    flex: 1 1 auto;
+    margin-top: 0.5rem;
+    margin-bottom: 0;
+}
+
+.novelty-page .novelty-file-hint {
+    display: block;
+    margin-top: 0.5rem;
+    line-height: 1.2;
+    font-size: 0.75rem;
+}
+
+.novelty-page .novelty-actions {
+    flex-shrink: 0;
+    margin-top: 0.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e2e8f0;
+}
+
+.novelty-page .novelty-actions .btn-success {
+    width: 100%;
+    margin-bottom: 0.8rem;
+}
+
+.novelty-page .novelty-actions-row {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.novelty-page .novelty-actions-row .btn-danger,
+.novelty-page .novelty-actions-row .btn-info {
+    width: 100%;
+    margin: 0;
+}
+
+/* --- Panel derecho --- */
+.novelty-page .novelty-right-panel {
+    display: flex;
+    flex-direction: column;
+    height: var(--novelty-height);
+}
+
+.novelty-page .novelty-search-row {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    margin-bottom: 1rem;
+    flex-shrink: 0;
+}
+
+/* Anula max-width: 300px de style.css */
+.novelty-page .novelty-search-row .search-input-wrapper {
+    position: relative;
+    width: 85%;
+    max-width: 700px;
+}
+
+.novelty-page .novelty-search-row .search-icon-left {
+    left: 16px;
+    color: #3b82f6;
+}
+
+.novelty-page .novelty-search-row .search-input-clean {
+    width: 100%;
+    padding: 10px 15px 10px 42px;
+    border: 1px solid #cbd5e1;
+    border-radius: 50px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    font-size: 0.95rem;
+}
+
+/* --- Tabla --- */
+.novelty-page .novelty-table-card {
+    flex-grow: 1;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 0;
+    margin-bottom: 1rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+}
+
+.novelty-page .novelty-table {
+    width: 100%;
+    min-width: 100% !important;
+    table-layout: fixed;
+    margin-bottom: 0;
+}
+
+.novelty-page .novelty-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: #f1f5f9;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.novelty-page .novelty-table thead th {
+    padding: 10px 15px;
+    border-bottom: 2px solid #cbd5e1;
+}
+
+.novelty-page .novelty-table .col-cedula {
+    width: 18%;
+}
+
+.novelty-page .novelty-table .col-empleado {
+    width: 62%;
+}
+
+.novelty-page .novelty-table .col-monto {
+    width: 20%;
+    text-align: right;
+}
+
+/* Estado vacío */
+.novelty-page .novelty-empty-cell {
+    height: 250px;
+    vertical-align: middle;
+    text-align: center;
+}
+
+.novelty-page .novelty-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.novelty-page .novelty-empty-state > i {
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.novelty-page .novelty-empty-state > span {
+    font-size: 1rem;
+}
+
+.novelty-page .novelty-empty-state > small {
+    margin-top: 0.5rem;
+}
+
+/* --- Barra de totales --- */
+.novelty-page .novelty-totals-bar {
     display: flex;
     align-items: center;
-    gap: 8px;
-    letter-spacing: 0.02em;
-}
-
-.payslip-list-header.incomes {
-    background: #ecfdf5;
-    color: #059669;
-    border-bottom: 2px solid #a7f3d0;
-}
-
-.payslip-list-header.deductions {
-    background: #fef2f2;
-    color: #dc2626;
-    border-bottom: 2px solid #fecaca;
-}
-
-.payslip-items-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    flex: 1;
-}
-
-.payslip-items-list li {
-    display: flex;
     justify-content: space-between;
-    padding: 12px 16px;
-    border-bottom: 1px solid #f1f5f9;
-    font-size: 0.9rem;
-}
-
-.payslip-items-list li:last-child {
-    border-bottom: none;
-}
-
-.payslip-items-list li .desc {
-    color: #475569;
-    font-weight: 500;
-}
-
-.payslip-items-list li .val {
-    font-weight: 700;
-    color: #1e293b;
-}
-
-.val.sealed {
-    display: inline-block;
-    padding: 4px 8px;
-    border-radius: 6px;
-    background: #f8fafc;
-    border: 1px solid #e6eef6;
-    cursor: text;
-}
-
-.val.seal-animate {
-    animation: sealPulse 420ms ease-out;
-}
-
-/* --- Impresión --- */
-.print-note {
-    margin-top: 18px;
-    border: 2px solid #0b3a57;
-    padding: 12px 14px;
-    border-radius: 6px;
-    font-weight: 700;
-    text-align: center;
-    background: #eaf6ff;
-    color: #073049;
-    font-size: 0.85rem;
-}
-
-.print-total-words {
-    margin-bottom: 8px;
-    padding: 10px 12px;
-    border-radius: 6px;
-    background: #fff8e6;
-    border: 1px solid #f3d89b;
-    color: #5a3e00;
-    font-weight: 800;
-    text-align: center;
-}
-
-/* --- Caja de Mapeo Presupuestario --- */
-.budget-mapping-box {
-    background-color: #f1f5f9;
-    border: 1px solid #e2e8f0;
+    flex-shrink: 0;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    padding: 12px 25px;
     border-radius: 8px;
-    padding: 1.25rem;
-    transition: all 0.3s ease-in-out;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
-.budget-mapping-box.hidden-mapping {
-    display: none !important;
+.novelty-page .novelty-totals-label {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #475569;
 }
 
-.card-budget-integration {
-    border-left: 4px solid #3b82f6 !important;
+.novelty-page .novelty-totals-amount {
+    margin-left: 1rem;
+    font-size: 1.4rem;
+    color: #0f4c81;
 }
 
-/* --- Módulo de Rubros --- */
-.rubric-modal-container {
-    background: white;
-    width: 85%;
-    max-width: 900px;
-    border-radius: 12px;
+.novelty-page .novelty-totals-bar .btn-dark-blue-rectangle {
+    margin: 0;
+}
+
+/* --- Dropzone para subir Excel --- */
+.novelty-page .novelty-dropzone {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 130px;
     display: flex;
     flex-direction: column;
-    max-height: 90vh;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-}
-
-.rubric-section-card {
-    background: #f8fafc;
-    padding: 20px;
-    border-radius: 8px;
-    border: 1px solid #e2e8f0;
-    margin-bottom: 20px;
-}
-
-.rubric-section-title {
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: #1e293b;
-    margin-bottom: 15px;
-    border-bottom: 2px solid #e2e8f0;
-    padding-bottom: 5px;
-}
-
-.rubric-matrix-col {
-    padding: 0 15px;
-}
-
-.rubric-matrix-col.bordered {
-    border-right: 1px solid #e2e8f0;
-}
-
-.rubric-col-header {
-    font-size: 0.85rem;
-    font-weight: 700;
-    margin-bottom: 10px;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 1rem;
     text-align: center;
-    padding: 4px;
-    border-radius: 4px;
+    background: #f8fafc;
+    border: 2px dashed #cbd5e1;
+    border-radius: 12px;
+    transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
 }
 
-.rubric-col-corriente {
-    color: #0f4c81;
-    background: #e0f2fe;
+.novelty-page .novelty-dropzone:hover,
+.novelty-page .novelty-dropzone.is-dragover {
+    border-color: #10b981;
+    background: #ecfdf5;
 }
 
-.rubric-col-produccion {
-    color: #d97706;
-    background: #fef3c7;
+.novelty-page .novelty-dropzone.is-dragover {
+    transform: scale(1.01);
 }
 
-.rubric-col-inversion {
-    color: #047857;
-    background: #d1fae5;
+.novelty-page .novelty-dropzone.has-file {
+    border-style: solid;
+    border-color: #10b981;
+    background: #ecfdf5;
 }
 
-.rubric-devengado-section {
-    border-top: 1px dashed #cbd5e1;
-    margin-top: 1rem;
-    padding-top: 1rem;
-}
-
-/* Blindaje para forzar el ocultamiento del checkbox nativo de Django */
-input[type="checkbox"].switch-input,
-input[type="checkbox"].toggle-status-red-input,
-input[type="checkbox"]:has(+ .switch-wrapper) {
-    display: none !important;
-    width: 0;
-    height: 0;
+/* Input real invisible que cubre todo el recuadro (clic + arrastrar y soltar) */
+.novelty-page .novelty-dropzone .novelty-dropzone-input {
+    position: absolute;
+    inset: 0;
+    width: 100% !important;
+    height: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
     opacity: 0;
+    cursor: pointer;
+}
+
+.novelty-page .novelty-dropzone-icon {
+    font-size: 2.6rem;
+    color: #059669;
+    transition: transform 0.2s ease;
+}
+
+.novelty-page .novelty-dropzone:hover .novelty-dropzone-icon {
+    transform: translateY(-2px) scale(1.06);
+}
+
+.novelty-page .novelty-dropzone-title {
+    max-width: 100%;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #334155;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.novelty-page .novelty-dropzone-sub {
+    font-size: 0.72rem;
+    color: #94a3b8;
 }

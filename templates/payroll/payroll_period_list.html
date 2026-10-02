@@ -7,30 +7,30 @@
 {% endblock %}
 
 {% block content %}
-    <div class="container-fluid">
-        <div class="header-card">
-            <div>
-                <h1>Periodos de Nómina</h1>
-                <p>Gestión de aperturas y cálculo de roles.</p>
+    <div class="header-card">
+        <div>
+            <h1>Periodos de Nómina</h1>
+            <p>Gestión de aperturas y cálculo de roles.</p>
+        </div>
+        {% if perms.payroll.add_payrollperiod %}
+            <button type="button" class="btn-blue-rectangle"
+                    onclick="openAjaxModal('{% url 'payroll:period_create' %}', window.initializePeriodModal)">
+                <i class="fas fa-plus me-1"></i> Nuevo Periodo
+            </button>
+        {% endif %}
+    </div>
+
+    <div class="content-table">
+        <div class="table-controls toolbar-row">
+            <div class="toolbar-center"></div>
+            <div class="toolbar-right">
+                <input id="searchPeriodInput" class="table-search-input table-search-input--large"
+                       placeholder="Buscar periodo">
             </div>
-            {% if perms.payroll.add_payrollperiod %}
-                <button type="button" class="btn-white-rectangle"
-                        onclick="openAjaxModal('{% url 'payroll:period_create' %}', '.modal-overlay', 'initializePeriodModal')">
-                    <i class="fas fa-plus"></i> Nuevo Periodo
-                </button>
-            {% endif %}
         </div>
 
-        <div class="content-table mt-4">
-            <div class="table-controls">
-                <div class="search-box" style="max-width: 350px; width: 100%;">
-                    <input id="searchPeriodInput" class="table-search-input" placeholder="Buscar periodo...">
-                </div>
-            </div>
-
-            <div id="period-table-container">
-                {% include 'payroll/partials/partial_period_table.html' %}
-            </div>
+        <div id="period-table-container">
+            {% include 'payroll/partials/partial_period_table.html' %}
         </div>
     </div>
 
