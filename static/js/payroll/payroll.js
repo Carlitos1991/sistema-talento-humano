@@ -1178,3 +1178,50 @@ window.uploadMassExcel = function (input, url, label) {
             input.value = '';
         });
 };
+
+window.downloadFilteredReport = function (type) {
+    // 1. Resolver el ID del periodo de forma infalible
+    let periodId = window.CURRENT_PERIOD_ID;
+
+    if (!periodId || periodId === 'None' || periodId === '') {
+        const selectPeriod = document.getElementById('period-selector') || document.getElementById('period_id');
+        if (selectPeriod && selectPeriod.value) {
+            periodId = selectPeriod.value;
+        } else {
+            periodId = new URLSearchParams(window.location.search).get('period_id');
+        }
+    }
+
+    if (!periodId) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Atención',
+            text: 'Por favor, seleccione un periodo de nómina para generar el reporte.'
+        });
+        return;
+    }
+
+    // 2. Extraer filtros activos
+    const searchInput = document.getElementById('searchInput');
+    const regimeFilter = document.getElementById('regimeFilter');
+    const checkbox = document.getElementById('toggleWithheld');
+
+    const q = searchInput ? searchInput.value.trim() : '';
+    const regime = regimeFilter ? regimeFilter.value : '';
+    const show_withheld = (checkbox && checkbox.checked) ? 'only' : 'exclude';
+
+    // 3. Mapeo de rutas según urls.py
+    let url = '';
+    const queryParams = `q=${encodeURIComponent(q)}&regime=${encodeURIComponent(regime)}&show_withheld=${show_withheld}`;
+
+    if (type === 'banco') {
+        url = `/payroll/reports/bank/${periodId}/?${queryParams}`;
+    } else if (type === 'negativos') {
+        url = `/payroll/reports/negative-balances/${periodId}/?${queryParams}`;
+    } else {
+        // Reporte Rol General / Agrupado
+        url = `/payroll/reports/grouped/${periodId}/?${queryParams}`;
+    }
+
+    window.open(url, '_blank');
+};
