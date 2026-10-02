@@ -1,0 +1,53 @@
+<div id="modalReportOptions" class="modal-overlay modal-payroll-action">
+    <div class="modal-container-medium modal-payroll-container">
+
+        <!-- Cabecera Estándar SIGETH -->
+        <div class="modal-header-medium">
+            <div class="header-content-group">
+                <div class="header-icon-circle">
+                    <i class="fas fa-lock"></i>
+                </div>
+                <h3 class="header-title">Cerrar Periodo: <span id="rep-period-name"></span></h3>
+            </div>
+            <button type="button" class="btn-close-circle" onclick="window.closeReportModal()" title="Cerrar">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <!-- Cuerpo del Modal -->
+        <div class="modal-body-content modal-body-custom">
+            <div class="close-period-list">
+                <label class="close-period-option">
+                    <input type="radio" name="reportFiltro" value="NORMAL" checked class="custom-radio">
+                    <div class="close-period-info">
+                        <strong>Nómina Mensual</strong>
+                        <small class="text-muted">Excluye roles en estado retenido.</small>
+                    </div>
+                </label>
+
+                <label class="close-period-option">
+                    <input type="radio" name="reportFiltro" value="REZAGADOS" class="custom-radio">
+                    <div class="close-period-info">
+                        <strong>Alcance / Rezagados</strong>
+                        <small class="text-warning">Solo roles pendientes de cobro.</small>
+                    </div>
+                </label>
+            </div>
+
+            <!-- Botón de Sellar -->
+            <div id="sellar-container" class="close-period-actions">
+                <button type="button" onclick="sellarComoPagados()"
+                        class="btn-success-outline w-100 justify-content-center">
+                    <i class="fas fa-check-double me-1"></i> Sellar como PAGADOS
+                </button>
+            </div>
+        </div>
+
+        <!-- Pie Fijo -->
+        <div class="modal-footer-fixed">
+            <button type="button" class="btn-dark-blue-rectangle-outline" onclick="window.closeReportModal()">
+                Cancelar
+            </button>
+        </div>
+    </div>
+</div>

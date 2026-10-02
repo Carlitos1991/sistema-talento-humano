@@ -509,3 +509,364 @@
     background-color: #fef08a !important;
     color: #854d0e !important;
 }
+
+/* =====================================================================
+   MODALES DE ACCIÓN DE NÓMINA (Generar y Cerrar Periodos)
+   ===================================================================== */
+#modalGeneratePayroll,
+#modalReportOptions,
+.modal-overlay.modal-payroll-action {
+    display: none !important;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 2050;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Solo visibles cuando JS los activa */
+#modalGeneratePayroll.is-open,
+#modalReportOptions.is-open {
+    display: flex !important;
+}
+
+.modal-payroll-container {
+    max-width: 540px !important;
+    width: 100% !important;
+}
+
+/* Spinner de procesamiento */
+.payroll-loading-box {
+    display: none;
+    text-align: center;
+    padding: 3rem 1.5rem;
+}
+
+.payroll-loading-text {
+    margin-top: 1rem;
+    font-weight: 700;
+    color: #475569;
+}
+
+/* Indicador de periodo seleccionado */
+.payroll-period-indicator {
+    margin-bottom: 1rem;
+    font-size: 0.95rem;
+    color: #64748b;
+}
+
+.payroll-period-indicator strong {
+    color: #0f172a;
+}
+
+/* Grilla de opciones para Procesar Nómina */
+.payroll-action-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Opciones de filtro para Cerrar Periodo */
+.close-period-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 1rem;
+}
+
+.close-period-option {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+    margin-bottom: 0;
+}
+
+.close-period-option:hover {
+    background-color: #f8fafc;
+    border-color: #cbd5e1;
+}
+
+.close-period-option input[type="radio"]:checked ~ .close-period-info strong {
+    color: #0f4c81;
+}
+
+.close-period-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.close-period-info strong {
+    color: #1e293b;
+    font-size: 0.95rem;
+}
+
+.close-period-info small {
+    font-size: 0.8rem;
+}
+
+.close-period-actions {
+    display: none;
+    margin-top: 0.5rem;
+}
+
+/* =====================================================================
+   DETALLE DE ROLES (PAYSLIP LIST)
+   ===================================================================== */
+.payslip-controls-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+}
+
+.payslip-search-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-grow: 1;
+    max-width: 650px;
+    justify-content: flex-end;
+}
+
+.payslip-regime-select {
+    width: auto !important;
+    min-width: 190px !important;
+    height: 40px !important;
+    padding: 0 12px !important;
+    font-size: 0.85rem !important;
+}
+
+.payslip-search-box {
+    position: relative;
+    flex-grow: 1;
+    max-width: 440px;
+}
+
+.payslip-search-box .search-icon-left {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #3b82f6;
+    font-size: 0.9rem;
+    pointer-events: none;
+}
+
+.payslip-search-box .search-input-clean {
+    width: 100%;
+    height: 40px;
+    padding: 8px 14px 8px 38px;
+    border: 1px solid #cbd5e1;
+    border-radius: 999px;
+    font-size: 0.88rem;
+    background: #ffffff;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.payslip-search-box .search-input-clean:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+/* =====================================================================
+   VISTA DETALLE DE ROLES: BOTÓN RECALCULAR Y SWITCHES RETENCIÓN
+   ===================================================================== */
+
+/* Botón Recalcular perfectamente integrado en la barra de exportación */
+.btn-recalculate-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 14px;
+    background-color: #ffffff;
+    color: #10b981;
+    border: 1px solid #10b981;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-recalculate-pill:hover {
+    background-color: #10b981;
+    color: #ffffff;
+    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.2);
+}
+
+/* --- Switches de Retención (Verde Normal <-> Rojo Retenido) --- */
+.switch-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #475569;
+}
+
+/* Cápsula del switch */
+.switch-input.switch-retencion + .switch-wrapper,
+.switch-input.switch-danger + .switch-wrapper {
+    padding: 4px 10px;
+    border-radius: 999px;
+    background-color: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    color: #047857;
+    transition: all 0.25s ease;
+}
+
+.switch-input.switch-retencion + .switch-wrapper .switch-circle,
+.switch-input.switch-danger + .switch-wrapper .switch-circle {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background-color: #10b981;
+    transition: all 0.25s ease;
+}
+
+/* Estado ACTIVO / RETENIDO (Rojo Ámbar Corporativo) */
+.switch-input.switch-retencion:checked + .switch-wrapper,
+.switch-input.switch-danger:checked + .switch-wrapper {
+    background-color: #fef2f2 !important;
+    border-color: #fecaca !important;
+    color: #dc2626 !important;
+}
+
+.switch-input.switch-retencion:checked + .switch-wrapper .switch-circle,
+.switch-input.switch-danger:checked + .switch-wrapper .switch-circle {
+    background-color: #ef4444 !important;
+    transform: scale(1.15);
+}
+
+/* =====================================================================
+   MODAL DETALLE DE ROL (modal_payslip_detail.html)
+   ===================================================================== */
+.custom-payslip-modal {
+    max-width: 780px !important;
+    width: 95% !important;
+    background: #ffffff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.2);
+}
+
+.payslip-summary-banner {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    border-radius: 10px;
+    padding: 1.1rem 1.5rem;
+    margin-bottom: 1.25rem;
+    color: #ffffff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.payslip-banner-divider {
+    width: 1px;
+    height: 32px;
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.payslip-list-wrapper {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.payslip-list-header {
+    padding: 10px 14px;
+    font-weight: 800;
+    font-size: 0.85rem;
+    letter-spacing: 0.03em;
+}
+
+.payslip-list-header.incomes {
+    background: #f0fdf4;
+    color: #166534;
+    border-bottom: 2px solid #bbf7d0;
+}
+
+.payslip-list-header.deductions {
+    background: #fef2f2;
+    color: #991b1b;
+    border-bottom: 2px solid #fecaca;
+}
+
+.payslip-items-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 240px;
+    overflow-y: auto;
+}
+
+.payslip-items-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 14px;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 0.85rem;
+}
+
+.payslip-items-list li .desc {
+    color: #334155;
+    font-weight: 500;
+}
+
+.payslip-items-list li .val {
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.payslip-items-list li.empty-message {
+    justify-content: center;
+    color: #94a3b8;
+    padding: 18px;
+    font-style: italic;
+}
+
+.payslip-list-footer.incomes-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #ecfdf5;
+    color: #059669;
+    padding: 10px 16px;
+    font-weight: 800;
+    font-size: 0.95rem;
+    border-top: 2px solid #a7f3d0;
+}
+
+.payslip-list-footer.deductions-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #fef2f2;
+    color: #dc2626;
+    padding: 10px 16px;
+    font-weight: 800;
+    font-size: 0.95rem;
+    border-top: 2px solid #fecaca;
+}
+
+.font-size-xs {
+    font-size: 0.75rem;
+}

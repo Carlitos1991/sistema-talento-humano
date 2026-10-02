@@ -889,7 +889,284 @@ window.initNoveltyEvents = function () {
     }
 };
 /* =================================================================================
-   7. DELEGACIÓN DE EVENTOS GLOBAL
+   7. LISTADO Y BÚSQUEDA DE ROLES (PAYSLIP LIST)
+   ================================================================================= */
+(function () {
+    const container = document.getElementById('payslip-table-container');
+    const searchInput = document.getElementById('searchInput');
+    const regimeFilter = document.getElementById('regimeFilter');
+    if (!container || !searchInput) return;
+
+    let debounceTimer = null;
+
+    function initPaginationControls(root) {
+        const pagination = (root || document).querySelector('#js-pagination');
+        if (!pagination) return;
+
+        pagination.querySelectorAll('[data-page]').forEach(btn => {
+            btn.onclick = function (e) {
+                e.preventDefault();
+                const page = this.getAttribute('data-page');
+                if (page) performPayslipSearch({page: Number(page)});
+            };
+        });
+
+        const pageInput = pagination.querySelector('#page-input');
+        if (pageInput) {
+            const submit = () => {
+                const p = parseInt(pageInput.value.trim(), 10) || 1;
+                performPayslipSearch({page: p});
+            };
+            pageInput.onkeypress = (e) => {
+                if (e.key === 'Enter') submit();
+            };
+            pageInput.onblur = submit;
+        }
+    }
+
+    function performPayslipSearch(options = {}) {
+        const periodId = window.CURRENT_PERIOD_ID || new URLSearchParams(window.location.search).get('period_id');
+        if (!periodId) return;
+
+        const checkbox = document.getElementById('toggleWithheld');
+        const showWithheld = checkbox && checkbox.checked ? 'only' : 'exclude';
+
+        const params = new URLSearchParams({
+            period_id: periodId,
+            q: searchInput.value.trim(),
+            regime: regimeFilter ? regimeFilter.value : '',
+            show_withheld: showWithheld,
+            page: options.page || 1
+        });
+
+        container.style.opacity = '0.5';
+
+        fetch(`${window.URLS.baseList}?${params.toString()}`, {
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        })
+            .then(res => res.json())
+            .then(data => {
+                container.innerHTML = data.html;
+                container.style.opacity = '1';
+
+                if (data.total_roles !== undefined) {
+                    const el = document.getElementById('total-roles');
+                    if (el) el.innerText = data.total_roles;
+                }
+                if (data.total_liquidado !== undefined) {
+                    const el2 = document.getElementById('total-liquidado');
+                    if (el2) el2.innerText = `$ ${parseFloat(data.total_liquidado || 0).toLocaleString('es-EC', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    })}`;
+                }
+
+                initPaginationControls(container);
+            })
+            .catch(() => {
+                container.style.opacity = '1';
+            });
+    }
+
+    // Escuchadores del buscador con debounce
+    searchInput.addEventListener('input', () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => performPayslipSearch({page: 1}), 300);
+    });
+
+    searchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            clearTimeout(debounceTimer);
+            performPayslipSearch({page: 1});
+        }
+    });
+
+    if (regimeFilter) {
+        regimeFilter.addEventListener('change', () => performPayslipSearch({page: 1}));
+    }
+
+    window.performSearchWithOptions = () => performPayslipSearch({page: 1});
+
+    // Delegación para switches de retención
+    container.addEventListener('change', (e) => {
+        const target = e.target;
+        if (target && target.classList.contains('toggle-withhold-btn')) {
+            const payslipId = target.dataset.id;
+            const textSpan = target.nextElementSibling?.querySelector('.switch-text');
+            const checked = target.checked;
+
+            fetch(`/payroll/payslips/${payslipId}/toggle-withhold/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getPayrollCSRF(),
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        if (textSpan) textSpan.textContent = data.is_withheld ? 'Retenido' : 'Normal';
+                    } else {
+                        target.checked = !checked;
+                        if (textSpan) textSpan.textContent = !checked ? 'Retenido' : 'Normal';
+                    }
+                })
+                .catch(() => {
+                    target.checked = !checked;
+                });
+        }
+    });
+
+    initPaginationControls(container);
+})();
+
+window.downloadFilteredReport = function (type) {
+    const searchInput = document.getElementById('searchInput');
+    const regimeFilter = document.getElementById('regimeFilter');
+    const checkbox = document.getElementById('toggleWithheld');
+
+    const periodId = window.CURRENT_PERIOD_ID || new URLSearchParams(window.location.search).get('period_id');
+    if (!periodId) return alert('Seleccione un periodo.');
+
+    const q = searchInput ? searchInput.value.trim() : '';
+    const regime = regimeFilter ? regimeFilter.value : '';
+    const show_withheld = checkbox && checkbox.checked ? 'only' : 'exclude';
+
+    let url = '';
+    if (type === 'banco') {
+        url = `/payroll/reports/bank/${periodId}/?q=${encodeURIComponent(q)}&regime=${encodeURIComponent(regime)}&show_withheld=${show_withheld}`;
+    } else if (type === 'negativos') {
+        url = `/payroll/reports/negative-balances/${periodId}/`;
+    } else {
+        url = `/payroll/reports/grouped/${periodId}/?q=${encodeURIComponent(q)}&regime=${encodeURIComponent(regime)}&show_withheld=${show_withheld}`;
+    }
+
+    window.open(url, '_blank');
+};
+/* =================================================================================
+   8. ACCIONES DE ROLES (Recálculo filtrado, Ver Detalle y Envío por Correo)
+   ================================================================================= */
+window.recalculateCurrentFilter = function () {
+    const periodId = window.CURRENT_PERIOD_ID || new URLSearchParams(window.location.search).get('period_id');
+    if (!periodId) return Swal.fire('Atención', 'Periodo no definido', 'warning');
+
+    const searchInput = document.getElementById('searchInput');
+    const regimeFilter = document.getElementById('regimeFilter');
+    const checkbox = document.getElementById('toggleWithheld');
+
+    const q = searchInput ? searchInput.value.trim() : '';
+    const regime = regimeFilter ? regimeFilter.value : '';
+    const show_withheld = checkbox && checkbox.checked ? 'only' : '';
+
+    Swal.fire({
+        title: '¿Recalcular roles filtrados?',
+        text: 'Se actualizarán las fórmulas y sueldos para los roles visibles en este filtro.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: '<i class="fas fa-sync-alt me-1"></i> Sí, recalcular',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#10b981'
+    }).then(result => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: 'Recalculando Nómina...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            const formData = new FormData();
+            formData.append('period_id', periodId);
+            formData.append('q', q);
+            formData.append('regime', regime);
+            formData.append('show_withheld', show_withheld);
+
+            // CORREGIDO: Ruta exacta registrada en urls.py
+            fetch('/payroll/payslips/recalculate/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getPayrollCSRF(),
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData
+            })
+                .then(safeJsonParse)
+                .then(data => {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Completado!',
+                        text: data.message || 'Roles recalculados correctamente.',
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        if (typeof window.performSearchWithOptions === 'function') {
+                            window.performSearchWithOptions();
+                        } else {
+                            location.reload();
+                        }
+                    });
+                })
+                .catch(err => Swal.fire('Error', err.message, 'error'));
+        }
+    });
+};
+
+window.openPayslipDetail = function (url) {
+    if (typeof openAjaxModal === 'function') {
+        openAjaxModal(url);
+    } else {
+        fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+            .then(res => res.text())
+            .then(html => {
+                const root = document.getElementById('modal-root') || document.body;
+                root.innerHTML = html;
+                const modal = root.querySelector('.modal-overlay');
+                if (modal) {
+                    modal.style.display = 'flex';
+                }
+            });
+    }
+};
+
+window.sendPayslipEmail = function (payslipId) {
+    Swal.fire({
+        title: '¿Enviar rol por correo institucional?',
+        text: 'Se generará el archivo oficial en PDF con código QR y se enviará a la cuenta de correo del funcionario.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: '<i class="fas fa-paper-plane me-1"></i> Enviar Correo',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#eab308'
+    }).then(res => {
+        if (res.isConfirmed) {
+            Swal.fire({
+                title: 'Enviando notificación...',
+                text: 'Generando PDF y conectando con el servidor de correo...',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            // CORREGIDO: Ruta en plural 'payslips' según urls.py
+            fetch(`/payroll/payslips/${payslipId}/send-email/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getPayrollCSRF(),
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+                .then(safeJsonParse)
+                .then(data => {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Enviado!',
+                        text: data.message || 'Notificación enviada correctamente al funcionario.'
+                    });
+                })
+                .catch(err => Swal.fire('Error al enviar', err.message, 'error'));
+        }
+    });
+};
+/* =================================================================================
+   9. DELEGACIÓN DE EVENTOS GLOBAL
    ================================================================================= */
 document.addEventListener('click', (e) => {
     const btnGen = e.target.closest('[data-generate-id]');

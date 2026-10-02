@@ -1,57 +1,67 @@
-<div id="modalGeneratePayroll" class="modal-overlay" style="display: none !important;">
-    <div class="modal-container-medium" style="max-width: 550px;">
+<div id="modalGeneratePayroll" class="modal-overlay modal-payroll-action">
+    <div class="modal-container-medium modal-payroll-container">
 
-        <!-- Cabecera Estandarizada con botón cerrar -->
-        <div class="modal-header-refined">
+        <!-- Cabecera Estándar SIGETH -->
+        <div class="modal-header-medium">
             <div class="header-content-group">
-                <div class="header-icon-circle"><i class="fas fa-cogs"></i></div>
-                <h3 class="header-title-main">Procesar Nómina</h3>
+                <div class="header-icon-circle">
+                    <i class="fas fa-cogs"></i>
+                </div>
+                <h3 class="header-title">Procesar Nómina</h3>
             </div>
-            <button type="button" class="btn-close-circle" onclick="window.closeGenerateModal()">
+            <button type="button" class="btn-close-circle" onclick="window.closeGenerateModal()" title="Cerrar">
                 <i class="fas fa-times"></i>
             </button>
         </div>
 
         <!-- Cuerpo del Modal -->
-        <div class="modal-body-custom">
-            <div id="generate-loading" style="display: none; text-align: center; padding: 40px;">
-                <i class="fas fa-spinner fa-spin fa-3x" style="color: #3b82f6;"></i>
-                <p style="margin-top: 15px; font-weight: bold; color: #475569;">Procesando, espere...</p>
+        <div class="modal-body-content modal-body-custom">
+            <!-- Estado Cargando -->
+            <div id="generate-loading" class="payroll-loading-box">
+                <i class="fas fa-spinner fa-spin fa-3x text-primary"></i>
+                <p class="payroll-loading-text">Procesando, por favor espere...</p>
             </div>
 
+            <!-- Opciones de Generación -->
             <div id="generate-options">
-                <p style="margin-bottom: 20px; color: #64748b;">Periodo: <strong id="gen-period-name"
-                                                                                 style="color: #0f172a;"></strong></p>
-                <div style="display: grid; gap: 15px;">
-                    <button onclick="submitGenerate('missing')" class="action-card action-card-green">
-                        <i class="fas fa-user-plus fa-2x"></i>
+                <p class="payroll-period-indicator">
+                    Periodo: <strong id="gen-period-name"></strong>
+                </p>
+
+                <div class="payroll-action-grid">
+                    <button type="button" onclick="submitGenerate('missing')" class="action-card action-card-green">
+                        <i class="fas fa-user-plus"></i>
                         <div>
                             <strong>Sincronizar Faltantes</strong>
-                            <span class="muted">Solo agrega empleados nuevos.</span>
+                            <span class="muted">Solo agrega empleados nuevos sin recalcular el resto.</span>
                         </div>
                     </button>
-                    <button onclick="submitGenerate('all')" class="action-card action-card-red">
-                        <i class="fas fa-sync-alt fa-2x"></i>
+
+                    <button type="button" onclick="submitGenerate('all')" class="action-card action-card-red">
+                        <i class="fas fa-sync-alt"></i>
                         <div>
                             <strong>Recalcular Todo (Normal)</strong>
-                            <span class="muted">Borra y genera el rol principal (corte al día 25).</span>
+                            <span class="muted">Borra y regenera el rol principal (corte al día 25).</span>
                         </div>
                     </button>
-                    <button id="btn-generate-scope" onclick="submitGenerate('scope')"
+
+                    <button type="button" id="btn-generate-scope" onclick="submitGenerate('scope')"
                             class="action-card action-card-gray">
-                        <i class="fas fa-code-branch fa-2x"></i>
+                        <i class="fas fa-code-branch"></i>
                         <div>
                             <strong>Generar Rol de Alcance</strong>
-                            <span class="muted">Incluye movimientos posteriores al día 25.</span>
+                            <span class="muted">Incluye movimientos y contratos posteriores al día 25.</span>
                         </div>
                     </button>
                 </div>
             </div>
         </div>
 
-        <!-- Pie del Modal -->
+        <!-- Pie Fijo -->
         <div class="modal-footer-fixed">
-            <button type="button" class="btn-dark-blue-rectangle-outline" onclick="window.closeGenerateModal()">Cancelar</button>
+            <button type="button" class="btn-dark-blue-rectangle-outline" onclick="window.closeGenerateModal()">
+                Cancelar
+            </button>
         </div>
     </div>
 </div>

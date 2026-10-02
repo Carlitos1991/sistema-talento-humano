@@ -55,7 +55,7 @@
             if (typeof window.openGenerateModal === 'function') {
                 window.openGenerateModal(periodId, periodName);
             } else {
-                console.error("No se encontró la función openGenerateModal. Revisa que modal_generate_payroll.js esté cargado.");
+                console.error("No se encontró la función openGenerateModal");
             }
         }
 
@@ -104,7 +104,5 @@
             };
         });
     </script>
-
-    <script src="{% static 'js/payroll/modal_generate_payroll.js' %}"></script>
     <script src="{% static 'js/payroll/payroll.js' %}"></script>
 {% endblock %}
