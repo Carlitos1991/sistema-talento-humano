@@ -161,7 +161,11 @@
                             </td>
 
                             <td class="binnacle-registered-column small text-secondary">
-                                {{ b.created_by.get_full_name|default:b.created_by.username|default:"Sistema" }}
+                                {% if b.created_by %}
+                                    {{ b.created_by.get_full_name|default:b.created_by.username }}
+                                {% else %}
+                                    Sistema
+                                {% endif %}
                             </td>
 
                             <!-- ACCIONES -->
@@ -286,9 +290,17 @@
         transform: translateY(-1px);
     }
 
-    .binnacle-bulk-btn-approve { background: #059669; }
-    .binnacle-bulk-btn-reject { background: #d97706; }
-    .binnacle-bulk-btn-delete { background: #dc2626; }
+    .binnacle-bulk-btn-approve {
+        background: #059669;
+    }
+
+    .binnacle-bulk-btn-reject {
+        background: #d97706;
+    }
+
+    .binnacle-bulk-btn-delete {
+        background: #dc2626;
+    }
 
     .binnacle-table-scroll {
         max-height: 52vh;
