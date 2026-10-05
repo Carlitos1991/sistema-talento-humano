@@ -5,14 +5,15 @@
                data-title="Reporte de Fondos de Reserva y Décimos"
                data-filename="Reporte_Fondos_Reserva"
                data-external-pagination="true"
+               data-list-url="{% url 'payroll:reserve_funds' %}"
                data-page-size="10">
             <thead>
             <tr>
-                <th class="width-15">Identificación</th>
-                <th class="width-35">Servidor / Funcionario</th>
-                <th class="width-20">Área / Cargo</th>
-                <th class="width-15 center text-center">Fondos de Reserva</th>
-                <th class="width-15 center text-center">Décimos</th>
+                <th class="width-15" data-field="document_number">Identificación</th>
+                <th class="width-35" data-field="employee_name">Servidor / Funcionario</th>
+                <th class="width-20" data-field="area_name">Área / Cargo</th>
+                <th class="width-15 center text-center" data-field="reserve_funds">Fondos de Reserva</th>
+                <th class="width-15 center text-center" data-field="monthly_payment">Décimos</th>
             </tr>
             </thead>
             <tbody id="table-body">
@@ -34,25 +35,41 @@
                                     {{ emp.current_budget_line.position_item.name|default:"Sin Cargo" }}
                                 </small>
                             </td>
+                            <!-- Switch Fondos de Reserva -->
                             <td class="center text-center">
-                                {% if info and info.reserve_funds %}
-                                    <span class="badge badge-green"><i class="fas fa-check-circle me-1"></i> Mensualiza</span>
-                                {% else %}
-                                    <span class="badge badge-blue"><i class="fas fa-piggy-bank me-1"></i> Acumula</span>
-                                {% endif %}
+                                <label style="margin: 0; cursor: pointer;">
+                                    <input type="checkbox"
+                                           class="switch-input switch-green toggle-reserve-switch"
+                                           data-emp-id="{{ emp.id }}"
+                                           data-type="reserve_funds"
+                                           {% if info and info.reserve_funds %}checked{% endif %}>
+                                    <div class="switch-wrapper" style="min-width: 110px; padding: 4px 10px;">
+                                        <div class="switch-circle"></div>
+                                        <span class="switch-text">
+                                            {% if info and info.reserve_funds %}Mensualiza{% else %}Acumula{% endif %}
+                                        </span>
+                                    </div>
+                                </label>
                             </td>
+                            <!-- Switch Décimos -->
                             <td class="center text-center">
-                                {% if info and info.monthly_payment %}
-                                    <span class="badge badge-green"><i class="fas fa-check-circle me-1"></i> Mensualiza</span>
-                                {% else %}
-                                    <span class="badge badge-blue"><i class="fas fa-piggy-bank me-1"></i> Acumula</span>
-                                {% endif %}
+                                <label style="margin: 0; cursor: pointer;">
+                                    <input type="checkbox"
+                                           class="switch-input switch-green toggle-reserve-switch"
+                                           data-emp-id="{{ emp.id }}"
+                                           data-type="monthly_payment"
+                                           {% if info and info.monthly_payment %}checked{% endif %}>
+                                    <div class="switch-wrapper" style="min-width: 110px; padding: 4px 10px;">
+                                        <div class="switch-circle"></div>
+                                        <span class="switch-text">
+                                            {% if info and info.monthly_payment %}Mensualiza{% else %}Acumula{% endif %}
+                                        </span>
+                                    </div>
+                                </label>
                             </td>
                         </tr>
                     {% endwith %}
                 {% endfor %}
-            {% else %}
-                <!-- TableManager maneja el estado vacío automáticamente -->
             {% endif %}
             </tbody>
         </table>

@@ -1,18 +1,6 @@
 from django.urls import path
-from .views import (
-    PeriodListView, PeriodCreateView, GeneratePayrollView,
-    GeneratePayrollUIView, GeneratePayrollSelectedView,
-    ConstantListView, ConstantCreateView, ConstantUpdateView,
-    PayrollListView, PayslipListView, PayslipDetailView,
-    FondosReservaListView,
-    InstitutionalReportView, NoveltyMassLoadView, ParseNoveltyExcelView,
-    SaveNoveltiesView, GetNoveltiesView, GroupedPayrollReportView, PayslipToggleWithholdView, PayslipItemUpdateAPIView,
-    MarkPeriodAsPaidAPIView,
-    GenerateMissingPayrollView, BankTransferReportView, PeriodUpdateView, api_calculate_working_days,
-    RecalculatePayslipsView, export_negative_balances_report, MassUpdateReserveFundsView, PrintablePayslipView,
-    SendPayslipEmailView, PublicPayslipValidationView, RubricListView, RubricCreateView, RubricUpdateView,
-    ConstantToggleView, RubricToggleView
-)
+from .views import *
+from .views import PayslipDetailView
 
 app_name = 'payroll'
 
@@ -51,7 +39,9 @@ urlpatterns = [
     # API para Modificar un rubro individual manualmente
     path('payslip-item/<int:item_id>/update/', PayslipItemUpdateAPIView.as_view(), name='payslip_item_update'),
     path('payslips/recalculate/', RecalculatePayslipsView.as_view(), name='payslip_recalculate'),
-    path('reserve-funds/', FondosReservaListView.as_view(), name='reserve_funds'),
+    path('reserve-funds/', PayslipDetailView.FundsReserveListView
+         .as_view(), name='reserve_funds'),
+    path('reserve-funds/toggle/<int:pk>/', ToggleReserveFundsView.as_view(), name='reserve_funds_toggle'),
     path('period/<int:period_id>/mark-paid/', MarkPeriodAsPaidAPIView.as_view(), name='period_mark_paid'),
     path('generate/missing/', GenerateMissingPayrollView.as_view(), name='generate_missing'),
     # Reporte exclusivo para el Banco (Reporte 4)

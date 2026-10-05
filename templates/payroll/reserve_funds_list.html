@@ -33,8 +33,8 @@
         <div class="table-controls toolbar-row">
             <div class="toolbar-left"></div>
             <div class="toolbar-right">
-                    <input id="reserve-search-input" type="text" class="table-search-input table-search-input--large"
-                           placeholder="Buscar por nombre o cédula...">
+                <input id="reserve-search-input" type="text" class="table-search-input table-search-input--large"
+                       placeholder="Buscar por nombre o cédula...">
             </div>
         </div>
 
@@ -61,6 +61,56 @@
                     }, 300);
                 });
             }
+
+            // Manejo del cambio en los switches de Fondos y Décimos
+            document.addEventListener('change', function (e) {
+                const target = e.target;
+                if (!target.classList.contains('toggle-reserve-switch')) return;
+
+                const empId = target.dataset.empId;
+                const fieldType = target.dataset.type;
+                const wrapper = target.closest('label')?.querySelector('.switch-wrapper');
+                const textSpan = wrapper?.querySelector('.switch-text');
+                const isChecked = target.checked;
+
+                const formData = new FormData();
+                formData.append('field_type', fieldType);
+
+                fetch(`/payroll/reserve-funds/toggle/${empId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': typeof getCSRF === 'function' ? getCSRF() : ''
+                    },
+                    body: formData
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            if (textSpan) textSpan.textContent = data.status ? 'Mensualiza' : 'Acumula';
+                            showToast(data.message, 'success');
+                        } else {
+                            target.checked = !isChecked;
+                            if (textSpan) textSpan.textContent = !isChecked ? 'Mensualiza' : 'Acumula';
+                            Swal.fire({icon: 'warning', title: 'Atención', text: data.message});
+                        }
+                    })
+                    .catch(err => {
+                        target.checked = !isChecked;
+                        if (textSpan) textSpan.textContent = !isChecked ? 'Mensualiza' : 'Acumula';
+                        console.error('Error al actualizar switch:', err);
+                        Swal.fire({icon: 'error', title: 'Error', text: 'Error de comunicación con el servidor.'});
+                    });
+            });
+
+            // Soporte para entrada manual de página en el input numérico
+            document.addEventListener('keypress', function (e) {
+                if (e.target && e.target.id === 'page-input' && e.key === 'Enter') {
+                    const p = parseInt(e.target.value, 10) || 1;
+                    const searchVal = document.getElementById('reserve-search-input')?.value.trim() || '';
+                    refreshCurrentTable({page: p, q: searchVal});
+                }
+            });
         });
     </script>
 {% endblock %}

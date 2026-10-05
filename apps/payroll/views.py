@@ -611,68 +611,62 @@ class PayslipDetailView(DetailView):
 
         return context
 
+    class FundsReserveListView(LoginRequiredMixin, ListView):
+        """Lista de empleados activos mostrando Fondos de Reserva y Mensualiza Décimos."""
+        model = Employee
+        template_name = 'payroll/reserve_funds_list.html'
+        context_object_name = 'employees'
+        paginate_by = 10
+        partial_template_name = 'payroll/partials/partial_reserve_funds_table.html'
 
-class FondosReservaListView(LoginRequiredMixin, ListView):
-    """Lista de empleados activos mostrando Fondos de Reserva y Mensualiza Décimos."""
-    model = Employee
-    template_name = 'payroll/reserve_funds_list.html'
-    context_object_name = 'employees'
-    paginate_by = 10
-    partial_template_name = 'payroll/partials/partial_reserve_funds_table.html'
+        def get_queryset(self):
+            qs = Employee.objects.filter(is_active=True, person__is_active=True)
+            qs = qs.select_related(
+                'person__economic_data__payroll_info', 'area'
+            ).prefetch_related('current_budget_line__position_item')
 
-    def get_queryset(self):
-        qs = Employee.objects.filter(is_active=True, person__is_active=True)
-        # Traer relaciones comúnmente usadas para evitar N+1
-        qs = qs.select_related('person__economic_data__payroll_info', 'area').prefetch_related(
-            'current_budget_line__position_item')
-        # Soporte de búsqueda simple desde frontend
-        q = self.request.GET.get('q', '').strip()
-        if q:
-            qs = qs.filter(
-                Q(person__first_name__icontains=q) |
-                Q(person__last_name__icontains=q) |
-                Q(person__document_number__icontains=q)
-            )
-        return qs.order_by('person__last_name', 'person__first_name')
+            # Búsqueda
+            q = self.request.GET.get('q', '').strip()
+            if q:
+                qs = qs.filter(
+                    Q(person__first_name__icontains=q) |
+                    Q(person__last_name__icontains=q) |
+                    Q(person__document_number__icontains=q)
+                )
 
-    def render_to_response(self, context, **response_kwargs):
-        # Si es petición AJAX devolvemos solo el partial con la tabla y datos de paginación
-        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            html = render_to_string(self.partial_template_name, context, request=self.request)
-            page_obj = context.get('page_obj')
-            if page_obj:
-                pagination_data = {
-                    'start_index': page_obj.start_index(),
-                    'end_index': page_obj.end_index(),
-                    'total_count': page_obj.paginator.count,
-                    'current_page': page_obj.number,
-                    'total_pages': page_obj.paginator.num_pages,
-                    'has_previous': page_obj.has_previous(),
-                    'has_next': page_obj.has_next(),
-                }
+            # Ordenamiento dinámico (Server-Side Sorting compatible con TableManager)
+            sort_field = self.request.GET.get('sort_field')
+            sort_dir = (self.request.GET.get('sort_dir') or 'asc').lower()
+
+            field_mapping = {
+                'document_number': 'person__document_number',
+                'employee_name': 'person__last_name',
+                'area_name': 'area__name',
+                'reserve_funds': 'person__economic_data__payroll_info__reserve_funds',
+                'monthly_payment': 'person__economic_data__payroll_info__monthly_payment'
+            }
+
+            if sort_field in field_mapping:
+                order_by_col = field_mapping[sort_field]
+                if sort_dir == 'desc':
+                    order_by_col = f"-{order_by_col}"
+                qs = qs.order_by(order_by_col, 'person__first_name')
             else:
-                pagination_data = {
-                    'start_index': 0,
-                    'end_index': 0,
-                    'total_count': 0,
-                    'current_page': 1,
-                    'total_pages': 1,
-                    'has_previous': False,
-                    'has_next': False,
-                }
+                qs = qs.order_by('person__last_name', 'person__first_name')
 
-            return JsonResponse({'html': html, 'pagination': pagination_data})
-        return super().render_to_response(context, **response_kwargs)
+            return qs
 
-    def get_paginate_by(self, queryset):
-        """Return None to disable server-side pagination and return all employees."""
-        # Usar el valor definido en `paginate_by` para habilitar paginación servidor
-        return self.paginate_by
+        def render_to_response(self, context, **response_kwargs):
+            # Si es petición AJAX devolvemos solo el partial HTML
+            if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                html = render_to_string(self.partial_template_name, context, request=self.request)
+                return JsonResponse({'html': html})
+            return super().render_to_response(context, **response_kwargs)
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['title'] = 'Fondos de Reserva'
-        return context
+        def get_context_data(self, **kwargs):
+            context = super().get_context_data(**kwargs)
+            context['title'] = 'Fondos de Reserva'
+            return context
 
 
 class InstitutionalReportView(TemplateView):
@@ -1398,6 +1392,35 @@ class PayslipToggleWithholdView(LoginRequiredMixin, View):
             'success': True,
             'message': f'El pago de este empleado ha sido {estado}.',
             'is_withheld': payslip.is_withheld
+        })
+
+
+class ToggleReserveFundsView(LoginRequiredMixin, View):
+    """Permite conmutar individualmente el switch de fondos de reserva o decimos."""
+
+    def post(self, request, pk):
+        field_type = request.POST.get('field_type')  # 'reserve_funds' o 'monthly_payment'
+        if field_type not in ['reserve_funds', 'monthly_payment']:
+            return JsonResponse({'success': False, 'message': 'Campo no válido.'}, status=400)
+
+        employee = get_object_or_404(Employee, pk=pk)
+        economic_data = getattr(employee.person, 'economic_data', None)
+        if not economic_data or not hasattr(economic_data, 'payroll_info'):
+            return JsonResponse({'success': False, 'message': 'El empleado no posee configuración de nómina.'},
+                                status=400)
+
+        info = economic_data.payroll_info
+        current_val = getattr(info, field_type, False)
+        new_val = not current_val
+        setattr(info, field_type, new_val)
+        info.save(update_fields=[field_type])
+
+        label = 'Fondos de Reserva' if field_type == 'reserve_funds' else 'Décimos'
+        estado = 'Mensualiza' if new_val else 'Acumula'
+        return JsonResponse({
+            'success': True,
+            'message': f'{label} actualizado a: {estado}',
+            'status': new_val
         })
 
 
