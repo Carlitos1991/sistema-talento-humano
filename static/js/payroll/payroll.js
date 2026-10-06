@@ -1225,3 +1225,197 @@ window.downloadFilteredReport = function (type) {
 
     window.open(url, '_blank');
 };
+/* =================================================================================
+   SUBMIT AJAX Y RECARGA CON FILTROS ACTIVOS (MAPEO DE RUBROS)
+   ================================================================================= */
+window.submitAjaxForm = function (event) {
+    event.preventDefault();
+    const form = event.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    if (submitBtn) submitBtn.disabled = true;
+
+    const formData = new FormData(form);
+
+    fetch(form.action || window.location.href, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': getPayrollCSRF()
+        }
+    })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success || data.status === 'success') {
+                // Cerrar el modal
+                if (typeof closeModal === 'function') {
+                    closeModal();
+                } else {
+                    const overlay = document.getElementById('rubricModalOverlay');
+                    if (overlay) overlay.style.display = 'none';
+                }
+
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Guardado!',
+                        text: data.message || 'Rubro actualizado correctamente.',
+                        timer: 1300,
+                        showConfirmButton: false
+                    });
+                }
+
+                // Recargar la tabla manteniendo los valores actuales de los filtros
+                window.reloadRubricsTablePreservingSearch();
+
+            } else if (data.errors) {
+                if (typeof Swal !== 'undefined') {
+                    const msg = Object.entries(data.errors)
+                        .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`)
+                        .join('\n');
+                    Swal.fire('Atención', msg, 'warning');
+                }
+            }
+        })
+        .catch(err => {
+            console.error('Error al guardar rubro:', err);
+            if (typeof Swal !== 'undefined') {
+                Swal.fire('Error', 'No se pudo guardar el rubro.', 'error');
+            }
+        })
+        .finally(() => {
+            if (submitBtn) submitBtn.disabled = false;
+        });
+};
+
+window.reloadRubricsTablePreservingSearch = function () {
+    // 1. Detectar el input donde está escrito "remune"
+    const searchInput = document.querySelector('input[name="q"], #searchInput, .table-search-input')
+        || document.querySelector('.card-body input[type="text"]')
+        || document.querySelector('input[type="text"]');
+    const qVal = searchInput ? searchInput.value.trim() : '';
+
+    // 2. Detectar selects de tipo y estado
+    const selects = document.querySelectorAll('select');
+    let tipoVal = '';
+    let estadoVal = '';
+    selects.forEach(s => {
+        if (s.name === 'tipo' || s.id?.includes('type')) tipoVal = s.value;
+        if (s.name === 'estado' || s.id?.includes('status')) estadoVal = s.value;
+    });
+
+    const url = new URL(window.location.href);
+    if (qVal) url.searchParams.set('q', qVal); else url.searchParams.delete('q');
+    if (tipoVal) url.searchParams.set('tipo', tipoVal); else url.searchParams.delete('tipo');
+    if (estadoVal) url.searchParams.set('estado', estadoVal); else url.searchParams.delete('estado');
+
+    // 3. Ubicar el contenedor o tbody de la tabla
+    const tableContainer = document.getElementById('rubricsTableContainer')
+        || document.querySelector('.managed-table tbody')
+        || document.querySelector('table tbody');
+
+    if (!tableContainer) {
+        location.reload();
+        return;
+    }
+
+    tableContainer.style.opacity = '0.4';
+
+    fetch(url.toString(), {
+        headers: {'X-Requested-With': 'XMLHttpRequest'}
+    })
+        .then(res => res.json())
+        .then(data => {
+            if (data.html) {
+                // Si el selector es el tbody y el partial viene con <tr>
+                if (tableContainer.tagName === 'TBODY') {
+                    const temp = document.createElement('div');
+                    temp.innerHTML = data.html;
+                    const newTbody = temp.querySelector('tbody');
+                    tableContainer.innerHTML = newTbody ? newTbody.innerHTML : data.html;
+                } else {
+                    tableContainer.innerHTML = data.html;
+                }
+            }
+        })
+        .catch(err => {
+            console.error('Error al refrescar tabla de rubros:', err);
+        })
+        .finally(() => {
+            tableContainer.style.opacity = '1';
+        });
+};
+/* =================================================================================
+   10. FILTRADO Y GESTIÓN EN CLIENTE DE MAPEO DE RUBROS
+   ================================================================================= */
+window.applyRubricFilters = function () {
+    const searchInput = document.getElementById('searchRubric');
+    const typeSelect = document.getElementById('filterRubricType');
+    const statusSelect = document.getElementById('filterRubricStatus');
+
+    const query = (searchInput ? searchInput.value : '').toLowerCase().trim();
+    const typeVal = typeSelect ? typeSelect.value : '';
+    const statusVal = statusSelect ? statusSelect.value : '';
+
+    const table = document.querySelector('.managed-table');
+    if (!table || !table._tableManager) return;
+
+    const mgr = table._tableManager;
+
+    mgr.currentRows = mgr.originalRows.filter(row => {
+        const rowSearch = (row.dataset.searchText || row.innerText || '').toLowerCase();
+        const rowType = row.dataset.type || '';
+        const rowStatus = row.dataset.status || '';
+
+        const matchesSearch = !query || rowSearch.includes(query);
+        const matchesType = !typeVal || rowType === typeVal;
+        const matchesStatus = !statusVal || rowStatus === statusVal;
+
+        return matchesSearch && matchesType && matchesStatus;
+    });
+
+    mgr.currentPage = 1;
+    mgr.render();
+};
+
+document.addEventListener('DOMContentLoaded', function () {
+    const searchInput = document.getElementById('searchRubric');
+    const typeSelect = document.getElementById('filterRubricType');
+    const statusSelect = document.getElementById('filterRubricStatus');
+    const btnApply = document.getElementById('btnRubricApply');
+    const btnClear = document.getElementById('btnRubricClear');
+
+    // Solo ejecutar en la vista de Mapeo de Rubros
+    if (!searchInput && !typeSelect) return;
+
+    if (window.$ && $.fn.select2) {
+        $('#filterRubricType, #filterRubricStatus').each(function () {
+            $(this).select2({
+                width: '100%',
+                minimumResultsForSearch: Infinity,
+                allowClear: true
+            });
+        });
+    }
+
+    if (searchInput) searchInput.addEventListener('input', window.applyRubricFilters);
+    if (window.$) {
+        $('#filterRubricType, #filterRubricStatus').on('change.select2 change', window.applyRubricFilters);
+    }
+
+    if (btnApply) btnApply.addEventListener('click', window.applyRubricFilters);
+
+    if (btnClear) {
+        btnClear.addEventListener('click', function () {
+            if (searchInput) searchInput.value = '';
+            if (window.$) {
+                $('#filterRubricType').val('').trigger('change.select2');
+                $('#filterRubricStatus').val('').trigger('change.select2');
+            } else {
+                if (typeSelect) typeSelect.value = '';
+                if (statusSelect) statusSelect.value = '';
+            }
+            window.applyRubricFilters();
+        });
+    }
+});

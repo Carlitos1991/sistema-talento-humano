@@ -274,9 +274,29 @@ class RubricListView(ListView):
         qs = super().get_queryset().select_related(
             'debit_account', 'credit_account', 'income_account'
         ).order_by('order', 'name')
-        tipo = self.request.GET.get('tipo')
-        if tipo:
+
+        # 1. Filtro por texto de búsqueda (nombre, código o abreviación)
+        q = (self.request.GET.get('q') or '').strip()
+        if q:
+            qs = qs.filter(
+                Q(name__icontains=q) |
+                Q(code__icontains=q) |
+                Q(abbreviation__icontains=q)
+            )
+
+        # 2. Filtro por tipo de rubro (INCOME, DEDUCTION, CONTRIBUTION)
+        tipo = self.request.GET.get('tipo') or self.request.GET.get('type')
+        if tipo and tipo != 'ALL' and tipo != 'TODOS':
             qs = qs.filter(rubric_type=tipo)
+
+        # 3. Filtro por estado activo / inactivo
+        estado = self.request.GET.get('estado') or self.request.GET.get('status')
+        if estado:
+            if estado.lower() in ['active', 'activo', 'true', '1']:
+                qs = qs.filter(is_active=True)
+            elif estado.lower() in ['inactive', 'inactivo', 'false', '0']:
+                qs = qs.filter(is_active=False)
+
         return qs
 
     def get(self, request, *args, **kwargs):
@@ -286,6 +306,48 @@ class RubricListView(ListView):
             html = render_to_string('payroll/partials/partial_rubric_table.html', context, request=request)
             return JsonResponse({'html': html})
         return super().get(request, *args, **kwargs)
+
+
+class RubricCreateView(CreateView):
+    model = PayrollRubric
+    form_class = PayrollRubricForm
+    template_name = 'payroll/modals/modal_rubric_form.html'
+
+    def form_valid(self, form):
+        self.object = form.save()
+        return JsonResponse({
+            'success': True,
+            'status': 'success',
+            'message': 'Rubro creado correctamente.'
+        })
+
+    def form_invalid(self, form):
+        return JsonResponse({
+            'success': False,
+            'status': 'error',
+            'errors': form.errors
+        }, status=400)
+
+
+class RubricUpdateView(UpdateView):
+    model = PayrollRubric
+    form_class = PayrollRubricForm
+    template_name = 'payroll/modals/modal_rubric_form.html'
+
+    def form_valid(self, form):
+        self.object = form.save()
+        return JsonResponse({
+            'success': True,
+            'status': 'success',
+            'message': 'Rubro actualizado correctamente.'
+        })
+
+    def form_invalid(self, form):
+        return JsonResponse({
+            'success': False,
+            'status': 'error',
+            'errors': form.errors
+        }, status=400)
 
 
 class RubricToggleView(LoginRequiredMixin, View):
@@ -302,26 +364,6 @@ class RubricToggleView(LoginRequiredMixin, View):
             'message': f'El rubro {rubric.name} ha sido {estado} correctamente.',
             'is_active': rubric.is_active
         })
-
-
-class RubricCreateView(CreateView):
-    model = PayrollRubric
-    form_class = PayrollRubricForm
-    template_name = 'payroll/modals/modal_rubric_form.html'
-
-    def form_valid(self, form):
-        self.object = form.save()
-        return JsonResponse({'status': 'success', 'message': 'Rubro creado correctamente.'})
-
-
-class RubricUpdateView(UpdateView):
-    model = PayrollRubric
-    form_class = PayrollRubricForm
-    template_name = 'payroll/modals/modal_rubric_form.html'
-
-    def form_valid(self, form):
-        self.object = form.save()
-        return JsonResponse({'status': 'success', 'message': 'Rubro actualizado correctamente.'})
 
 
 class PayrollGenerateForm(forms.Form):

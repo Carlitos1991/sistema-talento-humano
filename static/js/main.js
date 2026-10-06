@@ -116,7 +116,7 @@ if (typeof Swal !== 'undefined') {
 
 
 /* ==========================================================================
-   3. RECARGA DINÁMICA DE TABLAS PARCIALES AJAX
+   3. RECARGA DINÁMICA UNIVERSAL DE TABLAS PARCIALES AJAX
    ========================================================================== */
 
 window.refreshCurrentTable = function (extraParams = {}, callback = null) {
@@ -128,7 +128,31 @@ window.refreshCurrentTable = function (extraParams = {}, callback = null) {
         return;
     }
 
+    // 1. Detectar el buscador de la vista (sirve para #searchRubric, #table-search, etc.)
+    const searchInput = wrapper.parentElement.querySelector('.table-search-input')
+        || document.getElementById('table-search')
+        || document.getElementById('searchRubric')
+        || document.querySelector('input[type="text"][name="q"]')
+        || document.querySelector('.search-grid input[type="text"]');
+
+    const activeQuery = searchInput ? searchInput.value.trim() : '';
+
+    // 2. Detectar switches de inactivos activos
+    const inactiveSwitch = document.querySelector('input[name="show_inactive"], #show_inactive');
+
+    // 3. Construir la URL del fetch manteniendo o actualizando parámetros GET
     const requestUrl = new URL(window.location.href);
+
+    // Si hay búsqueda escrita, enviarla al backend (para tablas Server-Side como Biométricos)
+    if (activeQuery) {
+        requestUrl.searchParams.set('q', activeQuery);
+    }
+
+    if (inactiveSwitch) {
+        requestUrl.searchParams.set('show_inactive', inactiveSwitch.checked);
+    }
+
+    // Mezclar cualquier parámetro extra que se haya pasado por código
     Object.keys(extraParams).forEach(key => {
         if (extraParams[key] !== null && extraParams[key] !== undefined && extraParams[key] !== '') {
             requestUrl.searchParams.set(key, extraParams[key]);
@@ -136,6 +160,8 @@ window.refreshCurrentTable = function (extraParams = {}, callback = null) {
             requestUrl.searchParams.delete(key);
         }
     });
+
+    wrapper.style.opacity = '0.5';
 
     fetch(requestUrl.toString(), {
         headers: {'X-Requested-With': 'XMLHttpRequest'}
@@ -153,9 +179,23 @@ window.refreshCurrentTable = function (extraParams = {}, callback = null) {
             if (!html) return;
             wrapper.innerHTML = html;
 
-            if (typeof TableManager !== 'undefined') {
-                const table = wrapper.querySelector('.managed-table');
-                if (table) new TableManager(table);
+            const table = wrapper.querySelector('.managed-table');
+            if (table && typeof TableManager !== 'undefined') {
+                const mgr = new TableManager(table);
+
+                // --- RE-APLICAR FILTRO POST-RECARGA SEGÚN EL TIPO DE TABLA ---
+                const isExternal = table.dataset.externalSearch === 'true';
+
+                if (!isExternal) {
+                    // TABLA CLIENT-SIDE (Ej. Rubros):
+                    if (typeof window.applyRubricFilters === 'function') {
+                        window.applyRubricFilters();
+                    } else if (activeQuery) {
+                        mgr.filterState.search = activeQuery.toLowerCase();
+                        mgr.applyGlobalFilters();
+                    }
+                }
+                // (Si es Server-Side, Django ya envió el HTML filtrado gracias a requestUrl.searchParams)
             }
 
             if (typeof callback === 'function') {
@@ -164,6 +204,9 @@ window.refreshCurrentTable = function (extraParams = {}, callback = null) {
         })
         .catch(err => {
             console.error("Error al refrescar la tabla parcial:", err);
+        })
+        .finally(() => {
+            wrapper.style.opacity = '1';
         });
 };
 
@@ -1489,7 +1532,7 @@ window.markTeleworkAttendance = function (punchType, personId) {
         doSubmit(0, 0);
     }
 };
-// ESCUCHADOR GLOBAL DE SWITCHES DE INACTIVOS (Sin clases ni funciones en línea)
+// 9. ESCUCHADOR GLOBAL DE SWITCHES DE INACTIVOS (Sin clases ni funciones en línea)
 document.addEventListener('change', function (e) {
     const el = e.target;
     if (el && el.type === 'checkbox' && (el.id?.toLowerCase().includes('inactive') || el.name?.toLowerCase().includes('inactive'))) {
@@ -1497,5 +1540,79 @@ document.addEventListener('change', function (e) {
         url.searchParams.set('show_inactive', el.checked);
         if (url.searchParams.has('page')) url.searchParams.set('page', 1);
         refreshCurrentTable({show_inactive: el.checked});
+    }
+});
+
+/* =================================================================================
+   10. FILTRADO Y GESTIÓN EN CLIENTE DE MAPEO DE RUBROS
+   ================================================================================= */
+window.applyRubricFilters = function () {
+    const searchInput = document.getElementById('searchRubric');
+    const typeSelect = document.getElementById('filterRubricType');
+    const statusSelect = document.getElementById('filterRubricStatus');
+
+    const query = (searchInput ? searchInput.value : '').toLowerCase().trim();
+    const typeVal = typeSelect ? typeSelect.value : '';
+    const statusVal = statusSelect ? statusSelect.value : '';
+
+    const table = document.querySelector('.managed-table');
+    if (!table || !table._tableManager) return;
+
+    const mgr = table._tableManager;
+
+    mgr.currentRows = mgr.originalRows.filter(row => {
+        const rowSearch = (row.dataset.searchText || row.innerText || '').toLowerCase();
+        const rowType = row.dataset.type || '';
+        const rowStatus = row.dataset.status || '';
+
+        const matchesSearch = !query || rowSearch.includes(query);
+        const matchesType = !typeVal || rowType === typeVal;
+        const matchesStatus = !statusVal || rowStatus === statusVal;
+
+        return matchesSearch && matchesType && matchesStatus;
+    });
+
+    mgr.currentPage = 1;
+    mgr.render();
+};
+
+document.addEventListener('DOMContentLoaded', function () {
+    const searchInput = document.getElementById('searchRubric');
+    const typeSelect = document.getElementById('filterRubricType');
+    const statusSelect = document.getElementById('filterRubricStatus');
+    const btnApply = document.getElementById('btnRubricApply');
+    const btnClear = document.getElementById('btnRubricClear');
+
+    if (!searchInput && !typeSelect) return;
+
+    if (window.$ && $.fn.select2) {
+        $('#filterRubricType, #filterRubricStatus').each(function () {
+            $(this).select2({
+                width: '100%',
+                minimumResultsForSearch: Infinity,
+                allowClear: true
+            });
+        });
+    }
+
+    if (searchInput) searchInput.addEventListener('input', window.applyRubricFilters);
+    if (window.$) {
+        $('#filterRubricType, #filterRubricStatus').on('change.select2 change', window.applyRubricFilters);
+    }
+
+    if (btnApply) btnApply.addEventListener('click', window.applyRubricFilters);
+
+    if (btnClear) {
+        btnClear.addEventListener('click', function () {
+            if (searchInput) searchInput.value = '';
+            if (window.$) {
+                $('#filterRubricType').val('').trigger('change.select2');
+                $('#filterRubricStatus').val('').trigger('change.select2');
+            } else {
+                if (typeSelect) typeSelect.value = '';
+                if (statusSelect) statusSelect.value = '';
+            }
+            window.applyRubricFilters();
+        });
     }
 });

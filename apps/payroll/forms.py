@@ -143,12 +143,12 @@ class PayrollRubricForm(forms.ModelForm):
             'debit_account_inv': forms.Select(attrs={'class': 'form-select'}),
             'credit_account_inv': forms.Select(attrs={'class': 'form-select'}),
             'income_account': forms.Select(attrs={'class': 'form-select'}),
-            'is_salary': forms.CheckboxInput(attrs={'class': 'switch-input switch-primary'}),
             'has_mapping': forms.CheckboxInput(attrs={'class': 'switch-input switch-primary'}),
             'is_fixed': forms.CheckboxInput(attrs={'class': 'switch-input switch-green'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'switch-input switch-green'}),
-            'is_taxable': forms.CheckboxInput(attrs={'class': 'switch-input switch-red'}),
-            'is_overtime': forms.CheckboxInput(attrs={'class': 'switch-input switch-green'}),
+            'is_salary': forms.CheckboxInput(attrs={'class': 'switch-input switch-green', 'id': 'id_is_salary'}),
+            'is_overtime': forms.CheckboxInput(attrs={'class': 'switch-input switch-green', 'id': 'id_is_overtime'}),
+            'is_taxable': forms.CheckboxInput(attrs={'class': 'switch-input switch-green', 'id': 'id_is_taxable'}),
             'is_upload': forms.CheckboxInput(attrs={'class': 'switch-input switch-green'}),
         }
 
