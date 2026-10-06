@@ -659,14 +659,32 @@ class PayrollCalculatorService:
                         )
                         total_income += nov_val
 
-                    # ── 9.12 POCKET LOGIC (descuentos y deudas) ─────────────
-                    available_balance = total_income - total_deduction
+                    # ── 9.12 POCKET LOGIC (descuentos y deudas protegidas) ─────────────────
+
+                    # Códigos de beneficios de ley mensualizados protegidos contra saldos negativos
+                    PROTECTED_BENEFIT_CODES = {'DECIMO_TERCERO', 'DECIMO_CUARTO', 'FONDOS_RESERVA'}
+
+                    # Calculamos los ingresos protegidos generados para este rol
+                    protected_income = sum(
+                        item.value for item in items_buffer
+                        if item.payslip == slip
+                        and item.item_type == 'INCOME'
+                        and item.rubric
+                        and (item.rubric.code or '').strip().upper() in PROTECTED_BENEFIT_CODES
+                    )
+
+                    # Saldo disponible solo sobre la remuneración descontable (sueldo base, horas extras, etc.)
+                    # total_deduction hasta este punto contiene aportes obligatorios de ley (ej. IESS individual)
+                    discountable_income = total_income - protected_income
+                    available_balance = max(Decimal('0.0'), discountable_income - total_deduction)
+
                     deduction_novelties = sorted(
                         emp_novelties['deductions'],
                         key=lambda x: getattr(x.rubric, 'priority', 100) or 100,
                     )
                     pending_debts_list = existing_pending_debts_map.get(slip.employee_id, [])
 
+                    # Descuento de deudas previas
                     for debt in pending_debts_list:
                         debt_val = Decimal(str(debt.pending_balance))
                         real_discount = (
@@ -684,6 +702,7 @@ class PayrollCalculatorService:
                             debt.pending_balance -= real_discount
                             debts_to_update.append(debt)
 
+                    # Descuento de novedades del periodo
                     for nov in deduction_novelties:
                         if nov.value <= 0:
                             continue
@@ -712,6 +731,7 @@ class PayrollCalculatorService:
                                 )
                             )
 
+                    # El líquido a pagar siempre incluirá intactos los beneficios protegidos
                     slip.total_income = total_income
                     slip.total_deduction = total_deduction
                     slip.net_pay = total_income - total_deduction
