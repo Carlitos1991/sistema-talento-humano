@@ -272,7 +272,9 @@ class RubricListView(ListView):
 
     def get_queryset(self):
         qs = super().get_queryset().select_related(
-            'debit_account', 'credit_account', 'income_account'
+            'debit_account', 'credit_account', 'income_account',
+            'debit_account_prod', 'credit_account_prod',
+            'debit_account_inv', 'credit_account_inv'
         ).order_by('order', 'name')
 
         # 1. Filtro por texto de búsqueda (nombre, código o abreviación)
@@ -583,11 +585,12 @@ class PayslipListView(LoginRequiredMixin, ListView):
         sort_field = self.request.GET.get('sort_field') or self.request.GET.get('sort')
         sort_dir = (self.request.GET.get('sort_dir') or 'asc').lower()
         allowed = {'employee__person__last_name', 'employee__person__document_number',
-                   'items__budget_line__budget_group__short_code', 'total_income', 'total_deduction', 'net_pay'}
+                   'items__budget_line__position_item__name', 'items__budget_line__budget_group__short_code',
+                   'total_income', 'total_deduction', 'net_pay'}
         if sort_field in allowed:
             order = sort_field if sort_dir == 'asc' else f'-{sort_field}'
             try:
-                queryset = queryset.order_by(order)
+                queryset = queryset.order_by(order).distinct()
             except Exception:
                 pass
 

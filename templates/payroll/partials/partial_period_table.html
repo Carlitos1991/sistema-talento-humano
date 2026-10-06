@@ -1,83 +1,95 @@
 {% load static %}
 <div class="table-container">
-    <table class="table managed-table exportable-table table-hover" data-page-size="10"
-           data-title="Reporte de Periodos">
-        <thead>
-        <tr>
-            <th>Periodo</th>
-            <th>Fechas</th>
-            <th class="text-center">Días Lab.</th>
-            <th class="text-center">Estado</th>
-            <th class="text-center">Procesar</th>
-            <th class="text-center">Roles</th>
-        </tr>
-        </thead>
-        <tbody>
-        {% for p in periods %}
+    <div class="table-scroll-top">
+        <table class="table managed-table exportable-table table-hover"
+               data-page-size="10"
+               data-title="Reporte de Periodos">
+            <thead>
             <tr>
-                <td class="{% if not p.is_closed %}td-clickable{% else %}bold text-muted{% endif %}"
-                    data-sort="{{ p.year }}{{ p.month_number|stringformat:"02d" }}"
-                    {% if not p.is_closed %}onclick="openAjaxModal('{% url 'payroll:period_edit' pk=p.id %}', window.initializePeriodModal)"{% endif %}>
-                    {{ p.month }} {{ p.year }}
+                <th class="width-20">Periodo</th>
+                <th class="width-23">Fechas</th>
+                <th class="width-10 center">Días Lab.</th>
+                <th class="width-12 center">Estado</th>
+                <th class="width-18 center no-sort actions"><i class="fa-solid fa-gears me-1"></i> Procesar</th>
+                <th class="width-17 center no-sort actions"><i class="fa-solid fa-list-check me-1"></i> Roles</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for p in periods %}
+                <tr>
+                    <td class="{% if not p.is_closed %}td-clickable{% else %}bold text-muted{% endif %}"
+                        data-sort="{{ p.year }}{{ p.month_number|stringformat:"02d" }}"
+                        {% if not p.is_closed %}onclick="openAjaxModal('{% url 'payroll:period_edit' pk=p.id %}', window.initializePeriodModal)"{% endif %}>
+                        {{ p.month }} {{ p.year }}
 
-                    {% if p.is_closed %}
-                        <i class="fas fa-lock ms-2 text-muted small" title="Periodo cerrado"></i>
-                    {% endif %}
-                </td>
-                <td>{{ p.start_date|date:"d/m/Y" }} - {{ p.end_date|date:"d/m/Y" }}</td>
-                <td class="text-center">{{ p.working_days }}</td>
-                <td class="text-center">
-                    {% if p.is_closed %}
-                        <span class="badge badge-red"><i class="fa-solid fa-lock"></i> Cerrado</span>
-                    {% else %}
-                        <span class="badge badge-green"><i class="fas fa-check-circle"></i> Abierto</span>
-                    {% endif %}
-                </td>
-                <td class="text-center actions">
-                    <div class="actions-wrapper">
-                        {% if not p.is_closed %}
-                            <button type="button" class="btn-dark-blue-circle" title="Procesar / Recalcular"
-                                    data-generate-id="{{ p.id }}" data-generate-name="{{ p.month }} {{ p.year }}"
-                                    data-has-scope-changes="{{ p.has_scope_changes|yesno:'true,false' }}">
-                                <i class="fa-solid fa-play"></i>
-                            </button>
-                            <a href="{% url 'payroll:novelty_mass_load' %}?period_id={{ p.id }}"
-                               class="btn-green-circle"
-                               title="Cargar Novedades al Periodo">
-                                <i class="fas fa-file-excel"></i>
-                            </a>
-                            <button type="button" class="btn-red-circle" title="Cerrar Rol de Pagos"
-                                    data-report-id="{{ p.id }}"
-                                    data-report-name="{{ p.month }} {{ p.year }}"
-                                    data-report-closed="{{ p.is_closed|yesno:'true,false' }}">
-                                <i class="fa-solid fa-stop"></i>
-                            </button>
+                        {% if p.is_closed %}
+                            <i class="fas fa-lock ms-2 text-muted small" title="Periodo cerrado"></i>
                         {% endif %}
-                    </div>
-                </td>
-                <td class="text-center actions">
-                    <div class="actions-wrapper">
-                        <a href="{% url 'payroll:payslip_list' %}?period_id={{ p.id }}" class="btn-blue-circle"
-                           title="Ver Roles Generados">
-                            <i class="fa-solid fa-table-list"></i>
-                        </a>
-                        {% if not p.is_closed and p.has_scope_changes %}
-                            <a href="{% url 'payroll:payslip_list' %}?period_id={{ p.id }}&scope=true"
-                               class="btn-thirteenth" title="Ver Roles Generados de Alcance">
-                                <i class="fas fa-code-branch"></i>
-                            </a>
+                    </td>
+
+                    <td>{{ p.start_date|date:"d/m/Y" }} - {{ p.end_date|date:"d/m/Y" }}</td>
+
+                    <td class="center bold">{{ p.working_days }}</td>
+
+                    <td class="center">
+                        {% if p.is_closed %}
+                            <span class="badge badge-red"><i class="fa-solid fa-lock me-1"></i> Cerrado</span>
+                        {% else %}
+                            <span class="badge badge-green"><i class="fas fa-check-circle me-1"></i> Abierto</span>
                         {% endif %}
-                    </div>
-                </td>
-            </tr>
-        {% empty %}
-            <tr>
-                <td colspan="6" class="text-center py-5 text-muted">
-                    <i class="fas fa-calendar-times fa-3x mb-3"></i><br>
-                    No hay periodos registrados.
-                </td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+                    </td>
+
+                    <td class="center actions">
+                        <div class="actions-wrapper">
+                            {% if not p.is_closed %}
+                                <button type="button" class="btn-dark-blue-circle" title="Procesar / Recalcular"
+                                        data-generate-id="{{ p.id }}" data-generate-name="{{ p.month }} {{ p.year }}"
+                                        data-has-scope-changes="{{ p.has_scope_changes|yesno:'true,false' }}">
+                                    <i class="fa-solid fa-play"></i>
+                                </button>
+                                <a href="{% url 'payroll:novelty_mass_load' %}?period_id={{ p.id }}"
+                                   class="btn-green-circle"
+                                   title="Cargar Novedades al Periodo">
+                                    <i class="fas fa-file-excel"></i>
+                                </a>
+                                <button type="button" class="btn-red-circle" title="Cerrar Rol de Pagos"
+                                        data-report-id="{{ p.id }}"
+                                        data-report-name="{{ p.month }} {{ p.year }}"
+                                        data-report-closed="{{ p.is_closed|yesno:'true,false' }}">
+                                    <i class="fa-solid fa-stop"></i>
+                                </button>
+                            {% else %}
+                                <span class="text-muted small">—</span>
+                            {% endif %}
+                        </div>
+                    </td>
+
+                    <td class="center actions">
+                        <div class="actions-wrapper">
+                            <a href="{% url 'payroll:payslip_list' %}?period_id={{ p.id }}" class="btn-blue-circle"
+                               title="Ver Roles Generados">
+                                <i class="fa-solid fa-table-list"></i>
+                            </a>
+                            {% if not p.is_closed and p.has_scope_changes %}
+                                <a href="{% url 'payroll:payslip_list' %}?period_id={{ p.id }}&scope=true"
+                                   class="btn-thirteenth" title="Ver Roles Generados de Alcance">
+                                    <i class="fas fa-code-branch"></i>
+                                </a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="6" class="center py-5 text-muted">
+                        <div class="empty-state-container">
+                            <i class="fas fa-calendar-times empty-state-icon"></i>
+                            <div class="empty-state-text">No hay periodos registrados.</div>
+                        </div>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>

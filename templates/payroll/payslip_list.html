@@ -39,22 +39,22 @@
                 <div class="table-controls payslip-controls-bar">
                     <!-- Botones de Acción / Exportación -->
                     <div class="table-export-btns">
-                        <button type="button" class="btn-export-excel" title="Reporte Nómina"
+                        <button type="button" class="btn-pill-report btn-pill-green" title="Reporte Nómina"
                                 onclick="downloadFilteredReport('nomina')">
                             <i class="fa-solid fa-file-pdf"></i> Rol
                         </button>
-                        <button type="button" class="btn-export-pdf" title="Archivo Banco"
+                        <button type="button" class="btn-pill-report btn-pill-red" title="Archivo Banco"
                                 onclick="downloadFilteredReport('banco')">
-                            <i class="fas fa-file-pdf"></i> Banco
+                            <i class="fa-solid fa-file-pdf"></i> Banco
                         </button>
-                        <button type="button" class="btn-export-pdf" title="Saldos Negativos"
+                        <button type="button" class="btn-pill-report btn-pill-red-light" title="Saldos Negativos"
                                 onclick="downloadFilteredReport('negativos')">
                             <i class="fa-solid fa-arrow-trend-down"></i> Saldos Neg.
                         </button>
                         {% if not current_period.is_closed %}
-                            <button type="button" id="btn-recalculate" class="btn-recalculate-pill"
+                            <button type="button" id="btn-recalculate" class="btn-pill-report btn-pill-teal"
                                     onclick="recalculateCurrentFilter()">
-                                <i class="fas fa-sync-alt"></i> Recalcular
+                                <i class="fa-solid fa-arrows-rotate"></i> Recalcular
                             </button>
                         {% endif %}
                     </div>

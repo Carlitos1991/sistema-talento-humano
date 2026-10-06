@@ -7129,3 +7129,16 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
         width: 100% !important;
     }
 }
+
+/* Asegura que los encabezados con clase .center centren tanto el texto como la flecha de ordenamiento */
+.table-container thead th.center,
+.table-container thead th.text-center {
+    text-align: center !important;
+}
+
+.table-container thead th.center .sort-arrow,
+.table-container thead th.text-center .sort-arrow {
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 4px;
+}

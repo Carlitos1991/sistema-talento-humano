@@ -870,3 +870,109 @@
 .font-size-xs {
     font-size: 0.75rem;
 }
+
+/* --- Botones Píldora de Exportación y Recálculo --- */
+.table-export-btns {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.btn-pill-report {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 14px;
+    background-color: #ffffff;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+    white-space: nowrap;
+    text-decoration: none;
+}
+
+.btn-pill-report:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(15, 23, 42, 0.08);
+}
+
+.btn-pill-report:active {
+    transform: translateY(0);
+}
+
+/* Rol */
+.btn-pill-green {
+    border: 1.5px solid #86efac;
+    color: #15803d;
+}
+
+.btn-pill-green i {
+    color: #166534;
+}
+
+.btn-pill-green:hover {
+    background-color: #f0fdf4;
+    border-color: #4ade80;
+}
+
+/* Banco */
+.btn-pill-red {
+    border: 1.5px solid #fca5a5;
+    color: #b91c1c;
+}
+
+.btn-pill-red i {
+    color: #dc2626;
+}
+
+.btn-pill-red:hover {
+    background-color: #fef2f2;
+    border-color: #f87171;
+}
+
+/* Saldos Negativos */
+.btn-pill-red-light {
+    border: 1.5px solid #fecaca;
+    color: #dc2626;
+}
+
+.btn-pill-red-light i {
+    color: #ef4444;
+}
+
+.btn-pill-red-light:hover {
+    background-color: #fff1f2;
+    border-color: #fca5a5;
+}
+
+/* Recalcular */
+.btn-pill-teal {
+    border: 1.5px solid #6ee7b7;
+    color: #047857;
+}
+
+.btn-pill-teal i {
+    color: #059669;
+}
+
+.btn-pill-teal:hover {
+    background-color: #ecfdf5;
+    border-color: #34d399;
+}
+
+/* Centrado exacto de los encabezados de tabla cuando tienen sort */
+.table-container thead th.center {
+    text-align: center !important;
+}
+
+.table-container thead th.center .sort-arrow {
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 4px;
+}
