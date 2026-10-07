@@ -578,15 +578,6 @@
                                     </a>
                                 </li>
                             {% endif %}
-                            {% if perms.payroll.view_payslip or request.user.is_staff %}
-                                <li>
-                                    <a href="{% url 'payroll:accounting_report' %}"
-                                       class="{% if request.resolver_match.url_name == 'accounting_report' %}active-child{% endif %}">
-                                        <i class="fa-solid fa-file-excel"></i>
-                                        <span class="menu-text">Reportes contables</span>
-                                    </a>
-                                </li>
-                            {% endif %}
                             {% if perms.payroll.view_payrollrubric %}
                                 <li>
                                     <a href="{% url 'payroll:rubric_list' %}"
@@ -596,8 +587,6 @@
                                     </a>
                                 </li>
                             {% endif %}
-
-
                             {% if perms.payroll.view_payslip %}
                                 <li>
                                     <a href="{% url 'payroll:reserve_funds' %}"
@@ -607,7 +596,15 @@
                                     </a>
                                 </li>
                             {% endif %}
-
+                            {% if perms.payroll.view_payslip or request.user.is_staff %}
+                                <li>
+                                    <a href="{% url 'payroll:accounting_report' %}"
+                                       class="{% if request.resolver_match.url_name == 'accounting_report' %}active-child{% endif %}">
+                                        <i class="fa-solid fa-file-excel"></i>
+                                        <span class="menu-text">Reportes contables</span>
+                                    </a>
+                                </li>
+                            {% endif %}
                         </ul>
                     </li>
                 {% endif %}
