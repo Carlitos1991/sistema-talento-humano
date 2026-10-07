@@ -785,7 +785,6 @@ class PayrollCalculatorService:
 
         vacation_dates = vacation_dates or set()
 
-        # Obtener la partida original del empleado si existe en InstitutionalData[cite: 8]
         original_bl = None
         orig_salary = Decimal('0.0')
         if employee:
@@ -797,7 +796,6 @@ class PayrollCalculatorService:
             except Exception:
                 inst_data = None
 
-        # Priorizamos: las asignaciones por encargo (is_acting=True) toman precedencia sobre la titular en sus fechas
         emp_assignments.sort(key=lambda x: (x.start_date, not getattr(x, 'is_acting', False)))
 
         processed = []
@@ -805,14 +803,12 @@ class PayrollCalculatorService:
             effective_end = asi.end_date
             if i + 1 < len(emp_assignments):
                 next_start = emp_assignments[i + 1].start_date
-                # Solo cortamos si no es una asignación por encargo que convive con la titular
                 if not getattr(asi, 'is_acting', False) and getattr(emp_assignments[i + 1], 'is_acting', False):
                     pass
                 elif not effective_end or effective_end >= next_start:
                     effective_end = next_start - timedelta(days=1)
             processed.append({'assignment': asi, 'start': asi.start_date, 'end': effective_end})
 
-        # Si hay un encargo activo en el mes, extraemos el rango del encargo
         acting_ranges = [
             (p['start'], p['end'] or self.period.end_date, p['assignment'])
             for p in processed if getattr(p['assignment'], 'is_acting', False)
@@ -825,7 +821,6 @@ class PayrollCalculatorService:
             asi = data['assignment']
             is_acting = getattr(asi, 'is_acting', False)
 
-            # Si esta es la asignación titular, pero hay un encargo solapado, recortamos los días del encargo
             s_date = max(data['start'], self.period.start_date)
             e_date = min(data['end'], self.period.end_date) if data['end'] else self.period.end_date
             if s_date > e_date:
@@ -833,15 +828,13 @@ class PayrollCalculatorService:
 
             base_remun = Decimal(str(asi.budget_line.remuneration or 0))
 
-            # Iteración día por día en base comercial (hasta 30 días)
             curr = s_date
             segment_acting_worked_days = 0
             segment_acting_vacation_days = 0
             segment_normal_days = 0
 
             while curr <= e_date:
-                # Control comercial de fin de mes
-                if curr.day > 30 and not (self.period.end_date.month == 2 and curr == self.period.end_date):
+                if curr.day > 30:
                     curr += timedelta(days=1)
                     continue
 
@@ -851,16 +844,26 @@ class PayrollCalculatorService:
                     else:
                         segment_acting_worked_days += 1
                 else:
-                    # Comprobar si este día ya está cubierto por un encargo
                     in_acting = any(act_s <= curr <= act_e for act_s, act_e, _ in acting_ranges)
                     if not in_acting:
                         segment_normal_days += 1
 
                 curr += timedelta(days=1)
 
-            # Ajuste de tope de 30 días
+            # Ajuste de febrero (al mismo nivel del while)
+            if self.period.end_date.month == 2 and e_date == self.period.end_date:
+                feb_missing_days = 30 - e_date.day
+                if feb_missing_days > 0:
+                    if is_acting:
+                        if e_date in vacation_dates:
+                            segment_acting_vacation_days += feb_missing_days
+                        else:
+                            segment_acting_worked_days += feb_missing_days
+                    else:
+                        segment_normal_days += feb_missing_days
+
+            # Creación de segmentos respetando el tope de 30 días
             if is_acting:
-                # 1. Tramo efectivamente laborado del encargo (gana sueldo de la partida del encargo)
                 if segment_acting_worked_days > 0:
                     actual = min(segment_acting_worked_days, max(0, 30 - total_month_days))
                     if actual > 0:
@@ -874,7 +877,6 @@ class PayrollCalculatorService:
                         })
                         total_month_days += actual
 
-                # 2. Tramo de vacaciones durante el encargo (vuelve al sueldo titular)
                 if segment_acting_vacation_days > 0:
                     actual = min(segment_acting_vacation_days, max(0, 30 - total_month_days))
                     if actual > 0:
@@ -1074,51 +1076,59 @@ class PayrollCalculatorService:
             _add(c_puente_banco, 'debit', slip.net_pay, 900)
             _add(c_banco, 'credit', slip.net_pay, 900)
 
-            desc_asiento = f"Nomina {self.period.month} {self.period.year}"
-            Journal.objects.filter(description=desc_asiento).delete()
-            journal = Journal.objects.create(
-                date=self.period.end_date, description=desc_asiento
-            )
+            # 2. FUERA DEL BUCLE: Crear la cabecera del asiento contable consolidado
+        desc_asiento = f"Nomina {self.period.month} {self.period.year}"
+        Journal.objects.filter(description=desc_asiento).delete()
+        journal = Journal.objects.create(
+            date=self.period.end_date, description=desc_asiento
+        )
 
-            total_debits = Decimal('0.0')
-            total_credits = Decimal('0.0')
+        total_debits = Decimal('0.0')
+        total_credits = Decimal('0.0')
 
-            for (acc_id, mov_type), (_, val) in sorted(aggregation.items(), key=lambda x: x[1][0]):
-                acc = _get_account(acc_id)
-                if acc and val > 0:
-                    val_rounded = val.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-                    is_debit = (mov_type == 'debit')
-                    debit_amt = val_rounded if is_debit else Decimal('0.0')
-                    credit_amt = Decimal('0.0') if is_debit else val_rounded
+        # 3. Crear los detalles del asiento (JournalItems)
+        for (acc_id, mov_type), (_, val) in sorted(aggregation.items(), key=lambda x: x[1][0]):
+            acc = _get_account(acc_id)
+            if acc and val > 0:
+                val_rounded = val.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                is_debit = (mov_type == 'debit')
+                debit_amt = val_rounded if is_debit else Decimal('0.0')
+                credit_amt = Decimal('0.0') if is_debit else val_rounded
 
+                JournalItem.objects.create(
+                    journal=journal,
+                    account=acc,
+                    debit=debit_amt,
+                    credit=credit_amt,
+                    reference=str(self.period),
+                )
+                total_debits += debit_amt
+                total_credits += credit_amt
+
+        # 4. Ajuste por redondeo si existe descuadre de centavos
+        if total_debits != total_credits:
+            diff = total_debits - total_credits
+            balancing_account = Account.objects.filter(
+                Q(code__icontains='PAYROLL') | Q(name__icontains='DIFERENCIAS')
+            ).first()
+
+            if balancing_account:
+                if diff > 0:
                     JournalItem.objects.create(
-                        journal=journal,
-                        account=acc,
-                        debit=debit_amt,
-                        credit=credit_amt,
-                        reference=str(self.period),
+                        journal=journal, account=balancing_account,
+                        debit=Decimal('0.0'), credit=diff, reference=str(self.period)
                     )
-                    total_debits += debit_amt
-                    total_credits += credit_amt
-
-            if total_debits != total_credits:
-                diff = total_debits - total_credits
-                balancing_account = Account.objects.filter(
-                    Q(code__icontains='PAYROLL') | Q(name__icontains='DIFERENCIAS')
-                ).first()
-
-                if balancing_account:
-                    if diff > 0:
-                        JournalItem.objects.create(journal=journal, account=balancing_account, debit=Decimal('0.0'),
-                                                   credit=diff, reference=str(self.period))
-                    else:
-                        JournalItem.objects.create(journal=journal, account=balancing_account, debit=abs(diff),
-                                                   credit=Decimal('0.0'), reference=str(self.period))
                 else:
-                    warnings.append(
-                        f"AVISO: El asiento tuvo un descuadre por redondeo de ${abs(diff)}. Configure una cuenta de ajuste.")
+                    JournalItem.objects.create(
+                        journal=journal, account=balancing_account,
+                        debit=abs(diff), credit=Decimal('0.0'), reference=str(self.period)
+                    )
+            else:
+                warnings.append(
+                    f"AVISO: El asiento tuvo un descuadre por redondeo de ${abs(diff)}. Configure una cuenta de ajuste."
+                )
 
-            return warnings
+        return warnings
 
 
 def calculate_effective_days(employee, start_date, end_date) -> int:

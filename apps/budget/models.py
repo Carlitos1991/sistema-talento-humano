@@ -2,7 +2,6 @@ from django.db import models
 from django.core.exceptions import ValidationError
 from core.models import BaseModel, CatalogItem, User
 from employee.models import Employee
-from .models import BudgetLine
 
 
 # ==========================================
@@ -358,8 +357,7 @@ class BudgetAssignmentHistory(models.Model):
 
     def clean(self):
         if self.is_current and not self.end_date and not self.is_acting:
-            if BudgetLine.objects.filter(current_employee=self.employee).exclude(
-                    pk=self.budget_line.pk).exists():
+            if BudgetLine.objects.filter(current_employee=self.employee).exclude(pk=self.budget_line.pk).exists():
                 raise ValidationError('Este empleado ya tiene una partida asignada en la tabla principal.')
 
     def save(self, *args, **kwargs):

@@ -23,7 +23,6 @@ from django.views.generic import DetailView, ListView, CreateView, UpdateView
 from xhtml2pdf import pisa
 
 from biometric.models import OfflineAttendanceRegistry
-from budget.models import BudgetAssignmentHistory, BudgetLine
 from contract.models import ManagementPeriod
 from core.models import CatalogItem, Location, SystemConfiguration
 from institution.models import AdministrativeUnit
@@ -122,7 +121,7 @@ def search_employee_by_cedula(request):
     cedula = request.GET.get('q', '').strip()
     if not cedula:
         return JsonResponse({'success': False, 'message': 'Cédula no proporcionada.'})
-
+    from budget.models import BudgetLine
     try:
         emp = Employee.objects.select_related('person').get(person__document_number=cedula)
         existing_assignment = BudgetLine.objects.filter(current_employee=emp).first()
@@ -375,6 +374,7 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
         # Partida presupuestaria
         try:
             if employee:
+                from budget.models import BudgetAssignmentHistory, BudgetLine
                 # 1. Partida Actual
                 current = BudgetLine.objects.filter(current_employee=employee).select_related('position_item',
                                                                                               'category_item').first()
