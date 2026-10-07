@@ -11,7 +11,7 @@ import openpyxl
 from django import forms
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.core.mail import EmailMultiAlternatives
 from django.db import transaction
 from django.db.models import Sum, Case, When, IntegerField, Value
@@ -36,6 +36,7 @@ from budget.models import BudgetAssignmentHistory, BudgetGroup
 from contract.models import ManagementPeriod
 from core.models import CatalogItem
 from employee.models import Employee
+from institution.models import AdministrativeUnit
 from .forms import PayrollPeriodForm, PayrollConstantForm, PayrollRubricForm
 from .models import PayrollPeriod, Payslip, PayrollConstant, PayslipItem, PayrollNovelty, PayrollRubric
 from .models import PendingDebt
@@ -43,6 +44,197 @@ from .services import PayrollCalculatorService
 from .services import rebuild_accounting_for_period
 
 PAYSLIP_PUBLIC_TOKEN_SALT = 'payroll.public.validation'
+
+
+class PayrollAccountingReportView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
+    template_name = 'payroll/reports/accounting_report.html'
+    permission_required = 'payroll.view_payslip'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['periods'] = list(PayrollPeriod.objects.order_by('-year', '-id'))
+        context['units_api_url'] = reverse('institution:api_unit_children')
+        context['regimes'] = list(CatalogItem.objects.filter(
+            catalog__code='LABOR_REGIMES', is_active=True
+        ).order_by('name'))
+
+        rubrics = PayrollRubric.objects.filter(is_active=True).select_related(
+            'debit_account', 'credit_account', 'debit_account_prod', 'credit_account_prod',
+            'debit_account_inv', 'credit_account_inv', 'income_account'
+        ).order_by('order', 'name')
+        context['rubrics'] = [
+            {
+                'id': rubric.id,
+                'name': rubric.name,
+                'account_label': self._account_label(rubric),
+            }
+            for rubric in rubrics
+            if self._account_label(rubric)
+        ]
+        context['export_url'] = reverse('payroll:accounting_report_export')
+        return context
+
+    @staticmethod
+    def _account_label(rubric):
+        account = (
+                rubric.debit_account or rubric.income_account or rubric.credit_account
+                or rubric.debit_account_prod or rubric.credit_account_prod
+                or rubric.debit_account_inv or rubric.credit_account_inv
+        )
+        return f'{account.code} - {account.name}' if account else ''
+
+
+class PayrollAccountingReportOptionsView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'payroll.view_payslip'
+
+    def get(self, request, *args, **kwargs):
+        term = (request.GET.get('term') or '').strip()
+        option_type = request.GET.get('type', 'all')
+
+        period_data = []
+        regime_data = []
+
+        if option_type in ('period', 'all'):
+            periods = PayrollPeriod.objects.all().order_by('-year', '-id')
+            if term:
+                periods = periods.filter(
+                    Q(month__icontains=term) | Q(year__icontains=term)
+                )
+            period_data = [
+                {'id': p.id, 'text': f'{p.month} {p.year}'}
+                for p in periods[:30]
+            ]
+
+        if option_type in ('regime', 'all'):
+            regimes = CatalogItem.objects.filter(
+                catalog__code='LABOR_REGIMES', is_active=True
+            ).order_by('name')
+            if term:
+                regimes = regimes.filter(name__icontains=term)
+            regime_data = [
+                {'id': r.id, 'text': r.name}
+                for r in regimes[:30]
+            ]
+
+        results = period_data if option_type == 'period' else regime_data
+
+        return JsonResponse({
+            'success': True,
+            'results': results
+        })
+
+
+class PayrollAccountingReportExportView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'payroll.view_payslip'
+
+    def get_descendant_unit_ids(self, unit_id):
+        unit_ids = [unit_id]
+        child_ids = list(AdministrativeUnit.objects.filter(
+            parent_id=unit_id, is_active=True
+        ).values_list('id', flat=True))
+        for child_id in child_ids:
+            unit_ids.extend(self.get_descendant_unit_ids(child_id))
+        return unit_ids
+
+    @staticmethod
+    def _account_label(rubric):
+        account = (
+                rubric.debit_account or rubric.income_account or rubric.credit_account
+                or rubric.debit_account_prod or rubric.credit_account_prod
+                or rubric.debit_account_inv or rubric.credit_account_inv
+        )
+        return f'{account.code} - {account.name}' if account else rubric.name
+
+    def get(self, request, *args, **kwargs):
+        period_id = request.GET.get('period_id')
+        rubric_ids = [value for value in request.GET.get('rubrics', '').split(',') if value.isdigit()]
+        if not period_id or not rubric_ids:
+            return JsonResponse({'error': 'Seleccione el período y al menos un rubro.'}, status=400)
+
+        period = get_object_or_404(PayrollPeriod, pk=period_id)
+        unit_id = request.GET.get('unit_id')
+        regime_id = request.GET.get('regime_id')
+        rubrics = list(PayrollRubric.objects.filter(
+            pk__in=rubric_ids, is_active=True
+        ).select_related(
+            'debit_account', 'credit_account', 'debit_account_prod', 'credit_account_prod',
+            'debit_account_inv', 'credit_account_inv', 'income_account'
+        ).order_by('order', 'name'))
+        if not rubrics:
+            return JsonResponse({'error': 'No hay rubros válidos para exportar.'}, status=400)
+
+        payslips = Payslip.objects.filter(period=period, is_withheld=False).select_related(
+            'employee__person', 'employee__area'
+        ).prefetch_related('items')
+        if unit_id and unit_id.isdigit():
+            payslips = payslips.filter(
+                employee__area_id__in=self.get_descendant_unit_ids(int(unit_id))
+            )
+        if regime_id and regime_id.isdigit():
+            payslips = payslips.filter(items__budget_line__regime_item_id=regime_id).distinct()
+
+        rubric_id_set = {rubric.id for rubric in rubrics}
+        report_rows = []
+        for payslip in payslips:
+            item_values = {}
+            for item in payslip.items.all():
+                if item.rubric_id in rubric_id_set:
+                    item_values[item.rubric_id] = (
+                            item_values.get(item.rubric_id, Decimal('0.00')) + item.value
+                    )
+            if any(value != Decimal('0.00') for value in item_values.values()):
+                report_rows.append((payslip, item_values))
+
+        from openpyxl import Workbook
+        from openpyxl.styles import Alignment, Font, PatternFill
+        from openpyxl.utils import get_column_letter
+
+        workbook = Workbook()
+        worksheet = workbook.active
+        worksheet.title = 'Reporte Contable'
+        headers = ['N°', 'Apellidos y Nombres', 'Cédula'] + [
+            self._account_label(rubric) for rubric in rubrics
+        ]
+        worksheet.append([f'REPORTE CONTABLE - {period}'])
+        worksheet.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(headers))
+        worksheet.append(headers)
+
+        title_fill = PatternFill('solid', fgColor='1F4E78')
+        header_fill = PatternFill('solid', fgColor='D9EAF7')
+        worksheet['A1'].font = Font(bold=True, color='FFFFFF', size=14)
+        worksheet['A1'].fill = title_fill
+        worksheet['A1'].alignment = Alignment(horizontal='center')
+        for cell in worksheet[2]:
+            cell.font = Font(bold=True)
+            cell.fill = header_fill
+            cell.alignment = Alignment(horizontal='center', wrap_text=True)
+
+        row_number = 3
+        for index, (payslip, item_values) in enumerate(report_rows, start=1):
+            employee = payslip.employee
+            person = employee.person
+            row = [index, person.full_name, person.document_number]
+            row.extend(item_values.get(rubric.id, 0) for rubric in rubrics)
+            worksheet.append(row)
+            row_number += 1
+
+        for row in worksheet.iter_rows(min_row=3, min_col=4):
+            for cell in row:
+                cell.number_format = '#,##0.00'
+        for column in range(1, len(headers) + 1):
+            worksheet.column_dimensions[get_column_letter(column)].width = 22 if column > 3 else (
+                8 if column == 1 else 25)
+        worksheet.freeze_panes = 'A3'
+
+        output = io.BytesIO()
+        workbook.save(output)
+        output.seek(0)
+        response = HttpResponse(
+            output.getvalue(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = f'attachment; filename="Reporte_Contable_{period.year}_{period.month}.xlsx"'
+        return response
 
 
 def build_public_payslip_token(payslip_id):

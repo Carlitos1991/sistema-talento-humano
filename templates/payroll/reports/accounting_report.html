@@ -1,0 +1,277 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Reporte Contable | SIGETH{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/payroll.css' %}">
+    <link rel="stylesheet" href="{% static 'css/report.css' %}">
+    <style>
+        .accounting-unit-selects {
+            flex-direction: column;
+            padding: 0;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+    <div class="header-card">
+        <div>
+            <h1>Reportes de Nómina</h1>
+            <p>Seleccione el período, filtros y rubros contables para exportar el reporte.</p>
+        </div>
+    </div>
+
+    <div class="content-table report-content">
+        <div class="form-section-card">
+            <div class="section-title"><i class="fa-solid fa-filter"></i> Filtros del reporte</div>
+            <div class="grid-3-cols">
+                <!-- Período: se usará con Select2 -->
+                <div class="form-group">
+                    <label class="form-label" for="report-period">Período de nómina</label>
+                    <select id="report-period" class="input-field">
+                        <option value="">Seleccione un período...</option>
+                        {% for p in periods %}
+                            <option value="{{ p.id }}">{{ p.month }} {{ p.year }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Régimen: select nativo sin Select2 -->
+                <div class="form-group">
+                    <label class="form-label" for="report-regime">Régimen de roles de pago</label>
+                    <select id="report-regime" class="input-field">
+                        <option value="">Todos los regímenes</option>
+                        {% for r in regimes %}
+                            <option value="{{ r.id }}">{{ r.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Unidad administrativa: dinámico original -->
+                <div class="form-group">
+                    <label class="form-label">Unidad administrativa</label>
+                    <div id="report-unit-selects" class="unit-dynamic-grid accounting-unit-selects"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section-card mt-3">
+            <div class="section-title"><i class="fa-solid fa-list-check"></i> Rubros contables</div>
+            <div class="fields-grid">
+                {% for rubric in rubrics %}
+                    <label class="radio-target">
+                        <input type="checkbox" class="rt-input report-rubric" value="{{ rubric.id }}">
+                        <span class="rt-indicator" aria-hidden="true"></span>
+                        <span class="rt-name">{{ rubric.name }} — {{ rubric.account_label }}</span>
+                    </label>
+                {% empty %}
+                    <p class="text-muted mb-0">No existen rubros activos asociados a cuentas contables.</p>
+                {% endfor %}
+            </div>
+            <hr class="report-divider">
+            <div class="report-actions">
+                <button type="button" id="exportAccountingReport" class="btn btn-success">
+                    <i class="fa-solid fa-file-excel"></i> Exportar Excel
+                </button>
+                <button type="button" id="clearAccountingReport" class="btn btn-white-rectangle">
+                    <i class="fa-solid fa-filter-circle-xmark"></i> Limpiar
+                </button>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script>
+        (() => {
+            const exportUrl = '{{ export_url }}';
+            const unitsApiUrl = '{{ units_api_url }}';
+            const period = document.getElementById('report-period');
+            const regime = document.getElementById('report-regime');
+            const unitSelects = document.getElementById('report-unit-selects');
+            const exportButton = document.getElementById('exportAccountingReport');
+            let selectedUnitId = '';
+            const rubrics = () => [...document.querySelectorAll('.report-rubric:checked')].map(input => input.value);
+
+            exportButton.disabled = true;
+
+            function updateExportButton() {
+                exportButton.disabled = !period.value;
+            }
+
+            // Inicialización simple de Período con buscador local
+            function initializePeriodSelect() {
+                if (!window.$ || !$.fn.select2) return;
+                $(period).select2({
+                    width: '100%',
+                    placeholder: 'Seleccione un período...',
+                    allowClear: true,
+                    language: {
+                        noResults: () => 'No se encontraron resultados'
+                    }
+                }).on('change', updateExportButton);
+            }
+
+            // Inicialización simple de Régimen con buscador local
+            function initializeRegimeSelect() {
+                if (!window.$ || !$.fn.select2) return;
+                $(regime).select2({
+                    width: '100%',
+                    placeholder: 'Todos los regímenes',
+                    allowClear: true,
+                    language: {
+                        noResults: () => 'No se encontraron resultados'
+                    }
+                });
+            }
+
+            initializePeriodSelect();
+            initializeRegimeSelect();
+
+            // ========================================================
+            // LÓGICA ORIGINAL INTACTA DE UNIDADES ADMINISTRATIVAS
+            // ========================================================
+            function initializeSelect(select, parentId) {
+                if (window.$ && $.fn.select2) {
+                    $(select).select2({
+                        width: '100%',
+                        placeholder: 'Seleccione una unidad...',
+                        allowClear: true,
+                        minimumInputLength: 3,
+                        ajax: {
+                            url: unitsApiUrl,
+                            delay: 250,
+                            data: params => ({
+                                term: params.term || '',
+                                parent_id: parentId || ''
+                            }),
+                            processResults: data => ({
+                                results: data.results || []
+                            }),
+                            cache: true
+                        },
+                        language: {
+                            inputTooShort: () => 'Escriba al menos 3 caracteres',
+                            searching: () => 'Buscando...',
+                            noResults: () => 'No se encontraron unidades'
+                        }
+                    }).on('change', handleUnitChange);
+                } else {
+                    select.addEventListener('change', handleUnitChange);
+                }
+            }
+
+            function createUnitSelect(level, units, parentId) {
+                const select = document.createElement('select');
+                select.id = `report-unit-${level}`;
+                select.className = 'input-field';
+                select.dataset.level = level;
+                select.innerHTML = '<option value="">Seleccione una unidad...</option>';
+                if (!parentId) {
+                    units.forEach(unit => select.add(new Option(unit.name, unit.id)));
+                }
+                unitSelects.appendChild(select);
+                initializeSelect(select, parentId);
+            }
+
+            function removeDeeperSelects(level) {
+                [...unitSelects.querySelectorAll('select')].forEach(select => {
+                    if (Number(select.dataset.level) > level) {
+                        if (window.$ && $.fn.select2) $(select).select2('destroy');
+                        select.remove();
+                    }
+                });
+            }
+
+            function handleUnitChange(event) {
+                const select = event.target;
+                const level = Number(select.dataset.level);
+                selectedUnitId = select.value;
+                removeDeeperSelects(level);
+
+                if (!selectedUnitId) {
+                    const previous = [...unitSelects.querySelectorAll('select')]
+                        .filter(item => Number(item.dataset.level) < level)
+                        .pop();
+                    selectedUnitId = previous ? previous.value : '';
+                    return;
+                }
+
+                fetch(`${unitsApiUrl}?parent_id=${encodeURIComponent(selectedUnitId)}`, {
+                    headers: {'X-Requested-With': 'XMLHttpRequest'}
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        const children = Array.isArray(data.units) ? data.units : [];
+                        if (data.success && children.length) {
+                            createUnitSelect(level + 1, children, selectedUnitId);
+                        }
+                    })
+                    .catch(() => {
+                        Swal.fire('Error', 'No se pudieron cargar las subdependencias.', 'error');
+                    });
+            }
+
+            // Carga inicial del nivel 0 de unidades
+            fetch(unitsApiUrl, {
+                headers: {'X-Requested-With': 'XMLHttpRequest'}
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) createUnitSelect(0, data.units || []);
+                })
+                .catch(() => {
+                    Swal.fire('Error', 'No se pudieron cargar las unidades administrativas.', 'error');
+                });
+
+            // ========================================================
+            // EXPORTAR Y LIMPIAR
+            // ========================================================
+            document.getElementById('exportAccountingReport').addEventListener('click', () => {
+                if (!period.value || !rubrics().length) {
+                    Swal.fire('Atención', 'Seleccione el período y al menos un rubro contable.', 'warning');
+                    return;
+                }
+                const params = new URLSearchParams({
+                    period_id: period.value,
+                    unit_id: selectedUnitId,
+                    regime_id: regime.value,
+                    rubrics: rubrics().join(',')
+                });
+                window.location.href = `${exportUrl}?${params.toString()}`;
+            });
+
+            document.getElementById('clearAccountingReport').addEventListener('click', () => {
+                // Limpiar período con Select2
+                if (window.$ && $.fn.select2) {
+                    $(period).val('').trigger('change');
+                } else {
+                    period.value = '';
+                }
+
+                // Limpiar régimen nativo
+                regime.value = '';
+
+                updateExportButton();
+
+                // Destruir y reiniciar unidades administrativas
+                [...unitSelects.querySelectorAll('select')].forEach(select => {
+                    if (window.$ && $.fn.select2) $(select).select2('destroy');
+                });
+                unitSelects.innerHTML = '';
+                selectedUnitId = '';
+
+                fetch(unitsApiUrl, {
+                    headers: {'X-Requested-With': 'XMLHttpRequest'}
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) createUnitSelect(0, data.units || []);
+                    });
+
+                document.querySelectorAll('.report-rubric').forEach(input => input.checked = false);
+            });
+        })();
+    </script>
+{% endblock %}
