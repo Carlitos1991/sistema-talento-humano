@@ -658,9 +658,24 @@ window.uploadExcel = function () {
                     window.renderTable(false, false);
 
                     if (res.not_found && res.not_found.length > 0) {
+                        const notFoundDocuments = res.not_found
+                            .map(cedula => String(cedula)
+                                .replace(/&/g, '&amp;')
+                                .replace(/</g, '&lt;')
+                                .replace(/>/g, '&gt;')
+                                .replace(/"/g, '&quot;')
+                                .replace(/'/g, '&#039;'))
+                            .map(cedula => `<li><code>${cedula}</code></li>`)
+                            .join('');
+
                         Swal.fire({
                             title: 'Advertencia',
-                            html: `Se procesó el archivo (${actualizados} modificados, ${agregados} agregados).<br>No se encontraron <b>${res.not_found.length}</b> cédulas en la base de datos.<br><small class="text-muted">Revisa las cédulas no registradas.</small>`,
+                            html: `
+                                Se procesó el archivo (${actualizados} modificados, ${agregados} agregados).<br>
+                                No se encontraron <b>${res.not_found.length}</b> cédulas en la base de datos.<br>
+                                <small class="text-muted">Revisa las cédulas no registradas:</small>
+                                <ul class="text-start mt-2 mb-0">${notFoundDocuments}</ul>
+                            `,
                             icon: 'warning'
                         });
                     } else {

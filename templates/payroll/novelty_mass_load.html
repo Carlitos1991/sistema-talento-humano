@@ -156,7 +156,7 @@
     </div>
 {% endblock %}
 {% block extra_js %}
-    <script src="{% static 'js/payroll/payroll.js' %}"></script>
+    <script src="{% static 'js/payroll/payroll.js' %}?v=2"></script>
     <script>
         window.NOVELTY_URLS = {
             get: '{% url "payroll:get_novelties" %}',

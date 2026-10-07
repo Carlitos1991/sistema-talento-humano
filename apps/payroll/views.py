@@ -839,9 +839,11 @@ class ParseNoveltyExcelView(View):
             # 🚀 FASE 2: PRECARGA EN MEMORIA (DICCIONARIOS)
             # ==========================================
 
-            # A. Buscamos TODOS los empleados de una sola vez
+            # A. Solo se consideran empleados activos, no personas sin perfil
+            # laboral activo.
             employees_qs = Employee.objects.select_related('person').filter(
-                person__document_number__in=cedulas_set
+                person__document_number__in=cedulas_set,
+                is_active=True
             ).order_by('-is_active')
 
             emp_dict = {}
@@ -1081,7 +1083,8 @@ class GroupedPayrollReportView(LoginRequiredMixin, View):
             spending_type = '5.1'
             if item.budget_line and item.budget_line.spending_type_item:
                 spending_type = item.budget_line.spending_type_item.code
-            if rubric_ref.is_salary or 'main_spending_type' not in employee_dict:
+            is_salary_rubric = getattr(rubric_ref, 'is_salary', False) if rubric_ref else False
+            if is_salary_rubric or 'main_spending_type' not in employee_dict:
                 employee_dict['main_spending_type'] = spending_type
             # A. Distribución estructural en el Rol de Pagos (Sábana)
             if item.item_type == 'INCOME':
