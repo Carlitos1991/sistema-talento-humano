@@ -1,4 +1,6 @@
 from django import forms
+
+from budget.models import BudgetLine
 from .models import InstitutionalData, BankAccount, Training, WorkExperience, PayrollInfo
 from institution.models import AdministrativeUnit
 from django import forms
@@ -99,18 +101,29 @@ class BankAccountForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['bank'].queryset = CatalogItem.objects.filter(catalog__code='BANCO', is_active=True).order_by('name')
+        self.fields['bank'].queryset = CatalogItem.objects.filter(catalog__code='BANCO', is_active=True).order_by(
+            'name')
         self.fields['bank'].empty_label = "— Seleccione banco —"
-        self.fields['account_type'].queryset = CatalogItem.objects.filter(catalog__code='ACCOUNT_TYPES', is_active=True).order_by('name')
+        self.fields['account_type'].queryset = CatalogItem.objects.filter(catalog__code='ACCOUNT_TYPES',
+                                                                          is_active=True).order_by('name')
         self.fields['account_type'].empty_label = "— Seleccione tipo —"
 
+
 class InstitutionalDataForm(forms.ModelForm):
+    original_budget_line = forms.ModelChoiceField(
+        queryset=BudgetLine.objects.filter(is_active=True).select_related('position_item'),
+        required=False,
+        empty_label="— Seleccione Partida Titular / Original —",
+        widget=forms.Select(attrs={'class': 'input-field select2'})
+    )
+
     class Meta:
         model = InstitutionalData
         fields = [
             'file_number', 'biometric_id', 'entry_date',
             'institutional_email', 'collective_contract',
             'original_dependency', 'original_dependency_reason',
+            'original_budget_line',  # <--- Agregado
             'observations'
         ]
         widgets = {

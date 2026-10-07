@@ -15,6 +15,16 @@ class ActionType(models.Model):
     is_active = models.BooleanField(verbose_name='Activo', default=True)
     is_acting = models.BooleanField(verbose_name='Es Encargo / Subrogación', default=False,
                                     help_text="Marcar si es un movimiento temporal donde no se altera la partida titular del empleado ni del custodio.")
+    is_acting_termination = models.BooleanField(
+        default=False,
+        verbose_name="Es Conclusión de Encargo / Reintegro",
+        help_text="Finaliza el encargo activo y devuelve al servidor a su partida titular."
+    )
+    requires_budget_movement = models.BooleanField(verbose_name="Requiere Movimiento de Partida", default=False,
+                                                   help_text="Activa el selector de partida presupuestaria (traslado, ascenso, encargo, etc.)."
+                                                   )
+    requires_unit_movement = models.BooleanField(verbose_name="Requiere Reubicación de Unidad", default=False,
+                                                 help_text="Activa el selector de unidad administrativa / dependencia en cascada.")
     default_authority_1 = models.ForeignKey(User, verbose_name='Autoridad 1 (Defecto)', on_delete=models.SET_NULL,
                                             related_name='default_auth1_types', limit_choices_to={'is_active': True},
                                             null=True, blank=True)

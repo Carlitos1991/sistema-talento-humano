@@ -40,9 +40,22 @@
                                     {% endif %}
                                 </div>
                                 <div class="employee-card-details">
-                                    <span class="employee-card-doc">
-                                        <i class="fas fa-id-card me-1"></i>{{ entry.employee.person.document_number|default:'-' }}
-                                    </span>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="employee-card-doc">
+                                            <i class="fas fa-id-card me-1"></i>{{ entry.employee.person.document_number|default:'-' }}
+                                        </span>
+                                        {% if entry.is_acting %}
+                                            <span class="badge bg-warning text-dark font-monospace"
+                                                  style="font-size: 0.72rem;">
+                                                <i class="fa-solid fa-user-clock me-1"></i>ENCARGO TEMPORAL
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-primary text-white font-monospace"
+                                                  style="font-size: 0.72rem;">
+                                                <i class="fa-solid fa-circle-check me-1"></i>TITULAR
+                                            </span>
+                                        {% endif %}
+                                    </div>
                                     <span class="employee-card-name text-primary">
                                         {{ entry.employee.person.name_and_last_name }}
                                     </span>

@@ -98,8 +98,20 @@
                             <span class="text-red small">{{ form.original_dependency_reason.errors.0 }}</span>
                         {% endif %}
                     </div>
+                    <!-- FILA 5: PARTIDA PRESUPUESTARIA ORIGINAL / TITULAR -->
+                    <div class="form-group form-group-compact mb-3">
+                        <label class="form-label">Partida Presupuestaria Original / Titular</label>
+                        {{ form.original_budget_line }}
+                        {% if form.original_budget_line.errors %}
+                            <span class="text-red small">{{ form.original_budget_line.errors.0 }}</span>
+                        {% endif %}
+                        <small class="form-text text-muted d-block mt-1">
+                            Partida a la que retorna el servidor durante sus vacaciones cuando se encuentra en un
+                            encargo temporal.
+                        </small>
+                    </div>
 
-                    <!-- FILA 5: OBSERVACIONES -->
+                    <!-- FILA 6: OBSERVACIONES -->
                     <div class="form-group form-group-compact">
                         <label class="form-label">Observaciones Adicionales</label>
                         {{ form.observations }}

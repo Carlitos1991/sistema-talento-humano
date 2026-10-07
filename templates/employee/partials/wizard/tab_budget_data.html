@@ -65,6 +65,16 @@
                             <div class="d-flex align-items-center gap-2 flex-wrap">
                                 <span class="history-job-title">{{ p.position_name|default:p.partida_name|default:'Partida' }}</span>
 
+                                {% if p.is_acting %}
+                                    <span class="badge badge-amber font-monospace">
+                                        <i class="fa-solid fa-user-clock me-1"></i> ENCARGO / SUBROGACIÓN
+                                    </span>
+                                {% else %}
+                                    <span class="badge badge-green font-monospace">
+                                        <i class="fa-solid fa-circle-check me-1"></i> TITULAR
+                                    </span>
+                                {% endif %}
+
                                 <div class="budget-dates-pill">
                                     <i class="fa-regular fa-calendar-days text-muted me-1"></i>
                                     <span><strong>Desde:</strong>

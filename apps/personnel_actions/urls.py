@@ -33,4 +33,5 @@ urlpatterns = [
     path('api/unit-children/', views.AdministrativeUnitChildrenJsonView.as_view(), name='api_unit_children'),
     path('api/search-budget-lines/', views.SearchBudgetLinesJsonView.as_view(), name='api_search_budget_lines'),
     path('api/users/search/', views.user_search_json, name='api_user_search'),
+    path('types/api/detail/<int:pk>/', views.ActionTypeDetailAPIView.as_view(), name='action_type_detail_api'),
 ]

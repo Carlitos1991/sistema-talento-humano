@@ -108,11 +108,9 @@ class ActionMovementForm(forms.ModelForm):
 class ActionTypeForm(forms.ModelForm):
     class Meta:
         model = ActionType
-        fields = [
-            'code', 'name', 'is_active',
-            'default_authority_1', 'default_authority_2',
-            'default_reviewer', 'default_register'
-        ]
+        fields = ['name', 'code', 'is_active', 'is_acting',
+                  'default_authority_1', 'default_authority_2',
+                  'default_reviewer', 'default_register']
         widgets = {
             'code': forms.TextInput(attrs={
                 'class': 'input-field uppercase-input',
@@ -128,6 +126,7 @@ class ActionTypeForm(forms.ModelForm):
             'default_authority_2': forms.Select(attrs={'class': 'input-field select2'}),
             'default_reviewer': forms.Select(attrs={'class': 'input-field select2'}),
             'default_register': forms.Select(attrs={'class': 'input-field select2'}),
+            'is_acting': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
     def __init__(self, *args, **kwargs):

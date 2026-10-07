@@ -1,9 +1,9 @@
 import datetime as dt
+import traceback
 from datetime import timedelta
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q, ProtectedError
 from django.http import HttpResponse, JsonResponse
@@ -272,7 +272,9 @@ class PersonnelActionCreateView(LoginRequiredMixin, CreateView):
                 'is_edit': False
             })
 
+
         except Exception as e:
+            traceback.print_exc()
             return HttpResponse(f"Error interno del servidor: {str(e)}", status=500)
 
     def form_valid(self, form):
@@ -707,7 +709,6 @@ class ActionRegisterView(LoginRequiredMixin, View):
         if action.is_registered:
             return JsonResponse({'status': 'error', 'success': False, 'message': 'Esta acción ya está registrada'},
                                 status=400)
-
         try:
             with transaction.atomic():
                 movement = getattr(action, 'movement', None)
@@ -716,9 +717,17 @@ class ActionRegisterView(LoginRequiredMixin, View):
 
                 effective_date = action.date_effective
                 reason = _movement_reason(action)
-                previous_budget_line = movement.previous_budget_line if movement and movement.previous_budget_line else action.employee.current_budget_line.first()
+                previous_budget_line = (
+                    movement.previous_budget_line
+                    if movement and movement.previous_budget_line
+                    else action.employee.current_budget_line.first()
+                )
                 new_budget_line = movement.new_budget_line if movement and movement.new_budget_line else None
-                is_acting_action = bool(action.action_type and action.action_type.is_acting)
+
+                # Banderas del tipo de acción
+                is_acting_action = bool(action.action_type and getattr(action.action_type, 'is_acting', False))
+                is_termination_action = bool(
+                    action.action_type and getattr(action.action_type, 'is_acting_termination', False))
 
                 # Asegurar registro de partida original en InstitutionalData si no existe
                 inst_data = getattr(action.employee, 'institutional_data', None)
@@ -726,100 +735,137 @@ class ActionRegisterView(LoginRequiredMixin, View):
                     inst_data.original_budget_line = previous_budget_line
                     inst_data.save(update_fields=['original_budget_line'])
 
-                # Actualización de Área / Unidad Administrativa
-                if movement and movement.new_unit:
-                    try:
-                        unit = AdministrativeUnit.objects.get(name=movement.new_unit)
-                        action.employee.area = unit
-                        action.employee.save(update_fields=['area'])
-                    except AdministrativeUnit.DoesNotExist:
-                        pass
+                # ── RAMA 1: CONCLUSIÓN DE ENCARGO / REINTEGRO ─────────────────
+                if is_termination_action:
+                    # 1. Cerrar el encargo temporal activo del servidor
+                    active_acting = BudgetAssignmentHistory.objects.filter(
+                        employee=action.employee,
+                        is_acting=True,
+                        is_current=True
+                    ).first()
 
-                if new_budget_line:
-                    if is_acting_action:
-                        # ── CASO ENCARGO / SUBROGACIÓN ──────────────────────────────
-                        # NO se libera la partida del titular (Jefe) ni la del empleado
-                        # Solo se crea la asignación temporal en el historial
+                    if active_acting:
+                        active_acting.end_date = effective_date - timedelta(days=1)
+                        active_acting.is_current = False
+                        active_acting.observation = f"Conclusión de encargo según Acción {action.number}: {reason}"
+                        active_acting.save()
+
+                        BudgetModificationHistory.objects.create(
+                            budget_line=active_acting.budget_line,
+                            modified_by=request.user,
+                            modification_type='RELEASE',
+                            field_name='Finalización de Encargo',
+                            old_value=f'Encargada a {action.employee.person.full_name}',
+                            new_value='Retorno a funciones exclusivas del titular',
+                            reason=reason,
+                        )
+
+                    # 2. Reintegrar al área original si hubo cambio de unidad
+                    if inst_data and inst_data.original_dependency:
+                        action.employee.area = inst_data.original_dependency
+                        action.employee.save(update_fields=['area'])
+
+                # ── RAMA 2: NUEVO ENCARGO / SUBROGACIÓN ───────────────────────
+                elif is_acting_action and new_budget_line:
+                    # Actualización de Área si el encargo lo especifica
+                    if movement and movement.new_unit:
+                        try:
+                            unit = AdministrativeUnit.objects.get(name=movement.new_unit)
+                            action.employee.area = unit
+                            action.employee.save(update_fields=['area'])
+                        except AdministrativeUnit.DoesNotExist:
+                            pass
+
+                    # No se libera la partida del titular ni la del empleado
+                    BudgetAssignmentHistory.objects.create(
+                        budget_line=new_budget_line,
+                        employee=action.employee,
+                        start_date=effective_date,
+                        end_date=None,
+                        is_current=True,
+                        is_acting=True,
+                        observation=f"Encargo según Acción {action.number}: {reason}"
+                    )
+                    BudgetModificationHistory.objects.create(
+                        budget_line=new_budget_line,
+                        modified_by=request.user,
+                        modification_type='ASSIGNMENT',
+                        field_name='Encargo Temporal',
+                        old_value='Titular en funciones',
+                        new_value=f'Encargada a {action.employee.person.full_name}',
+                        reason=reason,
+                    )
+
+                # ── RAMA 3: CASO REGULAR / DEFINITIVO (NOMBRAMIENTO, ASCENSO, TRASLADO)
+                elif new_budget_line:
+                    # Actualización de Área regular
+                    if movement and movement.new_unit:
+                        try:
+                            unit = AdministrativeUnit.objects.get(name=movement.new_unit)
+                            action.employee.area = unit
+                            action.employee.save(update_fields=['area'])
+                        except AdministrativeUnit.DoesNotExist:
+                            pass
+
+                    libre_status = CatalogItem.objects.get(code='LIBRE', catalog__code='BUDGET_STATUS')
+                    occupied_status = CatalogItem.objects.get(code='OCUPADA', catalog__code='BUDGET_STATUS')
+
+                    if previous_budget_line and previous_budget_line.pk != new_budget_line.pk:
+                        release_date = effective_date - timedelta(days=1)
+                        previous_history = BudgetAssignmentHistory.objects.filter(
+                            budget_line=previous_budget_line,
+                            employee=action.employee,
+                            is_current=True
+                        ).first()
+
+                        if previous_history:
+                            previous_history.end_date = release_date
+                            previous_history.is_current = False
+                            previous_history.observation = reason
+                            previous_history.save()
+
+                        previous_budget_line.current_employee = None
+                        previous_budget_line.status_item = libre_status
+                        previous_budget_line.save(modified_by=request.user)
+
+                        BudgetModificationHistory.objects.create(
+                            budget_line=previous_budget_line,
+                            modified_by=request.user,
+                            modification_type='RELEASE',
+                            field_name='Estado y Ocupante',
+                            old_value=f'Ocupada por {action.employee.person.full_name}',
+                            new_value='Libre',
+                            reason=reason,
+                        )
+
+                    if previous_budget_line is None or previous_budget_line.pk != new_budget_line.pk:
+                        new_budget_line.current_employee = action.employee
+                        new_budget_line.status_item = occupied_status
+                        new_budget_line.save(modified_by=request.user)
+
+                        new_history = BudgetAssignmentHistory.objects.filter(
+                            budget_line=new_budget_line,
+                            is_current=True
+                        ).first()
+                        if new_history:
+                            new_history.is_current = False
+                            new_history.end_date = effective_date - timedelta(days=1)
+                            new_history.save()
+
                         BudgetAssignmentHistory.objects.create(
                             budget_line=new_budget_line,
                             employee=action.employee,
                             start_date=effective_date,
-                            end_date=None,  # O la fecha de vencimiento si la acción la estipula
                             is_current=True,
-                            is_acting=True,
-                            observation=f"Encargo según Acción {action.number}: {reason}"
+                            is_acting=False,
+                            observation=reason,
                         )
-                        BudgetModificationHistory.objects.create(
-                            budget_line=new_budget_line,
-                            modified_by=request.user,
-                            modification_type='ASSIGNMENT',
-                            field_name='Encargo Temporal',
-                            old_value='Titular en funciones',
-                            new_value=f'Encargada a {action.employee.person.full_name}',
-                            reason=reason,
-                        )
-                    else:
-                        # ── CASO REGULAR / DEFINITIVO (CÓDIGO ORIGINAL) ────────────
-                        libre_status = CatalogItem.objects.get(code='LIBRE', catalog__code='BUDGET_STATUS')
-                        occupied_status = CatalogItem.objects.get(code='OCUPADA',
-                                                                  catalog__code='BUDGET_STATUS')
 
-                        if previous_budget_line and previous_budget_line.pk != new_budget_line.pk:
-                            release_date = effective_date - timedelta(days=1)
-                            previous_history = BudgetAssignmentHistory.objects.filter(
-                                budget_line=previous_budget_line,
-                                employee=action.employee,
-                                is_current=True
-                            ).first()
+                        if inst_data:
+                            inst_data.original_budget_line = new_budget_line
+                            inst_data.save(update_fields=['original_budget_line'])
 
-                            if previous_history:
-                                previous_history.end_date = release_date
-                                previous_history.is_current = False
-                                previous_history.observation = reason
-                                previous_history.save()
-
-                            previous_budget_line.current_employee = None
-                            previous_budget_line.status_item = libre_status
-                            previous_budget_line.save(modified_by=request.user)
-
-                            BudgetModificationHistory.objects.create(
-                                budget_line=previous_budget_line,
-                                modified_by=request.user,
-                                modification_type='RELEASE',
-                                field_name='Estado y Ocupante',
-                                old_value=f'Ocupada por {action.employee.person.full_name}',
-                                new_value='Libre',
-                                reason=reason,
-                            )
-
-                        if previous_budget_line is None or previous_budget_line.pk != new_budget_line.pk:
-                            new_budget_line.current_employee = action.employee
-                            new_budget_line.status_item = occupied_status
-                            new_budget_line.save(modified_by=request.user)
-
-                            new_history = BudgetAssignmentHistory.objects.filter(
-                                budget_line=new_budget_line,
-                                is_current=True
-                            ).first()
-                            if new_history:
-                                new_history.is_current = False
-                                new_history.end_date = effective_date - timedelta(days=1)
-                                new_history.save()
-
-                            BudgetAssignmentHistory.objects.create(
-                                budget_line=new_budget_line,
-                                employee=action.employee,
-                                start_date=effective_date,
-                                is_current=True,
-                                is_acting=False,
-                                observation=reason,
-                            )
-
-                            # Al ser nombramiento o ascenso definitivo, actualizamos original_budget_line
-                            if inst_data:
-                                inst_data.original_budget_line = new_budget_line
-                                inst_data.save(update_fields=['original_budget_line'])
-
+                # Marcar la acción como registrada
                 action.is_registered = True
                 action.register = request.user
                 action.save(update_fields=['is_registered', 'register'])
@@ -827,7 +873,8 @@ class ActionRegisterView(LoginRequiredMixin, View):
         except Exception as e:
             return JsonResponse(
                 {'status': 'error', 'success': False, 'message': f'No se pudo registrar la acción: {str(e)}'},
-                status=400)
+                status=400
+            )
 
         return JsonResponse(
             {'status': 'success', 'success': True, 'message': 'Acción registrada correctamente'})
@@ -987,19 +1034,23 @@ class SearchBudgetLinesJsonView(LoginRequiredMixin, View):
 
         qs = BudgetLine.objects.filter(
             is_active=True
-        ).filter(
-            Q(status_item__code__iexact='LIBRE') |
-            Q(current_employee__isnull=True)
-        ).select_related('position_item', 'activity__project__subprogram__program')
+        ).select_related(
+            'position_item',
+            'activity__project__subprogram__program',
+            'current_employee__person',
+            'status_item'
+        )
 
         if search_term:
             qs = qs.filter(
                 Q(code__icontains=search_term) |
                 Q(number_individual__icontains=search_term) |
-                Q(position_item__name__icontains=search_term)
+                Q(position_item__name__icontains=search_term) |
+                Q(current_employee__person__first_name__icontains=search_term) |
+                Q(current_employee__person__last_name__icontains=search_term)
             )
 
-        qs = qs.order_by('code')[:30]
+        qs = qs.order_by('code')[:40]
         results = []
         for line in qs:
             program_name = ''
@@ -1013,9 +1064,15 @@ class SearchBudgetLinesJsonView(LoginRequiredMixin, View):
             display_code = line.number_individual or line.code or f"Partida #{line.id}"
             remun = float(line.remuneration) if line.remuneration else 0.0
 
+            # Indicador de estado y ocupante para claridad en el selector
+            if line.current_employee and getattr(line.current_employee, 'person', None):
+                occupant_info = f"[OCUPADA: {line.current_employee.person.full_name}]"
+            else:
+                occupant_info = "[LIBRE]"
+
             results.append({
                 'id': line.id,
-                'text': f"{display_code} - {position_name} (RMU: ${remun:.2f})",
+                'text': f"{display_code} - {position_name} (RMU: ${remun:.2f}) {occupant_info}",
                 'code': display_code,
                 'position': position_name,
                 'remuneration': f"{remun:.2f}",
@@ -1023,3 +1080,39 @@ class SearchBudgetLinesJsonView(LoginRequiredMixin, View):
             })
 
         return JsonResponse({'results': results})
+
+
+class ActionTypeDetailAPIView(LoginRequiredMixin, View):
+    def get(self, request, pk):
+        action_type = get_object_or_404(
+            ActionType.objects.select_related(
+                'default_authority_1',
+                'default_authority_2',
+                'default_reviewer',
+                'default_register',
+            ),
+            pk=pk
+        )
+        requires_budget = action_type.requires_budget_movement or action_type.is_acting
+
+        def _user_label(user):
+            if not user:
+                return ''
+            name = getattr(user, 'signature_name', None) or user.get_full_name() or user.username
+            pos = getattr(user, 'signature_position', '')
+            return f"{name} - {pos}" if pos else name
+
+        return JsonResponse({
+            'success': True,
+            'is_acting': bool(action_type.is_acting),
+            'requires_budget': bool(requires_budget),
+            'requires_unit': bool(action_type.requires_unit_movement),
+            'auth1_id': action_type.default_authority_1_id,
+            'auth1_text': _user_label(action_type.default_authority_1),
+            'auth2_id': action_type.default_authority_2_id,
+            'auth2_text': _user_label(action_type.default_authority_2),
+            'reviewer_id': action_type.default_reviewer_id,
+            'reviewer_text': _user_label(action_type.default_reviewer),
+            'register_id': action_type.default_register_id,
+            'register_text': _user_label(action_type.default_register),
+        })

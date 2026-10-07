@@ -369,45 +369,47 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
     };
-    // Delegado en document: el select #id_action_type no existe hasta que
-    // el modal se inyecta vía openAjaxModal, así que no se puede bindear una
-    // sola vez al cargar la página.
     $(document).on('change', '#id_action_type', function () {
         const form = document.getElementById('form-create-action');
         const isCreateMode = !form || form.dataset.formMode !== 'edit';
-
-        if (!isCreateMode) {
-            return;
-        }
+        const alertBox = document.getElementById('acting-action-alert');
 
         let typeId = $(this).val();
 
-        if (typeId) {
-            // Cargar firmas por defecto del tipo de acción
-            $.get('/personnel_actions/types/api/detail/' + typeId + '/', function (data) {
-
-                // Función auxiliar para auto-seleccionar en Select2
-                function setSelect2Value(elementId, id, text) {
-                    let element = $('#' + elementId);
-                    if (id && text) {
-                        // Crear la opción y seleccionarla
-                        let newOption = new Option(text, id, true, true);
-                        element.append(newOption).trigger('change');
-                    } else {
-                        // Limpiar si no hay firma por defecto
-                        element.val(null).trigger('change');
-                    }
-                }
-
-                // Inyectar las firmas obtenidas
-                setSelect2Value('id_authority_1', data.auth1_id, data.auth1_text);
-                setSelect2Value('id_authority_2', data.auth2_id, data.auth2_text);
-                setSelect2Value('id_reviewer', data.reviewer_id, data.reviewer_text);
-                setSelect2Value('id_register', data.register_id, data.register_text);
-            }).fail(function () {
-                console.warn('No se pudieron cargar las firmas por defecto del tipo de acción.');
-            });
+        if (!typeId) {
+            if (alertBox) alertBox.classList.add('hidden');
+            return;
         }
-    });
 
+        $.get('/personnel_actions/types/api/detail/' + typeId + '/', function (data) {
+            if (!data || !data.success) return;
+
+            const unitSection = document.getElementById('section-unit-movement');
+            const budgetSection = document.getElementById('section-budget-movement');
+
+            // Visibilidad dinámica de Reubicación de Unidad
+            if (unitSection) {
+                if (data.requires_unit) {
+                    unitSection.classList.remove('hidden');
+                } else {
+                    unitSection.classList.add('hidden');
+                    // Limpiar selección de unidad si ya no aplica
+                    window.PersonnelActionModal.selectedUnitId = null;
+                }
+            }
+
+            // Visibilidad dinámica de Cambio / Asignación de Partida
+            if (budgetSection) {
+                if (data.requires_budget) {
+                    budgetSection.classList.remove('hidden');
+                } else {
+                    budgetSection.classList.add('hidden');
+                    // Limpiar selección de Select2 si ya no aplica
+                    $('#id_new_budget_line').val(null).trigger('change');
+                    const infoBox = document.getElementById('budget-info');
+                    if (infoBox) infoBox.classList.remove('show');
+                }
+            }
+        });
+    });
 })();
