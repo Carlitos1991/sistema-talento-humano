@@ -108,57 +108,88 @@ class ActionMovementForm(forms.ModelForm):
 class ActionTypeForm(forms.ModelForm):
     class Meta:
         model = ActionType
-        fields = ['name', 'code', 'is_active', 'is_acting',
-                  'default_authority_1', 'default_authority_2',
-                  'default_reviewer', 'default_register']
+        fields = [
+            'code',
+            'name',
+            'default_authority_1',
+            'default_authority_2',
+            'default_reviewer',
+            'default_register',
+            'is_acting',
+            'is_acting_termination',
+            'requires_budget_movement',
+            'requires_unit_movement',
+            'is_active',
+        ]
         widgets = {
             'code': forms.TextInput(attrs={
-                'class': 'input-field uppercase-input',
-                'placeholder': 'EJ: NOM-PROV',
-                'oninput': 'this.value = this.value.toUpperCase()'
+                'class': 'input-field form-control',
+                'placeholder': 'Ej: ENCARGO_DIR',
+                'id': 'id_action_type_code',
+                'maxlength': '50',
             }),
             'name': forms.TextInput(attrs={
-                'class': 'input-field',
-                'placeholder': 'EJ: NOMBRAMIENTO PROVISIONAL'
+                'class': 'input-field form-control',
+                'placeholder': 'Ej: Encargo de Dirección / Subrogación',
+                'id': 'id_action_type_name',
+                'maxlength': '150',
             }),
-            'is_active': forms.CheckboxInput(attrs={'class': 'switch-input switch-green'}),
-            'default_authority_1': forms.Select(attrs={'class': 'input-field select2'}),
-            'default_authority_2': forms.Select(attrs={'class': 'input-field select2'}),
-            'default_reviewer': forms.Select(attrs={'class': 'input-field select2'}),
-            'default_register': forms.Select(attrs={'class': 'input-field select2'}),
-            'is_acting': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'default_authority_1': forms.Select(attrs={
+                'class': 'input-field form-control select2-modal',
+                'id': 'id_default_authority_1',
+                'style': 'width: 100%;',
+            }),
+            'default_authority_2': forms.Select(attrs={
+                'class': 'input-field form-control select2-modal',
+                'id': 'id_default_authority_2',
+                'style': 'width: 100%;',
+            }),
+            'default_reviewer': forms.Select(attrs={
+                'class': 'input-field form-control select2-modal',
+                'id': 'id_default_reviewer',
+                'style': 'width: 100%;',
+            }),
+            'default_register': forms.Select(attrs={
+                'class': 'input-field form-control select2-modal',
+                'id': 'id_default_register',
+                'style': 'width: 100%;',
+            }),
+            'is_acting': forms.CheckboxInput(attrs={'class': 'switch-input switch-green', 'id': 'id_is_acting', }),
+            'is_acting_termination': forms.CheckboxInput(attrs={
+                'class': 'switch-input switch-green',
+                'id': 'id_is_acting_termination',
+            }),
+            'requires_budget_movement': forms.CheckboxInput(attrs={
+                'class': 'switch-input switch-green',
+                'id': 'id_requires_budget_movement',
+            }),
+            'requires_unit_movement': forms.CheckboxInput(attrs={
+                'class': 'switch-input switch-green',
+                'id': 'id_requires_unit_movement',
+            }),
+            'is_active': forms.CheckboxInput(attrs={
+                'class': 'switch-input switch-green',
+                'id': 'id_is_active',
+            }),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Si estamos editando, el código no se debe modificar
-        if self.instance and self.instance.pk:
-            self.fields['code'].widget.attrs['readonly'] = True
-            self.fields['code'].widget.attrs['class'] += ' readonly-styled'
-
-        signature_fields = [
-            'default_authority_1',
-            'default_authority_2',
-            'default_reviewer',
-            'default_register'
-        ]
-        users_qs = User.objects.filter(is_active=True).order_by('first_name', 'last_name', 'username')
-
-        def signature_label(user):
-            name = user.signature_name or user.get_full_name() or user.username
-            pos = getattr(user, 'signature_position', '')
+        # Helper para rotular firmantes con su cargo si existe
+        def get_user_label(user):
+            name = getattr(user, 'signature_name', None) or user.get_full_name() or user.username
+            pos = getattr(user, 'signature_position', None)
             return f"{name} - {pos}" if pos else name
 
-        for f_name in signature_fields:
-            if f_name in self.fields:
-                self.fields[f_name].queryset = users_qs
-                self.fields[f_name].required = False
-                self.fields[f_name].empty_label = '--- Seleccionar Firma por Defecto ---'
-                self.fields[f_name].label_from_instance = signature_label
+        active_users = User.objects.filter(is_active=True).order_by('first_name', 'last_name')
+        user_choices = [('', '-- Sin firma por defecto --')] + [
+            (u.id, get_user_label(u)) for u in active_users
+        ]
 
-    def clean_code(self):
-        code = self.cleaned_data.get('code')
-        if code:
-            return code.upper().strip()
-        return code
+        for field_name in ['default_authority_1', 'default_authority_2', 'default_reviewer', 'default_register']:
+            self.fields[field_name].choices = user_choices
+            self.fields[field_name].required = False
+
+        if not self.instance.pk:
+            self.initial['is_active'] = True

@@ -1,112 +1,248 @@
 {% load static %}
-<div class="modal-overlay">
+<div class="modal-overlay" id="actionTypeModalOverlay">
     <div class="modal-container-medium">
 
         <!-- HEADER -->
         <div class="modal-header-medium">
             <div class="header-content-group">
                 <div class="header-icon-circle">
-                    <i class="fas fa-file-pen"></i>
+                    <i class="fas fa-file-signature"></i>
                 </div>
-                <h3 class="header-title">{% if is_edit %}Editar Tipo de Acción{% else %}Nuevo Tipo de
-                    Acción{% endif %}</h3>
+                <h3 class="header-title">
+                    {% if is_edit or form.instance.pk %}Editar Tipo de Acción{% else %}Nuevo Tipo de Acción{% endif %}
+                </h3>
             </div>
             <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
                 <i class="fas fa-times"></i>
             </button>
         </div>
 
-        <!-- BODY -->
-        <div class="modal-body modal-body-custom">
-            <form id="actionTypeForm" action="{{ action_url }}" method="post" autocomplete="off">
-                {% csrf_token %}
+        <!-- FORMULARIO AJAX -->
+        <form id="actionTypeForm" action="{{ action_url }}" method="post" autocomplete="off" novalidate
+              onsubmit="submitAjaxForm(event)">
+            {% csrf_token %}
 
+            <div class="modal-body-custom">
+
+                <!-- 1. IDENTIFICACIÓN -->
                 <div class="form-section-card">
+                    <div class="section-title">
+                        <i class="fas fa-info-circle text-primary"></i> Identificación del Tipo de Acción
+                    </div>
+
                     <div class="grid-2-cols">
                         <div class="form-group">
-                            <label class="form-label" for="{{ form.code.id_for_label }}">Código *</label>
+                            <label class="form-label" for="{{ form.code.id_for_label }}">
+                                Código <span class="text-danger">*</span>
+                            </label>
                             {{ form.code }}
                             <div class="invalid-feedback" id="error-code"></div>
                         </div>
 
                         <div class="form-group">
-                            <label class="form-label" for="{{ form.name.id_for_label }}">Nombre de la Acción *</label>
+                            <label class="form-label" for="{{ form.name.id_for_label }}">
+                                Nombre de la Acción <span class="text-danger">*</span>
+                            </label>
                             {{ form.name }}
                             <div class="invalid-feedback" id="error-name"></div>
                         </div>
                     </div>
                 </div>
 
+                <!-- 2. COMPORTAMIENTO Y REGLAS DE NEGOCIO -->
                 <div class="form-section-card mt-3">
                     <div class="section-title">
-                        <i class="fas fa-signature text-green"></i> Firmas Preconfiguradas (Por Defecto)
+                        <i class="fas fa-sliders text-primary"></i> Dinamismo del Formulario y Reglas
+                    </div>
+
+                    <div class="grid-2-cols">
+                        <!-- Flag: Encargo / Subrogación -->
+                        <div class="form-group mb-2">
+                            <label class="form-label d-block">Modalidad Temporal</label>
+                            <div class="d-flex align-items-center">
+                                {{ form.is_acting }}
+                                <label class="switch-wrapper mb-0" for="{{ form.is_acting.id_for_label }}">
+                                    <div class="switch-circle"></div>
+                                    <span class="switch-text">Es Encargo / Subrogación</span>
+                                </label>
+                            </div>
+                            <small class="form-text text-muted d-block mt-1">
+                                No libera la partida titular del servidor ni la del custodio.
+                            </small>
+                        </div>
+
+                        <!-- Flag: Conclusión de Encargo -->
+                        <div class="form-group mb-2">
+                            <label class="form-label d-block">Retorno Titular</label>
+                            <div class="d-flex align-items-center">
+                                {{ form.is_acting_termination }}
+                                <label class="switch-wrapper mb-0" for="{{ form.is_acting_termination.id_for_label }}">
+                                    <div class="switch-circle"></div>
+                                    <span class="switch-text">Conclusión / Reintegro</span>
+                                </label>
+                            </div>
+                            <small class="form-text text-muted d-block mt-1">
+                                Cierra el encargo temporal y devuelve al servidor a su partida base.
+                            </small>
+                        </div>
+
+                        <!-- Flag: Requiere Partida -->
+                        <div class="form-group mb-2">
+                            <label class="form-label d-block">Movimiento Presupuestario</label>
+                            <div class="d-flex align-items-center">
+                                {{ form.requires_budget_movement }}
+                                <label class="switch-wrapper mb-0"
+                                       for="{{ form.requires_budget_movement.id_for_label }}">
+                                    <div class="switch-circle"></div>
+                                    <span class="switch-text">Muestra Selección de Partida</span>
+                                </label>
+                            </div>
+                            <small class="form-text text-muted d-block mt-1">
+                                Despliega el buscador de partidas en el modal de acción.
+                            </small>
+                        </div>
+
+                        <!-- Flag: Requiere Unidad -->
+                        <div class="form-group mb-2">
+                            <label class="form-label d-block">Reubicación de Dependencia</label>
+                            <div class="d-flex align-items-center">
+                                {{ form.requires_unit_movement }}
+                                <label class="switch-wrapper mb-0" for="{{ form.requires_unit_movement.id_for_label }}">
+                                    <div class="switch-circle"></div>
+                                    <span class="switch-text">Muestra Selección de Unidad</span>
+                                </label>
+                            </div>
+                            <small class="form-text text-muted d-block mt-1">
+                                Despliega la cascada de dependencias administrativas.
+                            </small>
+                        </div>
+                    </div>
+
+                    <div class="border-top pt-2 mt-2">
+                        <div class="form-group mb-0 d-flex align-items-center">
+                            {{ form.is_active }}
+                            <label class="switch-wrapper mb-0" for="{{ form.is_active.id_for_label }}">
+                                <div class="switch-circle"></div>
+                                <span class="switch-text">Tipo de Acción Activo para Operación</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. FIRMAS PRECONFIGURADAS -->
+                <div class="form-section-card mt-3">
+                    <div class="section-title">
+                        <i class="fas fa-signature text-primary"></i> Firmas Preconfiguradas (Por Defecto)
                     </div>
 
                     <div class="grid-2-cols">
                         <div class="form-group">
-                            <label class="form-label" for="{{ form.default_authority_1.id_for_label }}">Autoridad
-                                Nominadora (1)</label>
+                            <label class="form-label" for="{{ form.default_authority_1.id_for_label }}">
+                                Autoridad Nominadora (1)
+                            </label>
                             {{ form.default_authority_1 }}
                             <div class="invalid-feedback" id="error-default_authority_1"></div>
                         </div>
 
                         <div class="form-group">
-                            <label class="form-label" for="{{ form.default_authority_2.id_for_label }}">Director de
-                                Talento Humano (2)</label>
+                            <label class="form-label" for="{{ form.default_authority_2.id_for_label }}">
+                                Director de Talento Humano (2)
+                            </label>
                             {{ form.default_authority_2 }}
                             <div class="invalid-feedback" id="error-default_authority_2"></div>
                         </div>
 
                         <div class="form-group">
-                            <label class="form-label" for="{{ form.default_reviewer.id_for_label }}">Revisado
-                                Por</label>
+                            <label class="form-label" for="{{ form.default_reviewer.id_for_label }}">
+                                Revisado Por
+                            </label>
                             {{ form.default_reviewer }}
                             <div class="invalid-feedback" id="error-default_reviewer"></div>
                         </div>
 
                         <div class="form-group">
-                            <label class="form-label" for="{{ form.default_register.id_for_label }}">Registrado
-                                Por</label>
+                            <label class="form-label" for="{{ form.default_register.id_for_label }}">
+                                Registrado Por
+                            </label>
                             {{ form.default_register }}
                             <div class="invalid-feedback" id="error-default_register"></div>
                         </div>
                     </div>
                 </div>
 
-                <div class="form-section-card mt-3">
-                    <div class="grid-2-cols">
-                        <div class="form-group mb-0">
-                            <label class="form-label">Estado del Registro</label>
-                            <label class="switch-wrapper">
-                                {{ form.is_active }}
-                                <span class="switch-circle"></span>
-                                <span class="switch-text">Registro Activo</span>
-                            </label>
-                        </div>
+            </div>
 
-                        <div class="form-group mb-0">
-                            <label class="form-label">Modalidad Temporal</label>
-                            <label class="switch-wrapper">
-                                {{ form.is_acting }}
-                                <span class="switch-circle"></span>
-                                <span class="switch-text">Es Encargo / Subrogación</span>
-                            </label>
-                            <small class="form-text text-muted d-block mt-1">
-                                No libera la partida titular del servidor ni la del custodio.
-                            </small>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- FOOTER -->
-                <div class="modal-footer-fixed">
-                    <button type="button" class="btn-default-outline" onclick="closeModal()">Cancelar</button>
-                    <button type="submit" class="btn-success">
-                        <i class="fas fa-save me-1"></i> {% if is_edit %}Actualizar{% else %}Guardar{% endif %}
-                    </button>
-                </div>
-            </form>
-        </div>
+            <!-- FOOTER FIJO -->
+            <div class="modal-footer-fixed">
+                <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">Cancelar</button>
+                <button type="submit" class="btn-dark-blue-rectangle">
+                    <i class="fas fa-save me-1"></i>
+                    {% if is_edit or form.instance.pk %}Actualizar Tipo de Acción{% else %}Guardar Tipo de
+                        Acción{% endif %}
+                </button>
+            </div>
+        </form>
 
     </div>
 </div>
+
+<script>
+    (function () {
+        // Inicializar Select2 en los combos de firmas si la librería está disponible
+        if (window.$ && $.fn.select2) {
+            $('#actionTypeForm .select2-modal').each(function () {
+                $(this).select2({
+                    width: '100%',
+                    placeholder: '-- Seleccione un firmante --',
+                    allowClear: true,
+                    dropdownParent: $('#actionTypeModalOverlay .modal-body-custom')
+                });
+            });
+        }
+
+        // Generar código autolimpio a partir del nombre en tiempo real si el código está vacío
+        const nameInput = document.getElementById('id_action_type_name');
+        const codeInput = document.getElementById('id_action_type_code');
+        const isEditMode = {% if is_edit or form.instance.pk %}true{% else %}false{% endif %};
+
+        if (nameInput && codeInput && !isEditMode) {
+            nameInput.addEventListener('input', function () {
+                if (!codeInput.dataset.touched) {
+                    codeInput.value = this.value
+                        .normalize('NFD')
+                        .replace(/[\u0300-\u036f]/g, '')
+                        .replace(/[^a-zA-Z0-9 ]/g, '')
+                        .trim()
+                        .replace(/\s+/g, '_')
+                        .toUpperCase();
+                }
+            });
+            codeInput.addEventListener('input', function () {
+                this.dataset.touched = 'true';
+            });
+        }
+
+        // Exclusividad mutua amigable entre "Es Encargo" y "Conclusión de Encargo"
+        const chkActing = document.getElementById('id_is_acting');
+        const chkTermination = document.getElementById('id_is_acting_termination');
+        const chkBudget = document.getElementById('id_requires_budget_movement');
+
+        if (chkActing && chkTermination) {
+            chkActing.addEventListener('change', function () {
+                if (this.checked) {
+                    chkTermination.checked = false;
+                    // Un encargo por regla necesita selección de partida
+                    if (chkBudget) chkBudget.checked = true;
+                }
+            });
+
+            chkTermination.addEventListener('change', function () {
+                if (this.checked) {
+                    chkActing.checked = false;
+                    // Una conclusión no requiere que el operador busque una partida nueva
+                    if (chkBudget) chkBudget.checked = false;
+                }
+            });
+        }
+    })();
+</script>
