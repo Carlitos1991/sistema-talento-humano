@@ -91,36 +91,21 @@ class PayrollAccountingReportOptionsView(LoginRequiredMixin, PermissionRequiredM
         term = (request.GET.get('term') or '').strip()
         option_type = request.GET.get('type', 'all')
 
-        period_data = []
-        regime_data = []
+        periods_qs = PayrollPeriod.objects.all().order_by('-year', '-id')
+        regimes_qs = CatalogItem.objects.filter(catalog__code='LABOR_REGIMES', is_active=True).order_by('name')
 
-        if option_type in ('period', 'all'):
-            periods = PayrollPeriod.objects.all().order_by('-year', '-id')
-            if term:
-                periods = periods.filter(
-                    Q(month__icontains=term) | Q(year__icontains=term)
-                )
-            period_data = [
-                {'id': p.id, 'text': f'{p.month} {p.year}'}
-                for p in periods[:30]
-            ]
+        if term:
+            periods_qs = periods_qs.filter(Q(month__icontains=term) | Q(year__icontains=term))
+            regimes_qs = regimes_qs.filter(name__icontains=term)
 
-        if option_type in ('regime', 'all'):
-            regimes = CatalogItem.objects.filter(
-                catalog__code='LABOR_REGIMES', is_active=True
-            ).order_by('name')
-            if term:
-                regimes = regimes.filter(name__icontains=term)
-            regime_data = [
-                {'id': r.id, 'text': r.name}
-                for r in regimes[:30]
-            ]
-
-        results = period_data if option_type == 'period' else regime_data
+        period_data = [{'id': p.id, 'name': f'{p.month} {p.year}'} for p in periods_qs[:50]]
+        regime_data = [{'id': r.id, 'name': r.name} for r in regimes_qs[:50]]
 
         return JsonResponse({
             'success': True,
-            'results': results
+            'periods': period_data,
+            'regimes': regime_data,
+            'results': period_data if option_type == 'period' else regime_data
         })
 
 

@@ -26,29 +26,14 @@
         <div class="form-section-card">
             <div class="section-title"><i class="fa-solid fa-filter"></i> Filtros del reporte</div>
             <div class="grid-3-cols">
-                <!-- Período: se usará con Select2 -->
                 <div class="form-group">
                     <label class="form-label" for="report-period">Período de nómina</label>
-                    <select id="report-period" class="input-field">
-                        <option value="">Seleccione un período...</option>
-                        {% for p in periods %}
-                            <option value="{{ p.id }}">{{ p.month }} {{ p.year }}</option>
-                        {% endfor %}
-                    </select>
+                    <select id="report-period" class="input-field"></select>
                 </div>
-
-                <!-- Régimen: select nativo sin Select2 -->
                 <div class="form-group">
                     <label class="form-label" for="report-regime">Régimen de roles de pago</label>
-                    <select id="report-regime" class="input-field">
-                        <option value="">Todos los regímenes</option>
-                        {% for r in regimes %}
-                            <option value="{{ r.id }}">{{ r.name }}</option>
-                        {% endfor %}
-                    </select>
+                    <select id="report-regime" class="input-field"></select>
                 </div>
-
-                <!-- Unidad administrativa: dinámico original -->
                 <div class="form-group">
                     <label class="form-label">Unidad administrativa</label>
                     <div id="report-unit-selects" class="unit-dynamic-grid accounting-unit-selects"></div>
@@ -87,51 +72,71 @@
         (() => {
             const exportUrl = '{{ export_url }}';
             const unitsApiUrl = '{{ units_api_url }}';
+            const optionsApiUrl = '{% url "payroll:accounting_report_options" %}';
+
             const period = document.getElementById('report-period');
             const regime = document.getElementById('report-regime');
             const unitSelects = document.getElementById('report-unit-selects');
             const exportButton = document.getElementById('exportAccountingReport');
             let selectedUnitId = '';
-            const rubrics = () => [...document.querySelectorAll('.report-rubric:checked')].map(input => input.value);
 
+            const rubrics = () => [...document.querySelectorAll('.report-rubric:checked')].map(input => input.value);
             exportButton.disabled = true;
 
             function updateExportButton() {
                 exportButton.disabled = !period.value;
             }
 
-            // Inicialización simple de Período con buscador local
-            function initializePeriodSelect() {
-                if (!window.$ || !$.fn.select2) return;
-                $(period).select2({
-                    width: '100%',
-                    placeholder: 'Seleccione un período...',
-                    allowClear: true,
-                    language: {
-                        noResults: () => 'No se encontraron resultados'
+            // ================================================================
+            // 1. CARGA DE PERÍODOS Y REGÍMENES (PATRÓN IDÉNTICO A UNIDADES)
+            // ================================================================
+            function populateAndInitSelect(selectEl, items, placeholderText, onChangeCallback = null) {
+                selectEl.innerHTML = `<option value="">${placeholderText}</option>`;
+                if (Array.isArray(items)) {
+                    items.forEach(item => {
+                        selectEl.add(new Option(item.name, item.id));
+                    });
+                }
+
+                if (window.$ && $.fn.select2) {
+                    $(selectEl).select2({
+                        width: '100%',
+                        placeholder: placeholderText,
+                        allowClear: true,
+                        language: {
+                            noResults: () => 'No se encontraron resultados'
+                        }
+                    });
+
+                    if (typeof onChangeCallback === 'function') {
+                        $(selectEl).on('change', onChangeCallback);
                     }
-                }).on('change', updateExportButton);
+                } else if (typeof onChangeCallback === 'function') {
+                    selectEl.addEventListener('change', onChangeCallback);
+                }
             }
 
-            // Inicialización simple de Régimen con buscador local
-            function initializeRegimeSelect() {
-                if (!window.$ || !$.fn.select2) return;
-                $(regime).select2({
-                    width: '100%',
-                    placeholder: 'Todos los regímenes',
-                    allowClear: true,
-                    language: {
-                        noResults: () => 'No se encontraron resultados'
-                    }
-                });
+            function loadInitialOptions() {
+                fetch(optionsApiUrl, {
+                    headers: {'X-Requested-With': 'XMLHttpRequest'}
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            populateAndInitSelect(period, data.periods || [], 'Seleccione un período...', updateExportButton);
+                            populateAndInitSelect(regime, data.regimes || [], 'Todos los regímenes');
+                        }
+                    })
+                    .catch(() => {
+                        Swal.fire('Error', 'No se pudieron cargar los filtros de período y régimen.', 'error');
+                    });
             }
 
-            initializePeriodSelect();
-            initializeRegimeSelect();
+            loadInitialOptions();
 
-            // ========================================================
-            // LÓGICA ORIGINAL INTACTA DE UNIDADES ADMINISTRATIVAS
-            // ========================================================
+            // ================================================================
+            // 2. UNIDADES ADMINISTRATIVAS (CÓDIGO ORIGINAL INTACTO)
+            // ================================================================
             function initializeSelect(select, parentId) {
                 if (window.$ && $.fn.select2) {
                     $(select).select2({
@@ -168,7 +173,7 @@
                 select.className = 'input-field';
                 select.dataset.level = level;
                 select.innerHTML = '<option value="">Seleccione una unidad...</option>';
-                if (!parentId) {
+                if (!parentId && Array.isArray(units)) {
                     units.forEach(unit => select.add(new Option(unit.name, unit.id)));
                 }
                 unitSelects.appendChild(select);
@@ -213,21 +218,24 @@
                     });
             }
 
-            // Carga inicial del nivel 0 de unidades
-            fetch(unitsApiUrl, {
-                headers: {'X-Requested-With': 'XMLHttpRequest'}
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) createUnitSelect(0, data.units || []);
+            function loadInitialUnits() {
+                fetch(unitsApiUrl, {
+                    headers: {'X-Requested-With': 'XMLHttpRequest'}
                 })
-                .catch(() => {
-                    Swal.fire('Error', 'No se pudieron cargar las unidades administrativas.', 'error');
-                });
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) createUnitSelect(0, data.units || []);
+                    })
+                    .catch(() => {
+                        Swal.fire('Error', 'No se pudieron cargar las unidades administrativas.', 'error');
+                    });
+            }
 
-            // ========================================================
-            // EXPORTAR Y LIMPIAR
-            // ========================================================
+            loadInitialUnits();
+
+            // ================================================================
+            // 3. EXPORTAR Y LIMPIAR
+            // ================================================================
             document.getElementById('exportAccountingReport').addEventListener('click', () => {
                 if (!period.value || !rubrics().length) {
                     Swal.fire('Atención', 'Seleccione el período y al menos un rubro contable.', 'warning');
@@ -243,33 +251,22 @@
             });
 
             document.getElementById('clearAccountingReport').addEventListener('click', () => {
-                // Limpiar período con Select2
                 if (window.$ && $.fn.select2) {
                     $(period).val('').trigger('change');
+                    $(regime).val('').trigger('change');
                 } else {
                     period.value = '';
+                    regime.value = '';
                 }
-
-                // Limpiar régimen nativo
-                regime.value = '';
-
                 updateExportButton();
 
-                // Destruir y reiniciar unidades administrativas
                 [...unitSelects.querySelectorAll('select')].forEach(select => {
                     if (window.$ && $.fn.select2) $(select).select2('destroy');
                 });
                 unitSelects.innerHTML = '';
                 selectedUnitId = '';
 
-                fetch(unitsApiUrl, {
-                    headers: {'X-Requested-With': 'XMLHttpRequest'}
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) createUnitSelect(0, data.units || []);
-                    });
-
+                loadInitialUnits();
                 document.querySelectorAll('.report-rubric').forEach(input => input.checked = false);
             });
         })();

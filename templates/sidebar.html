@@ -578,15 +578,6 @@
                                     </a>
                                 </li>
                             {% endif %}
-                            {% if perms.payroll.view_payrollrubric %}
-                                <li>
-                                    <a href="{% url 'payroll:rubric_list' %}"
-                                       class="{% if request.resolver_match.url_name == 'rubric_list' %}active-child{% endif %}">
-                                        <i class="fa-solid fa-list-check"></i>
-                                        <span class="menu-text">Mapeo de Rubros</span>
-                                    </a>
-                                </li>
-                            {% endif %}
                             {% if perms.payroll.view_payslip or request.user.is_staff %}
                                 <li>
                                     <a href="{% url 'payroll:accounting_report' %}"
@@ -596,6 +587,16 @@
                                     </a>
                                 </li>
                             {% endif %}
+                            {% if perms.payroll.view_payrollrubric %}
+                                <li>
+                                    <a href="{% url 'payroll:rubric_list' %}"
+                                       class="{% if request.resolver_match.url_name == 'rubric_list' %}active-child{% endif %}">
+                                        <i class="fa-solid fa-list-check"></i>
+                                        <span class="menu-text">Mapeo de Rubros</span>
+                                    </a>
+                                </li>
+                            {% endif %}
+
 
                             {% if perms.payroll.view_payslip %}
                                 <li>
