@@ -86,6 +86,10 @@ class InstitutionalData(BaseModel):
                                             related_name='institutional_data_original',
                                             verbose_name="Dependencia Original", null=True, blank=True)
     original_dependency_reason = models.TextField(blank=True, null=True, verbose_name="Motivo de Dependencia Original")
+    original_budget_line = models.ForeignKey('budget.BudgetLine', on_delete=models.SET_NULL,
+                                             related_name='institutional_original_employees',
+                                             verbose_name="Partida Presupuestaria Original / Titular", null=True,
+                                             blank=True)
 
     class Meta:
         verbose_name = 'Datos Institucionales'

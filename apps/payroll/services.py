@@ -15,6 +15,7 @@ from contract.models import ManagementPeriod
 from biometric.models import AttendanceRegistry
 from permitrequest.models import PermitRequest
 from schedule.models import ScheduleObservation
+from vacation.models import VacationRequest
 from .models import (
     Payslip, PayrollConstant, PendingDebt,
     PayrollPeriod, PayrollNovelty, PayrollRubric,
@@ -97,6 +98,22 @@ class PayrollCalculatorService:
             start_date__lte=self.period.end_date,
             end_date__gte=self.period.start_date,
         ).values_list('start_date', 'end_date')
+        vacation_dates_map = {}
+        approved_vacations = VacationRequest.objects.filter(
+            employee_id__in=emp_ids,
+            status='APPROVED',
+            start_date__lte=self.period.end_date,
+            end_date__gte=self.period.start_date
+        ).values('employee_id', 'start_date', 'end_date')
+
+        for v in approved_vacations:
+            eid = v['employee_id']
+            vacation_dates_map.setdefault(eid, set())
+            v_curr = max(v['start_date'], self.period.start_date)
+            v_limit = min(v['end_date'], self.period.end_date)
+            while v_curr <= v_limit:
+                vacation_dates_map[eid].add(v_curr)
+                v_curr += timedelta(days=1)
 
         holiday_dates = set()
         for start_date, end_date in holidays_qs:
@@ -230,7 +247,7 @@ class PayrollCalculatorService:
                     curr += timedelta(days=1)
 
         worked_holidays_map = self._get_worked_holidays_map(emp_ids, holiday_dates)
-        return holiday_dates, prev_effective_days_map, absent_dates_map, worked_holidays_map
+        return holiday_dates, prev_effective_days_map, absent_dates_map, worked_holidays_map, vacation_dates_map
 
     def _get_worked_holidays_map(self, emp_ids, holiday_dates):
         if not emp_ids or not holiday_dates:
@@ -352,8 +369,9 @@ class PayrollCalculatorService:
             emp_ids = [p.employee.id for p in created_payslips]
             _lap("bulk_create payslips")
 
-            holiday_dates, prev_effective_days_map, absent_dates_map, worked_holidays_map = self._prepare_mass_data(
+            holiday_dates, prev_effective_days_map, absent_dates_map, worked_holidays_map, vacation_dates_map = self._prepare_mass_data(
                 emp_ids)
+
             current_business_days_set = self._build_business_days_set(
                 self.period.start_date, self.period.end_date, holiday_dates
             )
@@ -457,8 +475,9 @@ class PayrollCalculatorService:
                             if assignment_copy.end_date and assignment_copy.end_date > self.cutoff_date:
                                 assignment_copy.end_date = None
                             emp_assignments.append(assignment_copy)
+                    emp_vacation_dates = vacation_dates_map.get(slip.employee_id, set())
+                    segments = self._build_segments(emp_assignments, slip.employee, emp_vacation_dates)
 
-                    segments = self._build_segments(emp_assignments)
                     if not segments:
                         payslips_to_delete.append(slip.id)
                         continue
@@ -760,54 +779,132 @@ class PayrollCalculatorService:
 
             return {"success": True, "warnings": warnings}
 
-    def _build_segments(self, emp_assignments: list) -> list:
+    def _build_segments(self, emp_assignments: list, employee=None, vacation_dates=None) -> list:
         if not emp_assignments:
             return []
 
-        emp_assignments.sort(key=lambda x: x.start_date)
+        vacation_dates = vacation_dates or set()
+
+        # Obtener la partida original del empleado si existe en InstitutionalData[cite: 8]
+        original_bl = None
+        orig_salary = Decimal('0.0')
+        if employee:
+            try:
+                inst_data = getattr(employee, 'institutional_data', None)
+                if inst_data and inst_data.original_budget_line:
+                    original_bl = inst_data.original_budget_line
+                    orig_salary = Decimal(str(original_bl.remuneration or 0))
+            except Exception:
+                inst_data = None
+
+        # Priorizamos: las asignaciones por encargo (is_acting=True) toman precedencia sobre la titular en sus fechas
+        emp_assignments.sort(key=lambda x: (x.start_date, not getattr(x, 'is_acting', False)))
+
         processed = []
         for i, asi in enumerate(emp_assignments):
             effective_end = asi.end_date
             if i + 1 < len(emp_assignments):
                 next_start = emp_assignments[i + 1].start_date
-                if not effective_end or effective_end >= next_start:
+                # Solo cortamos si no es una asignación por encargo que convive con la titular
+                if not getattr(asi, 'is_acting', False) and getattr(emp_assignments[i + 1], 'is_acting', False):
+                    pass
+                elif not effective_end or effective_end >= next_start:
                     effective_end = next_start - timedelta(days=1)
             processed.append({'assignment': asi, 'start': asi.start_date, 'end': effective_end})
+
+        # Si hay un encargo activo en el mes, extraemos el rango del encargo
+        acting_ranges = [
+            (p['start'], p['end'] or self.period.end_date, p['assignment'])
+            for p in processed if getattr(p['assignment'], 'is_acting', False)
+        ]
 
         segments = []
         total_month_days = 0
 
         for data in processed:
+            asi = data['assignment']
+            is_acting = getattr(asi, 'is_acting', False)
+
+            # Si esta es la asignación titular, pero hay un encargo solapado, recortamos los días del encargo
             s_date = max(data['start'], self.period.start_date)
-            e_date = (
-                min(data['end'], self.period.end_date)
-                if data['end'] else self.period.end_date
-            )
+            e_date = min(data['end'], self.period.end_date) if data['end'] else self.period.end_date
             if s_date > e_date:
                 continue
 
-            if self.period.end_date.month == 2 and e_date == self.period.end_date:
-                actual_days = (30 - s_date.day) + 1
-            elif s_date.day == 31:
-                actual_days = 1
+            base_remun = Decimal(str(asi.budget_line.remuneration or 0))
+
+            # Iteración día por día en base comercial (hasta 30 días)
+            curr = s_date
+            segment_acting_worked_days = 0
+            segment_acting_vacation_days = 0
+            segment_normal_days = 0
+
+            while curr <= e_date:
+                # Control comercial de fin de mes
+                if curr.day > 30 and not (self.period.end_date.month == 2 and curr == self.period.end_date):
+                    curr += timedelta(days=1)
+                    continue
+
+                if is_acting:
+                    if curr in vacation_dates:
+                        segment_acting_vacation_days += 1
+                    else:
+                        segment_acting_worked_days += 1
+                else:
+                    # Comprobar si este día ya está cubierto por un encargo
+                    in_acting = any(act_s <= curr <= act_e for act_s, act_e, _ in acting_ranges)
+                    if not in_acting:
+                        segment_normal_days += 1
+
+                curr += timedelta(days=1)
+
+            # Ajuste de tope de 30 días
+            if is_acting:
+                # 1. Tramo efectivamente laborado del encargo (gana sueldo de la partida del encargo)
+                if segment_acting_worked_days > 0:
+                    actual = min(segment_acting_worked_days, max(0, 30 - total_month_days))
+                    if actual > 0:
+                        segments.append({
+                            'assignment': asi,
+                            'actual_days': actual,
+                            'base_salary': base_remun,
+                            'budget_line': asi.budget_line,
+                            'real_start': s_date,
+                            'real_end': e_date,
+                        })
+                        total_month_days += actual
+
+                # 2. Tramo de vacaciones durante el encargo (vuelve al sueldo titular)
+                if segment_acting_vacation_days > 0:
+                    actual = min(segment_acting_vacation_days, max(0, 30 - total_month_days))
+                    if actual > 0:
+                        fallback_salary = orig_salary if orig_salary > 0 else base_remun
+                        fallback_bl = original_bl if original_bl else asi.budget_line
+                        segments.append({
+                            'assignment': asi,
+                            'actual_days': actual,
+                            'base_salary': fallback_salary,
+                            'budget_line': fallback_bl,
+                            'real_start': s_date,
+                            'real_end': e_date,
+                        })
+                        total_month_days += actual
             else:
-                commercial_end_day = min(e_date.day, 30)
-                actual_days = (commercial_end_day - s_date.day) + 1
+                if segment_normal_days > 0:
+                    actual = min(segment_normal_days, max(0, 30 - total_month_days))
+                    if actual > 0:
+                        segments.append({
+                            'assignment': asi,
+                            'actual_days': actual,
+                            'base_salary': base_remun,
+                            'budget_line': asi.budget_line,
+                            'real_start': s_date,
+                            'real_end': e_date,
+                        })
+                        total_month_days += actual
 
-            if total_month_days + actual_days > 30:
-                actual_days = 30 - total_month_days
-            actual_days = max(0, actual_days)
-
-            if actual_days > 0:
-                segments.append({
-                    'assignment': data['assignment'],
-                    'actual_days': actual_days,
-                    'base_salary': Decimal(str(data['assignment'].budget_line.remuneration or 0)),
-                    'budget_line': data['assignment'].budget_line,
-                    'real_start': s_date,
-                    'real_end': e_date,
-                })
-                total_month_days += actual_days
+            if total_month_days >= 30:
+                break
 
         return segments
 

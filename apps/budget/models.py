@@ -2,6 +2,7 @@ from django.db import models
 from django.core.exceptions import ValidationError
 from core.models import BaseModel, CatalogItem, User
 from employee.models import Employee
+from .models import BudgetLine
 
 
 # ==========================================
@@ -341,10 +342,9 @@ class BudgetAssignmentHistory(models.Model):
                                     related_name='assignments')
     employee = models.ForeignKey(Employee, on_delete=models.PROTECT, verbose_name='Empleado',
                                  related_name='budget_history')
-
     start_date = models.DateField(verbose_name='Fecha Inicio')
     end_date = models.DateField(verbose_name='Fecha Fin', blank=True, null=True)
-
+    is_acting = models.BooleanField(default=False, verbose_name="Es Encargo / Subrogación")
     is_current = models.BooleanField(default=False, verbose_name="Es asignación actual")
     observation = models.TextField(verbose_name="Observación de salida", blank=True, null=True)
 
@@ -357,9 +357,9 @@ class BudgetAssignmentHistory(models.Model):
         return f"{self.employee} en {self.budget_line} ({self.start_date})"
 
     def clean(self):
-        if self.is_current and not self.end_date:
-            from .models import BudgetLine
-            if BudgetLine.objects.filter(current_employee=self.employee).exclude(pk=self.budget_line.pk).exists():
+        if self.is_current and not self.end_date and not self.is_acting:
+            if BudgetLine.objects.filter(current_employee=self.employee).exclude(
+                    pk=self.budget_line.pk).exists():
                 raise ValidationError('Este empleado ya tiene una partida asignada en la tabla principal.')
 
     def save(self, *args, **kwargs):

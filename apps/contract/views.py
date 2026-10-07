@@ -29,7 +29,7 @@ from django.db.models.functions import Coalesce
 from budget.models import BudgetModificationHistory, BudgetAssignmentHistory
 from core.models import CatalogItem
 from core.models import SystemConfiguration
-from employee.models import Employee
+from employee.models import Employee, InstitutionalData
 from person.models import Person
 from institution.models import AdministrativeUnit
 from schedule.models import Schedule
@@ -1479,13 +1479,20 @@ class ManagementPeriodSignView(LoginRequiredMixin, PermissionRequiredMixin, View
                     else:
                         new_status = 'EMPLEADO'
                 period.employee.set_status(new_status)
+                try:
+                    inst_data, _ = InstitutionalData.objects.get_or_create(employee=period.employee)
+                    if not inst_data.original_budget_line and period.budget_line:
+                        inst_data.original_budget_line = period.budget_line
+                        inst_data.save(update_fields=['original_budget_line'])
+                except Exception as e:
+                    print(f"No se pudo fijar partida original para {period.employee}: {e}")
 
                 try:
                     if not period.employee.is_active:
                         period.employee.is_active = True
                         period.employee.save(update_fields=['is_active'])
                 except Exception as e:
-                    print(f"No se pudo activar employee tras firma (id={getattr(period.employee, 'id', None)}): {e}")
+                    print(f"No se pudo activar empleado tras firma (id={getattr(period.employee, 'id', None)}): {e}")
 
                 # --- REGISTRO EN HISTORIAL DE CONTRATO ---
                 is_action_document = period.contract_type.contract_type_category == ContractType.TYPE_ACCION_PERSONAL

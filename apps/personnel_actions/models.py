@@ -13,6 +13,8 @@ class ActionType(models.Model):
     name = models.CharField(verbose_name='Nombre', max_length=100)
     code = models.CharField(verbose_name='Código', max_length=35, unique=True, help_text="Ej: ASC, NOM, REM")
     is_active = models.BooleanField(verbose_name='Activo', default=True)
+    is_acting = models.BooleanField(verbose_name='Es Encargo / Subrogación', default=False,
+                                    help_text="Marcar si es un movimiento temporal donde no se altera la partida titular del empleado ni del custodio.")
     default_authority_1 = models.ForeignKey(User, verbose_name='Autoridad 1 (Defecto)', on_delete=models.SET_NULL,
                                             related_name='default_auth1_types', limit_choices_to={'is_active': True},
                                             null=True, blank=True)
