@@ -615,7 +615,11 @@ class ActionDetailView(LoginRequiredMixin, View):
         movement = getattr(action, 'movement', None)
         html = render_to_string(
             'personnel_action/modals/modal_action_detail.html',
-            {'action': action, 'history_action': movement},
+            {
+                'action': action,
+                'history_action': movement,
+                'reason': _movement_reason(action),
+            },
             request=request
         )
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':

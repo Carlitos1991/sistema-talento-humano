@@ -437,7 +437,14 @@ function initDetailPhotoUpload() {
 // Delegación global para modales de detalle de acciones de personal
 $(document).on('click', '.js-close-detail-modal', function () {
     $('#action-modal-employee').empty();
-    $('body').removeClass('modal-open');
+    $('body, html').removeClass('modal-open no-scroll');
+});
+
+$(document).on('click', '#action-modal-employee .modal-overlay', function (e) {
+    if (e.target === this) {
+        $('#action-modal-employee').empty();
+        $('body, html').removeClass('modal-open no-scroll');
+    }
 });
 
 $(document).off('click', '.js-view-action-detail').on('click', '.js-view-action-detail', function (e) {

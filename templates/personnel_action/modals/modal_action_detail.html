@@ -16,7 +16,7 @@
                 </div>
             </div>
             <!-- Botón estandarizado con font-awesome -->
-            <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar ventana">
+            <button type="button" class="btn-close-circle js-close-detail-modal" title="Cerrar ventana">
                 <i class="fas fa-times"></i>
             </button>
         </div>
@@ -75,6 +75,17 @@
                     <div>
                         <span class="label-muted">Fecha Vigencia / Rige</span>
                         <span class="value-bold text-green">{{ action.date_effective|date:"d/m/Y"|default:"--" }}</span>
+                    </div>
+                    <div>
+                        <span class="label-muted">Estado</span>
+                        {% if action.is_registered %}
+                            <span class="badge badge-green badge-lg">Registrada</span>
+                            {% if action.date_registered %}
+                                <small class="d-block text-muted mt-1">{{ action.date_registered|date:"d/m/Y" }}</small>
+                            {% endif %}
+                        {% else %}
+                            <span class="badge badge-amber badge-lg">Pendiente de registro</span>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -136,7 +147,7 @@
                 <div class="mb-3">
                     <span class="label-muted">Motivación</span>
                     <div class="history-log-box">
-                        {{ action.motivation|default:"Sin motivación registrada." }}
+                        {{ action.motivation|default:reason|default:"Sin motivación registrada." }}
                     </div>
                 </div>
                 <div>
@@ -151,7 +162,7 @@
 
         <!-- Footer del Modal -->
         <div class="modal-footer-medium modal-footer-spaced">
-            <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">
+            <button type="button" class="btn-dark-blue-rectangle-outline js-close-detail-modal">
                 Cerrar
             </button>
             <a href="{% url 'personnel_actions:action_pdf' action.pk %}" target="_blank" class="btn-blue-rectangle">
