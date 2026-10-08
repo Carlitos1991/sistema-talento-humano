@@ -1,5 +1,5 @@
 /* static/js/budget.js
-   Gestión de Partidas Presupuestarias - AJAX estricto sin saltos ni recargas completas
+   Gestión de Partidas Presupuestarias - AJAX estricto, sin recargas y cascadas estables
 */
 
 (function () {
@@ -11,7 +11,6 @@
         page: 1
     };
 
-    // Helper para capturar todos los datos del formulario de búsqueda
     function getFilterParams(targetPage = null) {
         const form = document.getElementById('budget-filter-form');
         const params = new URLSearchParams();
@@ -40,7 +39,6 @@
         return params;
     }
 
-    // Petición AJAX que preserva la posición del scroll exacta
     function applyBudgetFilters(page = 1) {
         budgetState.page = page;
 
@@ -51,7 +49,6 @@
         const listUrl = table ? table.getAttribute('data-list-url') : window.location.pathname;
         const params = getFilterParams(page);
 
-        // Guardar la posición actual de scroll para evitar cualquier brinco al inicio
         const currentScrollPos = window.scrollY || document.documentElement.scrollTop;
 
         wrapper.style.opacity = '0.5';
@@ -73,11 +70,7 @@
             .then(html => {
                 if (!html) return;
                 wrapper.innerHTML = html;
-
-                // Mantener exactamente la posición de scroll
                 window.scrollTo({top: currentScrollPos, behavior: 'instant'});
-
-                // Actualizar estilo visual en cabeceras ordenadas
                 updateSortHeaderStyles();
             })
             .catch(err => {
@@ -89,7 +82,6 @@
             });
     }
 
-    // Toggle de búsqueda avanzada
     function toggleAdvancedSearch() {
         const container = document.getElementById('advanced-search-container');
         const icon = document.getElementById('icon-toggle-advanced');
@@ -111,12 +103,11 @@
             container.classList.add('hidden');
             if (icon) {
                 icon.classList.remove('fa-chevron-up');
-                icon.classList.down?.classList.add('fa-chevron-down');
+                icon.classList.add('fa-chevron-down');
             }
         }
     }
 
-    // Limpieza de filtros
     function clearFilters() {
         const form = document.getElementById('budget-filter-form');
         if (form) {
@@ -128,7 +119,6 @@
         filterByStatus('all');
     }
 
-    // Filtrado por Stat Cards (Estado)
     function filterByStatus(status) {
         budgetState.status = status;
         document.querySelectorAll('#budget-stats-row .stat-card').forEach(c => c.classList.add('opacity-low'));
@@ -140,7 +130,6 @@
         applyBudgetFilters(1);
     }
 
-    // Ordenamiento por columna
     function sortTable(field) {
         if (budgetState.sort === field) {
             budgetState.sort = '-' + field;
@@ -161,7 +150,6 @@
         const activeField = currentSort.replace(/^-/, '');
 
         headers.forEach(th => {
-            // 1. Asegurar que exista el elemento de la flecha
             let arrow = th.querySelector('.sort-arrow');
             if (!arrow) {
                 arrow = document.createElement('span');
@@ -170,14 +158,11 @@
                 th.appendChild(arrow);
             }
 
-            // 2. Comprobar si este th corresponde a la columna ordenada
             const thField = th.dataset.sortField || '';
             const isCurrentColumn = thField !== '' && thField === activeField;
 
-            // 3. Limpiar estados previos
             th.classList.remove('sorted-asc', 'sorted-desc');
 
-            // 4. Aplicar la clase institucional de style.css y el glifo
             if (isCurrentColumn) {
                 if (isDesc) {
                     th.classList.add('sorted-desc');
@@ -193,14 +178,10 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        // Inicializar combos Select2
         if (window.$ && $.fn.select2) {
-            $('#budget-filter-form select.select2').select2({
-                width: '100%'
-            });
+            $('#budget-filter-form select.select2').select2({width: '100%'});
         }
 
-        // Búsqueda en tiempo real con debounce
         const searchInput = document.getElementById('table-search-budget');
         if (searchInput) {
             let debounceTimer = null;
@@ -212,7 +193,6 @@
             });
         }
 
-        // Bloquear submit nativo y enter accidental en el formulario
         const filterForm = document.getElementById('budget-filter-form');
         if (filterForm) {
             filterForm.addEventListener('submit', (e) => {
@@ -229,13 +209,11 @@
             });
         }
 
-        // Botón toggle de filtros avanzados
         const btnToggle = document.getElementById('btn-toggle-advanced');
         if (btnToggle) {
             btnToggle.addEventListener('click', toggleAdvancedSearch);
         }
 
-        // Botón Limpiar
         const btnClear = document.getElementById('btn-budget-clear');
         if (btnClear) {
             btnClear.addEventListener('click', (e) => {
@@ -244,7 +222,6 @@
             });
         }
 
-        // Botón Nueva Partida
         const btnAdd = document.getElementById('btn-add-budget');
         if (btnAdd) {
             btnAdd.addEventListener('click', () => {
@@ -252,7 +229,6 @@
             });
         }
 
-        // Clic en Stat Cards (Filtro por estado)
         const statsRow = document.getElementById('budget-stats-row');
         if (statsRow) {
             statsRow.addEventListener('click', (e) => {
@@ -270,27 +246,19 @@
         if (e.target.closest('[data-action="close-modal"]')) {
             e.preventDefault();
             window.closeModal();
+            return;
         }
-        if (e.target && e.target.id === 'budget-item-form') {
-            window.submitAjaxForm(e, () => {
-                applyBudgetFilters(budgetState.page);
-            });
-        }
-        // 1. Modales en botones de acciones
+
         const modalBtn = e.target.closest('.btn-ajax-modal');
         if (modalBtn && modalBtn.dataset.modalUrl) {
             e.preventDefault();
             const url = modalBtn.dataset.modalUrl;
-
             window.openAjaxModal(url, () => {
-                if (document.getElementById('display-budget-code')) {
-                    window.initBudgetFormCascades();
-                }
+                window.initBudgetFormCascades();
             });
             return;
         }
 
-        // 2. Ordenamiento de cabeceras
         const sortTh = e.target.closest('th.sortable-header[data-sort-field]');
         if (sortTh && sortTh.closest('#table-content-wrapper')) {
             e.preventDefault();
@@ -299,7 +267,6 @@
             return;
         }
 
-        // 3. Paginación AJAX conservando la posición
         const pageBtn = e.target.closest('#js-pagination .page-btn');
         if (pageBtn) {
             if (pageBtn.disabled || pageBtn.classList.contains('disabled')) return;
@@ -313,7 +280,62 @@
         }
     }, true);
 
-    // Salto directo por input numérico en la paginación
+    // Interceptar envío del formulario modal para que NUNCA navegue a la URL del JSON
+    // Interceptar envío del formulario modal para que guarde por AJAX y refresque según la vista
+    document.addEventListener('submit', (e) => {
+        const form = e.target;
+        if (form && form.id === 'budget-item-form') {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const formData = new FormData(form);
+            const csrfToken = form.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+
+            fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': csrfToken
+                }
+            })
+                .then(async response => {
+                    const data = await response.json();
+                    if (response.ok && (data.success || data.status === 'success')) {
+                        window.closeModal();
+                        if (typeof window.showToast === 'function') {
+                            window.showToast(data.message || 'Partida guardada exitosamente.', 'success');
+                        }
+
+                        // Si estamos en la vista de DETALLE, recargamos la página para ver los cambios
+                        const isDetailPage = !document.getElementById('table-content-wrapper');
+                        if (isDetailPage) {
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 500);
+                        } else {
+                            // Si estamos en el listado, refrescamos la tabla AJAX
+                            applyBudgetFilters(budgetState.page);
+                        }
+                    } else {
+                        let msg = data.message || 'Error al guardar la partida.';
+                        if (data.errors) {
+                            const errorList = Object.entries(data.errors).map(([k, v]) => `• <b>${k}:</b> ${Array.isArray(v) ? v[0] : v}`);
+                            msg = errorList.join('<br>');
+                        }
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire({icon: 'warning', title: 'Atención', html: msg});
+                        }
+                    }
+                })
+                .catch(err => {
+                    console.error("Error al procesar formulario de partida:", err);
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({icon: 'error', title: 'Error', text: 'Problema de conexión con el servidor.'});
+                    }
+                });
+        }
+    });
     document.addEventListener('change', (e) => {
         if (e.target && e.target.classList.contains('budget-page-input')) {
             e.preventDefault();
@@ -329,56 +351,66 @@
             applyBudgetFilters(page);
         }
     });
-
-// =========================================================================
-    // MODAL DE CREACIÓN / EDICIÓN CON CASCADA Y CÓDIGO GENERADO
+    // =========================================================================
+    // MODAL DE CASCADA Y CÓDIGO GENERADO (COMPLETO Y ESTABLE)
     // =========================================================================
     window.initBudgetFormCascades = function () {
         const modal = document.querySelector('#modal-root .modal-overlay');
         if (!modal) return;
 
-        // Referencias a los campos
-        const $program = $('#id_program', modal);
-        const $subprogram = $('#id_subprogram', modal);
-        const $project = $('#id_project', modal);
-        const $activity = $('#id_activity', modal);
-        const $spending = $('#id_spending_type_item', modal);
-        const $regime = $('#id_regime_item', modal);
+        const form = modal.querySelector('#budget-item-form');
+        if (!form) return;
+
+        // Evitar inicializaciones dobles de Select2 y de eventos
+        if (form.dataset.cascadesInitialized === 'true') return;
+        form.dataset.cascadesInitialized = 'true';
+
+        const $modal = $(modal);
+        const $program = $('#id_program', form);
+        const $subprogram = $('#id_subprogram', form);
+        const $project = $('#id_project', form);
+        const $activity = $('#id_activity', form);
+        const $spending = $('#id_spending_type_item', form);
+        const $regime = $('#id_regime_item', form);
         const displayCode = document.getElementById('display-budget-code');
         const hiddenCode = document.getElementById('id_code');
 
         if (!$program.length) return;
 
-        // 1. Inicialización limpia de Select2
-        $(modal).find('select').each(function () {
+        // 1. Inicialización limpia y única de Select2
+        $modal.find('select').each(function () {
             const $this = $(this);
-            if ($this.hasClass('select2-hidden-accessible')) {
-                $this.select2('destroy');
+            if (!$this.hasClass('select2-hidden-accessible')) {
+                $this.select2({
+                    width: '100%',
+                    dropdownParent: $modal
+                });
             }
-            $this.select2({
-                width: '100%',
-                dropdownParent: $(modal).find('.modal-body-custom')
-            });
         });
 
-        // 2. Extractor de código robusto (soporta data-code o split por guion)
+        // 2. Extractor de código (LIMPIO: sin return '' previo)
         const getCodePart = ($el) => {
             if (!$el || !$el.length) return '';
-            return '';
             const val = $el.val();
             if (!val) return '';
 
             const opt = $el.find('option:selected')[0];
             if (!opt) return '';
 
+            // 1. data-code asignado
             if (opt.dataset && opt.dataset.code) {
                 return opt.dataset.code.trim();
             }
 
+            // 2. Extraer del texto (ej. "1.06 - PROCURADURIA SINDICA" -> "1.06")
             const rawText = (opt.textContent || opt.innerText || '').trim();
             if (rawText.includes('---------') || rawText === '') return '';
 
-            // Limpieza de texto (soporta " - ", " – ", o solo el primer bloque)
+            const match = rawText.match(/^([0-9.]+)/);
+            if (match) {
+                return match[1].trim();
+            }
+
             if (rawText.includes('-')) {
                 return rawText.split('-')[0].trim();
             }
@@ -386,7 +418,7 @@
             return rawText;
         };
 
-        // 3. Función unificada para pintar el código
+        // 3. Recalcular y pintar el código compuesto
         const updateFullCode = () => {
             const parts = [
                 getCodePart($program),
@@ -397,20 +429,24 @@
                 getCodePart($regime)
             ].filter(p => p !== '');
 
-            const finalCode = parts.length > 0 ? parts.join('.') : '00.00.00.00.00.00';
-
-            if (displayCode) {
-                displayCode.textContent = finalCode;
-            }
-            if (hiddenCode) {
-                hiddenCode.value = finalCode;
+            if (parts.length > 0) {
+                const finalCode = parts.join('.');
+                if (displayCode) displayCode.textContent = finalCode;
+                if (hiddenCode) hiddenCode.value = finalCode;
+            } else {
+                const existingVal = hiddenCode && hiddenCode.value ? hiddenCode.value.trim() : '';
+                if (existingVal && existingVal !== '00.00.00.00.00.00') {
+                    if (displayCode) displayCode.textContent = existingVal;
+                } else {
+                    if (displayCode) displayCode.textContent = '00.00.00.00.00.00';
+                }
             }
         };
 
         // 4. Carga AJAX jerárquica de combos dependientes
         const fetchChildren = (parentId, type, $targetSelect) => {
             if (!parentId) {
-                $targetSelect.empty().append(new Option('---------', '')).prop('disabled', true).trigger('change');
+                $targetSelect.empty().append(new Option('---------', '')).prop('disabled', true).trigger('change.select2');
                 return Promise.resolve();
             }
 
@@ -429,71 +465,56 @@
                         $targetSelect.append(opt);
                     });
 
-                    $targetSelect.prop('disabled', false).trigger('change');
+                    $targetSelect.prop('disabled', false).trigger('change.select2');
                 })
                 .catch(err => {
                     console.error(`Error consultando niveles para ${type}:`, err);
                 });
         };
 
-        // 5. Enlace directo a eventos nativos y de Select2
-        // Al cambiar PROGRAMA -> actualiza SUBPROGRAMA y vacía PROYECTO y ACTIVIDAD
-        $program.off('select2:select change').on('select2:select change', function (e) {
-            if (e.originalEvent || e.type === 'select2:select') {
-                const parentVal = $(this).val();
-                $project.empty().append(new Option('---------', '')).prop('disabled', true).trigger('change');
-                $activity.empty().append(new Option('---------', '')).prop('disabled', true).trigger('change');
-                fetchChildren(parentVal, 'subprogram', $subprogram).then(updateFullCode);
-            } else {
-                updateFullCode();
-            }
+        // 5. Escuchar solo 'change' (evita doble ejecución con select2:select)
+        $program.off('change.budgetCascades').on('change.budgetCascades', function (e) {
+            const parentVal = $(this).val();
+            $project.empty().append(new Option('---------', '')).prop('disabled', true).trigger('change.select2');
+            $activity.empty().append(new Option('---------', '')).prop('disabled', true).trigger('change.select2');
+            fetchChildren(parentVal, 'subprogram', $subprogram).then(updateFullCode);
         });
 
-        // Al cambiar SUBPROGRAMA -> actualiza PROYECTO y vacía ACTIVIDAD
-        $subprogram.off('select2:select change').on('select2:select change', function (e) {
-            if (e.originalEvent || e.type === 'select2:select') {
-                const parentVal = $(this).val();
-                $activity.empty().append(new Option('---------', '')).prop('disabled', true).trigger('change');
-                fetchChildren(parentVal, 'project', $project).then(updateFullCode);
-            } else {
-                updateFullCode();
-            }
+        $subprogram.off('change.budgetCascades').on('change.budgetCascades', function (e) {
+            const parentVal = $(this).val();
+            $activity.empty().append(new Option('---------', '')).prop('disabled', true).trigger('change.select2');
+            fetchChildren(parentVal, 'project', $project).then(updateFullCode);
         });
 
-        // Al cambiar PROYECTO -> actualiza ACTIVIDAD
-        $project.off('select2:select change').on('select2:select change', function (e) {
-            if (e.originalEvent || e.type === 'select2:select') {
-                const parentVal = $(this).val();
-                fetchChildren(parentVal, 'activity', $activity).then(updateFullCode);
-            } else {
-                updateFullCode();
-            }
+        $project.off('change.budgetCascades').on('change.budgetCascades', function (e) {
+            const parentVal = $(this).val();
+            fetchChildren(parentVal, 'activity', $activity).then(updateFullCode);
         });
 
-        // Al cambiar ACTIVIDAD, TIPO DE GASTO o RÉGIMEN -> recalcula código
-        $activity.off('select2:select change').on('select2:select change', function () {
+        $activity.off('change.budgetCascades').on('change.budgetCascades', function () {
             const hasVal = !!$(this).val();
-            $spending.prop('disabled', !hasVal).trigger('change');
+            $spending.prop('disabled', !hasVal).trigger('change.select2');
             updateFullCode();
         });
 
-        $spending.off('select2:select change').on('select2:select change', function () {
+        $spending.off('change.budgetCascades').on('change.budgetCascades', function () {
             const hasVal = !!$(this).val();
-            $regime.prop('disabled', !hasVal).trigger('change');
+            $regime.prop('disabled', !hasVal).trigger('change.select2');
             updateFullCode();
         });
 
-        $regime.off('select2:select change').on('select2:select change', function () {
+        $regime.off('change.budgetCascades').on('change.budgetCascades', function () {
             updateFullCode();
         });
 
-        // Habilitar según valores existentes en caso de edición
-        if ($activity.val()) $spending.prop('disabled', false);
-        if ($spending.val()) $regime.prop('disabled', false);
+        // Habilitar según valores existentes en edición
+        if ($activity.val()) $spending.prop('disabled', false).trigger('change.select2');
+        if ($spending.val()) $regime.prop('disabled', false).trigger('change.select2');
 
-        // Disparo inicial
+        // Cálculo inicial para reflejar la partida actual
         updateFullCode();
     };
+
     window.openCreateBudgetModal = function () {
         window.openAjaxModal('/budget/create/', () => {
             window.initBudgetFormCascades();
@@ -506,18 +527,18 @@
         });
     };
 })();
-// Detecta automáticamente cuando el modal de partidas presupuestarias se inyecta en el DOM
+
+// Observador único sin re-ejecuciones múltiples
 const modalObserver = new MutationObserver((mutations) => {
-    mutations.forEach((mutation) => {
+    for (let mutation of mutations) {
         if (mutation.addedNodes.length) {
-            const form = document.getElementById('budget-item-form') || document.getElementById('display-budget-code');
-            if (form) {
-                setTimeout(() => {
-                    window.initBudgetFormCascades();
-                }, 50);
+            const form = document.getElementById('budget-item-form');
+            if (form && form.dataset.cascadesInitialized !== 'true') {
+                window.initBudgetFormCascades();
+                break;
             }
         }
-    });
+    }
 });
 
 document.addEventListener('DOMContentLoaded', () => {
