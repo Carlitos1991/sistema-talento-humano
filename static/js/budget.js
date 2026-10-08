@@ -267,11 +267,26 @@
 
     // Delegación de eventos para la tabla y paginación
     document.addEventListener('click', (e) => {
+        if (e.target.closest('[data-action="close-modal"]')) {
+            e.preventDefault();
+            window.closeModal();
+        }
+        if (e.target && e.target.id === 'budget-item-form') {
+            window.submitAjaxForm(e, () => {
+                applyBudgetFilters(budgetState.page);
+            });
+        }
         // 1. Modales en botones de acciones
         const modalBtn = e.target.closest('.btn-ajax-modal');
         if (modalBtn && modalBtn.dataset.modalUrl) {
             e.preventDefault();
-            window.openAjaxModal(modalBtn.dataset.modalUrl);
+            const url = modalBtn.dataset.modalUrl;
+
+            window.openAjaxModal(url, () => {
+                if (document.getElementById('display-budget-code')) {
+                    window.initBudgetFormCascades();
+                }
+            });
             return;
         }
 
@@ -315,99 +330,199 @@
         }
     });
 
-    // =========================================================================
-    // MODALES Y CASCADAS
+// =========================================================================
+    // MODAL DE CREACIÓN / EDICIÓN CON CASCADA Y CÓDIGO GENERADO
     // =========================================================================
     window.initBudgetFormCascades = function () {
-        const $modal = $('#modal-root');
-        const $program = $modal.find('#id_program'),
-            $subprogram = $modal.find('#id_subprogram'),
-            $project = $modal.find('#id_project'),
-            $activity = $modal.find('#id_activity'),
-            $spending = $modal.find('#id_spending_type_item'),
-            $regime = $modal.find('#id_regime_item'),
-            $displayCode = $modal.find('#display-budget-code'),
-            $hiddenCode = $modal.find('#id_code');
+        const modal = document.querySelector('#modal-root .modal-overlay');
+        if (!modal) return;
+
+        // Referencias a los campos
+        const $program = $('#id_program', modal);
+        const $subprogram = $('#id_subprogram', modal);
+        const $project = $('#id_project', modal);
+        const $activity = $('#id_activity', modal);
+        const $spending = $('#id_spending_type_item', modal);
+        const $regime = $('#id_regime_item', modal);
+        const displayCode = document.getElementById('display-budget-code');
+        const hiddenCode = document.getElementById('id_code');
 
         if (!$program.length) return;
 
-        $modal.find('select').select2({
-            width: '100%',
-            dropdownParent: $modal.find('.modal-body-custom')
+        // 1. Inicialización limpia de Select2
+        $(modal).find('select').each(function () {
+            const $this = $(this);
+            if ($this.hasClass('select2-hidden-accessible')) {
+                $this.select2('destroy');
+            }
+            $this.select2({
+                width: '100%',
+                dropdownParent: $(modal).find('.modal-body-custom')
+            });
         });
 
+        // 2. Extractor de código robusto (soporta data-code o split por guion)
         const getCodePart = ($el) => {
-            const selected = $el.find('option:selected')[0];
-            if (!selected || !selected.value || selected.text.includes('---------')) return '';
-            return selected.dataset.code || selected.text.split(' - ')[0].trim();
+            if (!$el || !$el.length) return '';
+            return '';
+            const val = $el.val();
+            if (!val) return '';
+
+            const opt = $el.find('option:selected')[0];
+            if (!opt) return '';
+
+            if (opt.dataset && opt.dataset.code) {
+                return opt.dataset.code.trim();
+            }
+
+            const rawText = (opt.textContent || opt.innerText || '').trim();
+            if (rawText.includes('---------') || rawText === '') return '';
+
+            // Limpieza de texto (soporta " - ", " – ", o solo el primer bloque)
+            if (rawText.includes('-')) {
+                return rawText.split('-')[0].trim();
+            }
+
+            return rawText;
         };
 
+        // 3. Función unificada para pintar el código
         const updateFullCode = () => {
             const parts = [
-                getCodePart($program), getCodePart($subprogram), getCodePart($project),
-                getCodePart($activity), getCodePart($spending), getCodePart($regime)
+                getCodePart($program),
+                getCodePart($subprogram),
+                getCodePart($project),
+                getCodePart($activity),
+                getCodePart($spending),
+                getCodePart($regime)
             ].filter(p => p !== '');
-            const finalCode = parts.join('.');
-            if ($displayCode.length) $displayCode.text(finalCode || '00.00.00.00.00.00');
-            if ($hiddenCode.length) $hiddenCode.val(finalCode);
+
+            const finalCode = parts.length > 0 ? parts.join('.') : '00.00.00.00.00.00';
+
+            if (displayCode) {
+                displayCode.textContent = finalCode;
+            }
+            if (hiddenCode) {
+                hiddenCode.value = finalCode;
+            }
         };
 
-        const fetchChildren = async (parentId, type, $targetSelect) => {
+        // 4. Carga AJAX jerárquica de combos dependientes
+        const fetchChildren = (parentId, type, $targetSelect) => {
             if (!parentId) {
-                $targetSelect.empty().append('<option value="">---------</option>').prop('disabled', true).trigger('change.select2');
-                return;
+                $targetSelect.empty().append(new Option('---------', '')).prop('disabled', true).trigger('change');
+                return Promise.resolve();
             }
-            try {
-                const res = await fetch(`/budget/api/hierarchy/?parent_id=${parentId}&target_type=${type}`);
-                const data = await res.json();
-                $targetSelect.empty().append('<option value="">---------</option>');
-                data.results.forEach(item => {
-                    const opt = new Option(item.text, item.id);
-                    opt.setAttribute('data-code', item.code);
-                    $targetSelect.append(opt);
+
+            return fetch(`/budget/api/hierarchy/?parent_id=${parentId}&target_type=${type}`, {
+                headers: {'X-Requested-With': 'XMLHttpRequest'}
+            })
+                .then(res => res.json())
+                .then(data => {
+                    $targetSelect.empty().append(new Option('---------', ''));
+                    const list = data.results || data || [];
+
+                    list.forEach(item => {
+                        const opt = new Option(item.text, item.id);
+                        const code = item.code || (item.text.includes('-') ? item.text.split('-')[0].trim() : item.text);
+                        opt.setAttribute('data-code', code);
+                        $targetSelect.append(opt);
+                    });
+
+                    $targetSelect.prop('disabled', false).trigger('change');
+                })
+                .catch(err => {
+                    console.error(`Error consultando niveles para ${type}:`, err);
                 });
-                $targetSelect.prop('disabled', false).trigger('change.select2');
-            } catch (e) {
-                console.error(e);
-            }
         };
 
-        $program.on('change', () => {
-            fetchChildren($program.val(), 'subprogram', $subprogram);
-            [$project, $activity].forEach(s => s.empty().prop('disabled', true).trigger('change.select2'));
+        // 5. Enlace directo a eventos nativos y de Select2
+        // Al cambiar PROGRAMA -> actualiza SUBPROGRAMA y vacía PROYECTO y ACTIVIDAD
+        $program.off('select2:select change').on('select2:select change', function (e) {
+            if (e.originalEvent || e.type === 'select2:select') {
+                const parentVal = $(this).val();
+                $project.empty().append(new Option('---------', '')).prop('disabled', true).trigger('change');
+                $activity.empty().append(new Option('---------', '')).prop('disabled', true).trigger('change');
+                fetchChildren(parentVal, 'subprogram', $subprogram).then(updateFullCode);
+            } else {
+                updateFullCode();
+            }
+        });
+
+        // Al cambiar SUBPROGRAMA -> actualiza PROYECTO y vacía ACTIVIDAD
+        $subprogram.off('select2:select change').on('select2:select change', function (e) {
+            if (e.originalEvent || e.type === 'select2:select') {
+                const parentVal = $(this).val();
+                $activity.empty().append(new Option('---------', '')).prop('disabled', true).trigger('change');
+                fetchChildren(parentVal, 'project', $project).then(updateFullCode);
+            } else {
+                updateFullCode();
+            }
+        });
+
+        // Al cambiar PROYECTO -> actualiza ACTIVIDAD
+        $project.off('select2:select change').on('select2:select change', function (e) {
+            if (e.originalEvent || e.type === 'select2:select') {
+                const parentVal = $(this).val();
+                fetchChildren(parentVal, 'activity', $activity).then(updateFullCode);
+            } else {
+                updateFullCode();
+            }
+        });
+
+        // Al cambiar ACTIVIDAD, TIPO DE GASTO o RÉGIMEN -> recalcula código
+        $activity.off('select2:select change').on('select2:select change', function () {
+            const hasVal = !!$(this).val();
+            $spending.prop('disabled', !hasVal).trigger('change');
             updateFullCode();
         });
 
-        $subprogram.on('change', () => {
-            fetchChildren($subprogram.val(), 'project', $project);
-            $activity.empty().prop('disabled', true).trigger('change.select2');
+        $spending.off('select2:select change').on('select2:select change', function () {
+            const hasVal = !!$(this).val();
+            $regime.prop('disabled', !hasVal).trigger('change');
             updateFullCode();
         });
 
-        $project.on('change', () => {
-            fetchChildren($project.val(), 'activity', $activity);
+        $regime.off('select2:select change').on('select2:select change', function () {
             updateFullCode();
         });
 
-        $activity.on('change', () => {
-            const hasVal = !!$activity.val();
-            $spending.prop('disabled', !hasVal).trigger('change.select2');
-            updateFullCode();
-        });
+        // Habilitar según valores existentes en caso de edición
+        if ($activity.val()) $spending.prop('disabled', false);
+        if ($spending.val()) $regime.prop('disabled', false);
 
-        $spending.on('change', () => {
-            const hasVal = !!$spending.val();
-            $regime.prop('disabled', !hasVal).trigger('change.select2');
-            updateFullCode();
-        });
-
-        $regime.on('change', updateFullCode);
+        // Disparo inicial
         updateFullCode();
     };
-
     window.openCreateBudgetModal = function () {
         window.openAjaxModal('/budget/create/', () => {
             window.initBudgetFormCascades();
         });
     };
+
+    window.openEditBudgetModal = function (url) {
+        window.openAjaxModal(url, () => {
+            window.initBudgetFormCascades();
+        });
+    };
 })();
+// Detecta automáticamente cuando el modal de partidas presupuestarias se inyecta en el DOM
+const modalObserver = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+        if (mutation.addedNodes.length) {
+            const form = document.getElementById('budget-item-form') || document.getElementById('display-budget-code');
+            if (form) {
+                setTimeout(() => {
+                    window.initBudgetFormCascades();
+                }, 50);
+            }
+        }
+    });
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    const modalRoot = document.getElementById('modal-root');
+    if (modalRoot) {
+        modalObserver.observe(modalRoot, {childList: true, subtree: true});
+    }
+});
