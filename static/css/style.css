@@ -666,8 +666,8 @@ body.swal2-height-auto {
 }
 
 .small {
-    font-size: 0.85rem;
-    line-height: 1.2;
+    font-size: .78rem;
+    color: #64748b;
 }
 
 /* Label y valor */

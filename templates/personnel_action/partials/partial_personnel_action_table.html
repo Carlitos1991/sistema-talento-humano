@@ -39,7 +39,7 @@
             {% with mov=action.movement %}
                 <tr data-search-text="{{ action.employee.person.full_name }} {{ action.employee.person.document_number }} {{ action.number }} {{ action.action_type.name }}">
                     <td>{{ action.employee.person.name_and_last_name }}
-                        <div class="person-doc">CI: {{ action.employee.person.document_number }}</div>
+                        <div class="small">CI: {{ action.employee.person.document_number }}</div>
                     </td>
                     <td><span class="badge badge-blue">
                         {{ action.action_type.name }}

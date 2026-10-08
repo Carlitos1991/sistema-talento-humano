@@ -1,5 +1,5 @@
 /* static/js/budget.js
-   Gestión de Partidas Presupuestarias - Integrado a main.js
+   Gestión de Partidas Presupuestarias - AJAX estricto sin saltos ni recargas completas
 */
 
 (function () {
@@ -11,29 +11,86 @@
         page: 1
     };
 
-    document.addEventListener('DOMContentLoaded', () => {
-        // Inicializar Select2 en los combos de filtro
-        if (window.$ && $.fn.select2) {
-            $('#budget-filter-form select.select2').select2({
-                width: '100%'
-            });
+    // Helper para capturar todos los datos del formulario de búsqueda
+    function getFilterParams(targetPage = null) {
+        const form = document.getElementById('budget-filter-form');
+        const params = new URLSearchParams();
+
+        if (form) {
+            const formData = new FormData(form);
+            for (let [key, val] of formData.entries()) {
+                const cleanVal = val ? val.trim() : '';
+                if (cleanVal !== '') {
+                    params.set(key, cleanVal);
+                }
+            }
         }
 
-        // Búsqueda en tiempo real sobre el input de empleado/cédula/código
-        const searchInput = document.getElementById('table-search-budget');
-        if (searchInput) {
-            let debounceTimer = null;
-            searchInput.addEventListener('input', () => {
-                clearTimeout(debounceTimer);
-                debounceTimer = setTimeout(() => {
-                    applyBudgetFilters(1);
-                }, 400);
-            });
+        if (budgetState.status && budgetState.status !== 'all') {
+            params.set('status', budgetState.status);
         }
-    });
 
-    // Control del acordeón colapsable
-    window.toggleBudgetAdvancedSearch = function () {
+        if (budgetState.sort) {
+            params.set('sort', budgetState.sort);
+        }
+
+        const pageToApply = targetPage !== null ? targetPage : budgetState.page;
+        params.set('page', pageToApply);
+
+        return params;
+    }
+
+    // Petición AJAX que preserva la posición del scroll exacta
+    function applyBudgetFilters(page = 1) {
+        budgetState.page = page;
+
+        const wrapper = document.getElementById('table-content-wrapper');
+        if (!wrapper) return;
+
+        const table = wrapper.querySelector('.managed-table');
+        const listUrl = table ? table.getAttribute('data-list-url') : window.location.pathname;
+        const params = getFilterParams(page);
+
+        // Guardar la posición actual de scroll para evitar cualquier brinco al inicio
+        const currentScrollPos = window.scrollY || document.documentElement.scrollTop;
+
+        wrapper.style.opacity = '0.5';
+        wrapper.style.pointerEvents = 'none';
+
+        fetch(`${listUrl}?${params.toString()}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+            .then(async response => {
+                const contentType = response.headers.get("content-type");
+                if (contentType && contentType.includes("application/json")) {
+                    const data = await response.json();
+                    return data.html || '';
+                }
+                return await response.text();
+            })
+            .then(html => {
+                if (!html) return;
+                wrapper.innerHTML = html;
+
+                // Mantener exactamente la posición de scroll
+                window.scrollTo({top: currentScrollPos, behavior: 'instant'});
+
+                // Actualizar estilo visual en cabeceras ordenadas
+                updateSortHeaderStyles();
+            })
+            .catch(err => {
+                console.error("Error al actualizar la tabla de partidas presupuestarias:", err);
+            })
+            .finally(() => {
+                wrapper.style.opacity = '1';
+                wrapper.style.pointerEvents = 'auto';
+            });
+    }
+
+    // Toggle de búsqueda avanzada
+    function toggleAdvancedSearch() {
         const container = document.getElementById('advanced-search-container');
         const icon = document.getElementById('icon-toggle-advanced');
         if (!container) return;
@@ -45,7 +102,6 @@
                 icon.classList.remove('fa-chevron-down');
                 icon.classList.add('fa-chevron-up');
             }
-            // Reajustar anchos de Select2 al desplegar
             if (window.$ && $.fn.select2) {
                 $('#advanced-search-container select.select2').each(function () {
                     $(this).select2({width: '100%'});
@@ -55,46 +111,25 @@
             container.classList.add('hidden');
             if (icon) {
                 icon.classList.remove('fa-chevron-up');
-                icon.classList.add('fa-chevron-down');
+                icon.classList.down?.classList.add('fa-chevron-down');
             }
         }
-    };
+    }
 
-    // Helper para capturar todos los datos del formulario de búsqueda y refrescar la tabla
-    function getFilterParams() {
+    // Limpieza de filtros
+    function clearFilters() {
         const form = document.getElementById('budget-filter-form');
-        const formData = new FormData(form);
-        const params = {};
-
-        for (let [key, val] of formData.entries()) {
-            if (val && val.trim() !== '') {
-                params[key] = val.trim();
+        if (form) {
+            form.reset();
+            if (window.$ && $.fn.select2) {
+                $(form).find('select.select2').val('').trigger('change');
             }
         }
-
-        if (budgetState.status && budgetState.status !== 'all') {
-            params.status = budgetState.status;
-        }
-
-        if (budgetState.sort) {
-            params.sort = budgetState.sort;
-        }
-
-        params.page = budgetState.page;
-        return params;
+        filterByStatus('all');
     }
 
-    function applyBudgetFilters(page = 1) {
-        budgetState.page = page;
-        const params = getFilterParams();
-
-        if (typeof window.refreshCurrentTable === 'function') {
-            window.refreshCurrentTable(params, updateSortHeaderStyles);
-        }
-    }
-
-    // 1. Filtrar por Stat Card (Estado)
-    window.filterBudgetByStatus = function (status) {
+    // Filtrado por Stat Cards (Estado)
+    function filterByStatus(status) {
         budgetState.status = status;
         document.querySelectorAll('#budget-stats-row .stat-card').forEach(c => c.classList.add('opacity-low'));
 
@@ -103,33 +138,10 @@
         if (activeCard) activeCard.classList.remove('opacity-low');
 
         applyBudgetFilters(1);
-    };
+    }
 
-    // 2. Envío del Formulario de Búsqueda Avanzada
-    window.handleBudgetSearchSubmit = function (e) {
-        e.preventDefault();
-        applyBudgetFilters(1);
-    };
-
-    // 3. Limpiar Filtros
-    window.clearBudgetFilters = function () {
-        const form = document.getElementById('budget-filter-form');
-        if (form) {
-            form.reset();
-            if (window.$ && $.fn.select2) {
-                $(form).find('select.select2').val('').trigger('change');
-            }
-        }
-        window.filterBudgetByStatus('all');
-    };
-
-    // 4. Paginación
-    window.changeBudgetPage = function (page) {
-        applyBudgetFilters(page);
-    };
-
-    // 5. Ordenamiento de Columnas
-    window.sortBudgetTable = function (field) {
+    // Ordenamiento por columna
+    function sortTable(field) {
         if (budgetState.sort === field) {
             budgetState.sort = '-' + field;
         } else if (budgetState.sort === '-' + field) {
@@ -138,33 +150,174 @@
             budgetState.sort = field;
         }
         applyBudgetFilters(1);
-    };
+    }
 
     function updateSortHeaderStyles() {
-        document.querySelectorAll('thead th.sortable-header').forEach(th => {
+        const headers = document.querySelectorAll('#table-content-wrapper thead th.sortable-header');
+        if (!headers.length) return;
+
+        const currentSort = budgetState.sort || '';
+        const isDesc = currentSort.startsWith('-');
+        const activeField = currentSort.replace(/^-/, '');
+
+        headers.forEach(th => {
+            // 1. Asegurar que exista el elemento de la flecha
+            let arrow = th.querySelector('.sort-arrow');
+            if (!arrow) {
+                arrow = document.createElement('span');
+                arrow.className = 'sort-arrow';
+                th.appendChild(document.createTextNode(' '));
+                th.appendChild(arrow);
+            }
+
+            // 2. Comprobar si este th corresponde a la columna ordenada
+            const thField = th.dataset.sortField || '';
+            const isCurrentColumn = thField !== '' && thField === activeField;
+
+            // 3. Limpiar estados previos
             th.classList.remove('sorted-asc', 'sorted-desc');
-            const arrow = th.querySelector('.sort-arrow');
-            if (arrow) arrow.innerText = '⇅';
-        });
 
-        if (!budgetState.sort) return;
-
-        const field = budgetState.sort.replace('-', '');
-        const isDesc = budgetState.sort.startsWith('-');
-
-        document.querySelectorAll('thead th.sortable-header').forEach(th => {
-            if (th.getAttribute('onclick') && th.getAttribute('onclick').includes(`'${field}'`)) {
-                th.classList.add(isDesc ? 'sorted-desc' : 'sorted-asc');
-                const arrow = th.querySelector('.sort-arrow');
-                if (arrow) arrow.innerText = isDesc ? '↓' : '↑';
+            // 4. Aplicar la clase institucional de style.css y el glifo
+            if (isCurrentColumn) {
+                if (isDesc) {
+                    th.classList.add('sorted-desc');
+                    arrow.innerText = '↓';
+                } else {
+                    th.classList.add('sorted-asc');
+                    arrow.innerText = '↑';
+                }
+            } else {
+                arrow.innerText = '⇅';
             }
         });
     }
 
-    // =========================================================================
-    // MODAL DE CREACIÓN / EDICIÓN CON CASCADA
-    // =========================================================================
+    document.addEventListener('DOMContentLoaded', () => {
+        // Inicializar combos Select2
+        if (window.$ && $.fn.select2) {
+            $('#budget-filter-form select.select2').select2({
+                width: '100%'
+            });
+        }
 
+        // Búsqueda en tiempo real con debounce
+        const searchInput = document.getElementById('table-search-budget');
+        if (searchInput) {
+            let debounceTimer = null;
+            searchInput.addEventListener('input', () => {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    applyBudgetFilters(1);
+                }, 400);
+            });
+        }
+
+        // Bloquear submit nativo y enter accidental en el formulario
+        const filterForm = document.getElementById('budget-filter-form');
+        if (filterForm) {
+            filterForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                applyBudgetFilters(1);
+            });
+
+            filterForm.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+                    e.preventDefault();
+                    applyBudgetFilters(1);
+                }
+            });
+        }
+
+        // Botón toggle de filtros avanzados
+        const btnToggle = document.getElementById('btn-toggle-advanced');
+        if (btnToggle) {
+            btnToggle.addEventListener('click', toggleAdvancedSearch);
+        }
+
+        // Botón Limpiar
+        const btnClear = document.getElementById('btn-budget-clear');
+        if (btnClear) {
+            btnClear.addEventListener('click', (e) => {
+                e.preventDefault();
+                clearFilters();
+            });
+        }
+
+        // Botón Nueva Partida
+        const btnAdd = document.getElementById('btn-add-budget');
+        if (btnAdd) {
+            btnAdd.addEventListener('click', () => {
+                window.openCreateBudgetModal();
+            });
+        }
+
+        // Clic en Stat Cards (Filtro por estado)
+        const statsRow = document.getElementById('budget-stats-row');
+        if (statsRow) {
+            statsRow.addEventListener('click', (e) => {
+                const card = e.target.closest('.stat-card');
+                if (card && card.dataset.budgetStatus) {
+                    e.preventDefault();
+                    filterByStatus(card.dataset.budgetStatus);
+                }
+            });
+        }
+    });
+
+    // Delegación de eventos para la tabla y paginación
+    document.addEventListener('click', (e) => {
+        // 1. Modales en botones de acciones
+        const modalBtn = e.target.closest('.btn-ajax-modal');
+        if (modalBtn && modalBtn.dataset.modalUrl) {
+            e.preventDefault();
+            window.openAjaxModal(modalBtn.dataset.modalUrl);
+            return;
+        }
+
+        // 2. Ordenamiento de cabeceras
+        const sortTh = e.target.closest('th.sortable-header[data-sort-field]');
+        if (sortTh && sortTh.closest('#table-content-wrapper')) {
+            e.preventDefault();
+            e.stopPropagation();
+            sortTable(sortTh.dataset.sortField);
+            return;
+        }
+
+        // 3. Paginación AJAX conservando la posición
+        const pageBtn = e.target.closest('#js-pagination .page-btn');
+        if (pageBtn) {
+            if (pageBtn.disabled || pageBtn.classList.contains('disabled')) return;
+            const targetPage = parseInt(pageBtn.dataset.page);
+            if (!isNaN(targetPage)) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                applyBudgetFilters(targetPage);
+            }
+        }
+    }, true);
+
+    // Salto directo por input numérico en la paginación
+    document.addEventListener('change', (e) => {
+        if (e.target && e.target.classList.contains('budget-page-input')) {
+            e.preventDefault();
+            const page = parseInt(e.target.value) || 1;
+            applyBudgetFilters(page);
+        }
+    });
+
+    document.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && e.target && e.target.classList.contains('budget-page-input')) {
+            e.preventDefault();
+            const page = parseInt(e.target.value) || 1;
+            applyBudgetFilters(page);
+        }
+    });
+
+    // =========================================================================
+    // MODALES Y CASCADAS
+    // =========================================================================
     window.initBudgetFormCascades = function () {
         const $modal = $('#modal-root');
         const $program = $modal.find('#id_program'),
@@ -257,45 +410,4 @@
             window.initBudgetFormCascades();
         });
     };
-
 })();
-
-window.searchEmployee = async function () {
-    const cedulaInput = document.getElementById('search-cedula');
-    const cedula = cedulaInput ? cedulaInput.value.trim() : '';
-    const resultCard = document.getElementById('search-result-card');
-    const btnSubmit = document.getElementById('btn-submit-assign');
-    const resName = document.getElementById('res-name');
-    const resEmail = document.getElementById('res-email');
-    const resPhoto = document.getElementById('res-photo');
-    const hiddenId = document.getElementById('selected-employee-id');
-
-    if (!cedula || cedula.length < 10) {
-        Swal.fire({icon: 'warning', title: 'Cédula inválida', text: 'Ingrese una cédula de 10 dígitos.'});
-        return;
-    }
-
-    try {
-        const res = await fetch(`/employee/api/search/?q=${cedula}`);
-        const data = await res.json();
-        if (data.success) {
-            resName.textContent = data.full_name;
-            resEmail.textContent = data.email || 'Sin correo registrado';
-            hiddenId.value = data.id;
-
-            resPhoto.innerHTML = data.photo_url
-                ? `<img src="${data.photo_url}" class="employee-avatar-img">`
-                : `<div class="employee-avatar-placeholder">${data.full_name.charAt(0)}</div>`;
-
-            resultCard.classList.remove('hidden');
-            btnSubmit.disabled = false;
-        } else {
-            resultCard.classList.add('hidden');
-            btnSubmit.disabled = true;
-            Swal.fire({icon: 'warning', title: 'No disponible', text: data.message});
-        }
-    } catch (e) {
-        console.error(e);
-        Swal.fire({icon: 'error', title: 'Error', text: 'Problema al consultar la cédula.'});
-    }
-};
