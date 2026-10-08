@@ -446,23 +446,55 @@ $(document).off('click', '.js-view-action-detail').on('click', '.js-view-action-
     const modalPlaceholder = $('#action-modal-employee');
 
     fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
-        .then(response => response.json())
-        .then(data => {
-            if (data && data.html) {
-                modalPlaceholder.html(`
-                    <div class="modal-overlay" style="display:flex;">
-                        <div class="modal-container-medium animate-scale-in" 
-                             style="max-width:850px;background:#fff;border-radius:12px;display:flex;flex-direction:column;max-height:85vh;overflow:hidden;box-shadow:0 25px 50px -12px rgba(0,0,0,.25);">
-                            ${data.html}
-                        </div>
-                    </div>
-                `);
+        .then(async response => {
+            const contentType = (response.headers.get('content-type') || '').toLowerCase();
+            const body = await response.text();
+
+            if (!response.ok) {
+                console.error('Respuesta completa del detalle:', {
+                    url: response.url,
+                    status: response.status,
+                    statusText: response.statusText,
+                    body
+                });
+                const responsePreview = body.replace(/\s+/g, ' ').trim().slice(0, 500);
+                throw new Error(
+                    `HTTP ${response.status} ${response.statusText} en ${response.url}. ` +
+                    `Respuesta: ${responsePreview || '(vacía)'}`
+                );
+            }
+
+            if (contentType.includes('application/json')) {
+                try {
+                    return JSON.parse(body);
+                } catch (error) {
+                    throw new Error(`JSON inválido (${response.status}) en ${response.url}`);
+                }
+            }
+
+            return body;
+        })
+        .then(payload => {
+            const html = typeof payload === 'string' ? payload : payload && payload.html;
+            if (typeof html === 'string' && html.trim()) {
+                modalPlaceholder.html(html);
+                modalPlaceholder.find('.modal-overlay').first()
+                    .removeClass('hidden')
+                    .css('display', 'flex');
                 $('body').addClass('modal-open');
             } else {
                 Swal.fire("Error", "Respuesta inválida del servidor.", "error");
             }
         })
-        .catch(err => Swal.fire("Error", "No se pudo cargar el detalle.", "error"));
+        .catch(err => {
+            console.error('Error al cargar el detalle de la acción:', err);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error al cargar detalle',
+                html: `<pre style="white-space: pre-wrap; text-align: left; max-height: 260px; overflow: auto;">${String(err.message || 'Error desconocido').replace(/[<>&]/g, character => ({'<': '&lt;', '>': '&gt;', '&': '&amp;'}[character]))}</pre>`,
+                width: 700
+            });
+        });
 });
 /**
  * Callback tras actualizar los datos desde el modal de edición

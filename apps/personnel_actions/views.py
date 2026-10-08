@@ -5,7 +5,7 @@ from datetime import timedelta
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
-from django.db.models import Q, ProtectedError
+from django.db.models import Case, IntegerField, Q, ProtectedError, When
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.template.loader import render_to_string
@@ -24,6 +24,30 @@ from .models import PersonnelAction, ActionMovement, ActionType
 # ==============================================================================
 # HELPER FUNCTIONS
 # ==============================================================================
+
+def _resolve_administrative_unit(name, employee=None):
+    """Resolve legacy unit snapshots without assuming names are unique."""
+    if not name:
+        return None
+
+    units = AdministrativeUnit.objects.filter(name=name)
+    if employee and employee.area_id:
+        current_area = employee.area
+        units = units.order_by(
+            Case(
+                When(pk=current_area.parent_id, then=0),
+                When(pk=current_area.pk, then=1),
+                default=2,
+                output_field=IntegerField(),
+            ),
+            '-is_active',
+            'code',
+            'pk',
+        )
+    else:
+        units = units.order_by('-is_active', 'code', 'pk')
+
+    return units.first()
 
 def _save_action_movement(action, request, is_create=False):
     """
@@ -50,6 +74,7 @@ def _save_action_movement(action, request, is_create=False):
         try:
             unit_obj = AdministrativeUnit.objects.get(pk=new_unit_id)
             movement.new_unit = unit_obj.name
+            movement.new_unit_reference = unit_obj
         except AdministrativeUnit.DoesNotExist:
             pass
 
@@ -593,6 +618,8 @@ class ActionDetailView(LoginRequiredMixin, View):
             {'action': action, 'history_action': movement},
             request=request
         )
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'html': html})
         return HttpResponse(html)
 
 
@@ -770,9 +797,12 @@ class ActionRegisterView(LoginRequiredMixin, View):
                     # Actualización de Área si el encargo lo especifica
                     if movement and movement.new_unit:
                         try:
-                            unit = AdministrativeUnit.objects.get(name=movement.new_unit)
-                            action.employee.area = unit
-                            action.employee.save(update_fields=['area'])
+                            unit = movement.new_unit_reference or _resolve_administrative_unit(
+                                movement.new_unit, action.employee
+                            )
+                            if unit:
+                                action.employee.area = unit
+                                action.employee.save(update_fields=['area'])
                         except AdministrativeUnit.DoesNotExist:
                             pass
 
@@ -801,9 +831,12 @@ class ActionRegisterView(LoginRequiredMixin, View):
                     # Actualización de Área regular
                     if movement and movement.new_unit:
                         try:
-                            unit = AdministrativeUnit.objects.get(name=movement.new_unit)
-                            action.employee.area = unit
-                            action.employee.save(update_fields=['area'])
+                            unit = movement.new_unit_reference or _resolve_administrative_unit(
+                                movement.new_unit, action.employee
+                            )
+                            if unit:
+                                action.employee.area = unit
+                                action.employee.save(update_fields=['area'])
                         except AdministrativeUnit.DoesNotExist:
                             pass
 
@@ -907,10 +940,9 @@ class ActionPDFView(LoginRequiredMixin, View):
         proposed_unit = None
 
         if movement and movement.new_unit:
-            try:
-                proposed_unit = AdministrativeUnit.objects.get(name=movement.new_unit)
-            except AdministrativeUnit.DoesNotExist:
-                proposed_unit = None
+            proposed_unit = movement.new_unit_reference or _resolve_administrative_unit(
+                movement.new_unit, action.employee
+            )
 
         current_budget = None
         proposed_budget = None

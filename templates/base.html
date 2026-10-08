@@ -92,7 +92,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 
 <!-- 5. Motor Central SIGETH (Inicializa CSRF, Modales, Tablas y Adapta SweetAlert2) -->
-<script src="{% static 'js/main.js' %}"></script>
+<script src="{% static 'js/main.js' %}?v={% now 'U' %}"></script>
 <script src="{% static 'js/core/modal-change-password.js' %}"></script>
 
 <!-- 6. Scripts Específicos de cada vista -->

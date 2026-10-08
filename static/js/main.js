@@ -243,9 +243,11 @@ window.openAjaxModal = function (url, callback = null) {
     fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
         .then(response => {
             if (!response.ok) throw new Error('Error al cargar modal');
-            return response.text();
+            const contentType = (response.headers.get('content-type') || '').toLowerCase();
+            return contentType.includes('application/json') ? response.json() : response.text();
         })
-        .then(html => {
+        .then(payload => {
+            const html = typeof payload === 'string' ? payload : payload.html;
             const root = document.getElementById('modal-root');
             if (!root) return;
             root.innerHTML = html;

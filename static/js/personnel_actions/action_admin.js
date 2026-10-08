@@ -419,10 +419,17 @@ document.addEventListener('DOMContentLoaded', function () {
         })
             .then(function (res) {
                 if (!res.ok) throw new Error('No encontrado');
-                return res.json();
+                var contentType = (res.headers.get('content-type') || '').toLowerCase();
+                return contentType.indexOf('application/json') !== -1 ? res.json() : res.text();
             })
-            .then(function (data) {
-                detailContent.innerHTML = data.html;
+            .then(function (payload) {
+                var html = typeof payload === 'string' ? payload : payload.html;
+                detailContent.innerHTML = html;
+                var loadedModal = detailContent.querySelector('.modal-overlay');
+                if (loadedModal) {
+                    loadedModal.classList.remove('hidden');
+                    loadedModal.style.display = 'flex';
+                }
                 detailContent.querySelectorAll('.js-close-detail-modal').forEach(function (btn) {
                     btn.onclick = function () {
                         _closeDetailModal();

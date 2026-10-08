@@ -163,6 +163,14 @@ class ActionMovement(models.Model):
 
     # --- SITUACIÓN PROPUESTA ---
     new_unit = models.CharField(verbose_name='Unidad nueva', max_length=200, blank=True, null=True)
+    new_unit_reference = models.ForeignKey(
+        'institution.AdministrativeUnit',
+        verbose_name='Referencia de unidad nueva',
+        on_delete=models.SET_NULL,
+        related_name='action_movements_referenced',
+        null=True,
+        blank=True,
+    )
     new_position = models.CharField(verbose_name='Puesto nuevo', max_length=200, blank=True, null=True)
     new_remuneration = models.DecimalField(verbose_name='RMU Nuevo', max_digits=10, decimal_places=2, default=0)
     new_budget_line = models.ForeignKey(BudgetLine, verbose_name='Partida Presupuestaria Nueva',

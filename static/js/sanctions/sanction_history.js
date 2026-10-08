@@ -333,7 +333,7 @@ document.addEventListener('DOMContentLoaded', function () {
             })
             .catch(err => {
                 console.error(err);
-                Swal.fire({icon: 'error', title: 'Error', text: 'No se pudo cargar el detalle de la acción.'});
+                Swal.fire({icon: 'error', title: 'Error', text: `No se pudo cargar el detalle de la acción: ${err.message || 'respuesta inválida del servidor'}.`});
             });
     }
 

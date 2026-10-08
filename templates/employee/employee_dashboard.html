@@ -278,7 +278,7 @@
 {% block extra_js %}
     <!-- 100% Vanilla JS: Eliminada la librería de Vue.js para evitar conflictos -->
     <script src="{% static 'js/personnel_actions/wizard_table_init.js' %}"></script>
-    <script src="{% static 'js/employee_wizard.js' %}"></script>
+    <script src="{% static 'js/employee_wizard.js' %}?v={% now 'U' %}"></script>
     <script src="{% static 'js/employee_period_modal_init.js' %}"></script>
     <script src="{% static 'js/employee_permission_modal_init.js' %}"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>

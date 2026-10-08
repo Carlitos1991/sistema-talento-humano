@@ -181,14 +181,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 return await res.text();
             })
             .then((html) => {
-                detailContent.innerHTML = html || '<div class="modal-body">No se pudo cargar el detalle.</div>';
+                detailContent.innerHTML = html || '<div class="modal-body">Respuesta vacía del servidor al cargar el detalle.</div>';
                 detailModal.classList.remove('hidden');
                 document.body.classList.add('modal-open');
             })
             .catch(err => {
                 console.error('Error:', err);
                 if (typeof Swal !== 'undefined') {
-                    Swal.fire('Error', 'No se pudo cargar el detalle', 'error');
+                    Swal.fire('Error', `No se pudo cargar el detalle: ${err.message || 'respuesta inválida del servidor'}`, 'error');
                 }
             });
     }
