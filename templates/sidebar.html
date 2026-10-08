@@ -1,10 +1,5 @@
 {% load static %}
 <aside class="sidebar" id="mainSidebar">
-    <script>
-        if (localStorage.getItem('sidebar_collapsed') === 'true') {
-            document.getElementById('mainSidebar').classList.add('collapsed');
-        }
-    </script>
     <div class="sidebar-header">
         <a href="{% url 'core:dashboard' %}">
             {% if sidebar_logo_url %}

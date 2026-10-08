@@ -40,12 +40,6 @@
 <body {% if request.user.is_authenticated and request.session.force_change_on_login %}data-force-change="1"{% endif %}>
 
 <div class="layout-wrapper" id="mainWrapper">
-    <script>
-        if (localStorage.getItem('sidebar_collapsed') === 'true') {
-            document.getElementById('mainWrapper').classList.add('is-collapsed');
-        }
-    </script>
-
     <!-- Sidebar -->
     {% include 'sidebar.html' %}
 
