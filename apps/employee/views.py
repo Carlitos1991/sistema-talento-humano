@@ -418,6 +418,7 @@ class EmployeeDetailWizardView(LoginRequiredMixin, PermissionRequiredMixin, Deta
                     history_list.append({
                         'partida_code': b_line.number_individual or b_line.code,
                         'position_name': b_line.position_item.name if b_line.position_item else '',
+                        'is_acting': bool(a.is_acting),
                         'remuneration': str(b_line.remuneration or '0.00'),
                         'partida_name': str(b_line),
                         'code': b_line.code,

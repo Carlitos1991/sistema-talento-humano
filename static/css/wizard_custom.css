@@ -1066,6 +1066,10 @@
     color: #1e293b;
 }
 
+.history-status-badge {
+    margin-left: 0.35rem;
+}
+
 .history-meta-row {
     display: flex;
     gap: 0.4rem;

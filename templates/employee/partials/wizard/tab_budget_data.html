@@ -66,11 +66,11 @@
                                 <span class="history-job-title">{{ p.position_name|default:p.partida_name|default:'Partida' }}</span>
 
                                 {% if p.is_acting %}
-                                    <span class="badge badge-amber font-monospace">
+                                    <span class="badge badge-amber font-monospace history-status-badge">
                                         <i class="fa-solid fa-user-clock me-1"></i> ENCARGO / SUBROGACIÓN
                                     </span>
                                 {% else %}
-                                    <span class="badge badge-green font-monospace">
+                                    <span class="badge badge-green font-monospace history-status-badge">
                                         <i class="fa-solid fa-circle-check me-1"></i> TITULAR
                                     </span>
                                 {% endif %}
