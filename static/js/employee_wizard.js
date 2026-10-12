@@ -295,99 +295,111 @@ async function handleTabVisibilityToggle(checkElement) {
  * 4. Paginación Local para Acciones de Personal
  */
 function initActionsLocalPagination() {
-    const $container = $('[data-action-history-table]');
-    if (!$container.length) return;
+    const container = document.querySelector('[data-action-history-table]');
+    if (!container) return;
+
+    const existingPagination = container._actionPagination;
+    if (existingPagination) {
+        existingPagination.refresh();
+        return;
+    }
 
     const rowsPerPage = 10;
+    const rows = Array.from(container.querySelectorAll('[data-action-row]'));
+    const tbody = container.querySelector('[data-action-tbody]');
+    const emptyRow = container.querySelector('[data-action-empty-row]');
+    const searchInput = container.querySelector('#action-search-input');
+    const clearButton = container.querySelector('#action-clear-btn');
+    const pageInfo = container.querySelector('[data-action-page-info]');
+    const totalPagesLabel = container.querySelector('[data-action-total-pages]');
+    const pageInput = container.querySelector('[data-action-page-input]');
+    const firstButton = container.querySelector('[data-action-first]');
+    const previousButton = container.querySelector('[data-action-prev]');
+    const nextButton = container.querySelector('[data-action-next]');
+    const lastButton = container.querySelector('[data-action-last]');
     let currentPage = 1;
-    let searchQuery = ($('#action-search-input').val() || '').toLowerCase();
-    const $allRows = $container.find('[data-action-row]');
 
-    const updateTable = () => {
-        const $filteredRows = $allRows.filter(function () {
-            if (!searchQuery) return true;
-            return $(this).text().toLowerCase().includes(searchQuery);
-        });
+    const setEmptyState = (visible, message = 'No hay acciones para la búsqueda.') => {
+        if (!tbody) return;
 
-        const totalRows = $filteredRows.length;
-        const totalPages = Math.max(1, Math.ceil(totalRows / rowsPerPage));
+        let row = emptyRow || container.querySelector('[data-action-empty-row]');
+        if (!row && visible) {
+            row = document.createElement('tr');
+            row.dataset.actionEmptyRow = '';
+            row.innerHTML = `
+                <td colspan="6" class="text-center py-5">
+                    <i class="fas fa-inbox fa-2x text-muted mb-2"></i>
+                    <p class="text-muted mb-0"></p>
+                </td>
+            `;
+            tbody.appendChild(row);
+        }
 
-        if (currentPage > totalPages) currentPage = totalPages;
-        if (currentPage < 1) currentPage = 1;
-
-        const start = (currentPage - 1) * rowsPerPage;
-        const end = start + rowsPerPage;
-
-        $allRows.hide();
-        $filteredRows.slice(start, end).show();
-
-        const emptyRow = $('[data-action-empty-row]');
-        if (totalRows === 0) {
-            if (emptyRow.length === 0) {
-                $('[data-action-tbody]').append(`
-                    <tr data-action-empty-row>
-                        <td colspan="6" class="text-center py-5">
-                            <i class="fas fa-inbox fa-2x text-muted mb-2"></i>
-                            <p class="text-muted mb-0">No hay acciones para la búsqueda.</p>
-                        </td>
-                    </tr>
-                `);
-            } else {
-                emptyRow.show();
-            }
-            $('[data-action-page-info]').text(`Mostrando 0-0 de 0`);
-            $('[data-action-total-pages]').text(`de 1`);
-            $('[data-action-page-input]').val(1);
-            $('[data-action-prev], [data-action-first], [data-action-next], [data-action-last]').prop('disabled', true);
-        } else {
-            if (emptyRow.length) emptyRow.hide();
-            $('[data-action-page-info]').text(`Mostrando ${start + 1}-${Math.min(end, totalRows)} de ${totalRows}`);
-            $('[data-action-total-pages]').text(`de ${totalPages}`);
-            $('[data-action-page-input]').val(currentPage);
-            $('[data-action-prev], [data-action-first]').prop('disabled', currentPage === 1);
-            $('[data-action-next], [data-action-last]').prop('disabled', currentPage === totalPages);
+        if (row) {
+            const messageElement = row.querySelector('p');
+            if (messageElement && visible) messageElement.textContent = message;
+            row.hidden = !visible;
         }
     };
 
-    $('[data-action-next]').off('click').on('click', () => {
-        currentPage++;
-        updateTable();
-    });
-    $('[data-action-prev]').off('click').on('click', () => {
-        currentPage--;
-        updateTable();
-    });
-    $('[data-action-first]').off('click').on('click', () => {
-        currentPage = 1;
-        updateTable();
-    });
-    $('[data-action-last]').off('click').on('click', () => {
-        currentPage = 99999;
-        updateTable();
-    });
+    const refresh = () => {
+        const searchQuery = (searchInput?.value || '').trim().toLowerCase();
+        const filteredRows = rows.filter(row =>
+            !searchQuery || row.textContent.toLowerCase().includes(searchQuery)
+        );
+        const totalRows = filteredRows.length;
+        const totalPages = Math.max(1, Math.ceil(totalRows / rowsPerPage));
+        currentPage = Math.min(Math.max(currentPage, 1), totalPages);
 
-    $('[data-action-page-input]').off('change').on('change', function () {
-        let val = parseInt($(this).val(), 10);
-        if (!isNaN(val)) {
-            currentPage = val;
-            updateTable();
+        rows.forEach(row => {
+            row.hidden = true;
+        });
+
+        const start = (currentPage - 1) * rowsPerPage;
+        filteredRows.slice(start, start + rowsPerPage).forEach(row => {
+            row.hidden = false;
+        });
+
+        setEmptyState(totalRows === 0);
+        if (pageInfo) {
+            pageInfo.textContent = totalRows
+                ? `Mostrando ${start + 1}-${Math.min(start + rowsPerPage, totalRows)} de ${totalRows}`
+                : 'Mostrando 0-0 de 0';
         }
-    });
+        if (totalPagesLabel) totalPagesLabel.textContent = `de ${totalPages}`;
+        if (pageInput) pageInput.value = currentPage;
+        if (firstButton) firstButton.disabled = totalRows === 0 || currentPage === 1;
+        if (previousButton) previousButton.disabled = totalRows === 0 || currentPage === 1;
+        if (nextButton) nextButton.disabled = totalRows === 0 || currentPage === totalPages;
+        if (lastButton) lastButton.disabled = totalRows === 0 || currentPage === totalPages;
+    };
 
-    $('#action-search-input').off('input').on('input', function () {
-        searchQuery = $(this).val().toLowerCase();
+    const goToPage = page => {
+        currentPage = page;
+        refresh();
+    };
+
+    firstButton?.addEventListener('click', () => goToPage(1));
+    previousButton?.addEventListener('click', () => goToPage(currentPage - 1));
+    nextButton?.addEventListener('click', () => goToPage(currentPage + 1));
+    lastButton?.addEventListener('click', () => goToPage(Number.MAX_SAFE_INTEGER));
+    pageInput?.addEventListener('change', event => {
+        const requestedPage = Number.parseInt(event.target.value, 10);
+        if (!Number.isNaN(requestedPage)) goToPage(requestedPage);
+        else refresh();
+    });
+    searchInput?.addEventListener('input', () => {
         currentPage = 1;
-        updateTable();
+        refresh();
     });
-
-    $('#action-clear-btn').off('click').on('click', function () {
-        $('#action-search-input').val('');
-        searchQuery = '';
+    clearButton?.addEventListener('click', () => {
+        if (searchInput) searchInput.value = '';
         currentPage = 1;
-        updateTable();
+        refresh();
     });
 
-    updateTable();
+    container._actionPagination = {refresh};
+    refresh();
 }
 
 /**
