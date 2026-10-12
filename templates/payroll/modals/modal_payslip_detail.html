@@ -52,66 +52,87 @@
 
             <!-- Listado de Ingresos y Egresos -->
             <div class="row g-4">
-                <div class="col-md-6">
+                <!-- 1. BLOQUE DE INGRESOS -->
+                <div class="col-12">
                     <div class="payslip-list-wrapper">
                         <div class="payslip-list-header incomes">
                             <i class="fas fa-arrow-down me-1"></i> INGRESOS
                         </div>
                         <ul class="payslip-items-list">
                             {% for item in incomes %}
-                                <li>
-                                    <div class="d-flex flex-column">
+                                <li class="d-flex justify-content-between align-items-center py-2 px-3 border-bottom">
+                                    <div class="d-flex flex-column pe-3">
                                         {% if item.notes %}
-                                            <span class="desc font-weight-bold">{{ item.notes }}</span>
+                                            <span class="desc font-weight-bold"
+                                                  style="font-size: 0.9rem; color: #1e293b;">
+                                                {{ item.notes }}
+                                            </span>
                                             <small class="text-muted" style="font-size: 0.78rem;">
-                                                {{ item.rubric.name }} {% if item.budget_line_code %}•
-                                                {{ item.budget_line_code }}{% endif %}
+                                                {{ item.rubric.name }}{% if item.budget_line_code %} • Partida:
+                                                    {{ item.budget_line_code }}{% endif %}
                                             </small>
                                         {% else %}
-                                            <span class="desc">{{ item.rubric.name }}</span>
+                                            <span class="desc font-weight-bold"
+                                                  style="font-size: 0.9rem; color: #1e293b;">
+                                                {{ item.rubric.name }}
+                                            </span>
                                             {% if item.budget_line_code %}
-                                                <small class="text-muted"
-                                                       style="font-size: 0.75rem;">Partida: {{ item.budget_line_code }}</small>
+                                                <small class="text-muted" style="font-size: 0.78rem;">
+                                                    Partida: {{ item.budget_line_code }}
+                                                </small>
                                             {% endif %}
                                         {% endif %}
                                     </div>
-                                    <div class="val-container">
-                                        <span class="val"
-                                              id="item-val-{{ item.id }}">$ {{ item.value|floatformat:2 }}</span>
+                                    <div class="val-container text-end ms-auto" style="min-width: 110px;">
+                                        <span class="val fw-bold" id="item-val-{{ item.id }}"
+                                              style="font-size: 0.95rem; color: #0f172a;">
+                                            $ {{ item.value|floatformat:2 }}
+                                        </span>
                                     </div>
                                 </li>
                             {% empty %}
-                                <li class="empty-message">No hay ingresos registrados</li>
+                                <li class="empty-message py-3 text-center text-muted">No hay ingresos registrados</li>
                             {% endfor %}
                         </ul>
-                        <div class="payslip-list-footer incomes-total">
+                        <div class="payslip-list-footer incomes-total d-flex justify-content-between px-3 py-2 fw-bold">
                             <span>Total Ingresos:</span>
-                            <span id="total-ingresos">$ {{ payslip.total_income }}</span>
+                            <span id="total-ingresos">$ {{ payslip.total_income|floatformat:2 }}</span>
                         </div>
                     </div>
                 </div>
 
-                <div class="col-md-6">
+                <!-- 2. BLOQUE DE EGRESOS -->
+                <div class="col-12">
                     <div class="payslip-list-wrapper">
                         <div class="payslip-list-header deductions">
                             <i class="fas fa-arrow-up me-1"></i> EGRESOS
                         </div>
                         <ul class="payslip-items-list">
                             {% for item in deductions %}
-                                <li>
-                                    <span class="desc">{{ item.rubric.name }}</span>
-                                    <div class="val-container">
-                                        <span class="val"
-                                              id="item-val-{{ item.id }}">$ {{ item.value|floatformat:2 }}</span>
+                                <li class="d-flex justify-content-between align-items-center py-2 px-3 border-bottom">
+                                    <div class="d-flex flex-column pe-3">
+                                        <span class="desc font-weight-bold" style="font-size: 0.9rem; color: #1e293b;">
+                                            {{ item.rubric.name }}
+                                        </span>
+                                        {% if item.notes %}
+                                            <small class="text-muted"
+                                                   style="font-size: 0.78rem;">{{ item.notes }}</small>
+                                        {% endif %}
+                                    </div>
+                                    <div class="val-container text-end ms-auto" style="min-width: 110px;">
+                                        <span class="val fw-bold text-danger" id="item-val-{{ item.id }}"
+                                              style="font-size: 0.95rem;">
+                                            $ {{ item.value|floatformat:2 }}
+                                        </span>
                                     </div>
                                 </li>
                             {% empty %}
-                                <li class="empty-message">No hay egresos registrados</li>
+                                <li class="empty-message py-3 text-center text-muted">No hay egresos registrados</li>
                             {% endfor %}
                         </ul>
-                        <div class="payslip-list-footer deductions-total">
+                        <div class="payslip-list-footer deductions-total d-flex justify-content-between px-3 py-2 fw-bold text-danger">
                             <span>Total Egresos:</span>
-                            <span id="total-egresos">$ {{ payslip.total_deduction }}</span>
+                            <span id="total-egresos">$ {{ payslip.total_deduction|floatformat:2 }}</span>
                         </div>
                     </div>
                 </div>

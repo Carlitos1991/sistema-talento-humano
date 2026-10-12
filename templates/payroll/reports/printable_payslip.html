@@ -237,10 +237,12 @@
                         <tr>
                             <td>
                                 {% if item.rubric.is_salary and item.notes %}
-                                    {# Resumen limpio para el servidor en el reporte oficial #}
+                                    {# Identificación clara y resumida para el servidor público #}
                                     {% if 'Encargo' in item.notes %}
                                         Remuneración Encargo
-                                    {% elif 'Vacaciones' in item.notes or 'Titular' in item.notes %}
+                                    {% elif 'Vacaciones' in item.notes %}
+                                        Remuneración Titular (Vacaciones)
+                                    {% elif 'Titular' in item.notes %}
                                         Remuneración Titular
                                     {% else %}
                                         {{ item.rubric.name }}
