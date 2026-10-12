@@ -236,7 +236,16 @@
                     {% for item in incomes %}
                         <tr>
                             <td>
-                                {% if item.rubric and item.rubric.name %}
+                                {% if item.rubric.is_salary and item.notes %}
+                                    {# Resumen limpio para el servidor en el reporte oficial #}
+                                    {% if 'Encargo' in item.notes %}
+                                        Remuneración Encargo
+                                    {% elif 'Vacaciones' in item.notes or 'Titular' in item.notes %}
+                                        Remuneración Titular
+                                    {% else %}
+                                        {{ item.rubric.name }}
+                                    {% endif %}
+                                {% elif item.rubric and item.rubric.name %}
                                     {{ item.rubric.name }}
                                 {% elif item.deduction_ref and item.deduction_ref.name %}
                                     {{ item.deduction_ref.name }}

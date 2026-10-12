@@ -60,7 +60,21 @@
                         <ul class="payslip-items-list">
                             {% for item in incomes %}
                                 <li>
-                                    <span class="desc">{{ item.rubric.name }}</span>
+                                    <div class="d-flex flex-column">
+                                        {% if item.notes %}
+                                            <span class="desc font-weight-bold">{{ item.notes }}</span>
+                                            <small class="text-muted" style="font-size: 0.78rem;">
+                                                {{ item.rubric.name }} {% if item.budget_line_code %}•
+                                                {{ item.budget_line_code }}{% endif %}
+                                            </small>
+                                        {% else %}
+                                            <span class="desc">{{ item.rubric.name }}</span>
+                                            {% if item.budget_line_code %}
+                                                <small class="text-muted"
+                                                       style="font-size: 0.75rem;">Partida: {{ item.budget_line_code }}</small>
+                                            {% endif %}
+                                        {% endif %}
+                                    </div>
                                     <div class="val-container">
                                         <span class="val"
                                               id="item-val-{{ item.id }}">$ {{ item.value|floatformat:2 }}</span>

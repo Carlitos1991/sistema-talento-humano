@@ -295,7 +295,7 @@ class PayslipItem(models.Model):
     rubric = models.ForeignKey(PayrollRubric, on_delete=models.PROTECT, null=True, blank=True)
     item_type = models.CharField(max_length=15)
     value = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-    # Partida presupuestaria asociada a este ítem (si aplica)
+    notes = models.CharField(max_length=255, blank=True, null=True, verbose_name=_("Detalle / Observación"))
     budget_line = models.ForeignKey('budget.BudgetLine', on_delete=models.SET_NULL, null=True, blank=True,
                                     related_name='payslip_items', verbose_name=_('Partida Presupuestaria'))
     budget_line_code = models.CharField(

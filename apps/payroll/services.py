@@ -576,13 +576,31 @@ class PayrollCalculatorService:
                         code_clean = inc.code.strip().upper() if inc.code else ''
 
                         if getattr(inc, 'is_salary', False):
-                            # Sueldo base proporcional por segmentos: toma el rubro con is_salary
-                            # asignado al contexto del empleado sin bloquear por código rígido
                             for segment in segments:
                                 segment_val = (segment['base_salary'] / Decimal('30.0')) * Decimal(
                                     str(segment['actual_days']))
                                 if segment_val > 0:
-                                    it = PayslipItem(payslip=slip, rubric=inc, item_type='INCOME', value=segment_val)
+                                    # Generamos la nota descriptiva
+                                    seg_type = segment.get('segment_type', 'REGULAR')
+                                    pos_name = segment.get('position_name', '')
+                                    days = segment.get('actual_days', 0)
+                                    rmu = segment.get('base_salary', 0)
+
+                                    if seg_type == 'ACTING':
+                                        note_str = f"Encargo: {pos_name} ({days} días - RMU ${rmu})"
+                                    elif seg_type == 'VACATION_ORIGINAL':
+                                        note_str = f"Titular / Vacaciones: {pos_name} ({days} días - RMU ${rmu})"
+                                    else:
+                                        note_str = f"Remuneración Titular ({days} días)"
+
+                                    it = PayslipItem(
+                                        payslip=slip,
+                                        rubric=inc,
+                                        item_type='INCOME',
+                                        value=segment_val,
+                                        notes=note_str,
+                                        order=inc.order
+                                    )
                                     it._historical_bl = segment['budget_line']
                                     items_buffer.append(it)
                                     total_income += segment_val
@@ -864,6 +882,8 @@ class PayrollCalculatorService:
 
             # Creación de segmentos respetando el tope de 30 días
             if is_acting:
+                pos_acting = getattr(asi.budget_line, 'position_item', None)
+                pos_acting_name = pos_acting.name if pos_acting else "Encargo"
                 if segment_acting_worked_days > 0:
                     actual = min(segment_acting_worked_days, max(0, 30 - total_month_days))
                     if actual > 0:
@@ -874,6 +894,8 @@ class PayrollCalculatorService:
                             'budget_line': asi.budget_line,
                             'real_start': s_date,
                             'real_end': e_date,
+                            'segment_type': 'ACTING',
+                            'position_name': pos_acting_name,
                         })
                         total_month_days += actual
 
@@ -882,6 +904,10 @@ class PayrollCalculatorService:
                     if actual > 0:
                         fallback_salary = orig_salary if orig_salary > 0 else base_remun
                         fallback_bl = original_bl if original_bl else asi.budget_line
+
+                        pos_titular = getattr(fallback_bl, 'position_item', None) if fallback_bl else None
+                        pos_titular_name = pos_titular.name if pos_titular else "Puesto Titular"
+
                         segments.append({
                             'assignment': asi,
                             'actual_days': actual,
@@ -889,9 +915,13 @@ class PayrollCalculatorService:
                             'budget_line': fallback_bl,
                             'real_start': s_date,
                             'real_end': e_date,
+                            'segment_type': 'VACATION_ORIGINAL',
+                            'position_name': pos_titular_name,
                         })
                         total_month_days += actual
             else:
+                pos_normal = getattr(asi.budget_line, 'position_item', None)
+                pos_normal_name = pos_normal.name if pos_normal else "Titular"
                 if segment_normal_days > 0:
                     actual = min(segment_normal_days, max(0, 30 - total_month_days))
                     if actual > 0:
@@ -902,6 +932,8 @@ class PayrollCalculatorService:
                             'budget_line': asi.budget_line,
                             'real_start': s_date,
                             'real_end': e_date,
+                            'segment_type': 'REGULAR',
+                            'position_name': pos_normal_name,
                         })
                         total_month_days += actual
 
