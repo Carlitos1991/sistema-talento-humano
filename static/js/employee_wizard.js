@@ -296,110 +296,32 @@ async function handleTabVisibilityToggle(checkElement) {
  */
 function initActionsLocalPagination() {
     const container = document.querySelector('[data-action-history-table]');
-    if (!container) return;
+    const table = container?.querySelector('#actions-personal-table');
+    if (!container || !table) return;
 
-    const existingPagination = container._actionPagination;
-    if (existingPagination) {
-        existingPagination.refresh();
+    const manager = table._tableManager;
+    if (!manager) {
+        window.setTimeout(initActionsLocalPagination, 0);
         return;
     }
 
-    const rowsPerPage = 10;
-    const rows = Array.from(container.querySelectorAll('[data-action-row]'));
-    const tbody = container.querySelector('[data-action-tbody]');
-    const emptyRow = container.querySelector('[data-action-empty-row]');
     const searchInput = container.querySelector('#action-search-input');
     const clearButton = container.querySelector('#action-clear-btn');
-    const pageInfo = container.querySelector('[data-action-page-info]');
-    const totalPagesLabel = container.querySelector('[data-action-total-pages]');
-    const pageInput = container.querySelector('[data-action-page-input]');
-    const firstButton = container.querySelector('[data-action-first]');
-    const previousButton = container.querySelector('[data-action-prev]');
-    const nextButton = container.querySelector('[data-action-next]');
-    const lastButton = container.querySelector('[data-action-last]');
-    let currentPage = 1;
-
-    const setEmptyState = (visible, message = 'No hay acciones para la búsqueda.') => {
-        if (!tbody) return;
-
-        let row = emptyRow || container.querySelector('[data-action-empty-row]');
-        if (!row && visible) {
-            row = document.createElement('tr');
-            row.dataset.actionEmptyRow = '';
-            row.innerHTML = `
-                <td colspan="6" class="text-center py-5">
-                    <i class="fas fa-inbox fa-2x text-muted mb-2"></i>
-                    <p class="text-muted mb-0"></p>
-                </td>
-            `;
-            tbody.appendChild(row);
-        }
-
-        if (row) {
-            const messageElement = row.querySelector('p');
-            if (messageElement && visible) messageElement.textContent = message;
-            row.hidden = !visible;
-        }
-    };
-
-    const refresh = () => {
-        const searchQuery = (searchInput?.value || '').trim().toLowerCase();
-        const filteredRows = rows.filter(row =>
-            !searchQuery || row.textContent.toLowerCase().includes(searchQuery)
-        );
-        const totalRows = filteredRows.length;
-        const totalPages = Math.max(1, Math.ceil(totalRows / rowsPerPage));
-        currentPage = Math.min(Math.max(currentPage, 1), totalPages);
-
-        rows.forEach(row => {
-            row.hidden = true;
-        });
-
-        const start = (currentPage - 1) * rowsPerPage;
-        filteredRows.slice(start, start + rowsPerPage).forEach(row => {
-            row.hidden = false;
-        });
-
-        setEmptyState(totalRows === 0);
-        if (pageInfo) {
-            pageInfo.textContent = totalRows
-                ? `Mostrando ${start + 1}-${Math.min(start + rowsPerPage, totalRows)} de ${totalRows}`
-                : 'Mostrando 0-0 de 0';
-        }
-        if (totalPagesLabel) totalPagesLabel.textContent = `de ${totalPages}`;
-        if (pageInput) pageInput.value = currentPage;
-        if (firstButton) firstButton.disabled = totalRows === 0 || currentPage === 1;
-        if (previousButton) previousButton.disabled = totalRows === 0 || currentPage === 1;
-        if (nextButton) nextButton.disabled = totalRows === 0 || currentPage === totalPages;
-        if (lastButton) lastButton.disabled = totalRows === 0 || currentPage === totalPages;
-    };
-
-    const goToPage = page => {
-        currentPage = page;
-        refresh();
-    };
-
-    firstButton?.addEventListener('click', () => goToPage(1));
-    previousButton?.addEventListener('click', () => goToPage(currentPage - 1));
-    nextButton?.addEventListener('click', () => goToPage(currentPage + 1));
-    lastButton?.addEventListener('click', () => goToPage(Number.MAX_SAFE_INTEGER));
-    pageInput?.addEventListener('change', event => {
-        const requestedPage = Number.parseInt(event.target.value, 10);
-        if (!Number.isNaN(requestedPage)) goToPage(requestedPage);
-        else refresh();
-    });
-    searchInput?.addEventListener('input', () => {
-        currentPage = 1;
-        refresh();
-    });
-    clearButton?.addEventListener('click', () => {
-        if (searchInput) searchInput.value = '';
-        currentPage = 1;
-        refresh();
-    });
-
-    container._actionPagination = {refresh};
-    refresh();
+    if (searchInput && !searchInput._actionSearchHandler) {
+        searchInput._actionSearchHandler = () => {
+            manager.filterState.search = searchInput.value.toLowerCase().trim();
+            manager.applyGlobalFilters();
+        };
+        searchInput.addEventListener('input', searchInput._actionSearchHandler);
+    }
+    if (clearButton && !clearButton._actionClearHandler) {
+        clearButton._actionClearHandler = () => {
+            if (searchInput) searchInput.value = '';
+            manager.filterState.search = '';
+            manager.applyGlobalFilters();
+        };
+        clearButton.addEventListener('click', clearButton._actionClearHandler);
+    }
 }
 
 /**

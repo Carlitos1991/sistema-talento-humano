@@ -31,8 +31,7 @@
     <div class="table-container">
         <table class="managed-table"
                id="actions-personal-table"
-               data-external-pagination="true"
-               data-external-search="true">
+               data-page-size="10">
             <thead>
             <tr>
                 <th class="width-5 text-center">Nº</th>
@@ -74,38 +73,9 @@
                         </td>
                     </tr>
                 {% endfor %}
-            {% else %}
-                <tr data-action-empty-row>
-                    <td colspan="6" class="text-center py-5 text-muted">
-                        <i class="fas fa-inbox fa-2x mb-2 opacity-50"></i>
-                        <p class="mb-0">No hay acciones de personal registradas en este expediente.</p>
-                    </td>
-                </tr>
             {% endif %}
             </tbody>
         </table>
     </div>
 
-    <!-- Paginador Único -->
-    <div class="pagination-container" data-action-pagination>
-        <span class="pagination-info" data-action-page-info>Mostrando 0-0 de 0</span>
-        <div class="pagination-controls">
-            <button type="button" class="page-btn" data-action-first title="Primera">
-                <i class="fas fa-angle-double-left"></i>
-            </button>
-            <button type="button" class="page-btn" data-action-prev title="Anterior">
-                <i class="fas fa-angle-left"></i>
-            </button>
-            <div class="page-input-wrapper">
-                <input type="number" class="page-input" min="1" value="1" data-action-page-input>
-                <span class="total-pages-badge" data-action-total-pages>de 1</span>
-            </div>
-            <button type="button" class="page-btn" data-action-next title="Siguiente">
-                <i class="fas fa-angle-right"></i>
-            </button>
-            <button type="button" class="page-btn" data-action-last title="Última">
-                <i class="fas fa-angle-double-right"></i>
-            </button>
-        </div>
-    </div>
 </div>
