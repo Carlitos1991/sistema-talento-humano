@@ -60,6 +60,10 @@
                     <div class="form-group">
                         <label class="form-label">1. Elaborado por (Servidor TTHH)</label>
                         <select name="elaborated_by" id="id_elaborated_by" class="input-field select2-user-ajax"
+                                data-ajax-url="{% url 'vacation:schedule_user_search' %}"
+                                data-minimum-input-length="2"
+                                data-placeholder="Escriba para buscar..."
+                                data-allow-clear="true"
                                 required>
                             <option value="{{ current_user_id }}" selected>{{ current_user_text }}</option>
                         </select>
@@ -68,7 +72,12 @@
 
                     <div class="form-group">
                         <label class="form-label">2. Revisado por (Coordinador Nómina/TTHH)</label>
-                        <select name="reviewed_by" id="id_reviewed_by" class="input-field select2-user-ajax" required>
+                        <select name="reviewed_by" id="id_reviewed_by" class="input-field select2-user-ajax"
+                                data-ajax-url="{% url 'vacation:schedule_user_search' %}"
+                                data-minimum-input-length="2"
+                                data-placeholder="Escriba para buscar..."
+                                data-allow-clear="true"
+                                required>
                             <option value="">Buscar funcionario por nombre o apellido...</option>
                         </select>
                         <span class="form-hint">Escriba al menos 2 letras para buscar</span>

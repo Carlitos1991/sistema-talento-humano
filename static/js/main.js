@@ -262,12 +262,32 @@ window.openAjaxModal = function (url, callback = null) {
                             const $select = $(this);
                             if ($select.hasClass('select2-hidden-accessible')) return;
 
-                            $select.select2({
+                            const ajaxUrl = $select.data('ajax-url');
+                            const select2Options = {
                                 width: '100%',
                                 dropdownParent: $(modal).find('.modal-body-custom').length
                                     ? $(modal).find('.modal-body-custom')
                                     : $(modal)
-                            });
+                            };
+
+                            if (ajaxUrl) {
+                                select2Options.minimumInputLength = Number(
+                                    $select.data('minimum-input-length') || 0
+                                );
+                                select2Options.placeholder = $select.data('placeholder') || 'Buscar...';
+                                select2Options.allowClear = $select.data('allow-clear') === true ||
+                                    $select.data('allow-clear') === 'true';
+                                select2Options.ajax = {
+                                    url: ajaxUrl,
+                                    dataType: 'json',
+                                    delay: 250,
+                                    data: params => ({q: params.term || ''}),
+                                    processResults: data => ({results: data.results || []}),
+                                    cache: true
+                                };
+                            }
+
+                            $select.select2(select2Options);
                         });
                     }
                 }, 10);
