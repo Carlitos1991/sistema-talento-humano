@@ -449,3 +449,100 @@
     background-color: #2563eb;
     transform: translateY(-1px);
 }
+
+/* --- CRONOGRAMA DE VACACIONES (vacations.css) --- */
+.schedule-matrix-table th.col-month {
+    text-align: center;
+    width: 6.5%;
+    font-size: 0.75rem;
+}
+
+.schedule-badge-slot {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3px 6px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1.1;
+    background: #dbeafe;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
+    white-space: nowrap;
+}
+
+.schedule-badge-slot.slot-approved {
+    background: #dcfce7;
+    color: #166534;
+    border-color: #86efac;
+}
+
+.schedule-actions-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.25rem;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+/* --- COMPONENTES GRÁFICOS DE MATRIZ DE CRONOGRAMA --- */
+.schedule-matrix-table td {
+    padding: 0.35rem 0.25rem !important;
+    vertical-align: middle;
+}
+
+.schedule-pill-item {
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+    padding: 3px 6px;
+    border-radius: 6px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    line-height: 1.1;
+    margin: 2px 0;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    cursor: default;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.schedule-pill-item:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.12);
+}
+
+/* Estado Propuesto (Azul suave institucional) */
+.schedule-pill-item.pill-proposed {
+    background-color: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+}
+
+/* Estado Aprobado (Verde esmeralda institucional) */
+.schedule-pill-item.pill-approved {
+    background-color: #f0fdf4;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+}
+
+/* Botón 'x' para anular la fecha */
+.schedule-pill-delete {
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin-left: 2px;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.15s ease;
+}
+
+.schedule-pill-delete:hover {
+    color: #ef4444;
+}

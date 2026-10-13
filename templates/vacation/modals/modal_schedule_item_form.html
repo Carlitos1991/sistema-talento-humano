@@ -1,0 +1,48 @@
+<!-- vacation/modals/modal_schedule_item_form.html -->
+<div class="modal-overlay hidden" id="scheduleItemModal">
+    <div class="modal-container-medium">
+        <div class="modal-header">
+            <div class="header-content-group">
+                <div class="header-icon-circle"><i class="fa-solid fa-calendar-check"></i></div>
+                <h3 class="header-title">Programar Fracción de Vacación</h3>
+            </div>
+            <button type="button" class="btn-close-circle" onclick="closeModal()"><i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <form action="{{ action_url }}" method="post"
+              onsubmit="submitAjaxForm(event, (data) => { if(data.redirect_url){ window.location.href = data.redirect_url; } else { window.location.reload(); } })">
+            {% csrf_token %}
+            <div class="modal-body-custom">
+                <div class="form-group">
+                    <label class="form-label">Empleado / Servidor</label>
+                    {{ form.employee }}
+                </div>
+                <div class="grid-2-cols">
+                    <div class="form-group">
+                        <label class="form-label">Fecha Desde</label>
+                        {{ form.start_date }}
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Fecha Hasta</label>
+                        {{ form.end_date }}
+                    </div>
+                </div>
+
+                <!-- Contador de días calculado automáticamente -->
+                <div id="daysCounter" class="alert alert-info mt-3" style="display: none;">
+                    <i class="fa-solid fa-clock"></i>
+                    <span>Días calculados para esta fracción: <strong id="calculatedDays">0</strong></span>
+                </div>
+
+                <div class="form-group mt-3">
+                    <label class="form-label">Detalle o Justificación</label>
+                    {{ form.observation }}
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-white-rectangle" onclick="closeModal()">Cancelar</button>
+                <button type="submit" class="btn-success">Guardar Fracción</button>
+            </div>
+        </form>
+    </div>
+</div>

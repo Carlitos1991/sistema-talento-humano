@@ -1,0 +1,124 @@
+<div class="table-container">
+    <div class="table-scroll-top">
+        <table class="managed-table exportable-table"
+               data-title="Cronogramas de Vacaciones"
+               data-filename="Cronogramas_Vacaciones"
+               data-page-size="10">
+            <thead>
+            <tr>
+                <th class="width-10">Año</th>
+                <th class="width-35">Título</th>
+                <th class="width-25">Recepción</th>
+                <th class="width-15 center no-sort">Estado</th>
+                <th class="width-15 no-sort text-center actions"><i class="fas fa-cogs"></i> Acciones</th>
+            </tr>
+            </thead>
+            <tbody id="table-body">
+            {% if plans %}
+                {% for plan in plans %}
+                    <tr id="row-{{ plan.id }}"
+                        data-status="{% if plan.status != 'CLOSED' %}true{% else %}false{% endif %}">
+                        <td class="bold">
+                            <span class="badge badge-blue">{{ plan.year }}</span>
+                        </td>
+                        <td class="bold text-muted">
+                            {{ plan.title }}
+                        </td>
+                        <td>
+                            <i class="fa-regular fa-calendar text-muted me-1 small"></i>
+                            {{ plan.start_submission_date|date:"d/m/Y" }} - {{ plan.end_submission_date|date:"d/m/Y" }}
+                        </td>
+                        <td class="text-center">
+                            {% if plan.status == 'OPEN' %}
+                                <span class="badge badge-green">Abierto</span>
+                            {% elif plan.status == 'APPROVED' %}
+                                <span class="badge badge-blue">Aprobado</span>
+                            {% elif plan.status == 'CLOSED' %}
+                                <span class="badge badge-red">Inactivo</span>
+                            {% else %}
+                                <span class="badge badge-gray">{{ plan.get_status_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="actions text-center">
+                            <div class="actions-wrapper">
+                                <!-- Botón Editar (reutiliza modal form) -->
+                                <button type="button"
+                                        class="btn-yellow-circle"
+                                        title="Editar Cronograma"
+                                        onclick="openAjaxModal('{% url 'vacation:schedule_plan_edit' plan.id %}')">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+
+                                <!-- Botón Ver Matriz -->
+                                <a href="{% url 'vacation:schedule_detail' plan.id %}"
+                                   class="btn-blue-circle"
+                                   title="Planificar Cronograma de Vacaciones">
+                                    <i class="fa-solid fa-calendar-days"></i>
+                                </a>
+
+                                <!-- Botón Baja / Reapertura -->
+                                {% if plan.status != 'CLOSED' %}
+                                    <button type="button"
+                                            class="btn-red-circle"
+                                            title="Dar de baja / Cerrar"
+                                            onclick="toggleStatusAjax('{% url 'vacation:schedule_plan_toggle_status' plan.id %}', 'el cronograma {{ plan.year }}', true)">
+                                        <i class="fa-solid fa-power-off"></i>
+                                    </button>
+                                {% else %}
+                                    <button type="button"
+                                            class="btn-green-circle"
+                                            title="Reaperturar cronograma"
+                                            onclick="toggleStatusAjax('{% url 'vacation:schedule_plan_toggle_status' plan.id %}', 'el cronograma {{ plan.year }}', false)">
+                                        <i class="fa-solid fa-check"></i>
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="5" class="center">
+                        <div class="empty-state-container">
+                            <i class="fas fa-calendar-times empty-state-icon"></i>
+                            <div class="empty-state-text">No se encontraron cronogramas {% if show_inactive %}
+                                inactivos{% else %}activos{% endif %}.
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if is_paginated %}
+    <div class="pagination-container">
+        <div class="pagination-info">
+            Mostrando {{ page_obj.start_index }} a {{ page_obj.end_index }} de {{ paginator.count }}
+        </div>
+        <div class="pagination-controls">
+            <button class="page-btn" data-page="1" {% if not page_obj.has_previous %}disabled{% endif %}>
+                <i class="fas fa-angle-double-left"></i>
+            </button>
+            <button class="page-btn" data-page="{{ page_obj.previous_page_number|default:1 }}"
+                    {% if not page_obj.has_previous %}disabled{% endif %}>
+                <i class="fas fa-angle-left"></i>
+            </button>
+            <div class="page-input-wrapper">
+                <input type="number" class="page-input" value="{{ page_obj.number }}" min="1"
+                       max="{{ paginator.num_pages }}" data-max-page="{{ paginator.num_pages }}">
+                <span class="total-pages-badge">de {{ paginator.num_pages }}</span>
+            </div>
+            <button class="page-btn" data-page="{{ page_obj.next_page_number|default:paginator.num_pages }}"
+                    {% if not page_obj.has_next %}disabled{% endif %}>
+                <i class="fas fa-angle-right"></i>
+            </button>
+            <button class="page-btn" data-page="{{ paginator.num_pages }}"
+                    {% if not page_obj.has_next %}disabled{% endif %}>
+                <i class="fas fa-angle-double-right"></i>
+            </button>
+        </div>
+    </div>
+{% endif %}

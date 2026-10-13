@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Cronogramas de Vacaciones - SIGETH{% endblock %}
+
+{% block content %}
+    <div class="header-card">
+        <div class="header-card-body">
+            <h1>Cronogramas de Vacaciones</h1>
+            <p>Planificación anual en línea de vacaciones del personal institucional.</p>
+        </div>
+        <div>
+            <button type="button" class="btn-success"
+                    onclick="openAjaxModal('{% url 'vacation:schedule_plan_create' %}')">
+                <i class="fa-solid fa-plus"></i> Aperturar Cronograma
+            </button>
+        </div>
+    </div>
+
+    <div class="content-table">
+        <!-- Estructura exacta de unit_list -->
+        <div class="table-controls toolbar-row">
+            <div class="toolbar-center">
+                <input class="switch-input switch-red" type="checkbox" id="show_inactive" name="show_inactive"
+                       {% if show_inactive %}checked{% endif %}>
+                <label class="switch-wrapper" for="show_inactive">
+                    <div class="switch-circle"></div>
+                    <span class="switch-text">Mostrar Cronogramas Inactivos</span>
+                </label>
+            </div>
+            <div class="toolbar-right">
+                <input type="text"
+                       class="table-search-input table-search-input--large"
+                       id="table-search"
+                       name="q"
+                       placeholder="Buscar por año o título..."
+                       value="{{ search_query }}">
+            </div>
+        </div>
+
+        <!-- Contenedor dinámico que actualiza refreshCurrentTable() -->
+        <div id="table-content-wrapper">
+            {% include 'vacation/partials/partial_schedule_plan_list.html' %}
+        </div>
+    </div>
+{% endblock %}

@@ -1,0 +1,74 @@
+<div class="modal-overlay hidden" id="schedulePlanModal">
+    <div class="modal-container-medium">
+        <div class="modal-header">
+            <div class="header-content-group">
+                <div class="header-icon-circle"><i class="fa-solid fa-calendar-check"></i></div>
+                <h3 class="header-title">{{ modal_title|default:"Plan Anual de Vacaciones" }}</h3>
+            </div>
+            <button type="button" class="btn-close-circle" onclick="closeModal()"><i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <form action="{{ action_url }}" method="post"
+              onsubmit="submitAjaxForm(event, (data) => { if(data.redirect_url){ window.location.href = data.redirect_url; } else { window.location.reload(); } })">
+            {% csrf_token %}
+            <div class="modal-body-custom">
+                <div class="grid-2-cols">
+                    <div class="form-group">
+                        <label class="form-label">Año</label>
+                        {{ form.year }}
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Estado</label>
+                        {{ form.status }}
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Título del Cronograma</label>
+                    {{ form.title }}
+                </div>
+                <div class="grid-2-cols">
+                    <div class="form-group">
+                        <label class="form-label">Desde</label>
+                        {{ form.start_submission_date }}
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Hasta</label>
+                        {{ form.end_submission_date }}
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Directrices</label>
+                    {{ form.observation }}
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-white-rectangle" onclick="closeModal()">Cancelar</button>
+                <button type="submit" class="btn-success">Guardar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const yearInput = document.getElementById('id_plan_year');
+        const startDateInput = document.getElementById('id_plan_start_date');
+        const endDateInput = document.getElementById('id_plan_end_date');
+        const titleInput = document.getElementById('id_plan_title');
+
+        if (yearInput) {
+            yearInput.addEventListener('input', function () {
+                const yearVal = parseInt(this.value, 10);
+                if (yearVal && yearVal >= 2000 && yearVal <= 2100) {
+                    if (startDateInput) startDateInput.value = `${yearVal}-01-01`;
+                    if (endDateInput) endDateInput.value = `${yearVal}-12-31`;
+
+                    // Si el título contiene la palabra cronograma o está vacío, se actualiza el año sugerido
+                    if (titleInput && (!titleInput.value || titleInput.value.toLowerCase().includes('cronograma'))) {
+                        titleInput.value = `Cronograma de Vacaciones ${yearVal}`;
+                    }
+                }
+            });
+        }
+    })();
+</script>

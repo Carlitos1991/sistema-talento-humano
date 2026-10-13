@@ -376,8 +376,16 @@
                                     </a>
                                 </li>
                             {% endif %}
+                            <!-- 2. CRONOGRAMA DE VACACIONES -->
+                            <li>
+                                <a href="{% url 'vacation:schedule_plan_list' %}"
+                                   class="{% if request.resolver_match.app_name == 'vacation' and 'schedule' in request.resolver_match.url_name %}active-child{% endif %}">
+                                    <i class="fa-solid fa-calendar-check"></i>
+                                    <span class="menu-text">Cronograma Anual</span>
+                                </a>
+                            </li>
 
-                            <!-- 2. Periodos y Saldos -->
+                            <!-- 3. Periodos y Saldos -->
                             {% if perms.vacation.view_vacationperiod %}
                                 <li>
                                     <a href="{% url 'vacation:period_list' %}"

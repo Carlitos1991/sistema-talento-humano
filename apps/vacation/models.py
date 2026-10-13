@@ -172,3 +172,104 @@ class VacationHistory(models.Model):
 
     def __str__(self):
         return f'{self.vacation_balance} - {self.action_type}'
+
+
+# Agregar a vacation/models.py
+
+class VacationSchedulePlan(models.Model):
+    class PlanStatus(models.TextChoices):
+        DRAFT = 'DRAFT', _('Borrador')
+        OPEN = 'OPEN', _('Abierto para Registro')
+        CLOSED = 'CLOSED', _('Cerrado')
+        APPROVED = 'APPROVED', _('Aprobado Oficialmente')
+
+    # Se quita unique=True para permitir reutilizar el año si el anterior está cerrado
+    year = models.PositiveIntegerField(verbose_name='Año del Cronograma')
+    title = models.CharField(max_length=150, verbose_name='Título Descriptivo')
+    start_submission_date = models.DateField(verbose_name='Inicio de Registro')
+    end_submission_date = models.DateField(verbose_name='Fin de Registro')
+    status = models.CharField(
+        max_length=20,
+        choices=PlanStatus.choices,
+        default=PlanStatus.DRAFT,
+        verbose_name='Estado'
+    )
+    observation = models.TextField(verbose_name='Observaciones / Directrices', blank=True, default='')
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        verbose_name='Creado por'
+    )
+
+    class Meta:
+        ordering = ['-year']
+        verbose_name = 'Plan de Cronograma de Vacaciones'
+        verbose_name_plural = 'Planes de Cronogramas de Vacaciones'
+        # Restricción única CONDICIONAL: solo aplica si el estado NO es CLOSED
+        constraints = [
+            models.UniqueConstraint(
+                fields=['year'],
+                condition=~models.Q(status='CLOSED'),
+                name='unique_active_plan_per_year'
+            )
+        ]
+
+    def __str__(self):
+        return f'{self.title} ({self.year})'
+
+
+class VacationScheduleItem(models.Model):
+    """
+    Fracción de vacaciones planificada por el empleado.
+    """
+
+    class ItemStatus(models.TextChoices):
+        PROPOSED = 'PROPOSED', _('Propuesto')
+        REVISED = 'REVISED', _('Revisado TH')
+        APPROVED = 'APPROVED', _('Aprobado')
+        REJECTED = 'REJECTED', _('Rechazado')
+
+    plan = models.ForeignKey(
+        VacationSchedulePlan,
+        on_delete=models.CASCADE,
+        related_name='items',
+        verbose_name='Plan Anual'
+    )
+    employee = models.ForeignKey(
+        Employee,
+        on_delete=models.PROTECT,
+        related_name='scheduled_vacations',
+        verbose_name='Empleado'
+    )
+    start_date = models.DateField(verbose_name='Fecha Inicio Planificada')
+    end_date = models.DateField(verbose_name='Fecha Fin Planificada')
+    days_quantity = models.PositiveIntegerField(verbose_name='Días Planificados')
+    status = models.CharField(
+        max_length=20,
+        choices=ItemStatus.choices,
+        default=ItemStatus.PROPOSED,
+        verbose_name='Estado'
+    )
+    observation = models.CharField(
+        max_length=255,
+        blank=True,
+        default='',
+        verbose_name='Detalle o Justificación'
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        verbose_name='Registrado por'
+    )
+
+    class Meta:
+        ordering = ['start_date']
+        verbose_name = 'Programación de Vacación'
+        verbose_name_plural = 'Programaciones de Vacaciones'
+
+    def __str__(self):
+        return f'{self.employee} | {self.start_date} al {self.end_date} ({self.days_quantity} días)'

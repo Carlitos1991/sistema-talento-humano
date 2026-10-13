@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Cronograma {{ plan.year }} - SIGETH{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/vacations.css' %}">
+{% endblock %}
+
+{% block content %}
+    <!-- Banner Principal Superior -->
+    <div class="vac-banner">
+        <div class="vac-banner-left">
+            <div class="vac-banner-icon">
+                <i class="fa-solid fa-calendar-check"></i>
+            </div>
+            <div class="vac-banner-title">
+                <h1>{{ plan.title }}</h1>
+                <span class="small opacity-90">
+                <i class="fa-regular fa-clock me-1"></i>
+                Vigencia para programación: {{ plan.start_submission_date|date:"d/m/Y" }} al {{ plan.end_submission_date|date:"d/m/Y" }}
+            </span>
+            </div>
+        </div>
+        <div class="header-actions-group">
+            <a href="{% url 'vacation:schedule_plan_list' %}" class="vac-banner-back-btn">
+                <i class="fa-solid fa-arrow-left"></i> Volver a Planes
+            </a>
+            <button type="button" class="btn-success"
+                    onclick="openAjaxModal('{% url 'vacation:schedule_item_create' plan.id %}', () => { if(typeof initModalDateCalculator === 'function') initModalDateCalculator(); })">
+                <i class="fa-solid fa-plus-circle"></i> Asignar Fechas
+            </button>
+        </div>
+    </div>
+
+    <!-- Stat Cards Superiores -->
+    <div class="stats-row">
+        <div class="stat-card color-one readonly">
+            <div>
+                <h3>Colaboradores</h3>
+                <div class="number">{{ stats.total_employees }}</div>
+            </div>
+            <div class="stat-icon"><i class="fa-solid fa-users"></i></div>
+        </div>
+        <div class="stat-card color-two readonly">
+            <div>
+                <h3>Días Programados</h3>
+                <div class="number">{{ stats.total_days }}</div>
+            </div>
+            <div class="stat-icon"><i class="fa-solid fa-umbrella-beach"></i></div>
+        </div>
+        <div class="stat-card color-three readonly">
+            <div>
+                <h3>Pendientes Revisión</h3>
+                <div class="number">{{ stats.total_proposed }}</div>
+            </div>
+            <div class="stat-icon"><i class="fa-solid fa-clock-rotate-left"></i></div>
+        </div>
+        <div class="stat-card color-four readonly">
+            <div>
+                <h3>Aprobadas</h3>
+                <div class="number">{{ stats.total_approved }}</div>
+            </div>
+            <div class="stat-icon"><i class="fa-solid fa-circle-check"></i></div>
+        </div>
+    </div>
+
+    <!-- Contenedor Principal de la Matriz Gráfica -->
+    <div class="content-table mt-3">
+        <div class="table-controls toolbar-row">
+            <div class="toolbar-left">
+                <span class="label-muted">Matriz Anual {{ plan.year }}</span>
+            </div>
+            <div class="toolbar-center"></div>
+            <div class="toolbar-right">
+                <input type="text"
+                       class="table-search-input table-search-input--large"
+                       id="table-search"
+                       placeholder="Filtrar servidor o cédula...">
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table class="managed-table schedule-matrix-table" data-page-size="15">
+                <thead>
+                <tr>
+                    <th class="width-23">Servidor / Puesto</th>
+                    <th class="width-7 center no-sort">Total</th>
+                    {% for m_num, m_name in months %}
+                        <th class="col-month no-sort">{{ m_name }}</th>
+                    {% endfor %}
+                </tr>
+                </thead>
+                <tbody>
+                {% for row in matrix_data %}
+                    <tr>
+                        <td>
+                            <div class="bold">{{ row.employee.person.full_name }}</div>
+                            <div class="small text-muted">
+                                <span>{{ row.employee.person.document_number }}</span>
+                                {% if row.employee.employment_status %}
+                                    • <span>{{ row.employee.employment_status.name }}</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="center">
+                            <span class="badge badge-dark-sm">{{ row.total_days }}d</span>
+                        </td>
+
+                        <!-- Celdas de los 12 Meses -->
+                        {% for m_num, m_name in months %}
+                            <td class="center">
+                                {% with items_in_month=row.items_by_month|slice:m_num %}
+                                {% endwith %}
+
+                                {% for m_key, items_list in row.items_by_month.items %}
+                                    {% if m_key == m_num %}
+                                        {% for item in items_list %}
+                                            <div class="schedule-pill-item {% if item.status == 'APPROVED' %}pill-approved{% else %}pill-proposed{% endif %}"
+                                                 title="{{ item.start_date|date:'d/m/Y' }} al {{ item.end_date|date:'d/m/Y' }} - {{ item.observation|default:'Sin observación' }}">
+                                                <span>{{ item.start_date|date:"d" }}-{{ item.end_date|date:"d" }} ({{ item.days_quantity }}d)</span>
+
+                                                <!-- Botón eliminar fracción directamente -->
+                                                <button type="button"
+                                                        class="schedule-pill-delete"
+                                                        title="Eliminar esta fracción"
+                                                        onclick="deleteRecordAjax('{% url 'vacation:schedule_item_delete' item.id %}', 'la fracción del {{ item.start_date|date:'d/m' }} al {{ item.end_date|date:'d/m' }}', () => location.reload())">
+                                                    <i class="fa-solid fa-xmark"></i>
+                                                </button>
+                                            </div>
+                                        {% endfor %}
+                                    {% endif %}
+                                {% endfor %}
+                            </td>
+                        {% endfor %}
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="14" class="center">
+                            <div class="empty-state-container">
+                                <i class="fa-regular fa-calendar-xmark empty-state-icon"></i>
+                                <div class="empty-state-text">No hay vacaciones programadas en este cronograma aún.
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}

@@ -1,12 +1,9 @@
 import datetime
-from decimal import Decimal
-from django import forms
-from django.conf import settings
-from django.utils import timezone
-import pytz
 
-from .models import VacationPeriod, EmployeeVacationBalance, VacationRequest
-from permitrequest.models import PermitRequest
+import pytz
+from django import forms
+from django.utils import timezone
+from .models import *
 
 
 class PeriodForm(forms.ModelForm):
@@ -277,7 +274,7 @@ class VacationLiquidationForm(forms.Form):
                   'review_responsible', 'elaborated_by']:
             self.fields[f].queryset = active_users
             self.fields[f].label_from_instance = lambda \
-                obj: f"{getattr(obj, 'signature_name', obj.username)} - {getattr(obj, 'signature_position', '')}"
+                    obj: f"{getattr(obj, 'signature_name', obj.username)} - {getattr(obj, 'signature_position', '')}"
 
     def clean(self):
         cleaned_data = super().clean()
@@ -298,4 +295,100 @@ class VacationLiquidationForm(forms.Form):
 
             cleaned_data['days_requested'] = days_requested
 
+        return cleaned_data
+
+
+class VacationSchedulePlanForm(forms.ModelForm):
+    class Meta:
+        model = VacationSchedulePlan
+        fields = ['year', 'title', 'start_submission_date', 'end_submission_date', 'status', 'observation']
+        widgets = {
+            'year': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'id': 'id_plan_year',
+                'placeholder': 'Ej. 2027',
+                'min': '2000',
+                'max': '2100'
+            }),
+            'title': forms.TextInput(attrs={
+                'class': 'form-control',
+                'id': 'id_plan_title',
+                'placeholder': 'Ej. Cronograma General de Vacaciones 2027'
+            }),
+            'start_submission_date': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date',
+                'id': 'id_plan_start_date'
+            }),
+            'end_submission_date': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date',
+                'id': 'id_plan_end_date'
+            }),
+            'status': forms.Select(attrs={'class': 'input-field'}),
+            'observation': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Directrices para las jefaturas y funcionarios...'
+            }),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.instance.pk:
+            current_year = datetime.date.today().year
+            next_year = current_year + 1
+
+            self.fields['year'].initial = next_year
+            self.fields['title'].initial = f'Cronograma de Vacaciones {next_year}'
+            self.fields['start_submission_date'].initial = datetime.date(next_year, 1, 1).strftime('%Y-%m-%d')
+            self.fields['end_submission_date'].initial = datetime.date(next_year, 12, 31).strftime('%Y-%m-%d')
+            self.fields['status'].initial = VacationSchedulePlan.PlanStatus.DRAFT
+
+    def clean_year(self):
+        year = self.cleaned_data.get('year')
+        status = self.cleaned_data.get('status')
+
+        # Si el plan que se está guardando no es cerrado, verificamos si ya existe otro activo
+        if status != VacationSchedulePlan.PlanStatus.CLOSED:
+            qs = VacationSchedulePlan.objects.filter(
+                year=year
+            ).exclude(
+                status=VacationSchedulePlan.PlanStatus.CLOSED
+            )
+
+            # Si estamos editando, excluimos la instancia actual
+            if self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+
+            if qs.exists():
+                raise forms.ValidationError(
+                    f'Ya existe un cronograma activo para el año {year}. Para crear uno nuevo con este año, debe dar de baja o cerrar el anterior.'
+                )
+
+        return year
+
+
+class VacationScheduleItemForm(forms.ModelForm):
+    class Meta:
+        model = VacationScheduleItem
+        fields = ['employee', 'start_date', 'end_date', 'observation']
+        widgets = {
+            'employee': forms.Select(attrs={'class': 'input-field select2'}),
+            'start_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'id': 'id_start_date'}),
+            'end_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'id': 'id_end_date'}),
+            'observation': forms.TextInput(
+                attrs={'class': 'form-control', 'placeholder': 'Ej. Primer período fraccionado'}),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        start = cleaned_data.get('start_date')
+        end = cleaned_data.get('end_date')
+
+        if start and end:
+            if end < start:
+                self.add_error('end_date', 'La fecha final no puede ser anterior a la inicial.')
+            else:
+                cleaned_data['days_quantity'] = (end - start).days + 1
         return cleaned_data

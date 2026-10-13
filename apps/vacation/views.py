@@ -1,44 +1,29 @@
 import datetime as dt
-from decimal import Decimal
 from io import BytesIO
+
 from dateutil.relativedelta import relativedelta
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db import IntegrityError, transaction
-from django.db.models import Q, Prefetch, F
+from django.db.models import Q, Prefetch, F, Sum
 from django.http import JsonResponse, HttpResponse
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string, get_template
 from django.urls import reverse_lazy, reverse
-from django.utils import timezone
 from django.views import View
 from django.views.generic import ListView, TemplateView, CreateView, UpdateView, FormView
 
-from .forms import (
-    PeriodForm,
-    FirstVacationForm,
-    HourPermitVacationForm,
-    DayPermitVacationForm,
-    VacationLiquidationForm
-)
-from .models import (
-    VacationRequest,
-    VacationPeriod,
-    EmployeeVacationBalance,
-    VacationHistory,
-    FACTOR_HOUR,
-    FACTOR_MINUTE
-)
-from employee.models import Employee
 from budget.models import BudgetLine
+from employee.models import Employee
 from permitrequest.models import PermitRequest, PermitType
 from personnel_actions.models import PersonnelAction, ActionType
+from .forms import *
+from .models import *
 
 
 # ==============================================================================
-# BUSINESS LOGIC (CALCULATION BY REGIME AND SERVICE YEARS)
+# CALCULO POR REGIMEN
 # ==============================================================================
 
 def calculate_earned_days(employee, calculation_date=None):
@@ -81,7 +66,7 @@ def calculate_earned_days(employee, calculation_date=None):
 
 
 # ==============================================================================
-# MAIN EMPLOYEE / REQUESTS LIST VIEW
+# LISTA DE VACACIONES
 # ==============================================================================
 
 class VacationRequestListView(LoginRequiredMixin, ListView):
@@ -178,7 +163,7 @@ class VacationCreateView(LoginRequiredMixin, TemplateView):
 
 
 # ==============================================================================
-# VACATION PERIOD MANAGEMENT
+# ADMINISTRACION DE VACACIONES
 # ==============================================================================
 
 class PeriodListView(LoginRequiredMixin, ListView):
@@ -188,28 +173,35 @@ class PeriodListView(LoginRequiredMixin, ListView):
     paginate_by = 10
 
     def get_queryset(self):
-        qs = VacationPeriod.objects.all()
-        order_by = self.request.GET.get('order_by', 'name')
-        direction = self.request.GET.get('direction', 'asc')
+        show_inactive = self.request.GET.get('show_inactive') == 'true'
 
-        if order_by in ['name', 'is_active']:
-            if direction == 'desc':
-                order_by = f'-{order_by}'
-            qs = qs.order_by(order_by)
+        # Por defecto solo activos
+        if show_inactive:
+            qs = VacationPeriod.objects.all()
         else:
-            qs = qs.order_by('name')
+            qs = VacationPeriod.objects.filter(is_active=True)
 
         q = self.request.GET.get('q', '').strip()
         if q:
             qs = qs.filter(name__icontains=q)
-        return qs
+
+        return qs.order_by('-name')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['search_query'] = self.request.GET.get('q', '')
-        context['current_order'] = self.request.GET.get('order_by', 'name')
-        context['current_direction'] = self.request.GET.get('direction', 'asc')
+        context['show_inactive'] = self.request.GET.get('show_inactive') == 'true'
         return context
+
+    def render_to_response(self, context, **response_kwargs):
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            html = render_to_string(
+                'vacation/partials/partial_period_list.html',
+                context,
+                request=self.request
+            )
+            return HttpResponse(html)
+        return super().render_to_response(context, **response_kwargs)
 
 
 class PeriodCreateView(LoginRequiredMixin, CreateView):
@@ -308,7 +300,7 @@ class PeriodUpdateView(LoginRequiredMixin, UpdateView):
 
 
 # ==============================================================================
-# VACATION BALANCES (FIRST PERIOD & SUBSEQUENT PERIODS)
+# PRIMER PERIODO DE VACACIONES
 # ==============================================================================
 
 class CreateFirstVacationView(LoginRequiredMixin, CreateView):
@@ -498,7 +490,7 @@ class CreateNewVacationPeriodView(LoginRequiredMixin, CreateView):
 
 
 # ==============================================================================
-# EMPLOYEE VACATION DETAIL VIEW
+# DETALLE DE VACACIONES
 # ==============================================================================
 
 class EmployeeVacationDetailView(LoginRequiredMixin, TemplateView):
@@ -916,7 +908,7 @@ class CancelPermitView(LoginRequiredMixin, View):
 
 
 # ==============================================================================
-# VACATION LIQUIDATIONS
+# LIQUIDACION DE VACACIONES
 # ==============================================================================
 
 class CreateVacationLiquidationView(LoginRequiredMixin, FormView):
@@ -1188,7 +1180,7 @@ class EditLiquidationView(LoginRequiredMixin, FormView):
 
 
 # ==============================================================================
-# HISTORIES AND PDF REPORTS
+# HISTORIAL Y REPORTES
 # ==============================================================================
 
 class VacationHistoryDetailView(LoginRequiredMixin, TemplateView):
@@ -1315,3 +1307,246 @@ class LiquidationPrintPDFView(LoginRequiredMixin, View):
             response['Content-Disposition'] = f'inline; filename="Liquidacion_{action.number}.pdf"'
             return response
         return HttpResponse('Error al generar PDF', status=500)
+
+
+# # ==============================================================================
+# # CRONOGRAMA DE VACACIONES
+# # ==============================================================================
+
+class VacationSchedulePlanListView(LoginRequiredMixin, ListView):
+    model = VacationSchedulePlan
+    template_name = 'vacation/schedule_plan_list.html'
+    context_object_name = 'plans'
+    paginate_by = 10
+
+    def get_queryset(self):
+        show_inactive = self.request.GET.get('show_inactive') == 'true'
+
+        # Si el switch está activo muestra SOLO inactivos (CLOSED); si está apagado, SOLO activos
+        if show_inactive:
+            qs = VacationSchedulePlan.objects.filter(status=VacationSchedulePlan.PlanStatus.CLOSED)
+        else:
+            qs = VacationSchedulePlan.objects.exclude(status=VacationSchedulePlan.PlanStatus.CLOSED)
+
+        q = self.request.GET.get('q', '').strip()
+        if q:
+            qs = qs.filter(Q(title__icontains=q) | Q(year__icontains=q))
+
+        return qs.order_by('-year')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['search_query'] = self.request.GET.get('q', '')
+        context['show_inactive'] = self.request.GET.get('show_inactive') == 'true'
+        return context
+
+    def render_to_response(self, context, **response_kwargs):
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            html = render_to_string(
+                'vacation/partials/partial_schedule_plan_list.html',
+                context,
+                request=self.request
+            )
+            return HttpResponse(html)
+        return super().render_to_response(context, **response_kwargs)
+
+
+class VacationSchedulePlanCreateModalView(LoginRequiredMixin, CreateView):
+    """Modal para aperturar cronograma anual."""
+    model = VacationSchedulePlan
+    form_class = VacationSchedulePlanForm
+    template_name = 'vacation/modals/modal_schedule_plan_form.html'
+    success_url = reverse_lazy('vacation:schedule_plan_list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['modal_title'] = 'Aperturar Plan Anual'
+        context['action_url'] = reverse('vacation:schedule_plan_create')
+        return context
+
+    def form_valid(self, form):
+        form.instance.created_by = self.request.user
+        self.object = form.save()
+        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                'status': 'success',
+                'success': True,
+                'message': f'Cronograma {self.object.year} creado con éxito.',
+                'redirect_url': str(self.success_url)
+            })
+        messages.success(self.request, f'Cronograma {self.object.year} creado con éxito.')
+        return redirect(self.success_url)
+
+    def form_invalid(self, form):
+        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            errors = {k: v[0] for k, v in form.errors.items()}
+            return JsonResponse({'status': 'error', 'success': False, 'errors': errors}, status=400)
+        return super().form_invalid(form)
+
+
+class VacationSchedulePlanUpdateModalView(LoginRequiredMixin, UpdateView):
+    """Modal para editar cronograma anual (reutiliza el mismo template)."""
+    model = VacationSchedulePlan
+    form_class = VacationSchedulePlanForm
+    template_name = 'vacation/modals/modal_schedule_plan_form.html'
+    success_url = reverse_lazy('vacation:schedule_plan_list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['modal_title'] = f'Editar Plan Anual ({self.object.year})'
+        context['action_url'] = reverse('vacation:schedule_plan_edit', kwargs={'pk': self.object.pk})
+        return context
+
+    def form_valid(self, form):
+        self.object = form.save()
+        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({
+                'status': 'success',
+                'success': True,
+                'message': f'Cronograma {self.object.year} actualizado con éxito.',
+                'redirect_url': str(self.success_url)
+            })
+        messages.success(self.request, f'Cronograma {self.object.year} actualizado con éxito.')
+        return redirect(self.success_url)
+
+    def form_invalid(self, form):
+        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            errors = {k: v[0] for k, v in form.errors.items()}
+            return JsonResponse({'status': 'error', 'success': False, 'errors': errors}, status=400)
+        return super().form_invalid(form)
+
+
+class VacationScheduleDetailView(LoginRequiredMixin, TemplateView):
+    """Detalle gráfico y matriz interactiva del cronograma anual."""
+    template_name = 'vacation/schedule_detail.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        plan = get_object_or_404(VacationSchedulePlan, pk=self.kwargs['plan_id'])
+
+        # Fracciones programadas del plan
+        items_qs = VacationScheduleItem.objects.filter(
+            plan=plan
+        ).select_related(
+            'employee__person',
+            'employee__employment_status',
+            'employee__area'
+        ).order_by('employee__person__last_name', 'start_date')
+
+        # Agrupación por empleado para la matriz visual
+        employees_map = {}
+        for item in items_qs:
+            emp_id = item.employee_id
+            if emp_id not in employees_map:
+                employees_map[emp_id] = {
+                    'employee': item.employee,
+                    'items_by_month': {m: [] for m in range(1, 13)},
+                    'total_days': 0
+                }
+
+            employees_map[emp_id]['total_days'] += item.days_quantity
+            # Si el rango cruza meses o inicia en un mes específico
+            start_m = item.start_date.month
+            employees_map[emp_id]['items_by_month'][start_m].append(item)
+
+        # Métricas para las stat cards superiores
+        total_items = items_qs.count()
+        total_days = items_qs.aggregate(d=Sum('days_quantity'))['d'] or 0
+        total_approved = items_qs.filter(status=VacationScheduleItem.ItemStatus.APPROVED).count()
+        total_proposed = items_qs.filter(status=VacationScheduleItem.ItemStatus.PROPOSED).count()
+
+        context['plan'] = plan
+        context['matrix_data'] = employees_map.values()
+        context['months'] = [
+            (1, 'Ene'), (2, 'Feb'), (3, 'Mar'), (4, 'Abr'),
+            (5, 'May'), (6, 'Jun'), (7, 'Jul'), (8, 'Ago'),
+            (9, 'Sep'), (10, 'Oct'), (11, 'Nov'), (12, 'Dic')
+        ]
+        context['stats'] = {
+            'total_employees': len(employees_map),
+            'total_days': total_days,
+            'total_approved': total_approved,
+            'total_proposed': total_proposed,
+        }
+        return context
+
+
+class VacationScheduleItemCreateModalView(LoginRequiredMixin, View):
+    """Modal para asignar/planificar fechas en el cronograma."""
+    template_name = 'vacation/modals/modal_schedule_item_form.html'
+
+    def get(self, request, plan_id):
+        plan = get_object_or_404(VacationSchedulePlan, pk=plan_id)
+        form = VacationScheduleItemForm()
+        context = {
+            'plan': plan,
+            'form': form,
+            'action_url': reverse('vacation:schedule_item_create', kwargs={'plan_id': plan.id})
+        }
+        # Si es petición AJAX desde openAjaxModal
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            html = render_to_string(self.template_name, context, request=request)
+            return HttpResponse(html)
+        return render(request, self.template_name, context)
+
+    def post(self, request, plan_id):
+        plan = get_object_or_404(VacationSchedulePlan, pk=plan_id)
+        form = VacationScheduleItemForm(request.POST)
+
+        if form.is_valid():
+            item = form.save(commit=False)
+            item.plan = plan
+            item.days_quantity = form.cleaned_data['days_quantity']
+            item.created_by = request.user
+            item.save()
+
+            return JsonResponse({
+                'status': 'success',
+                'success': True,
+                'message': f'Fracción de {item.days_quantity} días programada con éxito.',
+                'redirect_url': reverse('vacation:schedule_detail', kwargs={'plan_id': plan.id})
+            })
+
+        errors = {k: v[0] for k, v in form.errors.items()}
+        return JsonResponse({
+            'status': 'error',
+            'success': False,
+            'message': 'Por favor revise los errores del formulario.',
+            'errors': errors
+        }, status=400)
+
+
+class VacationScheduleItemDeleteView(LoginRequiredMixin, View):
+    """Eliminar ítem del cronograma vía AJAX."""
+
+    def post(self, request, item_id):
+        item = get_object_or_404(VacationScheduleItem, pk=item_id)
+        item.delete()
+        return JsonResponse({
+            'status': 'success',
+            'success': True,
+            'message': 'Fracción de vacación removida del cronograma.'
+        })
+
+
+class VacationSchedulePlanToggleStatusView(LoginRequiredMixin, View):
+    """Cierra o abre el cronograma anual de vacaciones."""
+
+    def post(self, request, pk):
+        plan = get_object_or_404(VacationSchedulePlan, pk=pk)
+        if plan.status == VacationSchedulePlan.PlanStatus.CLOSED:
+            plan.status = VacationSchedulePlan.PlanStatus.OPEN
+            action_word = "reaperturado"
+            is_active = True
+        else:
+            plan.status = VacationSchedulePlan.PlanStatus.CLOSED
+            action_word = "dado de baja / cerrado"
+            is_active = False
+        plan.save()
+
+        return JsonResponse({
+            'status': 'success',
+            'success': True,
+            'message': f'El cronograma {plan.year} ha sido {action_word} exitosamente.',
+            'is_active': is_active
+        })
