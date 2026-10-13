@@ -694,7 +694,7 @@
                                 </a>
                             </li>
                         {% endif %}
-                        {% if perms.auth.view_user %}
+                        {% if perms.auth.view_user or perms.core.view_user or request.user.is_staff %}
                             <li>
                                 <a href="{% url 'security:user_control_list' %}">
                                     <i class="fa-solid fa-users-gear"></i>

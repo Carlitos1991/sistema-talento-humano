@@ -2,8 +2,12 @@
 {% load static %}
 {% block title %}Perfiles de Acceso | SIGETH{% endblock %}
 
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/security.css' %}?v={% now 'U' %}">
+{% endblock %}
+
 {% block content %}
-    <!-- 1. Header idéntico a la captura -->
+    <!-- Encabezado y Tabla idénticos al listado institucional -->
     <div class="header-card">
         <div>
             <h1>Perfiles de Acceso</h1>
@@ -16,7 +20,6 @@
         {% endif %}
     </div>
 
-    <!-- 2. Contenedor principal con Toolbar (Excel, PDF, Buscador) -->
     <div id="table-app">
         <div class="content-table">
             <div class="table-controls toolbar-row">
@@ -28,7 +31,6 @@
                 </div>
             </div>
 
-            <!-- Zona de recarga AJAX -->
             <div id="table-content-wrapper">
                 {% include 'security/groups/partials/partial_group_table.html' %}
             </div>
@@ -54,5 +56,5 @@
 {% endblock %}
 
 {% block extra_js %}
-    <script src="{% static 'js/roles.js' %}"></script>
+    <script src="{% static 'js/roles.js' %}?v={% now 'U' %}"></script>
 {% endblock %}

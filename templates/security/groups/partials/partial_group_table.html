@@ -22,11 +22,9 @@
                         <td class="text-center">
                             <span class="badge badge-blue">{{ forloop.counter }}</span>
                         </td>
-
                         <td>
                             <span class="font-bold text-dark" style="font-size: 0.95rem;">{{ role.name }}</span>
                         </td>
-
                         <td class="text-center">
                             {% if role.user_set.count > 0 %}
                                 <span class="badge badge-green" style="padding: 6px 14px; font-size: 0.85rem;">
@@ -39,14 +37,14 @@
                                 </span>
                             {% endif %}
                         </td>
-
                         {% if perms.auth.change_group or perms.auth.delete_group %}
                             <td class="actions text-center">
                                 <div class="actions-wrapper" style="justify-content: center;">
                                     {% if perms.auth.change_group %}
                                         <button type="button"
-                                                class="btn-yellow-circle"
+                                                class="btn-yellow-circle btn-icon btn-views-action btn-edit-role"
                                                 data-url="{% url 'security:role_update' role.pk %}"
+                                                onclick="openEditRoleModal(this)"
                                                 title="Configurar Permisos">
                                             <i class="fas fa-edit"></i>
                                         </button>
@@ -63,7 +61,6 @@
         </table>
     </div>
 
-    <!-- Mensajes Vacíos / Búsqueda -->
     <div class="no-results-overlay {% if roles %}hidden{% endif %}">
         <div class="no-results-content {% if not roles %}show{% else %}hidden{% endif %}">
             <i class="fas fa-shield-halved no-results-icon"></i>

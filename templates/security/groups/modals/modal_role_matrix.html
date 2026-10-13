@@ -1,50 +1,43 @@
+{% load static %}
 <div id="role-modal-app">
     <div id="roleModalOverlay" class="modal-overlay hidden" role="dialog" aria-modal="true">
-        <div class="modal-container-large animate-scale-in"
-             style="max-width: 1350px; width: 94vw; border-radius: 12px; overflow: hidden;">
+        <div class="role-modal-window animate-scale-in">
 
             <form id="roleForm" method="post" action="{% url 'security:role_create' %}"
                   data-create-url="{% url 'security:role_create' %}">
                 {% csrf_token %}
 
-                <!-- HEADER OSCURO -->
-                <div class="modal-header-medium"
-                     style="background: #1e293b; padding: 1.2rem 1.8rem; display: flex; justify-content: space-between; align-items: center;">
-                    <h3 class="modal-title text-white m-0 d-flex align-items-center gap-2"
-                        style="font-size: 1.25rem; font-weight: 700;">
+                <!-- HEADER -->
+                <div class="role-modal-header">
+                    <h3 class="role-modal-title">
                         <i class="fa-solid fa-user-lock"></i>
                         <span id="roleModalTitle">Crear Nuevo Perfil</span>
                     </h3>
-                    <button type="button" class="btn-close-circle" onclick="closeRoleModal()" aria-label="Cerrar"
-                            style="background: rgba(255,255,255,0.15); color: #fff; border: none; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                    <button type="button" class="role-modal-close" onclick="closeRoleModal()" aria-label="Cerrar">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
 
-                <!-- CUERPO CON SCROLL -->
-                <div class="modal-body-content"
-                     style="max-height: 75vh; overflow-y: auto; padding: 1.8rem; background: #ffffff;">
+                <!-- BODY -->
+                <div class="role-modal-body">
 
-                    <!-- 1. NOMBRE DEL ROL -->
-                    <div class="mb-4">
-                        <label class="form-label font-bold text-dark"
-                               style="font-size: 0.85rem; letter-spacing: 0.5px;">
+                    <!-- SECCIÓN 1: NOMBRE -->
+                    <div class="role-form-group">
+                        <label class="role-label">
                             NOMBRE DEL ROL <span class="text-danger">*</span>
                         </label>
-                        <input type="text" name="name" class="input-field uppercase-input"
+                        <input type="text" name="name" class="input-field uppercase-input role-input-name"
                                placeholder="EJ: ANALISTA_TTHH" autocomplete="off"
-                               oninput="this.value = this.value.toUpperCase()" required
-                               style="height: 44px; font-size: 0.95rem; border: 1px solid #cbd5e1; border-radius: 8px; width: 100%; padding: 0 14px;">
+                               oninput="this.value = this.value.toUpperCase()" required>
                         <div class="invalid-feedback"></div>
                     </div>
 
-                    <!-- 2. PLANTILLAS RÁPIDAS (Borde punteado sutil como en la imagen) -->
-                    <div class="template-selector-box mb-4"
-                         style="border: 1px dashed #cbd5e1; border-radius: 10px; padding: 1.2rem; background: #fafafa; text-align: center;">
-                        <span class="template-label font-bold text-dark d-block mb-2" style="font-size: 0.9rem;">
-                            <i class="fa-solid fa-wand-magic-sparkles text-primary me-1"></i> Plantillas Rápidas:
+                    <!-- SECCIÓN 2: PLANTILLAS RÁPIDAS -->
+                    <div class="role-presets-box">
+                        <span class="role-presets-title">
+                            <i class="fa-solid fa-wand-magic-sparkles text-primary"></i> Plantillas Rápidas:
                         </span>
-                        <div class="template-options d-flex justify-content-center flex-wrap gap-2">
+                        <div class="role-chip-group">
                             <label class="template-chip manager">
                                 <input type="radio" name="template" data-permission-template="manager">
                                 <span><i class="fa-solid fa-user-gear"></i> Administrar</span>
@@ -64,13 +57,10 @@
                         </div>
                     </div>
 
-                    <!-- 3. DASHBOARD DISPONIBLE -->
-                    <div class="mb-4">
-                        <label class="form-label font-bold text-dark"
-                               style="font-size: 0.85rem; letter-spacing: 0.5px;">
-                            DASHBOARD DISPONIBLE PARA
-                        </label>
-                        <div class="template-options d-flex flex-wrap gap-2 mt-1">
+                    <!-- SECCIÓN 3: DASHBOARD DISPONIBLE -->
+                    <div class="role-dashboard-box">
+                        <label class="role-label">DASHBOARD DISPONIBLE PARA</label>
+                        <div class="role-chip-group">
                             <label class="template-chip">
                                 <input type="radio" name="dashboard_type" value="talento_humano">
                                 <span><i class="fa-solid fa-user-tie"></i> Talento Humano</span>
@@ -84,145 +74,112 @@
                                 <span><i class="fa-solid fa-user"></i> Empleado</span>
                             </label>
                         </div>
-                        <div class="text-muted small mt-2" style="font-size: 0.8rem; line-height: 1.4;">
-                            Selecciona un tipo de dashboard que los usuarios con este rol podrán ver.<br>
+                        <div class="role-helper-text">
                             Los permisos visibles en esta matriz se ajustan según los permisos del usuario conectado.
                         </div>
                     </div>
 
-                    <div class="mb-3">
-                        <span class="font-bold text-primary small text-uppercase" style="letter-spacing: 0.5px;">
-                            <i class="fa-solid fa-list-check me-1"></i> MATRIZ DE PERMISOS
-                        </span>
+                    <div class="role-matrix-title">
+                        <i class="fa-solid fa-list-check text-primary"></i> MATRIZ DE PERMISOS
                     </div>
 
-                    <!-- 4. MATRIZ DE MÓDULOS -->
-                    <div class="permissions-scroll-area">
+                    <!-- SECCIÓN 4: MATRIZ DE PERMISOS -->
+                    <div class="role-modules-wrapper">
                         {% with grouped_perms=form.get_grouped_permissions %}
                             {% if grouped_perms %}
                                 {% for module_name, models in grouped_perms.items %}
-                                    <div class="module-permission-card mb-4"
-                                         style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
-
-                                        <!-- Header Azul Oscuro del Módulo -->
-                                        <div class="module-header d-flex justify-content-between align-items-center"
-                                             style="background: #203a43; background: linear-gradient(to right, #0f2027, #203a43, #2c5364); padding: 0.65rem 1rem; color: #fff;">
-                                            <div class="d-flex align-items-center gap-2 font-bold"
-                                                 style="font-size: 0.95rem;">
+                                    <div class="role-module-card">
+                                        <!-- Header de Módulo -->
+                                        <div class="role-module-header">
+                                            <div class="role-module-name">
                                                 <i class="fa-solid fa-layer-group"></i>
                                                 <span>{{ module_name }}</span>
                                             </div>
-                                            <button type="button" class="btn btn-sm btn-toggle-all"
-                                                    data-toggle-module="{{ forloop.counter }}"
-                                                    style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: #fff; border-radius: 6px; padding: 3px 10px; font-size: 0.8rem;">
-                                                <i class="fa-solid fa-check-double me-1"></i> Marcar Todo
+                                            <button type="button" class="role-btn-toggle btn-toggle-all"
+                                                    data-toggle-module="{{ forloop.counter }}">
+                                                <i class="fa-solid fa-check"></i> Marcar Todo
                                             </button>
                                         </div>
 
-                                        <!-- Tabla de Permisos (Sin class="managed-table" para que no se autoinyecte paginador interno) -->
-                                        <div style="overflow-x: auto;">
-                                            <table class="table-permissions-custom module-table-{{ forloop.counter }}"
-                                                   style="width: 100%; border-collapse: collapse; font-size: 0.88rem;">
-                                                <thead>
-                                                <tr style="background: #f8fafc; border-bottom: 2px solid #e2e8f0; color: #475569;">
-                                                    <th class="text-start ps-3 py-2"
-                                                        style="width: 45%; font-weight: 600;">Recurso / Modelo
-                                                    </th>
-                                                    <th class="text-center py-2" style="width: 11%; font-weight: 600;">
-                                                        Ver
-                                                    </th>
-                                                    <th class="text-center py-2" style="width: 11%; font-weight: 600;">
-                                                        Crear
-                                                    </th>
-                                                    <th class="text-center py-2" style="width: 11%; font-weight: 600;">
-                                                        Editar
-                                                    </th>
-                                                    <th class="text-center py-2" style="width: 11%; font-weight: 600;">
-                                                        Borrar
-                                                    </th>
-                                                    <th class="text-center py-2" style="width: 11%; font-weight: 600;">
-                                                        Admin
-                                                    </th>
+                                        <!-- Tabla de Módulo -->
+                                        <table class="role-matrix-table module-table-{{ forloop.counter }}">
+                                            <thead>
+                                            <tr>
+                                                <th class="col-resource">Recurso / Modelo</th>
+                                                <th class="col-action">Ver</th>
+                                                <th class="col-action">Crear</th>
+                                                <th class="col-action">Editar</th>
+                                                <th class="col-action">Borrar</th>
+                                                <th class="col-action">Admin</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            {% for model in models %}
+                                                <tr>
+                                                    <td class="col-resource cell-name" title="{{ model.name }}">
+                                                        {{ model.name }}
+                                                    </td>
+
+                                                    <!-- Ver -->
+                                                    <td class="col-action">
+                                                        {% if model.perms.view %}
+                                                            <input type="checkbox" name="permissions[]"
+                                                                   value="{{ model.perms.view.id }}"
+                                                                   class="role-checkbox perm-check perm-view">
+                                                        {% else %}<span class="role-dash">—</span>{% endif %}
+                                                    </td>
+
+                                                    <!-- Crear -->
+                                                    <td class="col-action">
+                                                        {% if model.perms.add %}
+                                                            <input type="checkbox" name="permissions[]"
+                                                                   value="{{ model.perms.add.id }}"
+                                                                   class="role-checkbox perm-check perm-add">
+                                                        {% else %}<span class="role-dash">—</span>{% endif %}
+                                                    </td>
+
+                                                    <!-- Editar -->
+                                                    <td class="col-action">
+                                                        {% if model.perms.change %}
+                                                            <input type="checkbox" name="permissions[]"
+                                                                   value="{{ model.perms.change.id }}"
+                                                                   class="role-checkbox perm-check perm-change">
+                                                        {% else %}<span class="role-dash">—</span>{% endif %}
+                                                    </td>
+
+                                                    <!-- Borrar -->
+                                                    <td class="col-action">
+                                                        {% if model.perms.delete %}
+                                                            <input type="checkbox" name="permissions[]"
+                                                                   value="{{ model.perms.delete.id }}"
+                                                                   class="role-checkbox perm-check perm-delete delete-check">
+                                                        {% else %}<span class="role-dash">—</span>{% endif %}
+                                                    </td>
+
+                                                    <!-- Admin -->
+                                                    <td class="col-action">
+                                                        {% if model.perms.admin %}
+                                                            <input type="checkbox" name="permissions[]"
+                                                                   value="{{ model.perms.admin.id }}"
+                                                                   class="role-checkbox perm-check perm-admin-all"
+                                                                   data-toggle-model="{{ model.perms.view.content_type_id }}">
+                                                        {% elif model.perms.view %}
+                                                            <input type="checkbox"
+                                                                   class="role-checkbox perm-check perm-admin-all"
+                                                                   data-toggle-model="{{ model.perms.view.content_type_id }}">
+                                                        {% else %}
+                                                            <span class="role-dash">—</span>
+                                                        {% endif %}
+                                                    </td>
                                                 </tr>
-                                                </thead>
-                                                <tbody>
-                                                {% for model in models %}
-                                                    <tr style="border-bottom: 1px solid #f1f5f9;">
-                                                        <td class="ps-3 py-2 fw-semibold text-secondary"
-                                                            style="color: #334155;">
-                                                            {{ model.name }}
-                                                        </td>
-
-                                                        <!-- Ver -->
-                                                        <td class="text-center py-2">
-                                                            {% if model.perms.view %}
-                                                                <input type="checkbox" name="permissions[]"
-                                                                       value="{{ model.perms.view.id }}"
-                                                                       class="custom-checkbox perm-check perm-view"
-                                                                       style="width: 18px; height: 18px; accent-color: #0284c7; cursor: pointer;">
-                                                            {% else %}<span class="text-muted">—</span>{% endif %}
-                                                        </td>
-
-                                                        <!-- Crear -->
-                                                        <td class="text-center py-2">
-                                                            {% if model.perms.add %}
-                                                                <input type="checkbox" name="permissions[]"
-                                                                       value="{{ model.perms.add.id }}"
-                                                                       class="custom-checkbox perm-check perm-add"
-                                                                       style="width: 18px; height: 18px; accent-color: #0284c7; cursor: pointer;">
-                                                            {% else %}<span class="text-muted">—</span>{% endif %}
-                                                        </td>
-
-                                                        <!-- Editar -->
-                                                        <td class="text-center py-2">
-                                                            {% if model.perms.change %}
-                                                                <input type="checkbox" name="permissions[]"
-                                                                       value="{{ model.perms.change.id }}"
-                                                                       class="custom-checkbox perm-check perm-change"
-                                                                       style="width: 18px; height: 18px; accent-color: #0284c7; cursor: pointer;">
-                                                            {% else %}<span class="text-muted">—</span>{% endif %}
-                                                        </td>
-
-                                                        <!-- Borrar -->
-                                                        <td class="text-center py-2">
-                                                            {% if model.perms.delete %}
-                                                                <input type="checkbox" name="permissions[]"
-                                                                       value="{{ model.perms.delete.id }}"
-                                                                       class="custom-checkbox perm-check perm-delete delete-check"
-                                                                       style="width: 18px; height: 18px; accent-color: #0284c7; cursor: pointer;">
-                                                            {% else %}<span class="text-muted">—</span>{% endif %}
-                                                        </td>
-
-                                                        <!-- Admin (Marcar fila) -->
-                                                        <td class="text-center py-2">
-                                                            {% if model.perms.admin %}
-                                                                <input type="checkbox" name="permissions[]"
-                                                                       value="{{ model.perms.admin.id }}"
-                                                                       class="custom-checkbox perm-check perm-admin-all"
-                                                                       data-toggle-model="{{ model.perms.view.content_type_id }}"
-                                                                       style="width: 18px; height: 18px; accent-color: #0284c7; cursor: pointer;">
-                                                            {% elif model.perms.view %}
-                                                                <input type="checkbox"
-                                                                       class="custom-checkbox perm-check perm-admin-all"
-                                                                       data-toggle-model="{{ model.perms.view.content_type_id }}"
-                                                                       style="width: 18px; height: 18px; accent-color: #0284c7; cursor: pointer;">
-                                                            {% else %}
-                                                                <span class="text-muted">—</span>
-                                                            {% endif %}
-                                                        </td>
-                                                    </tr>
-                                                {% endfor %}
-                                                </tbody>
-                                            </table>
-                                        </div>
+                                            {% endfor %}
+                                            </tbody>
+                                        </table>
                                     </div>
                                 {% endfor %}
                             {% else %}
-                                <div class="empty-permissions-state p-4 text-center text-muted border rounded">
-                                    <i class="fa-solid fa-triangle-exclamation fa-2x mb-2 text-warning"></i>
-                                    <h4>No se cargaron los permisos</h4>
-                                    <p class="small mb-0">Verifica que tu usuario tenga permisos de administración o
-                                        esté como superusuario.</p>
+                                <div class="role-empty-state">
+                                    <p>No hay permisos disponibles para este usuario.</p>
                                 </div>
                             {% endif %}
                         {% endwith %}
@@ -230,14 +187,11 @@
                 </div>
 
                 <!-- FOOTER -->
-                <div class="modal-footer-medium d-flex justify-content-end gap-2"
-                     style="background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 1rem 1.8rem;">
-                    <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeRoleModal()"
-                            style="min-width: 120px; text-transform: none;">
+                <div class="role-modal-footer">
+                    <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeRoleModal()">
                         Cancelar
                     </button>
-                    <button type="submit" class="btn-dark-blue-rectangle"
-                            style="min-width: 150px; text-transform: none;">
+                    <button type="submit" class="btn-dark-blue-rectangle">
                         <i class="fas fa-save me-1"></i> Guardar Perfil
                     </button>
                 </div>
