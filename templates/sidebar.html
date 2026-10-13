@@ -355,7 +355,7 @@
                         </ul>
                     </li>
                 {% endif %}
-                {% if perms.vacation.view_vacationrequest or perms.vacation.view_vacationperiod or perms.vacation.view_vacationscheduleplan %}
+                {% if perms.vacation.view_vacationrequest or perms.vacation.view_vacationperiod or perms.vacation.view_vacationscheduleplan or perms.vacation.view_vacationscheduleplan %}
                     <li class="has-submenu">
                         <a href="#" class="{% if 'vacation' in request.resolver_match.app_name %}active{% endif %}">
                             <i class="fa-solid fa-umbrella-beach"></i>
