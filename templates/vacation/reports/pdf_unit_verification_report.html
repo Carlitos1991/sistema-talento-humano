@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Comprobación Vacaciones {{ plan.year }} - {{ target_unit.name }}</title>
+    <style>
+        @page {
+            size: a4 portrait;
+            margin-top: 3.2cm;
+            margin-bottom: 2.2cm;
+            margin-left: 1.5cm;
+            margin-right: 1.5cm;
+
+        {% if letterhead_path %}
+            background-image: url('{{ letterhead_path }}');
+        {% endif %}
+
+            @frame footer_frame {
+            -pdf-frame-content: page_footer;
+            bottom: 0.8cm;
+            left: 1.5cm;
+            right: 1.5cm;
+            height: 0.8cm;
+        }
+        }
+
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            color: #1e293b;
+            font-size: 7.5pt;
+        }
+
+        .header-title-box {
+            text-align: center;
+            margin-bottom: 12px;
+        }
+
+        .inst-title {
+            font-size: 11pt;
+            font-weight: bold;
+            color: #203c7d;
+            text-transform: uppercase;
+            margin-bottom: 2px;
+        }
+
+        .doc-title {
+            font-size: 9.5pt;
+            font-weight: bold;
+            color: #0f172a;
+            margin-bottom: 3px;
+        }
+
+        .doc-sub {
+            font-size: 7.5pt;
+            color: #475569;
+        }
+
+        table.data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 6px;
+        }
+
+        table.data-table th {
+            background-color: #203c7d;
+            color: #ffffff;
+            font-weight: bold;
+            font-size: 7pt;
+            text-transform: uppercase;
+            padding: 5px 3px;
+            text-align: center;
+            border: 0.5pt solid #1e293b;
+        }
+
+        table.data-table td {
+            padding: 4px 3px;
+            border: 0.5pt solid #cbd5e1;
+            vertical-align: middle;
+            font-size: 7pt;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-left {
+            text-align: left;
+        }
+
+        .bold {
+            font-weight: bold;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
+        .section-header {
+            font-size: 8.5pt;
+            font-weight: bold;
+            color: #1e293b;
+            margin-top: 10px;
+            margin-bottom: 4px;
+            border-bottom: 1pt solid #cbd5e1;
+            padding-bottom: 2px;
+        }
+
+        .page-break {
+            page-break-before: always;
+        }
+
+        .badge-warning {
+            color: #b45309;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ================= SECCIÓN 1: PERSONAL PROGRAMADO ================= -->
+<div class="header-title-box">
+    <div class="inst-title">{{ sys_config.institution_name|default:"MUNICIPIO DE LOJA" }}</div>
+    <div class="doc-title">REPORTE DE COMPROBACIÓN - CRONOGRAMA DE VACACIONES {{ plan.year }}</div>
+    <div class="doc-sub">
+        <strong>Dependencia:</strong> {{ target_unit.name }} &nbsp;|&nbsp;
+        <strong>Fecha Emisión:</strong> {{ today|date:"d/m/Y" }} &nbsp;|&nbsp;
+        <strong>Estado Plan:</strong> {{ plan.get_status_display }}
+    </div>
+</div>
+
+<div class="section-header">
+    1. PERSONAL CON ASIGNACIÓN DE VACACIONES PROGRAMADAS ({{ scheduled_rows|length }} SERVIDORES/TRABAJADORES)
+</div>
+
+<table class="data-table">
+    <thead>
+    <tr>
+        <th style="width: 5%;">N°</th>
+        <th style="width: 14%;">CÉDULA</th>
+        <th style="width: 36%;">APELLIDOS Y NOMBRES</th>
+        <th style="width: 14%;">TIPO</th>
+        <th style="width: 23%;">MESES PROGRAMADOS</th>
+        <th style="width: 8%;">TOTAL</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for r in scheduled_rows %}
+        <tr>
+            <td class="text-center">{{ forloop.counter }}</td>
+            <td class="text-center">{{ r.cedula }}</td>
+            <td class="text-left bold">{{ r.apellidos_nombres }}</td>
+            <td class="text-center">{{ r.tipo }}</td>
+            <td class="text-center">{{ r.meses }}</td>
+            <td class="text-center bold">{{ r.total_dias }}d</td>
+        </tr>
+    {% empty %}
+        <tr>
+            <td colspan="6" class="text-center" style="padding: 12px; color: #64748b;">
+                No se registra personal con vacaciones programadas en esta dependencia.
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+<!-- ================= SECCIÓN 2: PERSONAL PENDIENTE (EN OTRA PÁGINA) ================= -->
+<div class="page-break"></div>
+
+<div class="header-title-box">
+    <div class="inst-title">{{ sys_config.institution_name|default:"MUNICIPIO DE LOJA" }}</div>
+    <div class="doc-title">PERSONAL PENDIENTE DE PROGRAMACIÓN - VACACIONES {{ plan.year }}</div>
+    <div class="doc-sub">
+        <strong>Dependencia:</strong> {{ target_unit.name }} &nbsp;|&nbsp;
+        <strong>Fecha Emisión:</strong> {{ today|date:"d/m/Y" }} &nbsp;|&nbsp;
+        <strong>Total Sin Asignar / Incompletos:</strong> {{ pending_rows|length }}
+    </div>
+</div>
+
+<div class="section-header" style="color: #b45309;">
+    2. PERSONAL DE LA DEPENDENCIA QUE AÚN NO SE LE ASIGNAN O TIENEN DÍAS PENDIENTES
+</div>
+
+<table class="data-table">
+    <thead>
+    <tr>
+        <th style="width: 5%;">N°</th>
+        <th style="width: 15%;">CÉDULA</th>
+        <th style="width: 38%;">APELLIDOS Y NOMBRES</th>
+        <th style="width: 14%;">TIPO</th>
+        <th style="width: 14%;">PLANIFICADO</th>
+        <th style="width: 14%;">PENDIENTE</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for r in pending_rows %}
+        <tr>
+            <td class="text-center">{{ forloop.counter }}</td>
+            <td class="text-center">{{ r.cedula }}</td>
+            <td class="text-left bold">{{ r.apellidos_nombres }}</td>
+            <td class="text-center">{{ r.tipo }}</td>
+            <td class="text-center">{{ r.dias_planificados }}d / {{ r.dias_tope }}d</td>
+            <td class="text-center badge-warning">{{ r.dias_pendientes }} días</td>
+        </tr>
+    {% empty %}
+        <tr>
+            <td colspan="6" class="text-center" style="padding: 12px; color: #15803d; font-weight: bold;">
+                Todo el personal de esta dependencia ha completado su planificación de vacaciones.
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+<div id="page_footer">
+    SIGETH • Reporte de Comprobación Interna • Página
+    <pdf:pageNumber> de
+        <pdf:pageCount>
+</div>
+
+</body>
+</html>

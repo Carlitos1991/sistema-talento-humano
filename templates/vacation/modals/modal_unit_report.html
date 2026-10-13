@@ -1,0 +1,61 @@
+<div class="modal-overlay hidden" id="unitReportModal">
+    <div class="modal-container-medium animate-scale-in" style="max-width: 650px;">
+        <div class="modal-header-medium"
+             style="background: #1e293b; padding: 1rem 1.4rem; display: flex; justify-content: space-between; align-items: center;">
+            <h3 class="modal-title text-white m-0 d-flex align-items-center gap-2"
+                style="font-size: 1.15rem; font-weight: 700;">
+                <i class="fa-solid fa-sitemap"></i>
+                <span>Reporte de Comprobación por Dependencia</span>
+            </h3>
+            <button type="button" class="btn-close-circle" onclick="closeModal()" aria-label="Cerrar"
+                    style="background: rgba(255,255,255,0.15); color: #fff; border: none; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <form id="unitReportForm" method="get" target="_blank" action="">
+            <div class="modal-body-content" style="padding: 1.5rem; background: #ffffff;">
+                <div class="alert alert-light border mb-3 py-2 px-3 small text-muted" style="border-radius: 8px;">
+                    <i class="fa-solid fa-circle-info text-primary me-1"></i>
+                    Este reporte es de <strong>comprobación interna</strong>. Muestra el personal con vacaciones
+                    programadas y, en una página separada, el personal pendiente por asignar.
+                </div>
+
+                <!-- Combo 1: Dirección / Unidad Padre -->
+                <div class="form-group mb-3">
+                    <label class="form-label font-bold text-dark" style="font-size: 0.85rem;">
+                        Dirección General / Nivel Superior <span class="text-danger">*</span>
+                    </label>
+                    <select id="parent_unit_select" class="input-field" style="width: 100%; height: 40px;" required>
+                        <option value="">-- Seleccione Dirección General --</option>
+                        {% for unit in parent_units %}
+                            <option value="{{ unit.id }}">{{ unit.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Combo 2: Subdependencia / Departamento Específico -->
+                <div class="form-group mb-4">
+                    <label class="form-label font-bold text-dark" style="font-size: 0.85rem;">
+                        Departamento / Dependencia Específica
+                    </label>
+                    <select name="unit_id" id="sub_unit_select" class="input-field" style="width: 100%; height: 40px;"
+                            required>
+                        <option value="">-- Seleccione primero la Dirección --</option>
+                    </select>
+                    <span class="small text-muted mt-1 d-block">
+                        Puede seleccionar la Dirección completa o una de sus jefaturas/secciones.
+                    </span>
+                </div>
+            </div>
+
+            <div class="modal-footer-medium d-flex justify-content-end gap-2"
+                 style="background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 0.85rem 1.4rem;">
+                <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">Cancelar</button>
+                <button type="submit" class="btn-dark-blue-rectangle">
+                    <i class="fa-solid fa-file-pdf me-1"></i> Generar Reporte PDF
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

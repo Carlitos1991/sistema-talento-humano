@@ -1,10 +1,13 @@
-import datetime
-
 import pytz
 from django import forms
+from django.core.exceptions import ValidationError
+from django.db.models import Sum
 from django.utils import timezone
-from .models import *
+
 from core.models import User
+from .models import *
+from .models import VacationScheduleItem
+
 
 class PeriodForm(forms.ModelForm):
     class Meta:
@@ -372,25 +375,44 @@ class VacationSchedulePlanForm(forms.ModelForm):
 class VacationScheduleItemForm(forms.ModelForm):
     class Meta:
         model = VacationScheduleItem
-        fields = ['employee', 'start_date', 'end_date', 'observation']
-        widgets = {
-            'employee': forms.Select(attrs={'class': 'input-field select2'}),
-            'start_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'id': 'id_start_date'}),
-            'end_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'id': 'id_end_date'}),
-            'observation': forms.TextInput(
-                attrs={'class': 'form-control', 'placeholder': 'Ej. Primer período fraccionado'}),
-        }
+        fields = ['plan', 'employee', 'start_date', 'end_date', 'days_quantity', 'observation']
 
     def clean(self):
         cleaned_data = super().clean()
-        start = cleaned_data.get('start_date')
-        end = cleaned_data.get('end_date')
+        plan = cleaned_data.get('plan')
+        employee = cleaned_data.get('employee')
+        days_quantity = cleaned_data.get('days_quantity') or 0
 
-        if start and end:
-            if end < start:
-                self.add_error('end_date', 'La fecha final no puede ser anterior a la inicial.')
-            else:
-                cleaned_data['days_quantity'] = (end - start).days + 1
+        if not plan or not employee:
+            return cleaned_data
+
+        # 1. Obtener el límite máximo del empleado para ese año
+        max_allowed_days = get_annual_vacation_entitlement(employee, target_year=plan.year)
+
+        # 2. Calcular los días que ya tiene programados en otros ítems del mismo plan
+        existing_items = VacationScheduleItem.objects.filter(
+            plan=plan,
+            employee=employee
+        )
+        # Excluir la instancia actual si estamos editando
+        if self.instance and self.instance.pk:
+            existing_items = existing_items.exclude(pk=self.instance.pk)
+
+        already_scheduled_days = existing_items.aggregate(
+            total=Sum('days_quantity')
+        )['total'] or 0
+
+        total_requested = already_scheduled_days + days_quantity
+
+        # 3. Validación de tope
+        if total_requested > max_allowed_days:
+            remaining_days = max(0, max_allowed_days - already_scheduled_days)
+            raise ValidationError(
+                f"El empleado tiene un límite legal de {max_allowed_days} días para este periodo. "
+                f"Actualmente ya tiene programados {already_scheduled_days} días. "
+                f"Solo puede registrar hasta {remaining_days} días adicionales."
+            )
+
         return cleaned_data
 
 

@@ -6,7 +6,6 @@
     <style>
         @page {
             size: a4 portrait;
-            /* Margen superior de 3.5cm e inferior de 2.5cm para respetar el membrete institucional */
             margin-top: 3.5cm;
             margin-bottom: 2.5cm;
             margin-left: 1.5cm;
@@ -31,7 +30,6 @@
             font-size: 7.5pt;
         }
 
-        /* Títulos centrados */
         .header-title-box {
             text-align: center;
             margin-bottom: 12px;
@@ -57,7 +55,6 @@
             color: #475569;
         }
 
-        /* Tabla de Datos */
         table.data-table {
             width: 100%;
             border-collapse: collapse;
@@ -98,7 +95,6 @@
             background-color: #f8fafc;
         }
 
-        /* Bloque de Firmas sin fondos heredados */
         table.signatures-table {
             width: 100%;
             border-collapse: collapse;
@@ -127,7 +123,6 @@
             text-transform: uppercase;
         }
 
-        /* Espacio para la firma física completamente transparente */
         .sig-space-cell {
             height: 55px;
             font-size: 1pt;
@@ -136,7 +131,6 @@
             background-color: transparent !important;
         }
 
-        /* Línea superior y contenedor compacto de nombre + cargo */
         .sig-bottom-cell {
             border-top: 0.8pt solid #0f172a !important;
             padding-top: 4px !important;
@@ -168,7 +162,6 @@
 </head>
 <body>
 
-<!-- Título y Datos de Dependencia -->
 <div class="header-title-box">
     <div class="inst-title">{{ sys_config.institution_name|default:"MUNICIPIO DE LOJA" }}</div>
     <div class="doc-title">CRONOGRAMA ANUAL DE VACACIONES {{ plan.year }}</div>
@@ -179,17 +172,16 @@
     </div>
 </div>
 
-<!-- Tabla Principal (Formato Vertical) -->
+<!-- Tabla Principal (6 Columnas exactas) -->
 <table class="data-table">
     <thead>
     <tr>
-        <th style="width: 4%;">N°</th>
-        <th style="width: 12%;">CÉDULA</th>
-        <th style="width: 27%;">APELLIDOS Y NOMBRES</th>
-        <th style="width: 11%;">F. INGRESO</th>
-        <th style="width: 17%;">RÉGIMEN / TIPO</th>
-        <th style="width: 22%;">MESES PROGRAMADOS</th>
-        <th style="width: 7%;">TOTAL</th>
+        <th style="width: 5%;">N°</th>
+        <th style="width: 14%;">CÉDULA</th>
+        <th style="width: 36%;">APELLIDOS Y NOMBRES</th>
+        <th style="width: 14%;">TIPO</th>
+        <th style="width: 23%;">MESES PROGRAMADOS</th>
+        <th style="width: 8%;">TOTAL</th>
     </tr>
     </thead>
     <tbody>
@@ -198,39 +190,32 @@
             <td class="text-center">{{ r.secuencial }}</td>
             <td class="text-center">{{ r.cedula }}</td>
             <td class="text-left bold">{{ r.apellidos_nombres }}</td>
-            <td class="text-center">{{ r.fecha_ingreso }}</td>
-            <td class="text-center">{{ r.regimen_tipo }}</td>
+            <td class="text-center">{{ r.tipo }}</td>
             <td class="text-center">{{ r.meses }}</td>
             <td class="text-center bold">{{ r.total_dias }}d</td>
         </tr>
     {% empty %}
         <tr>
-            <td colspan="7" class="text-center" style="padding: 15px;">No hay personal planificado en esta
-                dependencia.
+            <td colspan="6" class="text-center" style="padding: 15px;">
+                No hay personal planificado en esta dependencia.
             </td>
         </tr>
     {% endfor %}
     </tbody>
 </table>
 
-<!-- Bloque de Firmas Estructurado en 3 Filas -->
-<!-- Bloque de Firmas: Fondo transparente, espacio y texto pegado -->
+<!-- Bloque de Firmas -->
 <table class="signatures-table">
-    <!-- Fila 1: Encabezados -->
     <tr>
         <td style="width: 44%;" class="sig-header">ELABORADO POR:</td>
         <td style="width: 12%;"></td>
         <td style="width: 44%;" class="sig-header">AUTORIZADO POR:</td>
     </tr>
-
-    <!-- Fila 2: Espacio para la firma (Totalmente transparente sin fondo par) -->
     <tr>
         <td class="sig-space-cell">&nbsp;</td>
         <td></td>
         <td class="sig-space-cell">&nbsp;</td>
     </tr>
-
-    <!-- Fila 3: Línea superior con Nombre y Cargo unidos inmediatamente -->
     <tr>
         <td class="sig-bottom-cell">
             <p class="sig-text-block">
@@ -248,7 +233,6 @@
     </tr>
 </table>
 
-<!-- Pie de página de numeración -->
 <div id="page_footer">
     SIGETH • Página
     <pdf:pageNumber> de

@@ -60,7 +60,7 @@
                          data-employee-id="{{ item.employee.id }}"
                          data-employee-name="{{ item.employee.person.full_name }}"
                          data-search-text="{{ item.employee.person.document_number }} {{ item.employee.person.first_name }} {{ item.employee.person.last_name }}"
-                         title="Pendiente por asignar: {{ item.remaining_days }} días (Registrado: {{ item.total_planned_days }}/30)">
+                         title="Pendiente por asignar: {{ item.remaining_days }} días (Registrado: {{ item.total_planned_days }}/{{ item.display_max }})">
 
                         {% if item.employee.person.photo %}
                             <img src="{{ item.employee.person.photo.url }}" class="drag-avatar-img" alt="Foto">
@@ -73,13 +73,15 @@
                         <div class="drag-info-texts">
                             <span class="drag-name">{{ item.employee.person.first_name }} {{ item.employee.person.last_name }}</span>
                             <span class="drag-role">{{ item.employee.person.document_number }}</span>
-                            <span class="small text-muted">{{ item.total_planned_days }}/30 días</span>
+                            <span class="small text-muted font-bold">
+                                {{ item.total_planned_days }}/{{ item.display_max }} días
+                            </span>
                         </div>
                     </div>
                 {% empty %}
                     <div class="text-center w-100 py-3 text-muted">
                         <i class="fa-solid fa-circle-check text-success me-1"></i>
-                        Todo el personal de esta dependencia ha completado sus 30 días de programación.
+                        Todo el personal de esta dependencia ha completado su programación de días.
                     </div>
                 {% endfor %}
             </div>
@@ -152,12 +154,16 @@
 
 
 
+
+
                     {% url 'vacation:schedule_export_excel' plan.id %}{% if base_unit %}?unit_id={{ base_unit.id }}{% endif %}"
                class="btn-success"
                title="Descargar reporte en formato Excel">
                 <i class="fa-solid fa-file-excel me-1"></i> Exportar Excel
             </a>
             <a href="
+
+
 
 
 

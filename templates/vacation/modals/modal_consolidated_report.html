@@ -14,7 +14,7 @@
             {% csrf_token %}
             <div class="modal-body-custom">
 
-                <!-- Banner Informativo Corporativo -->
+                <!-- Banner Informativo -->
                 <div class="employee-card-badge mb-3">
                     <div class="employee-avatar-wrapper" style="width: 46px; height: 46px; background-color: #203c7d;">
                         <i class="fa-solid fa-building-columns text-white" style="font-size: 1.2rem;"></i>
@@ -25,7 +25,7 @@
                     </div>
                 </div>
 
-                <!-- Selección de Formato con Tarjetas Interactivas -->
+                <!-- Formato de Salida -->
                 <div class="form-group mb-3">
                     <label class="form-label">Seleccione el Formato de Salida</label>
                     <div class="grid-2-cols gap-2">
@@ -55,7 +55,7 @@
                     <i class="fa-solid fa-pen-nib"></i> Firmantes Responsables
                 </div>
 
-                <!-- Firmas Dinámicas con Búsqueda a partir de 3 caracteres -->
+                <!-- Firmantes Dinámicos -->
                 <div class="grid-2-cols">
                     <div class="form-group">
                         <label class="form-label">1. Elaborado por (Servidor TTHH)</label>
@@ -63,19 +63,19 @@
                                 required>
                             <option value="{{ current_user_id }}" selected>{{ current_user_text }}</option>
                         </select>
-                        <span class="form-hint">Escriba al menos 3 letras para buscar por nombre o apellido</span>
+                        <span class="form-hint">Escriba al menos 2 letras para buscar</span>
                     </div>
 
                     <div class="form-group">
                         <label class="form-label">2. Revisado por (Coordinador Nómina/TTHH)</label>
                         <select name="reviewed_by" id="id_reviewed_by" class="input-field select2-user-ajax" required>
-                            <option value="" disabled selected>Escriba para buscar funcionario...</option>
+                            <option value="">Buscar funcionario por nombre o apellido...</option>
                         </select>
-                        <span class="form-hint">Escriba al menos 3 letras para buscar por nombre o apellido</span>
+                        <span class="form-hint">Escriba al menos 2 letras para buscar</span>
                     </div>
                 </div>
 
-                <!-- Tarjeta Visual de Firmas Preestablecidas de Autoridades -->
+                <!-- Firmas Automáticas Registradas -->
                 <div class="form-section-card mt-3 p-3 bg-light border">
                     <div class="d-flex align-items-center justify-content-between mb-2">
                         <span class="bold small text-primary"><i class="fa-solid fa-shield-halved me-1"></i> Firmas Institucionales Registradas:</span>
@@ -108,35 +108,53 @@
 </div>
 
 <script>
-    $(document).ready(function () {
-        // Inicializar Select2 con búsqueda AJAX por nombres y apellidos a partir de 3 caracteres
-        $('.select2-user-ajax').select2({
-            width: '100%',
-            dropdownParent: $('#consolidatedReportModal'),
-            minimumInputLength: 3,
-            language: {
-                inputTooShort: function () {
-                    return "Por favor ingrese 3 o más caracteres para buscar...";
-                },
-                searching: function () {
-                    return "Buscando servidores por nombres o apellidos...";
-                },
-                noResults: function () {
-                    return "No se encontraron funcionarios activos";
-                }
-            },
-            ajax: {
-                url: "{% url 'vacation:schedule_user_search' %}",
-                dataType: 'json',
-                delay: 300,
-                data: function (params) {
-                    return {q: params.term};
-                },
-                processResults: function (data) {
-                    return {results: data.results};
-                },
-                cache: true
+    // Se ejecuta INMEDIATAMENTE al inyectarse el HTML por AJAX en el modal
+    (function initConsolidatedSelect2() {
+        // Encontrar el modal activo en el DOM
+        const $modal = $('#consolidatedReportModal').closest('.modal-container, .modal-overlay, body');
+        const searchUrl = "{% url 'vacation:schedule_user_search' %}";
+
+        $('#consolidatedReportModal .select2-user-ajax').each(function () {
+            const $select = $(this);
+
+            if ($select.data('select2')) {
+                $select.select2('destroy');
             }
+
+            $select.select2({
+                width: '100%',
+                dropdownParent: $('#consolidatedReportModal'),
+                minimumInputLength: 2, // Bajado a 2 caracteres para mayor facilidad
+                placeholder: 'Escriba para buscar...',
+                allowClear: true,
+                language: {
+                    inputTooShort: function () {
+                        return "Escriba 2 o más letras para buscar...";
+                    },
+                    searching: function () {
+                        return "Buscando servidores...";
+                    },
+                    noResults: function () {
+                        return "No se encontraron resultados";
+                    }
+                },
+                ajax: {
+                    url: searchUrl,
+                    dataType: 'json',
+                    delay: 200,
+                    data: function (params) {
+                        return {
+                            q: params.term || ''
+                        };
+                    },
+                    processResults: function (data) {
+                        return {
+                            results: data.results || []
+                        };
+                    },
+                    cache: true
+                }
+            });
         });
-    });
+    })();
 </script>

@@ -20,7 +20,6 @@
     </div>
 
     <div class="content-table">
-        <!-- Estructura exacta de unit_list -->
         <div class="table-controls toolbar-row">
             <div class="toolbar-center">
                 <input class="switch-input switch-red" type="checkbox" id="show_inactive" name="show_inactive"
@@ -40,47 +39,102 @@
             </div>
         </div>
 
-        <!-- Contenedor dinámico que actualiza refreshCurrentTable() -->
         <div id="table-content-wrapper">
             {% include 'vacation/partials/partial_schedule_plan_list.html' %}
         </div>
     </div>
 {% endblock %}
-<script>
-    function approvePlanAjax(url, year) {
-        Swal.fire({
-            title: `¿Aprobar Oficialmente el Cronograma ${year}?`,
-            text: 'Una vez aprobado, el cronograma quedará bloqueado permanentemente: no se podrá editar, dar de baja ni modificar las vacaciones asignadas.',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Sí, Aprobar Oficialmente',
-            cancelButtonText: 'Cancelar',
-            customClass: {
-                confirmButton: 'swal2-confirm btn-swal-success',
-                cancelButton: 'swal2-cancel btn-swal-cancel'
-            }
-        }).then((result) => {
-            if (result.isConfirmed) {
-                fetch(url, {
-                    method: 'POST',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRFToken': typeof getCSRF === 'function' ? getCSRF() : ''
-                    }
-                })
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.success) {
-                            showToast(data.message, 'success');
-                            refreshCurrentTable();
-                        } else {
-                            Swal.fire({icon: 'error', title: 'Atención', text: data.message});
+
+{% block extra_js %}
+    <script>
+        function approvePlanAjax(url, year) {
+            Swal.fire({
+                title: `¿Aprobar Oficialmente el Cronograma ${year}?`,
+                text: 'Una vez aprobado, el cronograma quedará bloqueado permanentemente: no se podrá editar, dar de baja ni modificar las vacaciones asignadas.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, Aprobar Oficialmente',
+                cancelButtonText: 'Cancelar',
+                customClass: {
+                    confirmButton: 'swal2-confirm btn-swal-success',
+                    cancelButton: 'swal2-cancel btn-swal-cancel'
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRFToken': typeof getCSRF === 'function' ? getCSRF() : ''
                         }
                     })
-                    .catch(() => {
-                        Swal.fire({icon: 'error', title: 'Error', text: 'Problema de comunicación con el servidor.'});
-                    });
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) {
+                                showToast(data.message, 'success');
+                                if (typeof refreshCurrentTable === 'function') refreshCurrentTable();
+                                else location.reload();
+                            } else {
+                                Swal.fire({icon: 'error', title: 'Atención', text: data.message});
+                            }
+                        })
+                        .catch(() => {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: 'Problema de comunicación con el servidor.'
+                            });
+                        });
+                }
+            });
+        }
+
+        window.openUnitReportModal = function (planId) {
+            const url = `/vacation/schedule/${planId}/unit-report-modal/`;
+
+            if (typeof openAjaxModal !== 'function') {
+                console.error('openAjaxModal no está disponible en la página.');
+                return;
             }
-        });
-    }
-</script>
+
+            openAjaxModal(url, function () {
+                const $form = $('#unitReportForm');
+                const $parent = $('#parent_unit_select');
+                const $sub = $('#sub_unit_select');
+
+                // Asignar dinámicamente la URL de destino al formulario con el ID del plan
+                $form.attr('action', `/vacation/schedule/${planId}/unit-report-pdf/`);
+
+                // Evento de combos dependientes
+                $parent.off('change').on('change', function () {
+                    const parentId = $(this).val();
+                    $sub.empty().append('<option value="">Cargando dependencias...</option>');
+
+                    if (!parentId) {
+                        $sub.empty().append('<option value="">-- Seleccione primero la Dirección --</option>');
+                        return;
+                    }
+
+                    fetch(`/vacation/schedule/sub-units/${parentId}/`, {
+                        headers: {'X-Requested-With': 'XMLHttpRequest'}
+                    })
+                        .then(res => res.json())
+                        .then(data => {
+                            $sub.empty();
+                            if (data.units && data.units.length > 0) {
+                                data.units.forEach(u => {
+                                    $sub.append(`<option value="${u.id}">${u.name}</option>`);
+                                });
+                            } else {
+                                $sub.append('<option value="">Sin subdependencias</option>');
+                            }
+                        })
+                        .catch(err => {
+                            console.error('Error al cargar subdependencias:', err);
+                            $sub.empty().append('<option value="">Error al cargar dependencias</option>');
+                        });
+                });
+            });
+        };
+    </script>
+{% endblock %}

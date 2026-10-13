@@ -72,4 +72,9 @@ urlpatterns = [
          name='schedule_consolidated_export'),
     path('schedule/approve/<int:pk>/', views.VacationScheduleApprovePlanView.as_view(), name='schedule_plan_approve'),
     path('schedule/api/user-search/', views.UserSearchSelect2View.as_view(), name='schedule_user_search'),
+    path('schedule/<int:plan_id>/unit-report-modal/', views.VacationScheduleUnitReportModalView.as_view(),
+         name='schedule_unit_report_modal'),
+    path('schedule/sub-units/<int:parent_id>/', views.SubUnitsAjaxView.as_view(), name='schedule_sub_units_ajax'),
+    path('schedule/<int:plan_id>/unit-report-pdf/', views.VacationScheduleUnitReportPDFView.as_view(),
+         name='schedule_unit_report_pdf'),
 ]
