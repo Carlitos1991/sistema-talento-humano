@@ -117,7 +117,8 @@ class CredentialCreationForm(BaseFormMixin, forms.Form):
         required=False,
         widget=forms.PasswordInput(attrs={
             'class': 'input-field',
-            'placeholder': '******'
+            'placeholder': '******',
+            'autocomplete': 'new-password'
         }),
         error_messages={'required': 'La contraseña es obligatoria.'}
     )
@@ -126,7 +127,8 @@ class CredentialCreationForm(BaseFormMixin, forms.Form):
         required=False,
         widget=forms.PasswordInput(attrs={
             'class': 'input-field',
-            'placeholder': '******'
+            'placeholder': '******',
+            'autocomplete': 'new-password'
         }),
         error_messages={'required': 'Debes confirmar la contraseña.'}
     )

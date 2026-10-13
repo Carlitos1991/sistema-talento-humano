@@ -133,38 +133,20 @@ class ForgotPasswordView(TemplateView):
             return JsonResponse(
                 {'status': 'error', 'message': 'La fecha de nacimiento no coincide con nuestros registros.'})
 
-        from .keycloak_service import find_keycloak_user_by_username, send_keycloak_reset_password_email
-
-        try:
-            kc_user = find_keycloak_user_by_username(user.username)
-        except Exception:
-            logger.exception("[KEYCLOAK][RESET] Error conectando a Keycloak al buscar %s", user.username)
-            return JsonResponse(
-                {'status': 'error', 'message': 'Error de conexión con el servidor de identidades. Intente más tarde.'})
-
-        if not kc_user:
-            return JsonResponse({
-                'status': 'error',
-                'message': 'Su cuenta no ha sido migrada a Keycloak. Contacte a Talento Humano.'
-            })
-
+        from .keycloak_service import provision_and_send_password_reset
         redirect_to = request.build_absolute_uri(reverse('core:login'))
-
-        try:
-            send_keycloak_reset_password_email(kc_user['id'], redirect_to)
-        except Exception:
-            logger.exception("[KEYCLOAK][RESET] Error solicitando correo a Keycloak para %s", user.username)
-            return JsonResponse(
-                {'status': 'error', 'message': 'Keycloak no pudo procesar el envío del correo. Intente más tarde.'})
-
-        institutional_email = kc_user.get('email')
-        if not institutional_email:
+        reset_result = provision_and_send_password_reset(person, user, redirect_to)
+        if reset_result['status'] != 'ok':
+            if reset_result.get('reason') == 'sin email':
+                return JsonResponse({'status': 'error',
+                                     'message': 'El usuario no tiene un correo configurado para recibir el enlace.'})
             return JsonResponse({'status': 'error',
-                                 'message': 'El usuario en Keycloak no tiene un correo configurado para recibir el enlace.'})
+                                 'message': 'No se pudo procesar la recuperación en Keycloak. Intente más tarde.'})
 
-        masked_email = institutional_email
-        if '@' in institutional_email:
-            parts = institutional_email.split('@')
+        email = reset_result['email']
+        masked_email = email
+        if '@' in email:
+            parts = email.split('@')
             name_part = parts[0]
             masked_name = f"{name_part[:2]}{'*' * (len(name_part) - 4)}{name_part[-2:]}" if len(
                 name_part) > 4 else name_part

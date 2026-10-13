@@ -433,3 +433,46 @@ def send_keycloak_reset_password_email(keycloak_user_id: str, redirect_uri: str)
         timeout=REQUEST_TIMEOUT,
     )
     resp.raise_for_status()
+
+
+def provision_and_send_password_reset(person, django_user, redirect_uri: str) -> dict:
+    """
+    Garantiza la cuenta de la persona en Keycloak y solicita el correo de
+    recuperación. La contraseña temporal nunca se devuelve ni se envía por
+    esta aplicación; Keycloak la reemplaza mediante UPDATE_PASSWORD.
+    """
+    document_number = (getattr(person, 'document_number', None) or '').strip()
+    email = (getattr(django_user, 'email', None) or getattr(person, 'email', None) or '').strip()
+    if not document_number:
+        return {'status': 'error', 'reason': 'sin document_number'}
+    if not email:
+        return {'status': 'error', 'reason': 'sin email'}
+
+    try:
+        keycloak_user = find_keycloak_user_by_document(document_number)
+        if not keycloak_user:
+            keycloak_user = find_keycloak_user_by_username(django_user.username)
+
+        if not keycloak_user:
+            keycloak_user_id, _ = create_keycloak_user(
+                username=django_user.username,
+                email=email,
+                first_name=person.first_name,
+                last_name=person.last_name,
+                document_number=document_number,
+                password=_generate_temp_password(),
+                temporary=True,
+            )
+            if not keycloak_user_id:
+                return {'status': 'error', 'reason': 'Keycloak no devolvió el id del usuario creado'}
+            keycloak_user = {'id': keycloak_user_id}
+
+        send_keycloak_reset_password_email(keycloak_user['id'], redirect_uri)
+    except Exception:
+        logger.exception(
+            "[KEYCLOAK][RESET] Error aprovisionando o enviando recuperación para document_number=%s",
+            document_number,
+        )
+        return {'status': 'error', 'reason': 'no se pudo procesar la recuperación en Keycloak'}
+
+    return {'status': 'ok', 'email': (keycloak_user.get('email') or email)}
