@@ -56,7 +56,7 @@ class RoleForm(BaseFormMixin, forms.ModelForm):
         def can_manage_permission(permission):
             if permission is None:
                 return False
-            if current_user is None or current_user.is_superuser:
+            if current_user is None or current_user.is_superuser or current_user.has_perm('auth.change_group'):
                 return True
             return current_user.has_perm(f'{permission.content_type.app_label}.{permission.codename}')
 

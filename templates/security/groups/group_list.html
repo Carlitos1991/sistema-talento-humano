@@ -1,42 +1,45 @@
 {% extends 'base.html' %}
 {% load static %}
-{% block title %}Roles | SIGETH{% endblock %}
+{% block title %}Perfiles de Acceso | SIGETH{% endblock %}
 
 {% block content %}
-    <!-- 1. Header -->
+    <!-- 1. Header idéntico a la captura -->
     <div class="header-card">
         <div>
-            <h1>Perfiles de Acceso </h1>
+            <h1>Perfiles de Acceso</h1>
             <p>Configuración de roles y permisos del sistema</p>
         </div>
         {% if perms.auth.add_group %}
-            <button id="btn-add-role" type="button" class="btn btn-create">
+            <button id="btn-add-role" type="button" class="btn-white-rectangle">
                 <i class="fas fa-plus"></i> Nuevo Rol
             </button>
         {% endif %}
     </div>
-    <!-- 3. Contenedor principal Tabla (AJAX) -->
+
+    <!-- 2. Contenedor principal con Toolbar (Excel, PDF, Buscador) -->
     <div id="table-app">
         <div class="content-table">
-            <div class="table-controls">
-                <div class="search-box">
-                    <input type="text" id="table-search" class="input-field"
-                           placeholder="Buscar en la tabla">
+            <div class="table-controls toolbar-row">
+                <div class="toolbar-left">
+                </div>
+                <div class="toolbar-right">
+                    <input type="text" id="table-search" class="table-search-input table-search-input--large"
+                           placeholder="Buscar por rol o perfil">
                 </div>
             </div>
-            <!-- 3.1 Zona de recarga AJAX -->
+
+            <!-- Zona de recarga AJAX -->
             <div id="table-content-wrapper">
                 {% include 'security/groups/partials/partial_group_table.html' %}
             </div>
+
             <div class="pagination-container" id="js-pagination">
                 <span class="pagination-info" id="page-info">Mostrando 0-0 de 0</span>
                 <ul class="pagination-list">
                     <li>
                         <button id="btn-prev" class="page-btn"><i class="fas fa-chevron-left"></i></button>
                     </li>
-                    <li>
-                        <span id="current-page-display" style="padding: 0 10px; font-weight: bold;">1</span>
-                    </li>
+                    <li><span id="current-page-display" style="padding: 0 10px; font-weight: bold;">1</span></li>
                     <li>
                         <button id="btn-next" class="page-btn"><i class="fas fa-chevron-right"></i></button>
                     </li>
@@ -44,11 +47,12 @@
             </div>
         </div>
     </div>
-
 {% endblock %}
+
 {% block modals %}
     {% include 'security/groups/modals/modal_role_matrix.html' %}
 {% endblock %}
+
 {% block extra_js %}
     <script src="{% static 'js/roles.js' %}"></script>
 {% endblock %}

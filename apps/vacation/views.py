@@ -1326,6 +1326,7 @@ class LiquidationPrintPDFView(LoginRequiredMixin, View):
 class VacationSchedulePlanListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     model = VacationSchedulePlan
     template_name = 'vacation/schedule_plan_list.html'
+    permission_required = 'vacation.view_vacationscheduleplan'
     context_object_name = 'plans'
     paginate_by = 10
 

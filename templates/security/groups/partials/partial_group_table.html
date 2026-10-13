@@ -1,73 +1,72 @@
 {% load static %}
 <div class="table-container">
-    <table>
-        <thead>
-        <tr>
-            <th style="width: 50px;"><i class="fa-solid fa-list-ol"></i></th>
-            <th><i class="fa-solid fa-user-shield"></i> Nombre del Perfil / Rol</th>
-            <th class="text-center"><i class="fa-solid fa-users"></i> Usuarios Asignados</th>
-            {% if perms.auth.change_group or perms.auth.delete_group %}
-                <th class="text-center"><i class="fas fa-cogs"></i> Acciones</th>
-            {% endif %}
-        </tr>
-        </thead>
-        <tbody id="table-body">
-        {% for role in roles %}
-            <tr class="catalog-row" id="row-{{ role.id }}">
-                <td>{{ forloop.counter }}</td>
-
-                <td>
-                    <div class="d-flex align-items-center gap-3">
-                        <!-- Icono decorativo para el rol -->
-                        <div style="width: 32px; height: 32px; background: #e0f2fe; color: #0284c7; border-radius: 6px; display: flex; align-items: center; justify-content: center;">
-                            <i class="fa-solid fa-shield-halved"></i>
-                        </div>
-                        <span class="font-bold text-primary" style="font-size: 0.95rem;">{{ role.name }}</span>
-                    </div>
-                </td>
-
-                <td class="text-center">
-                    {% if role.user_set.count > 0 %}
-                        <span class="status-badge active" style="background-color: #dbeafe; color: #1e40af;">
-                            {{ role.user_set.count }} Usuarios
-                        </span>
-                    {% else %}
-                        <span class="status-badge" style="background-color: #f1f5f9; color: #64748b;">
-                            Sin Usuarios
-                        </span>
-                    {% endif %}
-                </td>
+    <div class="table-scroll-top">
+        <table class="managed-table exportable-table"
+               data-title="Reporte de Perfiles de Acceso"
+               data-filename="Perfiles_Acceso"
+               data-page-size="10">
+            <thead>
+            <tr>
+                <th class="width-7 text-center">#</th>
+                <th class="width-45"><i class="fa-solid fa-user-shield me-1"></i> PERFIL / ROL</th>
+                <th class="width-30 text-center"><i class="fa-solid fa-users me-1"></i> USUARIOS ASIGNADOS</th>
                 {% if perms.auth.change_group or perms.auth.delete_group %}
-                    <td class="actions text-center">
-                        <div class="actions-wrapper">
-                            <!-- Botón Editar -->
-                            {% if perms.auth.change_group %}
-                                <button class="btn-icon btn-views-action btn-edit-role"
-                                        data-url="{% url 'security:role_update' role.pk %}"
-                                        title="Configurar Permisos">
-                                    <i class="fas fa-pencil"></i>
-                                </button>
-                            {% endif %}
-                        </div>
-                    </td>
+                    <th class="width-18 text-center no-sort"><i class="fas fa-cogs me-1"></i> ACCIONES</th>
                 {% endif %}
             </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+            </thead>
+            <tbody id="table-body">
+            {% if roles %}
+                {% for role in roles %}
+                    <tr class="catalog-row" id="row-{{ role.id }}">
+                        <td class="text-center">
+                            <span class="badge badge-blue">{{ forloop.counter }}</span>
+                        </td>
 
-    <!-- Mensajes de Estado (Vacío / Búsqueda) -->
+                        <td>
+                            <span class="font-bold text-dark" style="font-size: 0.95rem;">{{ role.name }}</span>
+                        </td>
+
+                        <td class="text-center">
+                            {% if role.user_set.count > 0 %}
+                                <span class="badge badge-green" style="padding: 6px 14px; font-size: 0.85rem;">
+                                    <i class="fa-solid fa-user-check me-1"></i> {{ role.user_set.count }} Asignados
+                                </span>
+                            {% else %}
+                                <span class="badge-dark-sm"
+                                      style="padding: 5px 12px; font-size: 0.8rem; background: #64748b; color: #fff;">
+                                    SIN USUARIOS
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        {% if perms.auth.change_group or perms.auth.delete_group %}
+                            <td class="actions text-center">
+                                <div class="actions-wrapper" style="justify-content: center;">
+                                    {% if perms.auth.change_group %}
+                                        <button type="button"
+                                                class="btn-yellow-circle"
+                                                data-url="{% url 'security:role_update' role.pk %}"
+                                                title="Configurar Permisos">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        {% endif %}
+                    </tr>
+                {% endfor %}
+            {% else %}
+                <!-- Sin filas -->
+            {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Mensajes Vacíos / Búsqueda -->
     <div class="no-results-overlay {% if roles %}hidden{% endif %}">
-
-        <!-- Caso 1: Búsqueda sin éxito -->
-        <div class="no-results-content hidden" id="no-results-placeholder">
-            <i class="fas fa-search no-results-icon"></i>
-            <p class="no-results-text">No se encontraron roles con ese nombre.</p>
-        </div>
-
-        <!-- Caso 2: Base de datos vacía -->
         <div class="no-results-content {% if not roles %}show{% else %}hidden{% endif %}">
-            <i class="fas fa-shield-cat no-results-icon"></i>
+            <i class="fas fa-shield-halved no-results-icon"></i>
             <p class="no-results-text">No hay roles definidos en el sistema.</p>
         </div>
     </div>

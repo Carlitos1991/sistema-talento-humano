@@ -1,0 +1,127 @@
+/* static/css/security.css */
+
+/* Contenedor del modal */
+.role-modal-container {
+    max-width: 1050px;
+    width: 95%;
+    border-radius: 14px;
+    overflow: hidden;
+    background: #ffffff;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+}
+
+/* Scroll del cuerpo del modal */
+.role-modal-body {
+    max-height: 70vh;
+    overflow-y: auto;
+    padding: 1.5rem;
+    background-color: #f8fafc;
+}
+
+/* Tarjetas por módulo */
+.module-box {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    margin-bottom: 1.2rem;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
+}
+
+.module-box-header {
+    background: #f1f5f9;
+    padding: 0.65rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.module-box-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+}
+
+/* Tabla interna de permisos (NO usar managed-table para no activar table-manager.js) */
+.role-perms-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+}
+
+.role-perms-table thead tr {
+    background-color: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.role-perms-table th {
+    padding: 9px 12px;
+    font-weight: 700;
+    color: #475569;
+    text-align: center;
+}
+
+.role-perms-table th.text-start {
+    text-align: left;
+}
+
+.role-perms-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+}
+
+.role-perms-table tbody tr:hover {
+    background-color: #f8fafc;
+}
+
+.role-perms-table td.model-name {
+    font-weight: 600;
+    color: #334155;
+}
+
+/* Checkboxes personalizados */
+.role-perms-table input[type="checkbox"],
+.form-check-input {
+    width: 19px;
+    height: 19px;
+    cursor: pointer;
+    accent-color: #0284c7;
+}
+
+/* Chips rápidos */
+.quick-preset-container {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 1.2rem;
+}
+
+.btn-toggle-module {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: #334155;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-toggle-module:hover {
+    background: #0284c7;
+    color: #ffffff;
+    border-color: #0284c7;
+}

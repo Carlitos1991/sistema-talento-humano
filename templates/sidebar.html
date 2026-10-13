@@ -232,7 +232,7 @@
                                     </a>
                                 </li>
                             {% endif %}
-                            {% if perms.budget.view_groups_budget %}
+                            {% if perms.budget.view_budgetgroup or perms.budget.view_groupbudget or perms.budget.view_groups_budget %}
                                 <li>
                                     <a href="{% url 'budget:budget_group_list' %}"
                                        class="sidebar-link {% if request.resolver_match.url_name == 'budget_group_list' %}active{% endif %}">
