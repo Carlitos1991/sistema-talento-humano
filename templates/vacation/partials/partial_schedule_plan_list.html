@@ -44,8 +44,8 @@
                             <div class="actions-wrapper">
                                 <!-- BOTÓN EXCLUSIVO PARA SECRETARIAS / CONSULTA: Ver Matriz y Planificación -->
                                 <a href="{% url 'vacation:schedule_detail' plan.id %}"
-                                   class="btn-icon btn-blue-circle"
-                                   title="Ver Matriz y Planificación">
+                                   class="btn-blue-circle"
+                                   title="Planificar Vacaciones">
                                     <i class="fa-solid fa-calendar-days"></i>
                                 </a>
 
@@ -53,7 +53,7 @@
                                 {% if perms.vacation.change_vacationscheduleplan %}
                                     <!-- 1. Reporte Consolidado General -->
                                     <button type="button"
-                                            class="btn-icon btn-green-circle"
+                                            class="btn-green-circle"
                                             title="Generar Reporte Consolidado (PDF / Excel)"
                                             onclick="openAjaxModal('{% url 'vacation:schedule_consolidated_modal' plan.id %}')">
                                         <i class="fa-solid fa-file-invoice"></i>
@@ -62,7 +62,7 @@
                                     {% if plan.status != 'APPROVED' %}
                                         <!-- 2. Aprobar Oficialmente y Cerrar -->
                                         <button type="button"
-                                                class="btn-icon btn-fifth"
+                                                class="btn-fifth"
                                                 title="Aprobar Oficialmente y Cerrar Cronograma"
                                                 onclick="approvePlanAjax('{% url 'vacation:schedule_plan_approve' plan.id %}', '{{ plan.year }}')">
                                             <i class="fa-solid fa-stamp"></i>
@@ -70,7 +70,7 @@
 
                                         <!-- 3. Editar Cronograma -->
                                         <button type="button"
-                                                class="btn-icon btn-yellow-circle"
+                                                class="btn-yellow-circle"
                                                 title="Editar Cronograma"
                                                 onclick="openAjaxModal('{% url 'vacation:schedule_plan_edit' plan.id %}')">
                                             <i class="fas fa-edit"></i>
@@ -79,14 +79,14 @@
                                         <!-- 4. Baja / Reapertura -->
                                         {% if plan.status != 'CLOSED' %}
                                             <button type="button"
-                                                    class="btn-icon btn-red-circle"
+                                                    class="btn-red-circle"
                                                     title="Dar de baja / Cerrar"
                                                     onclick="toggleStatusAjax('{% url 'vacation:schedule_plan_toggle_status' plan.id %}', 'el cronograma {{ plan.year }}', true)">
                                                 <i class="fa-solid fa-power-off"></i>
                                             </button>
                                         {% else %}
                                             <button type="button"
-                                                    class="btn-icon btn-green-circle"
+                                                    class="btn-green-circle"
                                                     title="Reaperturar cronograma"
                                                     onclick="toggleStatusAjax('{% url 'vacation:schedule_plan_toggle_status' plan.id %}', 'el cronograma {{ plan.year }}', false)">
                                                 <i class="fa-solid fa-check"></i>
@@ -95,8 +95,8 @@
                                     {% else %}
                                         <span class="badge badge-emerald-solid"
                                               title="Cronograma Aprobado Oficialmente">
-                    <i class="fa-solid fa-lock"></i>
-                </span>
+                                            <i class="fa-solid fa-lock"></i>
+                                        </span>
                                     {% endif %}
                                 {% endif %}
                             </div>

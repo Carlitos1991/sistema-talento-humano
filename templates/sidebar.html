@@ -204,7 +204,7 @@
                 </li>
             {% endif %}
 
-            {% if perms.budget.view_budgetline or perms.budget.view_program or perms.budget.view_groups_budget or perms.function_manual.view_jobprofile or perms.function_manual.can_admin or perms.function_manual.view_manualcatalog or perms.function_manual.view_occupationalmatrix or perms.function_manual.view_valuationnode or perms.function_manual.view_competency or perms.permitrequest.view_permitrequest or perms.permitrequest.change_permitrequest or perms.permitrequest.add_permitrequest or perms.permitrequest.view_permittype or perms.vacation.view_vacationrequest or perms.vacation.view_vacationperiod or perms.sanctions.view_sanction or perms.sanctions.add_sanction or perms.sanctions.view_sanctionnotification or perms.sanctions.view_sanctiontype or perms.sanctions.view_sanctionnotificationtype or perms.contract.view_laborregime or perms.contract.view_managementperiod or perms.schedule.can_manage_schedules or perms.schedule.can_manage_observations or perms.schedule.view_schedule or perms.schedule.view_scheduleobservation or perms.schedule.change_schedule or perms.payroll.view_payrollperiod or perms.payroll.view_payslip or perms.payroll.view_payrollconstant or perms.accounting.view_account or perms.payroll.view_income or perms.payroll.view_deduction or perms.payroll.view_institutionalcontribution or perms.biometric.view_biometricdevice or perms.biometric.view_biometricload or perms.biometric.view_attendanceregistry %}
+            {% if perms.budget.view_budgetline or perms.budget.view_program or perms.budget.view_groups_budget or perms.function_manual.view_jobprofile or perms.function_manual.can_admin or perms.function_manual.view_manualcatalog or perms.function_manual.view_occupationalmatrix or perms.function_manual.view_valuationnode or perms.function_manual.view_competency or perms.permitrequest.view_permitrequest or perms.permitrequest.change_permitrequest or perms.permitrequest.add_permitrequest or perms.permitrequest.view_permittype or perms.vacation.view_vacationrequest or perms.vacation.view_vacationperiod or perms.vacation.view_vacationscheduleplan or perms.vacation.view_vacationscheduleitem or perms.sanctions.view_sanction or perms.sanctions.add_sanction or perms.sanctions.view_sanctionnotification or perms.sanctions.view_sanctiontype or perms.sanctions.view_sanctionnotificationtype or perms.contract.view_laborregime or perms.contract.view_managementperiod or perms.schedule.can_manage_schedules or perms.schedule.can_manage_observations or perms.schedule.view_schedule or perms.schedule.view_scheduleobservation or perms.schedule.change_schedule or perms.payroll.view_payrollperiod or perms.payroll.view_payslip or perms.payroll.view_payrollconstant or perms.accounting.view_account or perms.payroll.view_income or perms.payroll.view_deduction or perms.payroll.view_institutionalcontribution or perms.biometric.view_biometricdevice or perms.biometric.view_biometricload or perms.biometric.view_attendanceregistry %}
                 <li class="sidebar-section-title">Gestion</li>
 
                 {% if perms.budget.view_budgetline or perms.budget.view_program or perms.budget.view_groups_budget %}
@@ -355,7 +355,7 @@
                         </ul>
                     </li>
                 {% endif %}
-                {% if perms.vacation.view_vacationrequest or perms.vacation.view_vacationperiod or perms.vacation.view_vacationscheduleplan or perms.vacation.view_vacationscheduleplan %}
+                {% if perms.vacation.view_vacationrequest or perms.vacation.view_vacationperiod or perms.vacation.view_vacationscheduleplan or perms.vacation.view_vacationscheduleitem %}
                     <li class="has-submenu">
                         <a href="#" class="{% if 'vacation' in request.resolver_match.app_name %}active{% endif %}">
                             <i class="fa-solid fa-umbrella-beach"></i>
@@ -364,24 +364,24 @@
                         </a>
 
                         <ul class="submenu">
-                            <!-- 1. Administrar Solicitudes (Solo TH) -->
+                            <!-- 1. Cronograma Anual -->
+                            {% if perms.vacation.view_vacationscheduleplan or perms.vacation.view_vacationscheduleitem %}
+                                <li>
+                                    <a href="{% url 'vacation:schedule_plan_list' %}"
+                                       class="{% if request.resolver_match.app_name == 'vacation' and 'schedule' in request.resolver_match.url_name %}active-child{% endif %}">
+                                        <i class="fa-solid fa-calendar-check"></i>
+                                        <span class="menu-text">Cronograma Anual</span>
+                                    </a>
+                                </li>
+                            {% endif %}
+
+                            <!-- 2. Administrar Solicitudes (Solo TH) -->
                             {% if perms.vacation.view_vacationrequest %}
                                 <li>
                                     <a href="{% url 'vacation:request_list' %}"
                                        class="{% if request.resolver_match.app_name == 'vacation' and request.resolver_match.url_name == 'request_list' %}active-child{% endif %}">
                                         <i class="fa-solid fa-list-check"></i>
                                         <span class="menu-text">Administrar Solicitudes</span>
-                                    </a>
-                                </li>
-                            {% endif %}
-
-                            <!-- 2. Cronograma Anual (Secretarias y TH) -->
-                            {% if perms.vacation.view_vacationscheduleplan %}
-                                <li>
-                                    <a href="{% url 'vacation:schedule_plan_list' %}"
-                                       class="{% if request.resolver_match.app_name == 'vacation' and 'schedule' in request.resolver_match.url_name %}active-child{% endif %}">
-                                        <i class="fa-solid fa-calendar-check"></i>
-                                        <span class="menu-text">Cronograma Anual</span>
                                     </a>
                                 </li>
                             {% endif %}
