@@ -13,7 +13,7 @@ urlpatterns = [
     path('sync-keycloak-password/', views.SyncKeycloakPasswordView.as_view(), name='sync_keycloak_password'),
     path('create-user/', views.CreateUserFromLoginView.as_view(), name='create_user_from_login'),
     path('oidc/', include('mozilla_django_oidc.urls')),
-    path('logout/', auth_views.LogoutView.as_view(next_page='/'), name='logout'),
+    path('logout/', views.CustomLogoutView.as_view(), name='logout'),
 
     # 2. Panel Principal (Dashboard) y Perfil
     path('', views.DashboardView.as_view(), name='dashboard'),
