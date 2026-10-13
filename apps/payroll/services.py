@@ -551,6 +551,7 @@ class PayrollCalculatorService:
                     )
                     prepared_income_novelties = []
 
+                    # ── 9.8 PROCESAR NOVEDADES DE INGRESO ─────────────────
                     for nov in emp_novelties['incomes']:
                         if nov.value <= 0:
                             continue
@@ -570,44 +571,88 @@ class PayrollCalculatorService:
 
                         prepared_income_novelties.append((nov, nov_val))
 
-                    # ── 9.9 INGRESOS (RESTAURADO IDÉNTICO AL ORIGINAL) ────
+                    # ── 9.9 INGRESOS (SUELDO BASE, DÉCIMOS Y FONDOS) ───────
+                    inst_data = getattr(slip.employee, 'institutional_data', None)
+                    original_bl = getattr(inst_data, 'original_budget_line', None) if inst_data else None
+                    orig_salary = Decimal(str(original_bl.remuneration or 0)) if original_bl else Decimal('0.00')
+
+                    # Fallback si orig_salary no viene configurado en institutional_data
+                    if orig_salary <= 0:
+                        for s in segments:
+                            if s.get('segment_type') in ('REGULAR', 'VACATION_ORIGINAL'):
+                                orig_salary = Decimal(str(s.get('base_salary', 0)))
+                                original_bl = s.get('budget_line')
+                                break
+
                     for inc in emp_incomes:
                         val = Decimal('0.0')
                         code_clean = inc.code.strip().upper() if inc.code else ''
 
                         if getattr(inc, 'is_salary', False):
-                            for segment in segments:
-                                segment_val = (segment['base_salary'] / Decimal('30.0')) * Decimal(
-                                    str(segment['actual_days']))
-                                if segment_val > 0:
-                                    # Generamos la nota descriptiva
-                                    seg_type = segment.get('segment_type', 'REGULAR')
-                                    pos_name = segment.get('position_name', '')
-                                    days = segment.get('actual_days', 0)
-                                    rmu = segment.get('base_salary', 0)
+                            has_acting = any(seg.get('segment_type') == 'ACTING' for seg in segments)
 
-                                    if seg_type == 'ACTING':
-                                        note_str = f"Encargo: {pos_name} ({days} días - RMU ${rmu})"
-                                    elif seg_type == 'VACATION_ORIGINAL':
-                                        note_str = f"Titular / Vacaciones: {pos_name} ({days} días - RMU ${rmu})"
-                                    else:
-                                        note_str = f"Remuneración Titular ({days} días)"
+                            if has_acting and orig_salary > 0:
+                                # 1. Remuneración Titular completa (30 días)
+                                it_titular = PayslipItem(
+                                    payslip=slip,
+                                    rubric=inc,
+                                    item_type='INCOME',
+                                    value=orig_salary,
+                                    notes="Remuneración Titular (30 días)",
+                                    order=getattr(inc, 'order', 100) or 100
+                                )
+                                it_titular._historical_bl = original_bl or segments[0]['budget_line']
+                                items_buffer.append(it_titular)
+                                total_income += orig_salary
 
-                                    it = PayslipItem(
-                                        payslip=slip,
-                                        rubric=inc,
-                                        item_type='INCOME',
-                                        value=segment_val,
-                                        notes=note_str,
-                                        order=inc.order
+                                # 2. Diferencia proporcional por encargo (días trabajados)
+                                for segment in segments:
+                                    if segment.get('segment_type') == 'ACTING':
+                                        acting_salary = Decimal(str(segment.get('base_salary', 0)))
+                                        diff_monthly = max(Decimal('0.00'), acting_salary - orig_salary)
+                                        days = segment.get('actual_days', 0)
+
+                                        diff_val = ((diff_monthly / Decimal('30.0')) * Decimal(str(days))).quantize(
+                                            Decimal('0.01'), rounding=ROUND_HALF_UP
+                                        )
+
+                                        if diff_val > 0:
+                                            pos_acting = segment.get('position_name', 'Encargo')
+                                            it_encargo = PayslipItem(
+                                                payslip=slip,
+                                                rubric=inc,
+                                                item_type='INCOME',
+                                                value=diff_val,
+                                                notes=f"Diferencia por Encargo: {pos_acting} ({days} días)",
+                                                order=(getattr(inc, 'order', 100) or 100) + 1
+                                            )
+                                            it_encargo._historical_bl = segment['budget_line']
+                                            items_buffer.append(it_encargo)
+                                            total_income += diff_val
+                            else:
+                                # Empleado sin encargo (regular)
+                                for segment in segments:
+                                    segment_val = (segment['base_salary'] / Decimal('30.0')) * Decimal(
+                                        str(segment['actual_days'])
                                     )
-                                    it._historical_bl = segment['budget_line']
-                                    items_buffer.append(it)
-                                    total_income += segment_val
+                                    if segment_val > 0:
+                                        days = segment.get('actual_days', 0)
+                                        it = PayslipItem(
+                                            payslip=slip,
+                                            rubric=inc,
+                                            item_type='INCOME',
+                                            value=segment_val,
+                                            notes=f"Remuneración Titular ({days} días)",
+                                            order=getattr(inc, 'order', 100) or 100
+                                        )
+                                        it._historical_bl = segment['budget_line']
+                                        items_buffer.append(it)
+                                        total_income += segment_val
                             continue
 
                         elif code_clean == 'DECIMO_TERCERO' and monthly_bonuses:
-                            val = (thirteenth_base / Decimal('12.0')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                            val = (thirteenth_base / Decimal('12.0')).quantize(Decimal('0.01'),
+                                                                               rounding=ROUND_HALF_UP)
 
                         elif code_clean == 'DECIMO_CUARTO' and monthly_bonuses and self.period.working_days:
                             val = (Decimal(str(self.config.get('SBU', '460.00'))) / Decimal('12.0')) * (
@@ -651,7 +696,6 @@ class PayrollCalculatorService:
                                 PayslipItem(payslip=slip, rubric=inc, item_type='INCOME', value=val)
                             )
                             total_income += val
-
                     # ── 9.10 IESS Y APORTE PATRONAL ─────────────────────────
                     if regime_code == 'LOSEP':
                         target_iess_code = 'IESS_PER_EMP'

@@ -15,7 +15,6 @@
                 </button>
             {% endif %}
         </div>
-
         <div class="info-data-row">
             <label>N° EXPEDIENTE:</label>
             <span id="inst_file_number"
@@ -37,26 +36,13 @@
                 {{ employee_profile.employment_status.name|default:"ACTIVO" }}
             </span>
         </div>
-        <div class="info-data-row">
-            <label>CARGO / JERARQUÍA:</label>
-            <span id="inst_is_boss"
-                  class="badge {% if employee_profile and employee_profile.is_boss %}badge-amber{% else %}badge-gray{% endif %}">
-                {% if employee_profile and employee_profile.is_boss %}ES JEFE / RESPONSABLE{% else %}
-                    SERVIDOR/A{% endif %}
-            </span>
-        </div>
-        <div class="info-data-row">
-            <label>CONTRATO COLECTIVO:</label>
-            <span id="inst_collective_contract" class="badge badge-gray">
-                {% if institutional_data and institutional_data.collective_contract %}SÍ{% else %}NO{% endif %}
-            </span>
-        </div>
+
     </div>
 
     <!-- 2. CONTACTO Y UBICACIÓN INSTITUCIONAL -->
     <div class="info-box-styled orange-border">
         <h6 class="section-title">
-            <i class="fa-solid fa-building-user text-orange me-2"></i> UBICACIÓN ADMINISTRATIVA
+            <i class="fa-solid fa-briefcase"></i> DATOS INSTITUCIONALES
         </h6>
 
         <div class="info-data-row">
@@ -72,9 +58,76 @@
             </span>
         </div>
         <div class="info-data-row">
+            <label>CONTRATO COLECTIVO:</label>
+            <span id="inst_collective_contract" class="badge badge-gray">
+                {% if institutional_data and institutional_data.collective_contract %}SÍ{% else %}NO{% endif %}
+            </span>
+        </div>
+    </div>
+</div>
+
+<!-- FILA 2: ESTRUCTURA JERÁRQUICA COMPLETA -->
+<div class="grid-two-columns">
+    <!-- 1. JERARQUÍA INSTITUCIONAL -->
+    <div class="info-box-styled orange-border mt-3">
+        <h6 class="section-title">
+            <i class="fa-solid fa-sitemap text-orange me-2"></i> ESTRUCTURA JERÁRQUICA INSTITUCIONAL
+        </h6>
+
+        <div class="hierarchy-tree-wrapper">
+            {% if hierarchy_list %}
+                <div class="hierarchy-timeline">
+                    {% for unit in hierarchy_list %}
+                        <div class="hierarchy-node">
+                            <div class="node-indicator">
+                                <span class="node-circle">{{ forloop.counter }}</span>
+                                {% if not forloop.last %}<span class="node-line"></span>{% endif %}
+                            </div>
+                            <div class="node-card">
+                                <span class="node-level">{{ unit.level_name|default:"Nivel Organizacional" }}</span>
+                                <span class="node-title">
+                                <i class="fa-solid fa-building text-orange me-2"></i>{{ unit.name }}
+                            </span>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-state-notice py-4">
+                    <i class="fa-solid fa-sitemap fa-2x mb-2 text-secondary opacity-50"></i>
+                    <p class="mb-0 text-muted">No se ha establecido la jerarquía administrativa para este servidor.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    <!-- 2. ORIGEN INSTITUCIONAL -->
+    <div class="info-box-styled orange-border mt-3">
+        <h6 class="section-title">
+            <i class="fa-solid fa-building-user text-orange me-2"></i> ORIGEN INSTITUCIONAL
+        </h6>
+
+        <div class="info-data-row">
             <label>DEPENDENCIA ORIGINAL:</label>
-            <span id="inst_original_dependency_name" class="badge badge-blue">
+            <span id="inst_original_dependency_name" class="value-text bold text-uppercase">
                 {{ institutional_data.original_dependency.name|default:"Sin especificar" }}
+            </span>
+        </div>
+        <div class="info-data-row">
+            <label>PARTIDA ORIGINAL:</label>
+            <span id="inst_original_budget_line" class="value-text bold font-monospace">
+                {% if institutional_data.original_budget_line %}
+                    {{ institutional_data.original_budget_line.number_individual|default:"S/N" }}
+                    <small class="text-muted">
+                        ({{ institutional_data.original_budget_line.code|default:"Sin código" }})
+                    </small>
+                    {% if institutional_data.original_budget_line.position_item %}
+                        <span class="d-block text-uppercase">
+                            {{ institutional_data.original_budget_line.position_item.name }}
+                        </span>
+                    {% endif %}
+                {% else %}
+                    Sin especificar
+                {% endif %}
             </span>
         </div>
 
@@ -86,40 +139,6 @@
         </div>
     </div>
 </div>
-
-<!-- FILA 2: ESTRUCTURA JERÁRQUICA COMPLETA -->
-<div class="info-box-styled orange-border mt-3">
-    <h6 class="section-title">
-        <i class="fa-solid fa-sitemap text-orange me-2"></i> ESTRUCTURA JERÁRQUICA INSTITUCIONAL
-    </h6>
-
-    <div class="hierarchy-tree-wrapper">
-        {% if hierarchy_list %}
-            <div class="hierarchy-timeline">
-                {% for unit in hierarchy_list %}
-                    <div class="hierarchy-node">
-                        <div class="node-indicator">
-                            <span class="node-circle">{{ forloop.counter }}</span>
-                            {% if not forloop.last %}<span class="node-line"></span>{% endif %}
-                        </div>
-                        <div class="node-card">
-                            <span class="node-level">{{ unit.level_name|default:"Nivel Organizacional" }}</span>
-                            <span class="node-title">
-                                <i class="fa-solid fa-building text-orange me-2"></i>{{ unit.name }}
-                            </span>
-                        </div>
-                    </div>
-                {% endfor %}
-            </div>
-        {% else %}
-            <div class="empty-state-notice py-4">
-                <i class="fa-solid fa-sitemap fa-2x mb-2 text-secondary opacity-50"></i>
-                <p class="mb-0 text-muted">No se ha establecido la jerarquía administrativa para este servidor.</p>
-            </div>
-        {% endif %}
-    </div>
-</div>
-
 <!-- FILA 3: OBSERVACIONES -->
 {% if can_edit_person %}
     <div class="info-box-styled orange-border mt-3">

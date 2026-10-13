@@ -237,20 +237,13 @@
                         <tr>
                             <td>
                                 {% if item.rubric.is_salary and item.notes %}
-                                    {# Identificación clara y resumida para el servidor público #}
-                                    {% if 'Encargo' in item.notes %}
-                                        Remuneración Encargo
-                                    {% elif 'Vacaciones' in item.notes %}
-                                        Remuneración Titular (Vacaciones)
-                                    {% elif 'Titular' in item.notes %}
-                                        Remuneración Titular
+                                    {% if 'Encargo' in item.notes or 'Diferencia' in item.notes %}
+                                        Remuneración por Encargo
                                     {% else %}
-                                        {{ item.rubric.name }}
+                                        Remuneración Titular
                                     {% endif %}
                                 {% elif item.rubric and item.rubric.name %}
                                     {{ item.rubric.name }}
-                                {% elif item.deduction_ref and item.deduction_ref.name %}
-                                    {{ item.deduction_ref.name }}
                                 {% elif item.name and item.name != 'None' and item.name|length > 0 %}
                                     {{ item.name }}
                                 {% else %}
