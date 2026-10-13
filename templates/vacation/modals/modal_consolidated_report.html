@@ -1,0 +1,142 @@
+<!-- vacation/modals/modal_consolidated_report.html -->
+<div class="modal-overlay hidden" id="consolidatedReportModal">
+    <div class="modal-container-medium">
+        <div class="modal-header">
+            <div class="header-content-group">
+                <div class="header-icon-circle"><i class="fa-solid fa-file-signature"></i></div>
+                <h3 class="header-title">Reporte Consolidado Institucional</h3>
+            </div>
+            <button type="button" class="btn-close-circle" onclick="closeModal()"><i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <form action="{{ action_url }}" method="post" target="_blank" onsubmit="setTimeout(() => closeModal(), 600)">
+            {% csrf_token %}
+            <div class="modal-body-custom">
+
+                <!-- Banner Informativo Corporativo -->
+                <div class="employee-card-badge mb-3">
+                    <div class="employee-avatar-wrapper" style="width: 46px; height: 46px; background-color: #203c7d;">
+                        <i class="fa-solid fa-building-columns text-white" style="font-size: 1.2rem;"></i>
+                    </div>
+                    <div class="employee-card-details">
+                        <span class="employee-card-name">Cronograma Anual {{ plan.year }}</span>
+                        <span class="small text-muted">Consolidación general de todas las direcciones y dependencias municipales</span>
+                    </div>
+                </div>
+
+                <!-- Selección de Formato con Tarjetas Interactivas -->
+                <div class="form-group mb-3">
+                    <label class="form-label">Seleccione el Formato de Salida</label>
+                    <div class="grid-2-cols gap-2">
+                        <label class="general-card card-primary cursor-pointer p-3 m-0 d-flex flex-row align-items-center gap-3">
+                            <input type="radio" name="report_format" value="pdf" class="custom-radio perm-admin"
+                                   checked>
+                            <div>
+                                <div class="bold text-primary"><i class="fa-solid fa-file-pdf text-red me-1"></i>
+                                    Documento PDF
+                                </div>
+                                <span class="small text-muted">Formato vertical con hoja membretada y firmas</span>
+                            </div>
+                        </label>
+                        <label class="general-card card-success cursor-pointer p-3 m-0 d-flex flex-row align-items-center gap-3">
+                            <input type="radio" name="report_format" value="excel" class="custom-radio perm-admin">
+                            <div>
+                                <div class="bold text-success"><i class="fa-solid fa-file-excel text-green me-1"></i>
+                                    Hoja Excel (.xlsx)
+                                </div>
+                                <span class="small text-muted">Matriz de datos con columnas y totales</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="section-title mt-3">
+                    <i class="fa-solid fa-pen-nib"></i> Firmantes Responsables
+                </div>
+
+                <!-- Firmas Dinámicas con Búsqueda a partir de 3 caracteres -->
+                <div class="grid-2-cols">
+                    <div class="form-group">
+                        <label class="form-label">1. Elaborado por (Servidor TTHH)</label>
+                        <select name="elaborated_by" id="id_elaborated_by" class="input-field select2-user-ajax"
+                                required>
+                            <option value="{{ current_user_id }}" selected>{{ current_user_text }}</option>
+                        </select>
+                        <span class="form-hint">Escriba al menos 3 letras para buscar por nombre o apellido</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">2. Revisado por (Coordinador Nómina/TTHH)</label>
+                        <select name="reviewed_by" id="id_reviewed_by" class="input-field select2-user-ajax" required>
+                            <option value="" disabled selected>Escriba para buscar funcionario...</option>
+                        </select>
+                        <span class="form-hint">Escriba al menos 3 letras para buscar por nombre o apellido</span>
+                    </div>
+                </div>
+
+                <!-- Tarjeta Visual de Firmas Preestablecidas de Autoridades -->
+                <div class="form-section-card mt-3 p-3 bg-light border">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <span class="bold small text-primary"><i class="fa-solid fa-shield-halved me-1"></i> Firmas Institucionales Registradas:</span>
+                        <span class="badge badge-blue-mini">Automáticas</span>
+                    </div>
+                    <div class="grid-2-cols gap-2">
+                        <div class="p-2 bg-white rounded border">
+                            <span class="label-muted d-block small">3. VISTO BUENO:</span>
+                            <span class="bold small d-block">{{ sys_config.talento_humano_authority_name|default:"DIRECTOR/A DE TALENTO HUMANO" }}</span>
+                            <span class="small text-muted">{{ sys_config.talento_humano_authority_position|default:"Dirección de Talento Humano" }}</span>
+                        </div>
+                        <div class="p-2 bg-white rounded border">
+                            <span class="label-muted d-block small">4. APROBADO POR:</span>
+                            <span class="bold small d-block">{{ sys_config.max_authority_name|default:"MÁXIMA AUTORIDAD" }}</span>
+                            <span class="small text-muted">{{ sys_config.max_authority_position|default:"Alcalde/sa del Cantón Loja" }}</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-white-rectangle" onclick="closeModal()">Cancelar</button>
+                <button type="submit" class="btn-success">
+                    <i class="fa-solid fa-cloud-arrow-down me-1"></i> Descargar Reporte
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function () {
+        // Inicializar Select2 con búsqueda AJAX por nombres y apellidos a partir de 3 caracteres
+        $('.select2-user-ajax').select2({
+            width: '100%',
+            dropdownParent: $('#consolidatedReportModal'),
+            minimumInputLength: 3,
+            language: {
+                inputTooShort: function () {
+                    return "Por favor ingrese 3 o más caracteres para buscar...";
+                },
+                searching: function () {
+                    return "Buscando servidores por nombres o apellidos...";
+                },
+                noResults: function () {
+                    return "No se encontraron funcionarios activos";
+                }
+            },
+            ajax: {
+                url: "{% url 'vacation:schedule_user_search' %}",
+                dataType: 'json',
+                delay: 300,
+                data: function (params) {
+                    return {q: params.term};
+                },
+                processResults: function (data) {
+                    return {results: data.results};
+                },
+                cache: true
+            }
+        });
+    });
+</script>

@@ -8,145 +8,242 @@
 {% endblock %}
 
 {% block content %}
-    <!-- Banner Principal Superior -->
-    <div class="vac-banner">
-        <div class="vac-banner-left">
-            <div class="vac-banner-icon">
-                <i class="fa-solid fa-calendar-check"></i>
-            </div>
-            <div class="vac-banner-title">
-                <h1>{{ plan.title }}</h1>
-                <span class="small opacity-90">
-                <i class="fa-regular fa-clock me-1"></i>
-                Vigencia para programación: {{ plan.start_submission_date|date:"d/m/Y" }} al {{ plan.end_submission_date|date:"d/m/Y" }}
-            </span>
-            </div>
+    <!-- Header Corporativo Estándar -->
+    <div class="header-card">
+        <div class="header-card-body">
+            <h1>{{ plan.title }}</h1>
+            <p>
+                Dependencia: <strong>{{ base_unit.name|default:"General" }}</strong> •
+                Estado: <strong>{{ plan.get_status_display }}</strong>
+                {% if plan.status == 'APPROVED' %}
+                    <span class="badge badge-emerald ms-2"><i
+                            class="fa-solid fa-lock me-1"></i> Aprobado Oficialmente</span>
+                {% endif %}
+            </p>
         </div>
         <div class="header-actions-group">
-            <a href="{% url 'vacation:schedule_plan_list' %}" class="vac-banner-back-btn">
+            <a href="{% url 'vacation:schedule_plan_list' %}" class="btn-white-rectangle">
                 <i class="fa-solid fa-arrow-left"></i> Volver a Planes
             </a>
-            <button type="button" class="btn-success"
-                    onclick="openAjaxModal('{% url 'vacation:schedule_item_create' plan.id %}', () => { if(typeof initModalDateCalculator === 'function') initModalDateCalculator(); })">
-                <i class="fa-solid fa-plus-circle"></i> Asignar Fechas
-            </button>
         </div>
     </div>
+    <!-- Banquillo de Miniaturas Arrastrables -->
+    {% if plan.status != 'APPROVED' %}
+        <div class="drag-bench-container">
+            <div class="drag-bench-header-layout">
+                <div>
+            <span class="label-muted">
+                <i class="fa-solid fa-users me-1 text-primary"></i> Personal con Días Pendientes
+            </span>
+                </div>
 
-    <!-- Stat Cards Superiores -->
-    <div class="stats-row">
-        <div class="stat-card color-one readonly">
-            <div>
-                <h3>Colaboradores</h3>
-                <div class="number">{{ stats.total_employees }}</div>
-            </div>
-            <div class="stat-icon"><i class="fa-solid fa-users"></i></div>
-        </div>
-        <div class="stat-card color-two readonly">
-            <div>
-                <h3>Días Programados</h3>
-                <div class="number">{{ stats.total_days }}</div>
-            </div>
-            <div class="stat-icon"><i class="fa-solid fa-umbrella-beach"></i></div>
-        </div>
-        <div class="stat-card color-three readonly">
-            <div>
-                <h3>Pendientes Revisión</h3>
-                <div class="number">{{ stats.total_proposed }}</div>
-            </div>
-            <div class="stat-icon"><i class="fa-solid fa-clock-rotate-left"></i></div>
-        </div>
-        <div class="stat-card color-four readonly">
-            <div>
-                <h3>Aprobadas</h3>
-                <div class="number">{{ stats.total_approved }}</div>
-            </div>
-            <div class="stat-icon"><i class="fa-solid fa-circle-check"></i></div>
-        </div>
-    </div>
+                <!-- Buscador Central en Tiempo Real -->
+                <div class="bench-search-wrapper">
+                    <input type="text"
+                           id="benchSearchInput"
+                           class="bench-search-input"
+                           placeholder="Buscar por cédula, nombres o apellidos...">
+                </div>
 
-    <!-- Contenedor Principal de la Matriz Gráfica -->
-    <div class="content-table mt-3">
-        <div class="table-controls toolbar-row">
-            <div class="toolbar-left">
-                <span class="label-muted">Matriz Anual {{ plan.year }}</span>
+                <div>
+            <span class="small text-muted" id="benchCounter">
+                Mostrando {{ employee_cards|length }} servidores y trabajadores
+            </span>
+                </div>
             </div>
-            <div class="toolbar-center"></div>
-            <div class="toolbar-right">
-                <input type="text"
-                       class="table-search-input table-search-input--large"
-                       id="table-search"
-                       placeholder="Filtrar servidor o cédula...">
+
+            <!-- Tira de Miniaturas Arrastrables -->
+            <div class="drag-bench-grid" id="dragBenchGrid">
+                {% for item in employee_cards %}
+                    <div class="employee-drag-card"
+                         draggable="true"
+                         data-employee-id="{{ item.employee.id }}"
+                         data-employee-name="{{ item.employee.person.full_name }}"
+                         data-search-text="{{ item.employee.person.document_number }} {{ item.employee.person.first_name }} {{ item.employee.person.last_name }}"
+                         title="Pendiente por asignar: {{ item.remaining_days }} días (Registrado: {{ item.total_planned_days }}/30)">
+
+                        {% if item.employee.person.photo %}
+                            <img src="{{ item.employee.person.photo.url }}" class="drag-avatar-img" alt="Foto">
+                        {% else %}
+                            <div class="avatar-placeholder-sm">
+                                {{ item.employee.person.first_name|first }}{{ item.employee.person.last_name|first }}
+                            </div>
+                        {% endif %}
+
+                        <div class="drag-info-texts">
+                            <span class="drag-name">{{ item.employee.person.first_name }} {{ item.employee.person.last_name }}</span>
+                            <span class="drag-role">{{ item.employee.person.document_number }}</span>
+                            <span class="small text-muted">{{ item.total_planned_days }}/30 días</span>
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="text-center w-100 py-3 text-muted">
+                        <i class="fa-solid fa-circle-check text-success me-1"></i>
+                        Todo el personal de esta dependencia ha completado sus 30 días de programación.
+                    </div>
+                {% endfor %}
             </div>
         </div>
+    {% else %}
+        <div class="alert alert-info mb-3">
+            <i class="fa-solid fa-circle-check"></i>
+            <span>Este cronograma se encuentra <strong>Aprobado Oficialmente</strong>. La planificación ha sido cerrada y se encuentra en modo solo lectura.</span>
+        </div>
+    {% endif %}
+    <!-- 12 Tarjetas Mensuales-->
+    <div class="months-grid-6-cols">
+        {% for m in months_cards %}
+            <div class="month-dropzone-card" data-month-number="{{ m.number }}">
+                <div class="month-card-header">
+                    <span class="month-title">{{ m.name }}</span>
+                    <span class="month-count-badge">{{ m.items|length }}</span>
+                </div>
 
-        <div class="table-container">
-            <table class="managed-table schedule-matrix-table" data-page-size="15">
-                <thead>
-                <tr>
-                    <th class="width-23">Servidor / Puesto</th>
-                    <th class="width-7 center no-sort">Total</th>
-                    {% for m_num, m_name in months %}
-                        <th class="col-month no-sort">{{ m_name }}</th>
-                    {% endfor %}
-                </tr>
-                </thead>
-                <tbody>
-                {% for row in matrix_data %}
-                    <tr>
-                        <td>
-                            <div class="bold">{{ row.employee.person.full_name }}</div>
-                            <div class="small text-muted">
-                                <span>{{ row.employee.person.document_number }}</span>
-                                {% if row.employee.employment_status %}
-                                    • <span>{{ row.employee.employment_status.name }}</span>
+                <div class="month-card-body" id="dropzone-month-{{ m.number }}">
+                    {% for it in m.items %}
+                        <div class="assigned-schedule-card-compact"
+                             title="{{ it.employee.person.full_name }} - {{ it.days_quantity }} días ({{ it.observation|default:'Sin observación' }})">
+                            <!-- Fila 1: Avatar, Nombre Truncado y Botón Eliminar Fijo -->
+                            <div class="assigned-card-top">
+                                <div class="assigned-user-info">
+                                    {% if it.employee.person.photo %}
+                                        <img src="{{ it.employee.person.photo.url }}" class="assigned-avatar-mini"
+                                             alt="Foto">
+                                    {% else %}
+                                        <div class="assigned-avatar-mini-placeholder">
+                                            {{ it.employee.person.first_name|first }}{{ it.employee.person.last_name|first }}
+                                        </div>
+                                    {% endif %}
+                                    <span class="assigned-name-truncate">{{ it.employee.person.first_name }} {{ it.employee.person.last_name }}</span>
+                                </div>
+
+                                <!-- Botón Eliminar visible y accesible -->
+                                {% if it and plan.status != 'APPROVED' %}
+                                    <button type="button"
+                                            class="btn-assigned-delete"
+                                            title="Eliminar asignación de {{ it.days_quantity }} días"
+                                            onclick="deleteRecordAjax('{% url 'vacation:schedule_item_delete' it.id %}', 'la asignación de {{ it.days_quantity }} días de {{ it.employee.person.full_name }}', () => location.reload())">
+                                        <i class="fa-solid fa-xmark"></i>
+                                    </button>
                                 {% endif %}
                             </div>
-                        </td>
-                        <td class="center">
-                            <span class="badge badge-dark-sm">{{ row.total_days }}d</span>
-                        </td>
 
-                        <!-- Celdas de los 12 Meses -->
-                        {% for m_num, m_name in months %}
-                            <td class="center">
-                                {% with items_in_month=row.items_by_month|slice:m_num %}
-                                {% endwith %}
-
-                                {% for m_key, items_list in row.items_by_month.items %}
-                                    {% if m_key == m_num %}
-                                        {% for item in items_list %}
-                                            <div class="schedule-pill-item {% if item.status == 'APPROVED' %}pill-approved{% else %}pill-proposed{% endif %}"
-                                                 title="{{ item.start_date|date:'d/m/Y' }} al {{ item.end_date|date:'d/m/Y' }} - {{ item.observation|default:'Sin observación' }}">
-                                                <span>{{ item.start_date|date:"d" }}-{{ item.end_date|date:"d" }} ({{ item.days_quantity }}d)</span>
-
-                                                <!-- Botón eliminar fracción directamente -->
-                                                <button type="button"
-                                                        class="schedule-pill-delete"
-                                                        title="Eliminar esta fracción"
-                                                        onclick="deleteRecordAjax('{% url 'vacation:schedule_item_delete' item.id %}', 'la fracción del {{ item.start_date|date:'d/m' }} al {{ item.end_date|date:'d/m' }}', () => location.reload())">
-                                                    <i class="fa-solid fa-xmark"></i>
-                                                </button>
-                                            </div>
-                                        {% endfor %}
-                                    {% endif %}
-                                {% endfor %}
-                            </td>
-                        {% endfor %}
-                    </tr>
-                {% empty %}
-                    <tr>
-                        <td colspan="14" class="center">
-                            <div class="empty-state-container">
-                                <i class="fa-regular fa-calendar-xmark empty-state-icon"></i>
-                                <div class="empty-state-text">No hay vacaciones programadas en este cronograma aún.
-                                </div>
+                            <!-- Fila 2: Píldora de Días -->
+                            <div class="assigned-card-bottom">
+                                <span class="assigned-days-badge">{{ it.days_quantity }} D.</span>
+                                {% if it.observation %}
+                                    <span class="assigned-badge-obs">{{ it.observation }}</span>
+                                {% endif %}
                             </div>
-                        </td>
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
+                        </div>
+                    {% empty %}
+                        <div class="empty-table-message position-static py-3 text-center">
+                            <i class="fa-regular fa-calendar" style="font-size: 1.3rem; color: #cbd5e1;"></i>
+                            <span class="small text-muted mt-1 d-block">Arrastrar aquí</span>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+    <div class="schedule-export-section">
+        <div class="schedule-export-buttons-group">
+            <a href="
+
+
+
+                    {% url 'vacation:schedule_export_excel' plan.id %}{% if base_unit %}?unit_id={{ base_unit.id }}{% endif %}"
+               class="btn-success"
+               title="Descargar reporte en formato Excel">
+                <i class="fa-solid fa-file-excel me-1"></i> Exportar Excel
+            </a>
+            <a href="
+
+
+
+                    {% url 'vacation:schedule_export_pdf' plan.id %}{% if base_unit %}?unit_id={{ base_unit.id }}{% endif %}"
+               class="btn-danger"
+               target="_blank"
+               title="Generar reporte en formato PDF imprimible">
+                <i class="fa-solid fa-file-pdf me-1"></i> Generar PDF
+            </a>
         </div>
     </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // 1. Buscador en tiempo real de empleados en el banquillo
+            const searchInput = document.getElementById('benchSearchInput');
+            const cards = Array.from(document.querySelectorAll('.employee-drag-card'));
+            const counterEl = document.getElementById('benchCounter');
+
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    const query = e.target.value.toLowerCase().trim();
+                    let visibleCount = 0;
+
+                    cards.forEach(card => {
+                        const text = (card.dataset.searchText || '').toLowerCase();
+                        if (!query || text.includes(query)) {
+                            card.style.display = 'flex';
+                            visibleCount++;
+                        } else {
+                            card.style.display = 'none';
+                        }
+                    });
+
+                    if (counterEl) {
+                        counterEl.textContent = `Mostrando ${visibleCount} servidores y trabajadores`;
+                    }
+                });
+            }
+
+            // 2. Drag and Drop Nativo
+            let draggedEmployeeId = null;
+
+            document.querySelectorAll('.employee-drag-card[draggable="true"]').forEach(card => {
+                card.addEventListener('dragstart', (e) => {
+                    draggedEmployeeId = card.dataset.employeeId;
+                    card.classList.add('is-dragging');
+                    e.dataTransfer.setData('text/plain', draggedEmployeeId);
+                    e.dataTransfer.effectAllowed = 'move';
+                });
+
+                card.addEventListener('dragend', () => {
+                    card.classList.remove('is-dragging');
+                });
+            });
+
+            document.querySelectorAll('.month-dropzone-card').forEach(dropzone => {
+                dropzone.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    dropzone.classList.add('drag-over');
+                });
+
+                dropzone.addEventListener('dragleave', () => {
+                    dropzone.classList.remove('drag-over');
+                });
+
+                dropzone.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    dropzone.classList.remove('drag-over');
+
+                    const month = dropzone.dataset.monthNumber;
+                    const empId = draggedEmployeeId || e.dataTransfer.getData('text/plain');
+
+                    if (empId && month) {
+                        const modalUrl = `/vacation/schedule/{{ plan.id }}/drop-modal/${empId}/${month}/`;
+                        openAjaxModal(modalUrl, () => {
+                            if (typeof initModalDateCalculator === 'function') {
+                                initModalDateCalculator();
+                            }
+                        });
+                    }
+                });
+            });
+        });
+    </script>
 {% endblock %}

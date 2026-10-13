@@ -1,0 +1,70 @@
+<div class="modal-overlay hidden" id="dropScheduleModal">
+    <div class="modal-container-small">
+        <div class="modal-header">
+            <div class="header-content-group">
+                <div class="header-icon-circle"><i class="fa-solid fa-calendar-plus"></i></div>
+                <h3 class="header-title">Asignar Vacación - {{ month_name }}</h3>
+            </div>
+            <button type="button" class="btn-close-circle" onclick="closeModal()"><i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <form action="{{ action_url }}" method="post"
+              onsubmit="submitAjaxForm(event, () => window.location.reload())">
+            {% csrf_token %}
+            <input type="hidden" name="month" value="{{ month }}">
+
+            <div class="modal-body-custom">
+                <!-- Tarjeta informativa del colaborador -->
+                <div class="employee-card-badge mb-3">
+                    <div class="employee-avatar-wrapper">
+                        {% if employee.person.photo %}
+                            <img src="{{ employee.person.photo.url }}" class="employee-avatar-img" alt="Foto">
+                        {% else %}
+                            <div class="employee-avatar-placeholder">
+                                {{ employee.person.first_name|first }}{{ employee.person.last_name|first }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="employee-card-details">
+                        <span class="employee-card-name">{{ employee.person.full_name }}</span>
+                        <span class="employee-card-doc"><i
+                                class="fa-regular fa-id-card me-1"></i> {{ employee.person.document_number }}</span>
+                        <div class="d-flex align-items-center gap-2 mt-1">
+                            <span class="badge badge-blue">Programado: {{ planned_so_far }}/30 días</span>
+{#                            <span class="badge badge-green">Disponible: {{ max_assignable }} días</span>#}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Campo directo: Días a solicitar -->
+                <div class="form-group mb-3">
+                    <label class="form-label">Días a solicitar para {{ month_name }}
+                        (Máximo {{ max_assignable }})</label>
+                    <input type="number"
+                           name="days_quantity"
+                           id="id_days_quantity"
+                           class="form-control"
+                           value="{{ default_days }}"
+                           min="1"
+                           max="{{ max_assignable }}"
+                           required>
+                    <span class="form-hint">Puede asignar hasta {{ max_assignable }} días restantes para completar el período anual.</span>
+                </div>
+
+                <!-- Campo de Observación -->
+                <div class="form-group">
+                    <label class="form-label">Observaciones</label>
+                    <input type="text"
+                           name="observation"
+                           class="form-control"
+                           placeholder="Ej. {{ default_days }} días acordados con jefatura">
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-white-rectangle" onclick="closeModal()">Cancelar</button>
+                <button type="submit" class="btn-success"><i class="fa-solid fa-check"></i> Asignar Días</button>
+            </div>
+        </form>
+    </div>
+</div>

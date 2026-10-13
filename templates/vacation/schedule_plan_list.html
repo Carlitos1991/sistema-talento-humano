@@ -9,12 +9,14 @@
             <h1>Cronogramas de Vacaciones</h1>
             <p>Planificación anual en línea de vacaciones del personal institucional.</p>
         </div>
-        <div>
-            <button type="button" class="btn-success"
-                    onclick="openAjaxModal('{% url 'vacation:schedule_plan_create' %}')">
-                <i class="fa-solid fa-plus"></i> Aperturar Cronograma
-            </button>
-        </div>
+        {% if perms.vacation.add_vacationscheduleplan %}
+            <div>
+                <button type="button" class="btn-success"
+                        onclick="openAjaxModal('{% url 'vacation:schedule_plan_create' %}')">
+                    <i class="fa-solid fa-plus"></i> Aperturar Cronograma
+                </button>
+            </div>
+        {% endif %}
     </div>
 
     <div class="content-table">
@@ -44,3 +46,41 @@
         </div>
     </div>
 {% endblock %}
+<script>
+    function approvePlanAjax(url, year) {
+        Swal.fire({
+            title: `¿Aprobar Oficialmente el Cronograma ${year}?`,
+            text: 'Una vez aprobado, el cronograma quedará bloqueado permanentemente: no se podrá editar, dar de baja ni modificar las vacaciones asignadas.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, Aprobar Oficialmente',
+            cancelButtonText: 'Cancelar',
+            customClass: {
+                confirmButton: 'swal2-confirm btn-swal-success',
+                cancelButton: 'swal2-cancel btn-swal-cancel'
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': typeof getCSRF === 'function' ? getCSRF() : ''
+                    }
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            showToast(data.message, 'success');
+                            refreshCurrentTable();
+                        } else {
+                            Swal.fire({icon: 'error', title: 'Atención', text: data.message});
+                        }
+                    })
+                    .catch(() => {
+                        Swal.fire({icon: 'error', title: 'Error', text: 'Problema de comunicación con el servidor.'});
+                    });
+            }
+        });
+    }
+</script>

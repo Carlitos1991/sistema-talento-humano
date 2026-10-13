@@ -4,7 +4,7 @@ import pytz
 from django import forms
 from django.utils import timezone
 from .models import *
-
+from core.models import User
 
 class PeriodForm(forms.ModelForm):
     class Meta:
@@ -392,3 +392,33 @@ class VacationScheduleItemForm(forms.ModelForm):
             else:
                 cleaned_data['days_quantity'] = (end - start).days + 1
         return cleaned_data
+
+
+class ConsolidatedReportForm(forms.Form):
+    FORMAT_CHOICES = [
+        ('pdf', 'Documento PDF (Imprimible)'),
+        ('excel', 'Hoja de Cálculo Excel (.xlsx)'),
+    ]
+
+    report_format = forms.ChoiceField(
+        choices=FORMAT_CHOICES,
+        widget=forms.RadioSelect(attrs={'class': 'custom-radio'}),
+        initial='pdf',
+        label='Formato del Reporte'
+    )
+    elaborated_by = forms.ModelChoiceField(
+        queryset=User.objects.filter(is_active=True).order_by('first_name', 'last_name'),
+        widget=forms.Select(attrs={'class': 'input-field select2'}),
+        label='Elaborado por'
+    )
+    reviewed_by = forms.ModelChoiceField(
+        queryset=User.objects.filter(is_active=True).order_by('first_name', 'last_name'),
+        widget=forms.Select(attrs={'class': 'input-field select2'}),
+        label='Revisado por'
+    )
+
+    def __init__(self, *args, **kwargs):
+        current_user = kwargs.pop('current_user', None)
+        super().__init__(*args, **kwargs)
+        if current_user:
+            self.fields['elaborated_by'].initial = current_user

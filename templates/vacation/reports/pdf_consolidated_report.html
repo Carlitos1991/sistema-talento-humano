@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Consolidado de Vacaciones {{ plan.year }}</title>
+    <style>
+        @page {
+            size: a4 portrait;
+            margin-top: 3.5cm;
+            margin-bottom: 2.2cm;
+            margin-left: 1.2cm;
+            margin-right: 1.2cm;
+
+        {% if letterhead_path %}
+            background-image: url('{{ letterhead_path }}');
+        {% endif %}
+
+            @frame footer_frame {
+            -pdf-frame-content: page_footer;
+            bottom: 0.8cm;
+            left: 1.2cm;
+            right: 1.2cm;
+            height: 0.8cm;
+        }
+        }
+
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            color: #1e293b;
+            font-size: 7pt;
+        }
+
+        .header-title-box {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .inst-title {
+            font-size: 11pt;
+            font-weight: bold;
+            color: #203c7d;
+            text-transform: uppercase;
+            margin-bottom: 2px;
+        }
+
+        .doc-title {
+            font-size: 9.5pt;
+            font-weight: bold;
+            color: #0f172a;
+            margin-bottom: 3px;
+        }
+
+        .doc-sub {
+            font-size: 7.2pt;
+            color: #475569;
+        }
+
+        table.data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 6px;
+        }
+
+        table.data-table th {
+            background-color: #203c7d;
+            color: #ffffff;
+            font-weight: bold;
+            font-size: 6.8pt;
+            text-transform: uppercase;
+            padding: 4px 2px;
+            text-align: center;
+            border: 0.5pt solid #1e293b;
+        }
+
+        table.data-table td {
+            padding: 3.5px 2px;
+            border: 0.5pt solid #cbd5e1;
+            vertical-align: middle;
+            font-size: 6.8pt;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-left {
+            text-align: left;
+        }
+
+        .bold {
+            font-weight: bold;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
+        /* Bloque de 4 Firmas (2x2 para A4 vertical) */
+        table.signatures-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 25px;
+            background: transparent !important;
+        }
+
+        table.signatures-table tr {
+            background: transparent !important;
+        }
+
+        table.signatures-table td {
+            border: none;
+            padding: 0;
+            text-align: center;
+            vertical-align: top;
+            background: transparent !important;
+        }
+
+        .sig-header {
+            font-size: 7.5pt;
+            font-weight: bold;
+            color: #203c7d;
+            text-transform: uppercase;
+        }
+
+        .sig-space-cell {
+            height: 48px;
+            font-size: 1pt;
+            line-height: 48px;
+        }
+
+        .sig-bottom-cell {
+            border-top: 0.8pt solid #0f172a !important;
+            padding-top: 3px !important;
+            vertical-align: top;
+        }
+
+        .sig-text-block {
+            margin: 0;
+            padding: 0;
+            line-height: 1.15;
+            text-align: center;
+        }
+
+        .sig-name {
+            font-size: 7pt;
+            font-weight: bold;
+            color: #0f172a;
+            text-transform: uppercase;
+        }
+
+        .sig-position {
+            font-size: 6.5pt;
+            color: #475569;
+            text-transform: uppercase;
+        }
+
+        #page_footer {
+            text-align: right;
+            font-size: 6.8pt;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+
+<div class="header-title-box">
+    <div class="inst-title">{{ sys_config.institution_name|default:"MUNICIPIO DE LOJA" }}</div>
+    <div class="doc-title">CRONOGRAMA DE VACACIONES {{ plan.year }}</div>
+    <div class="doc-sub">
+{#        <strong>Ámbito:</strong> Todas las Dependencias &nbsp;|&nbsp;#}
+        <strong>Fecha Emisión:</strong> {{ today|date:"d/m/Y" }} &nbsp;|&nbsp;
+        <strong>Total Funcionarios:</strong> {{ total_funcionarios }}
+    </div>
+</div>
+
+<!-- Tabla Principal -->
+<table class="data-table">
+    <thead>
+    <tr>
+        <th style="width: 4%;">N°</th>
+        <th style="width: 10%;">CÉDULA</th>
+        <th style="width: 20%;">APELLIDOS Y NOMBRES</th>
+        <th style="width: 10%;">RÉGIMEN</th>
+        <th style="width: 9%;">F. INGRESO</th>
+        <th style="width: 19%;">UNIDAD ADMINISTRATIVA</th>
+        <th style="width: 8%;">TIPO</th>
+        <th style="width: 6%;">DÍAS</th>
+        <th style="width: 12%;">MESES</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for r in report_rows %}
+        <tr>
+            <td class="text-center">{{ r.secuencial }}</td>
+            <td class="text-center">{{ r.cedula }}</td>
+            <td class="text-left bold">{{ r.apellidos_nombres }}</td>
+            <td class="text-center">{{ r.regimen }}</td>
+            <td class="text-center">{{ r.fecha_ingreso }}</td>
+            <td class="text-left">{{ r.unidad }}</td>
+            <td class="text-center">{{ r.tipo }}</td>
+            <td class="text-center bold">{{ r.dias_ley }}</td>
+            <td class="text-center">{{ r.meses }}</td>
+        </tr>
+    {% empty %}
+        <tr>
+            <td colspan="9" class="text-center" style="padding: 15px;">No hay personal planificado en este cronograma.
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+<!-- Bloque de 4 Firmas (Fila 1: Elaborado y Revisado | Fila 2: Visto Bueno y Aprobado) -->
+<table class="signatures-table">
+    <!-- Par 1: Elaborado y Revisado -->
+    <tr>
+        <td style="width: 45%;" class="sig-header">ELABORADO POR:</td>
+        <td style="width: 10%;"></td>
+        <td style="width: 45%;" class="sig-header">REVISADO POR:</td>
+    </tr>
+    <tr>
+        <td class="sig-space-cell">&nbsp;</td>
+        <td></td>
+        <td class="sig-space-cell">&nbsp;</td>
+    </tr>
+    <tr>
+        <td class="sig-bottom-cell">
+            <p class="sig-text-block">
+                <span class="sig-name">{{ firmas.elaborado_nombre }}</span><br/>
+                <span class="sig-position">{{ firmas.elaborado_cargo }}</span>
+            </p>
+        </td>
+        <td></td>
+        <td class="sig-bottom-cell">
+            <p class="sig-text-block">
+                <span class="sig-name">{{ firmas.revisado_nombre }}</span><br/>
+                <span class="sig-position">{{ firmas.revisado_cargo }}</span>
+            </p>
+        </td>
+    </tr>
+
+    <!-- Espaciador entre filas de firmas -->
+    <tr>
+        <td style="height: 25px;">&nbsp;</td>
+        <td></td>
+        <td style="height: 25px;">&nbsp;</td>
+    </tr>
+
+    <!-- Par 2: Visto Bueno y Aprobado -->
+    <tr>
+        <td style="width: 45%;" class="sig-header">VISTO BUENO:</td>
+        <td style="width: 10%;"></td>
+        <td style="width: 45%;" class="sig-header">APROBADO POR:</td>
+    </tr>
+    <tr>
+        <td class="sig-space-cell">&nbsp;</td>
+        <td></td>
+        <td class="sig-space-cell">&nbsp;</td>
+    </tr>
+    <tr>
+        <td class="sig-bottom-cell">
+            <p class="sig-text-block">
+                <span class="sig-name">{{ firmas.visto_bueno_nombre }}</span><br/>
+                <span class="sig-position">{{ firmas.visto_bueno_cargo }}</span>
+            </p>
+        </td>
+        <td></td>
+        <td class="sig-bottom-cell">
+            <p class="sig-text-block">
+                <span class="sig-name">{{ firmas.aprobado_nombre }}</span><br/>
+                <span class="sig-position">{{ firmas.aprobado_cargo }}</span>
+            </p>
+        </td>
+    </tr>
+</table>
+
+<div id="page_footer">
+    SIGETH • Página
+    <pdf:pageNumber> de
+        <pdf:pageCount>
+</div>
+</body>
+</html>

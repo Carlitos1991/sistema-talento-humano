@@ -546,3 +546,454 @@
 .schedule-pill-delete:hover {
     color: #ef4444;
 }
+
+/* --- TABLERO DRAG & DROP DE CRONOGRAMA --- */
+
+/* 1. Banquillo superior de miniaturas */
+.drag-bench-container {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.05);
+}
+
+.drag-bench-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.65rem;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.drag-bench-grid {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding-bottom: 10px;
+    scroll-behavior: smooth;
+}
+
+/* Tarjeta miniatura de empleado arrastrable */
+.employee-drag-card {
+    flex: 0 0 190px;
+    background: #f8fafc;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 12px;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: grab;
+    user-select: none;
+    transition: all 0.2s ease;
+}
+
+.employee-drag-card:active {
+    cursor: grabbing;
+}
+
+.employee-drag-card.is-dragging {
+    opacity: 0.4;
+    border-color: #3b82f6;
+    transform: scale(0.95);
+}
+
+.employee-drag-card:hover {
+    background: #eff6ff;
+    border-color: #3b82f6;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(59, 130, 246, 0.15);
+}
+
+.employee-drag-card.limit-reached {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #f1f5f9;
+    border-style: dashed;
+}
+
+.drag-avatar-img {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #ffffff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.drag-info-texts {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    line-height: 1.15;
+}
+
+.drag-name {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #1e293b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.drag-role {
+    font-size: 0.68rem;
+    color: #64748b;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 2. Grid de 6 Tarjetas Mensuales */
+.months-kanban-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+}
+
+@media (max-width: 1024px) {
+    .months-kanban-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 680px) {
+    .months-kanban-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Tarjeta Mensual Dropzone */
+.month-dropzone-card {
+    background: #ffffff;
+    border: 2px dashed #cbd5e1;
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    min-height: 260px;
+    max-height: 380px;
+    transition: all 0.2s ease;
+    overflow: hidden;
+}
+
+.month-dropzone-card.drag-over {
+    border-color: #10b981;
+    background-color: #f0fdf4;
+    transform: scale(1.01);
+}
+
+.month-card-header {
+    background: linear-gradient(135deg, #203c7d 0%, #162955 100%);
+    color: #ffffff;
+    padding: 10px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.month-title {
+    font-size: 0.88rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.month-count-badge {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.month-card-body {
+    flex: 1;
+    padding: 12px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Item asignado dentro del mes */
+.assigned-schedule-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-left: 4px solid #10b981;
+    border-radius: 8px;
+    padding: 8px 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.assigned-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.assigned-details {
+    margin-left: 8px;
+    flex: 1;
+    min-width: 0;
+}
+
+.assigned-name {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #0f172a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.assigned-range {
+    font-size: 0.68rem;
+    color: #166534;
+    font-weight: 600;
+}
+
+/* Header del banquillo con buscador centrado */
+.drag-bench-header-layout {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 1.25rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.bench-search-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+}
+
+.bench-search-input {
+    width: 100%;
+    max-width: 360px;
+    height: 36px;
+    padding: 0.4rem 0.9rem;
+    font-size: 0.85rem;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 8px;
+    background-color: #ffffff;
+    transition: all 0.2s ease;
+}
+
+.bench-search-input:focus {
+    border-color: #3b82f6;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+/* Grid de 12 meses: estrictamente 6 por fila en escritorio */
+.months-grid-6-cols {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 10px;
+    width: 100%;
+}
+
+@media (max-width: 1400px) {
+    .months-grid-6-cols {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+@media (max-width: 992px) {
+    .months-grid-6-cols {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+    .months-grid-6-cols {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Ajustes compactos para las tarjetas mensuales en 6 columnas */
+.months-grid-6-cols .month-dropzone-card {
+    min-height: 230px;
+    max-height: 300px;
+}
+
+.months-grid-6-cols .month-card-header {
+    padding: 7px 10px;
+}
+
+.months-grid-6-cols .month-title {
+    font-size: 0.78rem;
+}
+
+.months-grid-6-cols .month-card-body {
+    padding: 8px;
+    gap: 6px;
+}
+
+.months-grid-6-cols .assigned-schedule-card {
+    padding: 6px 8px;
+}
+
+/* --- TARJETAS MENSUALES ULTRA COMPACTAS --- */
+
+.months-grid-6-cols .month-dropzone-card {
+    min-height: 250px;
+    max-height: 340px;
+    overflow-x: hidden;
+}
+
+.months-grid-6-cols .month-card-body {
+    padding: 6px;
+    gap: 6px;
+    overflow-x: hidden;
+}
+
+/* Tarjeta de empleado dentro del mes */
+.assigned-schedule-card-compact {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-left: 3.5px solid #10b981;
+    border-radius: 8px;
+    padding: 6px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Fila superior: Avatar + Nombre + Botón eliminar */
+.assigned-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    width: 100%;
+}
+
+.assigned-user-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0; /* Necesario para que text-overflow funcione */
+    flex: 1;
+}
+
+.assigned-avatar-mini {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.assigned-avatar-mini-placeholder {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background-color: var(--primary-color, #203c7d);
+    color: #ffffff;
+    font-size: 0.6rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.assigned-name-truncate {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #0f172a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2;
+}
+
+/* Botón eliminar circular y visible */
+.btn-assigned-delete {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background-color: #fee2e2;
+    color: #ef4444;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+    padding: 0;
+}
+
+.btn-assigned-delete:hover {
+    background-color: #ef4444;
+    color: #ffffff;
+    transform: scale(1.1);
+}
+
+/* Fila inferior: Badge de días */
+.assigned-card-bottom {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.assigned-days-badge {
+    background-color: #0f172a;
+    color: #ffffff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 1px 7px;
+    border-radius: 12px;
+    letter-spacing: 0.02em;
+}
+
+.assigned-badge-obs {
+    font-size: 0.62rem;
+    color: #64748b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Línea divisora y contenedor de reportes */
+.schedule-export-section {
+    width: 100%;
+    margin-top: 2rem;
+    margin-bottom: 2.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.schedule-divider-line {
+    width: 100%;
+    border: 0;
+    border-top: 1px solid #e2e8f0;
+    margin-bottom: 1.5rem;
+}
+
+.schedule-export-buttons-group {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+}
