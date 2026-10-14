@@ -407,6 +407,45 @@ def find_keycloak_user_by_username(username: str) -> dict | None:
     return results[0] if results else None
 
 
+def find_keycloak_user_by_email(email: str) -> dict | None:
+    """Busca un usuario por su correo exacto en Keycloak."""
+    token = get_admin_token()
+    resp = requests.get(
+        _admin_users_url(),
+        headers={'Authorization': f'Bearer {token}'},
+        params={'email': email, 'exact': True},
+        timeout=REQUEST_TIMEOUT,
+    )
+    resp.raise_for_status()
+    results = resp.json()
+    return results[0] if results else None
+
+
+def update_keycloak_user(*, keycloak_user_id: str, username: str, email: str,
+                         first_name: str, last_name: str,
+                         document_number: str) -> None:
+    """Mantiene actualizados en Keycloak los datos institucionales básicos."""
+    token = get_admin_token()
+    resp = requests.put(
+        f"{_admin_users_url()}/{keycloak_user_id}",
+        headers={'Authorization': f'Bearer {token}'},
+        json={
+            'username': username,
+            'email': email,
+            'firstName': first_name,
+            'lastName': last_name,
+            'enabled': True,
+            'emailVerified': True,
+            'attributes': {
+                'document_number': [document_number],
+                'locale': ['es'],
+            },
+        },
+        timeout=REQUEST_TIMEOUT,
+    )
+    resp.raise_for_status()
+
+
 def send_keycloak_reset_password_email(keycloak_user_id: str, redirect_uri: str) -> None:
     """
     Solicita a Keycloak que envíe su propio correo de restablecimiento de contraseña.
@@ -442,7 +481,14 @@ def provision_and_send_password_reset(person, django_user, redirect_uri: str) ->
     esta aplicación; Keycloak la reemplaza mediante UPDATE_PASSWORD.
     """
     document_number = (getattr(person, 'document_number', None) or '').strip()
-    email = (getattr(django_user, 'email', None) or getattr(person, 'email', None) or '').strip()
+    employee = getattr(person, 'employee_profile', None)
+    institutional_data = getattr(employee, 'institutional_data', None) if employee else None
+    email = (
+        getattr(institutional_data, 'institutional_email', None)
+        or getattr(django_user, 'email', None)
+        or getattr(person, 'email', None)
+        or ''
+    ).strip().lower()
     if not document_number:
         return {'status': 'error', 'reason': 'sin document_number'}
     if not email:
@@ -451,11 +497,18 @@ def provision_and_send_password_reset(person, django_user, redirect_uri: str) ->
     try:
         keycloak_user = find_keycloak_user_by_document(document_number)
         if not keycloak_user:
+            keycloak_user = find_keycloak_user_by_email(email)
+        if not keycloak_user and django_user:
             keycloak_user = find_keycloak_user_by_username(django_user.username)
 
         if not keycloak_user:
+            from .auth import generate_keycloak_username
+            username = (
+                getattr(django_user, 'username', None)
+                or generate_keycloak_username(person.first_name, person.last_name)
+            )
             keycloak_user_id, _ = create_keycloak_user(
-                username=django_user.username,
+                username=username,
                 email=email,
                 first_name=person.first_name,
                 last_name=person.last_name,
@@ -466,6 +519,19 @@ def provision_and_send_password_reset(person, django_user, redirect_uri: str) ->
             if not keycloak_user_id:
                 return {'status': 'error', 'reason': 'Keycloak no devolvió el id del usuario creado'}
             keycloak_user = {'id': keycloak_user_id}
+        else:
+            from .auth import generate_keycloak_username
+            update_keycloak_user(
+                keycloak_user_id=keycloak_user['id'],
+                username=(
+                    getattr(django_user, 'username', None)
+                    or generate_keycloak_username(person.first_name, person.last_name)
+                ),
+                email=email,
+                first_name=person.first_name,
+                last_name=person.last_name,
+                document_number=document_number,
+            )
 
         send_keycloak_reset_password_email(keycloak_user['id'], redirect_uri)
     except Exception:

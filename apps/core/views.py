@@ -113,6 +113,10 @@ class ForgotPasswordView(TemplateView):
 
     def post(self, request, *args, **kwargs):
         from django.db.models import Q
+        from person.models import Person
+        from core.auth import generate_keycloak_username
+        from django.contrib.auth.models import Group, Permission
+        from django.contrib.contenttypes.models import ContentType
 
         identificador = (request.POST.get('identificador') or '').strip()
         birth_date_raw = (request.POST.get('birth_date') or '').strip()
@@ -124,14 +128,60 @@ class ForgotPasswordView(TemplateView):
         UserModel = get_user_model()
         user = UserModel.objects.filter(Q(username=identificador) | Q(email=identificador)).first()
 
-        if not user or not hasattr(user, 'person'):
+        person = getattr(user, 'person', None) if user else None
+        if person is None:
+            person = Person.objects.filter(
+                employee_profile__institutional_data__institutional_email__iexact=identificador
+            ).select_related('employee_profile__institutional_data').first()
+            user = getattr(person, 'user', None) if person else None
+
+        if person is None:
             return JsonResponse(
                 {'status': 'error', 'message': 'No se encontró un registro asociado a este usuario o correo.'})
 
-        person = user.person
         if not person.birth_date or str(person.birth_date) != birth_date_raw:
             return JsonResponse(
                 {'status': 'error', 'message': 'La fecha de nacimiento no coincide con nuestros registros.'})
+
+        institutional_email = getattr(
+            getattr(getattr(person, 'employee_profile', None), 'institutional_data', None),
+            'institutional_email', None
+        )
+        if not institutional_email:
+            return JsonResponse(
+                {'status': 'error', 'message': 'No existe un correo institucional registrado para esta persona.'})
+
+        if user is None:
+            username = generate_keycloak_username(person.first_name, person.last_name)
+            if UserModel.objects.filter(username=username).exists():
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'No se pudo asociar la cuenta local. Contacte a Talento Humano.'
+                })
+            user = UserModel.objects.create_user(
+                username=username,
+                email=institutional_email.lower(),
+                first_name=person.first_name,
+                last_name=person.last_name,
+                is_active=True,
+            )
+            user.set_unusable_password()
+            user.save(update_fields=['password', 'email'])
+            person.user = user
+            person.save(update_fields=['user'])
+
+            normal_group, _ = Group.objects.get_or_create(name='USUARIO_NORMAL')
+            user.groups.add(normal_group)
+            content_type = ContentType.objects.get_for_model(Group)
+            dashboard_perm, _ = Permission.objects.get_or_create(
+                codename='dashboard_empleado',
+                content_type=content_type,
+                defaults={'name': 'Acceso dashboard empleado'},
+            )
+            user.user_permissions.add(dashboard_perm)
+        elif user.email != institutional_email:
+            user.email = institutional_email.lower()
+            user.save(update_fields=['email'])
 
         from .keycloak_service import provision_and_send_password_reset
         redirect_to = request.build_absolute_uri(reverse('core:login'))
@@ -181,18 +231,71 @@ class ChangePasswordView(LoginRequiredMixin, View):
             return JsonResponse({'success': False, 'message': 'La contraseña debe tener al menos 8 caracteres.'},
                                 status=400)
 
-        # 1. Cambiar contraseña en Django
-        user.set_password(new_password)
-        user.save()
-        update_session_auth_hash(request, user)
-
-        # 2. Intentar crear o actualizar en Keycloak si aplica
         try:
-            from core.keycloak_service import KeycloakAdminService
-            kc = KeycloakAdminService()
-            kc.set_user_password(user.username, new_password)
-        except Exception as e:
-            logger.warning(f"No se pudo sincronizar clave en Keycloak para {user.username}: {e}")
+            from .keycloak_service import (
+                create_keycloak_user,
+                find_keycloak_user_by_document,
+                find_keycloak_user_by_email,
+                find_keycloak_user_by_username,
+                set_keycloak_password,
+                update_keycloak_user,
+            )
+            person = _safe_related(user, 'person', None)
+            document_number = getattr(person, 'document_number', None)
+            institutional_data = _safe_related(
+                _safe_related(person, 'employee_profile', None),
+                'institutional_data',
+                None,
+            )
+            institutional_email = (
+                getattr(institutional_data, 'institutional_email', None)
+                or user.email
+                or getattr(person, 'email', None)
+                or ''
+            ).strip().lower()
+            if not person or not document_number or not institutional_email:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'No existe información institucional suficiente para sincronizar la cuenta.'
+                }, status=400)
+
+            keycloak_user = find_keycloak_user_by_document(document_number)
+            if not keycloak_user:
+                keycloak_user = find_keycloak_user_by_email(institutional_email)
+            if not keycloak_user:
+                keycloak_user = find_keycloak_user_by_username(user.username)
+
+            if keycloak_user:
+                update_keycloak_user(
+                    keycloak_user_id=keycloak_user['id'],
+                    username=user.username,
+                    email=institutional_email,
+                    first_name=person.first_name,
+                    last_name=person.last_name,
+                    document_number=document_number,
+                )
+                set_keycloak_password(keycloak_user['id'], new_password, temporary=False)
+            else:
+                create_keycloak_user(
+                    username=user.username,
+                    email=institutional_email,
+                    first_name=person.first_name,
+                    last_name=person.last_name,
+                    document_number=document_number,
+                    password=new_password,
+                    temporary=False,
+                )
+        except Exception:
+            logger.exception("[KEYCLOAK][CAMBIO_PASSWORD] No se pudo crear o actualizar la cuenta.")
+            return JsonResponse({
+                'success': False,
+                'message': 'No se pudo sincronizar la contraseña con Keycloak. Intente más tarde.'
+            }, status=502)
+
+        # Keycloak es la fuente de verdad de la contraseña.
+        user.set_unusable_password()
+        user.save(update_fields=['password'])
+        update_session_auth_hash(request, user)
 
         # 3. Liberar forzado de cambio
         if 'force_change_on_login' in request.session:
@@ -259,23 +362,50 @@ class CreateUserFromLoginView(TemplateView):
         user_model = get_user_model()
         user = getattr(person, 'user', None)
 
-        from .keycloak_service import find_keycloak_user_by_username, create_keycloak_user, \
-            send_keycloak_reset_password_email
+        from .keycloak_service import (
+            find_keycloak_user_by_document,
+            find_keycloak_user_by_email,
+            find_keycloak_user_by_username,
+            create_keycloak_user,
+            update_keycloak_user,
+            send_keycloak_reset_password_email,
+        )
 
         redirect_to = request.build_absolute_uri(reverse('core:login'))
 
         try:
-            existing_kc_user = find_keycloak_user_by_username(username)
+            existing_kc_user = find_keycloak_user_by_document(cedula)
+            if not existing_kc_user:
+                existing_kc_user = find_keycloak_user_by_email(institutional_email)
+            if not existing_kc_user:
+                existing_kc_user = find_keycloak_user_by_username(username)
         except Exception:
-            logger.exception("[KEYCLOAK][REGISTRO] Error consultando Keycloak para username=%s", username)
+            logger.exception("[KEYCLOAK][REGISTRO] Error consultando Keycloak para cedula=%s", cedula)
             return JsonResponse(
                 {'status': 'error', 'message': 'No se pudo verificar la cuenta en Keycloak. Intente más tarde.'})
 
         if existing_kc_user:
             kc_user_id = existing_kc_user.get('id')
             logger.info(
-                "[KEYCLOAK][REGISTRO] El usuario %s ya existe en Keycloak (id=%s). Se solicitará correo de actualización.",
-                username, kc_user_id)
+                "[KEYCLOAK][REGISTRO] El usuario de %s ya existe en Keycloak (id=%s). Se actualizarán sus datos.",
+                cedula,
+                kc_user_id)
+            try:
+                update_keycloak_user(
+                    keycloak_user_id=kc_user_id,
+                    username=username,
+                    email=institutional_email,
+                    first_name=person.first_name,
+                    last_name=person.last_name,
+                    document_number=cedula,
+                )
+            except Exception:
+                logger.exception("[KEYCLOAK][REGISTRO] Error actualizando usuario de Keycloak para cedula=%s",
+                                 cedula)
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'No se pudo actualizar la cuenta en el servidor. Intente más tarde.'
+                })
         else:
             logger.info("[KEYCLOAK][REGISTRO] Creando nuevo usuario %s en Keycloak.", username)
             try:
