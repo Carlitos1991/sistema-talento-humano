@@ -494,8 +494,7 @@
                 <div class="employee-welcome-info">
                     <span class="welcome-kicker">Portal del Colaborador</span>
                     <h2 class="welcome-title">
-{#                        Bienvenido, {{ request.user.signature_name|default:request.user.get_full_name|default:request.user.username }}#}
-                        Bienvenido, Usuario
+                        Bienvenido, {{ request.user.signature_name|default:request.user.get_full_name|default:request.user.username }}
                     </h2>
                     <p class="welcome-institution">
                         {{ system_config.institution_name|default:"Municipio de Loja" }}
@@ -503,8 +502,7 @@
                     {% if request.user.signature_position %}
                         <div class="employee-badge-position">
                             <i class="fa-solid fa-briefcase"></i>
-{#                            <span>{{ request.user.signature_position }}</span>#}
-                            <span>Servidor Municipal</span>
+                            <span>{{ request.user.signature_position }}</span>
                         </div>
                     {% endif %}
                 </div>
