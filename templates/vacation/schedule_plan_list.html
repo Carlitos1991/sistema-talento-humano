@@ -21,14 +21,19 @@
 
     <div class="content-table">
         <div class="table-controls toolbar-row">
-            <div class="toolbar-center">
-                <input class="switch-input switch-red" type="checkbox" id="show_inactive" name="show_inactive"
-                       {% if show_inactive %}checked{% endif %}>
-                <label class="switch-wrapper" for="show_inactive">
-                    <div class="switch-circle"></div>
-                    <span class="switch-text">Mostrar Cronogramas Inactivos</span>
-                </label>
-            </div>
+            {% if perms.vacation.add_vacationscheduleplan %}
+                <div class="toolbar-center">
+                    <input class="switch-input switch-red" type="checkbox" id="show_inactive" name="show_inactive"
+                           {% if show_inactive %}checked{% endif %}>
+                    <label class="switch-wrapper" for="show_inactive">
+                        <div class="switch-circle"></div>
+                        <span class="switch-text">Mostrar Cronogramas Inactivos</span>
+                    </label>
+                </div>
+            {% else %}
+                 <div class="toolbar-center">
+                </div>
+            {% endif %}
             <div class="toolbar-right">
                 <input type="text"
                        class="table-search-input table-search-input--large"
