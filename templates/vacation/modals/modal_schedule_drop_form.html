@@ -1,3 +1,4 @@
+<!-- vacation/modals/modal_schedule_drop_form.html -->
 <div class="modal-overlay hidden" id="dropScheduleModal">
     <div class="modal-container-small">
         <div class="modal-header">
@@ -14,7 +15,7 @@
             <input type="hidden" name="month" value="{{ month }}">
 
             <div class="modal-body-custom">
-                <!-- Tarjeta informativa del colaborador -->
+                <!-- Tarjeta del Funcionario -->
                 <div class="employee-card-badge mb-3">
                     <div class="employee-avatar-wrapper">
                         {% if employee.person.photo %}
@@ -30,16 +31,17 @@
                         <span class="employee-card-doc"><i
                                 class="fa-regular fa-id-card me-1"></i> {{ employee.person.document_number }}</span>
                         <div class="d-flex align-items-center gap-2 mt-1">
-                            <span class="badge badge-blue">Programado: {{ planned_so_far }}/30 días</span>
-{#                            <span class="badge badge-green">Disponible: {{ max_assignable }} días</span>#}
+                            <span class="badge badge-blue">Programado: {{ planned_so_far }}/{{ annual_cap }} días</span>
+                            <span class="badge badge-green">Disponible: {{ max_assignable }} días</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Campo directo: Días a solicitar -->
+                <!-- Input de Días a Solicitar -->
                 <div class="form-group mb-3">
-                    <label class="form-label">Días a solicitar para {{ month_name }}
-                        (Máximo {{ max_assignable }})</label>
+                    <label class="form-label font-bold text-dark">
+                        DÍAS A SOLICITAR PARA {{ month_name|upper }} (MÁXIMO {{ max_assignable }})
+                    </label>
                     <input type="number"
                            name="days_quantity"
                            id="id_days_quantity"
@@ -51,9 +53,8 @@
                     <span class="form-hint">Puede asignar hasta {{ max_assignable }} días restantes para completar el período anual.</span>
                 </div>
 
-                <!-- Campo de Observación -->
                 <div class="form-group">
-                    <label class="form-label">Observaciones</label>
+                    <label class="form-label font-bold text-dark">OBSERVACIONES</label>
                     <input type="text"
                            name="observation"
                            class="form-control"
@@ -63,7 +64,7 @@
 
             <div class="modal-footer">
                 <button type="button" class="btn-white-rectangle" onclick="closeModal()">Cancelar</button>
-                <button type="submit" class="btn-success"><i class="fa-solid fa-check"></i> Asignar Días</button>
+                <button type="submit" class="btn-success"><i class="fa-solid fa-check me-1"></i> Asignar Días</button>
             </div>
         </form>
     </div>

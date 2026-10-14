@@ -103,6 +103,26 @@ class AdministrativeUnit(BaseModel):
         null=True,
         verbose_name="Teléfono / Extensión"
     )
+    is_main_unit = models.BooleanField(
+        default=False,
+        verbose_name="Es Dependencia Principal",
+        help_text="Define si esta unidad actúa como cabecera/padre de planificación de cronogramas y reportes."
+    )
+
+    def get_scheduling_root_unit(self):
+        """
+        Asciende en el árbol jerárquico hasta encontrar la unidad padre
+        más cercana que tenga marcado 'is_main_unit=True'.
+        Si ninguna está marcada, asciende hasta la unidad raíz (parent=None).
+        """
+        current = self
+        while current:
+            if current.is_main_unit:
+                return current
+            if not current.parent:
+                return current
+            current = current.parent
+        return self
 
     class Meta:
         verbose_name = "Unidad Administrativa"

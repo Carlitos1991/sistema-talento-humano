@@ -77,4 +77,6 @@ urlpatterns = [
     path('schedule/sub-units/<int:parent_id>/', views.SubUnitsAjaxView.as_view(), name='schedule_sub_units_ajax'),
     path('schedule/<int:plan_id>/unit-report-pdf/', views.VacationScheduleUnitReportPDFView.as_view(),
          name='schedule_unit_report_pdf'),
+    path('schedule/<int:plan_id>/clear-month/<int:month>/', views.VacationScheduleClearMonthView.as_view(),
+         name='schedule_clear_month'),
 ]

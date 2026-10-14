@@ -31,7 +31,7 @@
                     </div>
                 {% endif %}
 
-                <div class="form-section-card">
+                <div class="form-section-card mb-3">
                     <div class="row g-3">
                         <div class="col-md-6 form-group">
                             <label class="form-label">
@@ -39,13 +39,15 @@
                             </label>
                             {{ form.code }}
                             {% if form.code.errors %}
-                                <div class="text-error">{{ form.code.errors.0 }}</div>{% endif %}
+                                <div class="text-error">{{ form.code.errors.0 }}</div>
+                            {% endif %}
                         </div>
                         <div class="col-md-6 form-group">
                             <label class="form-label">Nombre de la Unidad <span class="text-danger">*</span></label>
                             {{ form.name }}
                             {% if form.name.errors %}
-                                <div class="text-error">{{ form.name.errors.0 }}</div>{% endif %}
+                                <div class="text-error">{{ form.name.errors.0 }}</div>
+                            {% endif %}
                         </div>
                     </div>
                     <div class="row g-3">
@@ -59,6 +61,28 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- SWITCH: DEPENDENCIA PRINCIPAL -->
+                <div class="form-section-card py-2 px-3 border rounded bg-white">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="me-3">
+                            <label for="id_is_main_unit"
+                                   class="form-label font-bold text-dark mb-0 cursor-pointer d-flex align-items-center gap-2">
+                                <i class="fa-solid fa-sitemap text-primary"></i> Dependencia Principal Cabecera
+                            </label>
+                            <span class="small text-muted d-block mt-1">
+                                Si se activa, esta unidad agrupa la planificación del cronograma de vacaciones y reportes institucionales de ella y de todas sus subdependencias.
+                            </span>
+                        </div>
+                        <div class="form-check form-switch m-0">
+                            {{ form.is_main_unit }}
+                        </div>
+                    </div>
+                    {% if form.is_main_unit.errors %}
+                        <div class="text-error mt-1">{{ form.is_main_unit.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
             </div>
 
             <div class="modal-footer-medium modal-footer-spaced">

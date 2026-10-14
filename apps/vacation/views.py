@@ -1,12 +1,7 @@
+import calendar
 import datetime as dt
 from io import BytesIO
 
-from person.models import Person
-from .services import (
-    get_real_entry_date,
-    get_vacation_regime_info,
-    calculate_available_days_for_month
-)
 import openpyxl
 from dateutil.relativedelta import relativedelta
 from django.contrib import messages
@@ -14,7 +9,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMix
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db import IntegrityError, transaction
 from django.db.models import Prefetch
-from django.db.models import Q, F, Sum
+from django.db.models import Q, F
 from django.http import HttpResponse
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
@@ -33,9 +28,14 @@ from contract.models import ManagementPeriod
 from core.models import SystemConfiguration
 from institution.models import AdministrativeUnit
 from permitrequest.models import PermitType
+from person.models import Person
 from personnel_actions.models import PersonnelAction, ActionType
 from .forms import *
 from .models import *
+from .services import (
+    calculate_available_days_for_month
+)
+from .services import resolve_scheduling_hierarchy
 
 MONTH_NAMES = {
     1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril',
@@ -1458,30 +1458,13 @@ class VacationScheduleDetailView(LoginRequiredMixin, TemplateView, PermissionReq
         plan = get_object_or_404(VacationSchedulePlan, pk=self.kwargs['plan_id'])
         user = self.request.user
 
-        # 1. Resolver unidad administrativa y descendientes
-        user_employee = Employee.objects.filter(person__user=user, is_active=True).first()
-        base_unit = None
-        requested_unit_id = self.request.GET.get('unit_id')
-        if requested_unit_id and (user.is_staff or user.has_perm('vacation.change_vacationscheduleplan')):
-            base_unit = AdministrativeUnit.objects.filter(pk=requested_unit_id, is_active=True).first()
-        elif user_employee and user_employee.area:
-            base_unit = user_employee.area
+        # 1. Resolver unidad principal ascendente y todos sus descendientes
+        base_unit, unit_ids = resolve_scheduling_hierarchy(
+            user=user,
+            requested_unit_id=self.request.GET.get('unit_id')
+        )
 
-        if not base_unit:
-            base_unit = AdministrativeUnit.objects.filter(is_active=True, parent__isnull=True).first()
-
-        unit_ids = []
-        if base_unit:
-            unit_ids = [base_unit.id]
-            descendants = [base_unit]
-            while descendants:
-                curr = descendants.pop(0)
-                children = list(AdministrativeUnit.objects.filter(parent=curr, is_active=True))
-                for ch in children:
-                    unit_ids.append(ch.id)
-                    descendants.append(ch)
-
-        # 2. Exclusión estricta de Servicios Profesionales / Civiles / Honorarios
+        # 2. Filtrar todos los empleados que pertenecen a la unidad principal o sus hijas
         employees_qs = Employee.objects.filter(
             is_active=True,
             area_id__in=unit_ids
@@ -1505,11 +1488,6 @@ class VacationScheduleDetailView(LoginRequiredMixin, TemplateView, PermissionReq
         ).select_related('employee__person')
 
         # 3. Meses del año
-        month_names = {
-            1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril', 5: 'Mayo', 6: 'Junio',
-            7: 'Julio', 8: 'Agosto', 9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre'
-        }
-
         months_cards = []
         for m in range(1, 13):
             items_in_m = [it for it in scheduled_items if it.start_date.month == m]
@@ -1519,23 +1497,15 @@ class VacationScheduleDetailView(LoginRequiredMixin, TemplateView, PermissionReq
                 'items': items_in_m
             })
 
-        # 4. BANQUILLO con cálculo proporcional dinámico
+        # 4. Banquillo con cálculo proporcional
         employee_cards = []
         for emp in employees_qs:
-            # Evaluamos contra ENERO (mes 1) para saber su saldo inicial del cronograma
             allowed_days, ceiling, is_proportional, display_val = calculate_available_days_for_month(
                 emp, plan.year, 1
             )
-
             total_planned = sum(it.days_quantity for it in scheduled_items if it.employee_id == emp.id)
-
-            # Si es proporcional (ingreso reciente), mostramos el valor con '+' (ej: 17.5+)
-            if is_proportional:
-                display_max = f"{display_val}+"
-                max_assignable_plan = ceiling
-            else:
-                display_max = f"{allowed_days}"
-                max_assignable_plan = allowed_days
+            max_assignable_plan = ceiling if is_proportional else allowed_days
+            display_max = f"{display_val}+" if is_proportional else f"{allowed_days}"
 
             if total_planned < max_assignable_plan:
                 remaining = max_assignable_plan - total_planned
@@ -1549,89 +1519,99 @@ class VacationScheduleDetailView(LoginRequiredMixin, TemplateView, PermissionReq
                 })
 
         context['plan'] = plan
-        context['base_unit'] = base_unit
+        context['base_unit'] = base_unit  # Aquí llega la unidad principal resuelta
         context['employee_cards'] = employee_cards
         context['months_cards'] = months_cards
         return context
 
 
-class VacationScheduleDropModalView(LoginRequiredMixin, View):
+# vacation/views.py
+
+class VacationScheduleDropModalView(LoginRequiredMixin, PermissionRequiredMixin, View):
     template_name = 'vacation/modals/modal_schedule_drop_form.html'
+    permission_required = 'vacation.view_vacationscheduleplan'
 
     def get(self, request, plan_id, employee_id, month):
         plan = get_object_or_404(VacationSchedulePlan, pk=plan_id)
-        employee = get_object_or_404(Employee.objects.select_related('person', 'area'), pk=employee_id)
-
-        try:
-            m = int(month)
-        except (ValueError, TypeError):
-            m = 1
-
-        # Desempaquetado correcto de los 4 valores
-        allowed_until_month, total_annual, is_proportional, display_val = calculate_available_days_for_month(
-            employee, plan.year, m
+        employee = get_object_or_404(
+            Employee.objects.select_related('person', 'employment_status'),
+            pk=employee_id
         )
 
-        # Días ya programados en este plan
+        month_int = int(month)
+
+        # 1. Usar el servicio centralizado para calcular los días acumulados a ese mes específico
+        allowed_int, ceiling, is_proportional, display_val = calculate_available_days_for_month(
+            employee, plan.year, month_int
+        )
+        # Tope real al mes seleccionado (ej: 17 días para Enero si tenía 17.5)
+        annual_cap = allowed_int
+
+        # 2. Días que ya tiene programados en este plan anual
         planned_so_far = VacationScheduleItem.objects.filter(
             plan=plan,
             employee=employee
-        ).aggregate(s=Sum('days_quantity'))['s'] or 0
+        ).aggregate(total=Sum('days_quantity'))['total'] or 0
 
-        # Cupo real disponible para este mes
-        max_assignable = max(0, allowed_until_month - planned_so_far)
+        # 3. Cupo restante exacto para este mes
+        max_assignable = max(0, annual_cap - planned_so_far)
+
+        # Sugerir por defecto lo que quede o máximo 15 días
+        default_days = min(15, max_assignable) if max_assignable > 0 else 0
 
         context = {
             'plan': plan,
             'employee': employee,
-            'month': m,
-            'month_name': MONTH_NAMES.get(m, f'Mes {m}'),
+            'month': month_int,
+            'month_name': MONTH_NAMES.get(month_int, ''),
+            'annual_cap': annual_cap,
             'planned_so_far': planned_so_far,
             'max_assignable': max_assignable,
-            'allowed_until_month': allowed_until_month,
-            'display_val': display_val,
-            'is_proportional': is_proportional,
-            'default_days': min(15, max_assignable) if max_assignable > 0 else 0,
+            'default_days': default_days,
             'action_url': reverse('vacation:schedule_drop_save',
                                   kwargs={'plan_id': plan.id, 'employee_id': employee.id})
         }
         return render(request, self.template_name, context)
 
 
-class VacationScheduleDropSaveView(LoginRequiredMixin, View):
+# vacation/views.py
+
+class VacationScheduleDropSaveView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'vacation.view_vacationscheduleplan'
+
     def post(self, request, plan_id, employee_id):
         plan = get_object_or_404(VacationSchedulePlan, pk=plan_id)
-        employee = get_object_or_404(Employee, pk=employee_id)
+        employee = get_object_or_404(Employee.objects.select_related('employment_status'), pk=employee_id)
+
+        if plan.status == VacationSchedulePlan.PlanStatus.APPROVED:
+            return JsonResponse({
+                'status': 'error',
+                'success': False,
+                'message': 'El cronograma está Aprobado Oficialmente y no admite cambios.'
+            }, status=400)
 
         month_str = request.POST.get('month')
         days_str = request.POST.get('days_quantity')
         observation = request.POST.get('observation', '').strip()
 
-        if not month_str or not days_str:
-            return JsonResponse({
-                'status': 'error',
-                'success': False,
-                'message': 'Debe ingresar el número de días a programar.'
-            }, status=400)
-
         try:
             month = int(month_str)
             days_quantity = int(days_str)
         except (ValueError, TypeError):
-            return JsonResponse({
-                'status': 'error',
-                'success': False,
-                'message': 'Valores numéricos inválidos.'
-            }, status=400)
+            return JsonResponse({'status': 'error', 'success': False, 'message': 'Datos numéricos inválidos.'},
+                                status=400)
 
         if days_quantity < 1:
-            return JsonResponse({
-                'status': 'error',
-                'success': False,
-                'message': 'El número de días debe ser mayor a cero.'
-            }, status=400)
+            return JsonResponse({'status': 'error', 'success': False, 'message': 'Debe asignar al menos 1 día.'},
+                                status=400)
 
-        # 1. Validar que no tenga otra fracción en el mismo mes
+        # 1. Obtener el cupo calculado por services.py al mes seleccionado
+        allowed_int, ceiling, is_proportional, _ = calculate_available_days_for_month(
+            employee, plan.year, month
+        )
+        annual_cap = allowed_int
+
+        # 2. No permitir doble asignación en el mismo mes para el mismo funcionario
         already_in_month = VacationScheduleItem.objects.filter(
             plan=plan,
             employee=employee,
@@ -1642,40 +1622,28 @@ class VacationScheduleDropSaveView(LoginRequiredMixin, View):
             return JsonResponse({
                 'status': 'error',
                 'success': False,
-                'message': 'El colaborador ya tiene una fracción de vacaciones asignada en este mes.'
+                'message': 'El funcionario ya cuenta con una fracción asignada en este mes.'
             }, status=400)
 
-        # 2. Desempaquetado correcto de los 4 valores
-        allowed_until_month, _, is_proportional, display_val = calculate_available_days_for_month(
-            employee, plan.year, month
-        )
-
+        # 3. Control estricto de cupo
         planned_so_far = VacationScheduleItem.objects.filter(
             plan=plan,
             employee=employee
-        ).aggregate(s=Sum('days_quantity'))['s'] or 0
+        ).aggregate(total=Sum('days_quantity'))['total'] or 0
 
-        disponible_este_mes = allowed_until_month - planned_so_far
-        m_name = MONTH_NAMES.get(month, f'Mes {month}')
+        disponible = max(0, annual_cap - planned_so_far)
 
-        if days_quantity > disponible_este_mes:
+        if days_quantity > disponible:
             return JsonResponse({
                 'status': 'error',
                 'success': False,
-                'message': (
-                    f'No puede programar {days_quantity} días en {m_name}. '
-                    f'Hasta este mes acumula un límite de {allowed_until_month} días '
-                    f'y ya tiene programados {planned_so_far} días. '
-                    f'Cupo disponible para {m_name}: {max(0, disponible_este_mes)} días.'
-                )
+                'message': f'Excede el límite asignable para {MONTH_NAMES.get(month, "")}. Límite calculado a este mes: {annual_cap} días. Días disponibles: {disponible}.'
             }, status=400)
 
-        # 3. Guardar la fracción
-        import calendar
-        max_day_in_month = calendar.monthrange(plan.year, month)[1]
+        # 4. Fechas de referencia y guardado
+        max_day = calendar.monthrange(plan.year, month)[1]
         start_date = dt.date(plan.year, month, 1)
-        calculated_end_day = min(days_quantity, max_day_in_month)
-        end_date = dt.date(plan.year, month, calculated_end_day)
+        end_date = dt.date(plan.year, month, min(days_quantity, max_day))
 
         VacationScheduleItem.objects.create(
             plan=plan,
@@ -1684,14 +1652,14 @@ class VacationScheduleDropSaveView(LoginRequiredMixin, View):
             end_date=end_date,
             days_quantity=days_quantity,
             status=VacationScheduleItem.ItemStatus.PROPOSED,
-            observation=observation or f'{days_quantity} días programados para {m_name}',
+            observation=observation or f'{days_quantity} días programados para {MONTH_NAMES.get(month, "")}',
             created_by=request.user
         )
 
         return JsonResponse({
             'status': 'success',
             'success': True,
-            'message': f'Se programaron {days_quantity} días en {m_name} exitosamente.'
+            'message': f'Se programaron {days_quantity} días en {MONTH_NAMES.get(month, "")} exitosamente.'
         })
 
 
@@ -1785,39 +1753,33 @@ class VacationSchedulePlanToggleStatusView(LoginRequiredMixin, PermissionRequire
 
 class VacationScheduleExcelExportView(LoginRequiredMixin, View):
     """
-    Genera el reporte en Excel (.xlsx) con estilos corporativos del cronograma.
+    Genera el reporte en Excel (.xlsx) con estilos corporativos del cronograma
+    respetando la dependencia principal cabecera y sus firmas institucionales.
     """
 
     def get(self, request, plan_id):
         plan = get_object_or_404(VacationSchedulePlan, pk=plan_id)
-        unit_id = request.GET.get('unit_id')
 
-        # 1. Determinar dependencias a filtrar
-        base_unit = None
-        if unit_id:
-            base_unit = AdministrativeUnit.objects.filter(pk=unit_id, is_active=True).first()
-        else:
-            user_emp = Employee.objects.filter(person__user=request.user, is_active=True).first()
-            if user_emp and user_emp.area:
-                base_unit = user_emp.area
+        # 1. Resolver unidad principal cabecera (is_main_unit) y todas sus subdependencias
+        base_unit, unit_ids = resolve_scheduling_hierarchy(
+            user=request.user,
+            requested_unit_id=request.GET.get('unit_id')
+        )
 
-        unit_ids = []
-        if base_unit:
-            unit_ids = [base_unit.id]
-            descendants = [base_unit]
-            while descendants:
-                current = descendants.pop(0)
-                children = list(AdministrativeUnit.objects.filter(parent=current, is_active=True))
-                for child in children:
-                    unit_ids.append(child.id)
-                    descendants.append(child)
+        # 2. Filtrar empleados de la unidad principal y sus hijas (excluyendo servicios profesionales)
+        active_contract_prefetch = Prefetch(
+            'management_periods',
+            queryset=ManagementPeriod.objects.filter(
+                status__code='ACTIVO'
+            ).select_related('contract_type__labor_regime'),
+            to_attr='active_contracts'
+        )
 
-        # 2. Obtener empleados y sus asignaciones (incluyendo institutional_data)
-        emp_filter = {'is_active': True}
+        employees_qs = Employee.objects.filter(is_active=True)
         if unit_ids:
-            emp_filter['area_id__in'] = unit_ids
+            employees_qs = employees_qs.filter(area_id__in=unit_ids)
 
-        employees = Employee.objects.filter(**emp_filter).exclude(
+        employees = employees_qs.exclude(
             employment_status__code__icontains='SERVICIOS_PROFESIONALES'
         ).exclude(
             employment_status__name__icontains='SERVICIOS PROFESIONALES'
@@ -1826,6 +1788,8 @@ class VacationScheduleExcelExportView(LoginRequiredMixin, View):
             'employment_status',
             'area',
             'institutional_data'
+        ).prefetch_related(
+            active_contract_prefetch
         ).order_by('person__last_name', 'person__first_name')
 
         scheduled_items = VacationScheduleItem.objects.filter(
@@ -1845,7 +1809,7 @@ class VacationScheduleExcelExportView(LoginRequiredMixin, View):
         ws.title = f"Cronograma {plan.year}"
         ws.views.sheetView[0].showGridLines = True
 
-        # Paleta institucional
+        # Paleta de estilos corporativos
         header_fill = PatternFill(start_color="203C7D", end_color="203C7D", fill_type="solid")
         header_font = Font(name="Arial", size=10, bold=True, color="FFFFFF")
         title_font = Font(name="Arial", size=12, bold=True, color="1E293B")
@@ -1869,7 +1833,7 @@ class VacationScheduleExcelExportView(LoginRequiredMixin, View):
 
         ws.merge_cells("A2:G2")
         ws[
-            "A2"] = f"Dependencia: {base_unit.name if base_unit else 'Todas las dependencias'} | Fecha de emisión: {dt.date.today().strftime('%d/%m/%Y')}"
+            "A2"] = f"Dependencia Principal: {base_unit.name if base_unit else 'Todas las dependencias'} | Fecha de emisión: {dt.date.today().strftime('%d/%m/%Y')}"
         ws["A2"].font = sub_font
         ws["A2"].alignment = left_align
 
@@ -1877,10 +1841,10 @@ class VacationScheduleExcelExportView(LoginRequiredMixin, View):
         ws.row_dimensions[2].height = 18
         ws.row_dimensions[4].height = 26
 
-        # Cabecera de la tabla (7 columnas exactas)
+        # Cabecera de la tabla
         headers = [
             "N°", "CÉDULA", "APELLIDOS Y NOMBRES", "FECHA INGRESO",
-            "RÉGIMEN / CARGO", "MESES PROGRAMADOS", "TOTAL DÍAS"
+            "RÉGIMEN / TIPO", "MESES PROGRAMADOS", "TOTAL DÍAS"
         ]
 
         for col_idx, h in enumerate(headers, start=1):
@@ -1889,7 +1853,7 @@ class VacationScheduleExcelExportView(LoginRequiredMixin, View):
             cell.font = header_font
             cell.alignment = center_align
 
-        # Llenar datos secuenciales
+        # Llenar registros
         current_row = 5
         secuencial = 1
 
@@ -1898,20 +1862,33 @@ class VacationScheduleExcelExportView(LoginRequiredMixin, View):
             if not items:
                 continue
 
-            # Obtención segura de fecha de ingreso del expediente institucional
             inst_data = getattr(emp, 'institutional_data', None)
             fecha_ingreso = inst_data.entry_date.strftime('%d/%m/%Y') if (inst_data and inst_data.entry_date) else '-'
 
-            # Formatear meses asignados ej: "Enero (15d), Marzo (15d)"
+            # Apellidos y Nombres en orden correcto
+            apellidos_nombres = f"{emp.person.last_name} {emp.person.first_name}".strip()
+
+            # Régimen / Tipo
+            active_contract = emp.active_contracts[0] if getattr(emp, 'active_contracts', None) else None
+            regimen_nombre = "LOSEP"
+            if active_contract and active_contract.contract_type and active_contract.contract_type.labor_regime:
+                regimen_nombre = active_contract.contract_type.labor_regime.name or active_contract.contract_type.labor_regime.code
+
+            status_text = (emp.employment_status.name or '') if emp.employment_status else ''
+            tipo_display = "TRABAJADOR" if any(
+                k in status_text.upper() for k in ['TRABAJADOR', 'OBRERO', 'CODIGO']) else "EMPLEADO"
+            regimen_tipo = f"{regimen_nombre} / {tipo_display}"
+
+            # Meses programados
             meses_str = ", ".join([f"{month_names.get(it.start_date.month, '')} ({it.days_quantity}d)" for it in items])
             total_dias = sum(it.days_quantity for it in items)
 
             row_data = [
                 secuencial,
                 emp.person.document_number,
-                emp.person.full_name,
+                apellidos_nombres,
                 fecha_ingreso,
-                emp.employment_status.name if emp.employment_status else "General",
+                regimen_tipo,
                 meses_str,
                 f"{total_dias} días"
             ]
@@ -1921,7 +1898,6 @@ class VacationScheduleExcelExportView(LoginRequiredMixin, View):
                 cell.font = regular_font
                 cell.border = thin_border
 
-                # Columna 1 (N°), Columna 2 (Cédula), Columna 4 (Fecha Ingreso) y Columna 7 (Total Días) van centradas
                 if col_idx in [1, 2, 4, 7]:
                     cell.alignment = center_align
                     if col_idx == 7:
@@ -1933,55 +1909,78 @@ class VacationScheduleExcelExportView(LoginRequiredMixin, View):
             current_row += 1
             secuencial += 1
 
-        # Anchos proporcionales para las 7 columnas
+        # Bloque de Firmas Institucionales (Elaborado por y Autorizado por)
+        current_row += 2
+        sig_header_row = current_row
+        ws.cell(row=sig_header_row, column=2, value="ELABORADO POR:").font = bold_font
+        ws.cell(row=sig_header_row, column=5, value="AUTORIZADO POR:").font = bold_font
+        ws.cell(row=sig_header_row, column=2).alignment = center_align
+        ws.cell(row=sig_header_row, column=5).alignment = center_align
+
+        # Espacio para firmas y nombres
+        sig_name_row = current_row + 4
+        elaborado_nombre = request.user.signature_name
+        elaborado_cargo = request.user.signature_position or "Funcionario Responsable"
+
+        autorizado_nombre = "SIN ASIGNAR"
+        autorizado_cargo = "Responsable de Dependencia"
+        if base_unit and base_unit.boss and base_unit.boss.person:
+            boss_user = getattr(base_unit.boss.person, 'user', None)
+            if boss_user:
+                autorizado_nombre = boss_user.signature_name
+                autorizado_cargo = boss_user.signature_position or f"Jefe / Responsable de {base_unit.name}"
+            else:
+                autorizado_nombre = base_unit.boss.person.full_name.upper()
+                autorizado_cargo = f"Responsable de {base_unit.name}"
+
+        # Nombres y Cargos de los firmantes
+        ws.cell(row=sig_name_row, column=2, value=elaborado_nombre).font = bold_font
+        ws.cell(row=sig_name_row + 1, column=2, value=elaborado_cargo).font = regular_font
+        ws.cell(row=sig_name_row, column=2).alignment = center_align
+        ws.cell(row=sig_name_row + 1, column=2).alignment = center_align
+
+        ws.cell(row=sig_name_row, column=5, value=autorizado_nombre).font = bold_font
+        ws.cell(row=sig_name_row + 1, column=5, value=autorizado_cargo).font = regular_font
+        ws.cell(row=sig_name_row, column=5).alignment = center_align
+        ws.cell(row=sig_name_row + 1, column=5).alignment = center_align
+
+        # Anchos de columna proporcionales
         column_widths = [6, 15, 38, 16, 26, 36, 14]
         for idx, width in enumerate(column_widths, start=1):
             ws.column_dimensions[get_column_letter(idx)].width = width
 
-        # Respuesta binaria
+        # Descarga
         buffer = BytesIO()
         wb.save(buffer)
         buffer.seek(0)
 
+        unit_filename = base_unit.name.replace(' ', '_') if base_unit else 'General'
         response = HttpResponse(
             buffer.getvalue(),
             content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
-        response["Content-Disposition"] = f'attachment; filename="Cronograma_Vacaciones_{plan.year}.xlsx"'
+        response[
+            "Content-Disposition"] = f'attachment; filename="Cronograma_Vacaciones_{unit_filename}_{plan.year}.xlsx"'
         return response
 
 
+# vacation/views.py
+
 class VacationSchedulePdfExportView(LoginRequiredMixin, View):
     """
-    Genera el reporte formal en PDF vertical (Portrait) con hoja membretada,
-    régimen contractual, orden apellidos-nombres y firmas personalizadas.
+    Genera el reporte en PDF vertical con la dependencia principal resuelta y su jefe firmante.
     """
 
     def get(self, request, plan_id):
         plan = get_object_or_404(VacationSchedulePlan, pk=plan_id)
-        unit_id = request.GET.get('unit_id')
 
-        # 1. Resolver jerarquía de unidades
-        base_unit = None
-        if unit_id:
-            base_unit = AdministrativeUnit.objects.filter(pk=unit_id, is_active=True).first()
-        else:
-            user_emp = Employee.objects.filter(person__user=request.user, is_active=True).first()
-            if user_emp and user_emp.area:
-                base_unit = user_emp.area
+        # 1. Resolver unidad principal
+        base_unit, unit_ids = resolve_scheduling_hierarchy(
+            user=request.user,
+            requested_unit_id=request.GET.get('unit_id')
+        )
 
-        unit_ids = []
-        if base_unit:
-            unit_ids = [base_unit.id]
-            descendants = [base_unit]
-            while descendants:
-                current = descendants.pop(0)
-                children = list(AdministrativeUnit.objects.filter(parent=current, is_active=True))
-                for child in children:
-                    unit_ids.append(child.id)
-                    descendants.append(child)
-
-        # 2. Queryset seguro con institutional_data y contrato vigente
+        # 2. Empleados de toda la unidad principal y sus hijas
         active_contract_prefetch = Prefetch(
             'management_periods',
             queryset=ManagementPeriod.objects.filter(
@@ -1990,11 +1989,10 @@ class VacationSchedulePdfExportView(LoginRequiredMixin, View):
             to_attr='active_contracts'
         )
 
-        employees_qs = Employee.objects.filter(is_active=True)
-        if unit_ids:
-            employees_qs = employees_qs.filter(area_id__in=unit_ids)
-
-        employees = employees_qs.exclude(
+        employees_qs = Employee.objects.filter(
+            is_active=True,
+            area_id__in=unit_ids
+        ).exclude(
             employment_status__code__icontains='SERVICIOS_PROFESIONALES'
         ).exclude(
             employment_status__name__icontains='SERVICIOS PROFESIONALES'
@@ -2006,70 +2004,58 @@ class VacationSchedulePdfExportView(LoginRequiredMixin, View):
             active_contract_prefetch
         ).order_by('person__last_name', 'person__first_name')
 
-        # 3. Asignaciones del plan
         scheduled_items = VacationScheduleItem.objects.filter(
             plan=plan,
-            employee__in=employees
+            employee__in=employees_qs
         ).select_related('employee__person')
 
-        full_month_names = {
-            1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril',
-            5: 'Mayo', 6: 'Junio', 7: 'Julio', 8: 'Agosto',
-            9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre'
-        }
-
-        # 4. Estructurar filas de reporte
+        # 3. Filas del reporte
         report_rows = []
         secuencial = 1
-        for emp in employees:
+        for emp in employees_qs:
             items = [it for it in scheduled_items if it.employee_id == emp.id]
             if not items:
                 continue
 
-            meses_str = ", ".join(
-                [f"{full_month_names.get(it.start_date.month, '')} ({it.days_quantity}d)" for it in items]
-            )
+            meses_str = ", ".join([f"{MONTH_NAMES.get(it.start_date.month, '')} ({it.days_quantity}d)" for it in items])
             total_dias = sum(it.days_quantity for it in items)
             apellidos_nombres = f"{emp.person.last_name} {emp.person.first_name}".strip()
 
-            # Determinar si es EMPLEADO o TRABAJADOR
-            status_text = (
-                (emp.employment_status.name or emp.employment_status.code or '')
-                if emp.employment_status else ''
-            ).upper()
+            status_text = (emp.employment_status.name or '') if emp.employment_status else ''
+            tipo_display = "TRABAJADOR" if any(
+                k in status_text.upper() for k in ['TRABAJADOR', 'OBRERO', 'CODIGO']) else "EMPLEADO"
 
-            if any(k in status_text for k in ['TRABAJADOR', 'OBRERO', 'CODIGO_TRABAJO', 'CÓDIGO', 'CT']):
-                tipo_display = "TRABAJADOR"
-            else:
-                tipo_display = "EMPLEADO"
+            inst_data = getattr(emp, 'institutional_data', None)
+            fecha_ingreso = inst_data.entry_date.strftime('%d/%m/%Y') if (inst_data and inst_data.entry_date) else '-'
+
+            # Régimen del contrato
+            active_contract = emp.active_contracts[0] if getattr(emp, 'active_contracts', None) else None
+            regimen_nombre = "LOSEP"
+            if active_contract and active_contract.contract_type and active_contract.contract_type.labor_regime:
+                regimen_nombre = active_contract.contract_type.labor_regime.name or active_contract.contract_type.labor_regime.code
+            regimen_tipo = f"{regimen_nombre} / {tipo_display}"
 
             report_rows.append({
                 'secuencial': secuencial,
                 'cedula': emp.person.document_number,
                 'apellidos_nombres': apellidos_nombres,
-                'tipo': tipo_display,
+                'fecha_ingreso': fecha_ingreso,
+                'regimen_tipo': regimen_tipo,
                 'meses': meses_str,
                 'total_dias': total_dias,
             })
             secuencial += 1
 
-        # 5. Obtener hoja membretada activa
         sys_config = SystemConfiguration.get_current()
-        letterhead_path = None
-        if sys_config and sys_config.letterhead:
-            try:
-                letterhead_path = sys_config.letterhead.path
-            except Exception:
-                letterhead_path = None
+        letterhead_path = sys_config.letterhead.path if sys_config and sys_config.letterhead else None
 
-        # 6. Datos de firmas (Elaborado y Autorizado)
-        # Elaborado: Usuario actual logueado con sus datos personalizados
+        # 4. Autoridades Firmantes
         elaborado_nombre = request.user.signature_name
         elaborado_cargo = request.user.signature_position or "Funcionario Responsable"
 
-        # Autorizado: Jefe de la unidad administrativa
+        # AUTORIZADO POR: Siempre el jefe de la base_unit resuelta (unidad principal)
         autorizado_nombre = "SIN ASIGNAR"
-        autorizado_cargo = "Responsable de Unidad"
+        autorizado_cargo = "Responsable de Dependencia"
         if base_unit and base_unit.boss and base_unit.boss.person:
             boss_user = getattr(base_unit.boss.person, 'user', None)
             if boss_user:
@@ -2098,7 +2084,8 @@ class VacationSchedulePdfExportView(LoginRequiredMixin, View):
         pdf = pisa.pisaDocument(BytesIO(html.encode("UTF-8")), buffer, encoding='UTF-8')
         if not pdf.err:
             response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
-            response['Content-Disposition'] = f'inline; filename="Cronograma_Vacaciones_{plan.year}.pdf"'
+            response[
+                'Content-Disposition'] = f'inline; filename="Cronograma_Vacaciones_{base_unit.name}_{plan.year}.pdf"'
             return response
 
         return HttpResponse('Error al generar el reporte PDF', status=500)
@@ -2594,3 +2581,69 @@ class VacationScheduleUnitReportPDFView(LoginRequiredMixin, View):
                 'Content-Disposition'] = f'inline; filename="Comprobacion_Vacaciones_{target_unit.id}_{plan.year}.pdf"'
             return response
         return HttpResponse('Error al generar PDF', status=500)
+
+
+class VacationScheduleClearMonthView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """
+    Elimina todas las asignaciones planificadas en un mes específico para la dependencia activa.
+    """
+    permission_required = 'vacation.view_vacationscheduleplan'
+
+    def post(self, request, plan_id, month):
+        plan = get_object_or_404(VacationSchedulePlan, pk=plan_id)
+
+        # Si el cronograma ya fue aprobado oficialmente, está bloqueado
+        if plan.status == VacationSchedulePlan.PlanStatus.APPROVED:
+            return JsonResponse({
+                'status': 'error',
+                'success': False,
+                'message': 'No se pueden eliminar planificaciones en un cronograma Aprobado Oficialmente.'
+            }, status=400)
+
+        unit_id = request.GET.get('unit_id')
+        user = request.user
+        base_unit = None
+
+        if unit_id and (user.is_staff or user.has_perm('vacation.change_vacationscheduleplan')):
+            base_unit = AdministrativeUnit.objects.filter(pk=unit_id, is_active=True).first()
+        else:
+            user_emp = Employee.objects.filter(person__user=user, is_active=True).first()
+            if user_emp and user_emp.area:
+                base_unit = user_emp.area
+
+        if not base_unit:
+            base_unit = AdministrativeUnit.objects.filter(is_active=True, parent__isnull=True).first()
+
+        unit_ids = []
+        if base_unit:
+            unit_ids = [base_unit.id]
+            descendants = [base_unit]
+            while descendants:
+                curr = descendants.pop(0)
+                children = list(AdministrativeUnit.objects.filter(parent=curr, is_active=True))
+                for child in children:
+                    unit_ids.append(child.id)
+                    descendants.append(child)
+
+        month_int = int(month)
+
+        # Filtrar y eliminar solo los items de este mes y de esta dependencia
+        items_to_delete = VacationScheduleItem.objects.filter(
+            plan=plan,
+            start_date__month=month_int,
+            employee__area_id__in=unit_ids
+        )
+        total_deleted = items_to_delete.count()
+        items_to_delete.delete()
+
+        month_names = {
+            1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril',
+            5: 'Mayo', 6: 'Junio', 7: 'Julio', 8: 'Agosto',
+            9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre'
+        }
+
+        return JsonResponse({
+            'status': 'success',
+            'success': True,
+            'message': f'Se vació la planificación de {month_names.get(month_int, "")}. Se liberaron {total_deleted} registros.'
+        })

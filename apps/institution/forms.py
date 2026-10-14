@@ -22,7 +22,7 @@ from .models import (
 class AdministrativeUnitForm(BaseFormMixin, forms.ModelForm):
     """
     Formulario para creación y actualización de unidades administrativas.
-    Incluye validación de código único y control de jerarquía de niveles.
+    Incluye validación de código único, control de jerarquía y dependencia principal.
     """
 
     class Meta:
@@ -35,6 +35,7 @@ class AdministrativeUnitForm(BaseFormMixin, forms.ModelForm):
             'code',
             'address',
             'phone',
+            'is_main_unit',  # <-- NUEVO CAMPO
             'is_active'
         ]
         widgets = {
@@ -56,6 +57,10 @@ class AdministrativeUnitForm(BaseFormMixin, forms.ModelForm):
                 'class': 'input-field',
                 'placeholder': 'Extensión'
             }),
+            'is_main_unit': forms.CheckboxInput(attrs={
+                'class': 'custom-switch-input',
+                'id': 'id_is_main_unit'
+            }),
             'level': forms.HiddenInput(),
             'parent': forms.HiddenInput(),
             'boss': forms.HiddenInput(),
@@ -63,15 +68,16 @@ class AdministrativeUnitForm(BaseFormMixin, forms.ModelForm):
         }
         labels = {
             'name': 'Nombre de la Unidad',
-            'code': 'Código / Partida (Único)'
+            'code': 'Código / Partida (Único)',
+            'is_main_unit': '¿Es Dependencia Principal?'
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Los campos jerárquicos y de jefatura se gestionan mediante modales contextuales
         self.fields['boss'].required = False
         self.fields['parent'].required = False
         self.fields['level'].required = False
+        self.fields['is_main_unit'].required = False  # <-- Booleano opcional
 
     def clean_code(self):
         """Valida que el código no esté repetido entre unidades activas."""

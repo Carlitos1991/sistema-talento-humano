@@ -4,7 +4,7 @@ from datetime import date
 from decimal import Decimal
 
 from dateutil.relativedelta import relativedelta
-
+from institution.models import AdministrativeUnit
 from contract.models import ManagementPeriod
 
 
@@ -169,46 +169,104 @@ def get_vacation_regime_info(employee):
 def calculate_available_days_for_month(employee, plan_year, target_month):
     """
     Calcula los días acumulados disponibles para tomar al 1ro del mes evaluado.
-    Ej: Ingreso 01/06/2026. Plan 2027.
-    - Enero 2027: 7 meses cumplidos = 7 * 2.5 = 17.5 días disponibles.
-    - Febrero 2027: 8 meses cumplidos = 8 * 2.5 = 20.0 días disponibles.
-    - Marzo 2027: 9 meses cumplidos = 9 * 2.5 = 22.5 días disponibles.
+    Tope estricto:
+      - LOSEP / Empleado: Máximo 30 días.
+      - Código del Trabajo / Obrero: Máximo 15 días base + 1 día extra por año
+        a partir del 6to año de servicio (5 años cumplidos), tope 30 días.
     """
     entry_date = get_real_entry_date(employee)
     is_ct, base_annual, monthly_factor = get_vacation_regime_info(employee)
 
+    # 1. Determinar el techo anual máximo legal que puede alcanzar en este año de plan
+    ceiling_days = 30
+    eval_date = date(int(plan_year), int(target_month), 1)
+
     if not entry_date:
         return base_annual, base_annual, False, f"{base_annual}"
 
-    eval_date = date(int(plan_year), int(target_month), 1)
-
+    # Si la fecha de evaluación es anterior a la fecha de ingreso
     if entry_date >= eval_date:
         return 0, base_annual, True, "0"
 
-    diff = relativedelta(eval_date, entry_date)
-    total_months_worked = diff.years * 12 + diff.months
+    # Calcular años cumplidos al año del plan para obreros (Código del Trabajo)
+    if is_ct:
+        # Años cumplidos respecto al 31 de diciembre del año del cronograma
+        plan_end = date(int(plan_year), 12, 31)
+        years_completed = relativedelta(plan_end, entry_date).years
+        bonus = max(0, years_completed - 4) if years_completed >= 5 else 0
+        ceiling_days = min(15 + bonus, 30)
+    else:
+        ceiling_days = 30
 
-    # Si ya tenía más de 1 año cumplido ANTES de iniciar el año del plan (ej. ingreso en 2025 o antes):
-    # Ya tiene su derecho pleno anual completo (30 o 15+)
+    # 2. Si ya tenía más de 1 año cumplido antes de arrancar el año del plan:
     plan_start = date(int(plan_year), 1, 1)
     diff_at_start = relativedelta(plan_start, entry_date)
 
     if diff_at_start.years >= 1:
-        if is_ct:
-            bonus = max(0, diff_at_start.years - 5) if diff_at_start.years >= 5 else 0
-            full_ct = min(15 + bonus, 30)
-            return full_ct, full_ct, False, f"{full_ct}"
-        return 30, 30, False, "30"
+        return ceiling_days, ceiling_days, False, f"{ceiling_days}"
 
-    # CASO PROPORCIONAL (Entró en el año previo o en el año en curso):
-    # Meses cumplidos a la fecha solicitada * factor mensual
-    accrued = total_months_worked * monthly_factor
+    # 3. CASO PROPORCIONAL (Ingresó en el año previo o año en curso):
+    diff = relativedelta(eval_date, entry_date)
+    total_months_worked = diff.years * 12 + diff.months
 
-    # Formato visual: si tiene .5 muestra 17.5, si es entero muestra 20
+    # Multiplicar meses por factor mensual
+    raw_accrued = total_months_worked * monthly_factor
+
+    # TOPE MÁXIMO ESTRICTO: Nunca puede superar el techo anual (30 o 15+bonus)
+    accrued = min(raw_accrued, float(ceiling_days))
+
+    # Formatear valor visual (si es entero muestra 30, si tiene decimal muestra 17.5)
     if accrued % 1 == 0:
         display_val = f"{int(accrued)}"
     else:
         display_val = f"{accrued:.1f}"
 
     allowed_int = math.floor(accrued)
-    return allowed_int, base_annual, True, display_val
+
+    # Si ya topó el techo máximo legal, deja de ser proporcional con '+'
+    is_proportional = (allowed_int < ceiling_days)
+
+    return allowed_int, ceiling_days, is_proportional, display_val
+
+
+def resolve_scheduling_hierarchy(user, requested_unit_id=None):
+    """
+    Determina la unidad principal de planificación y todos sus descendientes.
+    1. Si un administrador solicita un 'unit_id', lo respeta.
+    2. Si es un usuario regular (secretaria/jefatura), busca su unidad y
+       asciende hasta la dependencia que tenga is_main_unit=True.
+    3. Retorna la unidad principal y la lista completa de IDs (ella + todas sus hijas).
+    """
+    base_unit = None
+
+    if requested_unit_id and (user.is_staff or user.has_perm('vacation.change_vacationscheduleplan')):
+        base_unit = AdministrativeUnit.objects.filter(pk=requested_unit_id, is_active=True).first()
+    else:
+        user_emp = getattr(user, 'person', None)
+        user_emp = getattr(user_emp, 'employee_profile', None) if user_emp else None
+
+        if user_emp and user_emp.area:
+            # Ascender hasta la dependencia marcada como principal
+            base_unit = user_emp.area.get_scheduling_root_unit()
+
+    if not base_unit:
+        # Fallback a la primera unidad principal del sistema o raíz
+        base_unit = AdministrativeUnit.objects.filter(
+            is_active=True, is_main_unit=True
+        ).first() or AdministrativeUnit.objects.filter(
+            is_active=True, parent__isnull=True
+        ).first()
+
+    # Obtener la unidad principal y todas sus subdependencias recursivamente
+    unit_ids = []
+    if base_unit:
+        unit_ids = [base_unit.id]
+        descendants = [base_unit]
+        while descendants:
+            curr = descendants.pop(0)
+            children = list(AdministrativeUnit.objects.filter(parent=curr, is_active=True))
+            for child in children:
+                unit_ids.append(child.id)
+                descendants.append(child)
+
+    return base_unit, unit_ids

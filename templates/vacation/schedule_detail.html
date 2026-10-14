@@ -16,8 +16,7 @@
                 Dependencia: <strong>{{ base_unit.name|default:"General" }}</strong> •
                 Estado: <strong>{{ plan.get_status_display }}</strong>
                 {% if plan.status == 'APPROVED' %}
-                    <span class="badge badge-emerald ms-2"><i
-                            class="fa-solid fa-lock me-1"></i> Aprobado Oficialmente</span>
+                    <span class="badge badge-emerald ms-2"><i class="fa-solid fa-lock me-1"></i> Aprobado Oficialmente</span>
                 {% endif %}
             </p>
         </div>
@@ -27,14 +26,15 @@
             </a>
         </div>
     </div>
+
     <!-- Banquillo de Miniaturas Arrastrables -->
     {% if plan.status != 'APPROVED' %}
         <div class="drag-bench-container">
             <div class="drag-bench-header-layout">
                 <div>
-            <span class="label-muted">
-                <i class="fa-solid fa-users me-1 text-primary"></i> Personal con Días Pendientes
-            </span>
+                    <span class="label-muted">
+                        <i class="fa-solid fa-users me-1 text-primary"></i> Personal con Días Pendientes
+                    </span>
                 </div>
 
                 <!-- Buscador Central en Tiempo Real -->
@@ -46,9 +46,9 @@
                 </div>
 
                 <div>
-            <span class="small text-muted" id="benchCounter">
-                Mostrando {{ employee_cards|length }} servidores y trabajadores
-            </span>
+                    <span class="small text-muted" id="benchCounter">
+                        Mostrando {{ employee_cards|length }} servidores y trabajadores
+                    </span>
                 </div>
             </div>
 
@@ -92,47 +92,58 @@
             <span>Este cronograma se encuentra <strong>Aprobado Oficialmente</strong>. La planificación ha sido cerrada y se encuentra en modo solo lectura.</span>
         </div>
     {% endif %}
-    <!-- 12 Tarjetas Mensuales-->
+
+    <!-- 12 Tarjetas Mensuales -->
     <div class="months-grid-6-cols">
         {% for m in months_cards %}
             <div class="month-dropzone-card" data-month-number="{{ m.number }}">
-                <div class="month-card-header">
-                    <span class="month-title">{{ m.name }}</span>
-                    <span class="month-count-badge">{{ m.items|length }}</span>
+                <!-- Header con Título, Contador y Botón Basurero -->
+                <div class="month-card-header d-flex align-items-center justify-content-between">
+                    <span class="month-title">{{ m.name|upper }}</span>
+
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="month-count-badge">{{ m.items|length }}</span>
+
+                        <!-- Botón de Basurero sin saltos de línea en el onclick -->
+                        {% if plan.status != 'APPROVED' and m.items|length > 0 %}
+                            <button type="button"
+                                    class="btn-trash-month"
+                                    title="Vaciar toda la planificación de {{ m.name }}"
+                                    onclick="event.stopPropagation(); event.preventDefault(); clearMonthScheduleAjax('{% url 'vacation:schedule_clear_month' plan.id m.number %}{% if base_unit %}?unit_id={{ base_unit.id }}{% endif %}', '{{ m.name }}', {{ m.items|length }});">
+                                <i class="fa-regular fa-trash-can" style="pointer-events: none;"></i>
+                            </button>
+                        {% endif %}
+                    </div>
                 </div>
 
                 <div class="month-card-body" id="dropzone-month-{{ m.number }}">
                     {% for it in m.items %}
                         <div class="assigned-schedule-card-compact"
-                             title="{{ it.employee.person.full_name }} - {{ it.days_quantity }} días ({{ it.observation|default:'Sin observación' }})">
-                            <!-- Fila 1: Avatar, Nombre Truncado y Botón Eliminar Fijo -->
+                             title="{{ it.employee.person.full_name }} - {{ it.days_quantity }} días">
                             <div class="assigned-card-top">
                                 <div class="assigned-user-info">
                                     {% if it.employee.person.photo %}
-                                        <img src="{{ it.employee.person.photo.url }}" class="assigned-avatar-mini"
-                                             alt="Foto">
+                                        <img src="{{ it.employee.person.photo.url }}" class="assigned-avatar-mini" alt="Foto">
                                     {% else %}
                                         <div class="assigned-avatar-mini-placeholder">
                                             {{ it.employee.person.first_name|first }}{{ it.employee.person.last_name|first }}
                                         </div>
                                     {% endif %}
-                                    <span class="assigned-name-truncate">{{ it.employee.person.first_name }} {{ it.employee.person.last_name }}</span>
+                                    <span class="assigned-name-truncate">{{ it.employee.person.last_name }} {{ it.employee.person.first_name }}</span>
                                 </div>
 
-                                <!-- Botón Eliminar visible y accesible -->
-                                {% if it and plan.status != 'APPROVED' %}
+                                {% if plan.status != 'APPROVED' %}
                                     <button type="button"
                                             class="btn-assigned-delete"
-                                            title="Eliminar asignación de {{ it.days_quantity }} días"
+                                            title="Eliminar asignación"
                                             onclick="deleteRecordAjax('{% url 'vacation:schedule_item_delete' it.id %}', 'la asignación de {{ it.days_quantity }} días de {{ it.employee.person.full_name }}', () => location.reload())">
                                         <i class="fa-solid fa-xmark"></i>
                                     </button>
                                 {% endif %}
                             </div>
 
-                            <!-- Fila 2: Píldora de Días -->
                             <div class="assigned-card-bottom">
-                                <span class="assigned-days-badge">{{ it.days_quantity }} D.</span>
+                                <span class="assigned-days-badge">{{ it.days_quantity }} Días</span>
                                 {% if it.observation %}
                                     <span class="assigned-badge-obs">{{ it.observation }}</span>
                                 {% endif %}
@@ -148,26 +159,16 @@
             </div>
         {% endfor %}
     </div>
+
+    <!-- Sección de Exportación Limpia -->
     <div class="schedule-export-section">
         <div class="schedule-export-buttons-group">
-            <a href="
-
-
-
-
-
-                    {% url 'vacation:schedule_export_excel' plan.id %}{% if base_unit %}?unit_id={{ base_unit.id }}{% endif %}"
+            <a href="{% url 'vacation:schedule_export_excel' plan.id %}{% if base_unit %}?unit_id={{ base_unit.id }}{% endif %}"
                class="btn-success"
                title="Descargar reporte en formato Excel">
                 <i class="fa-solid fa-file-excel me-1"></i> Exportar Excel
             </a>
-            <a href="
-
-
-
-
-
-                    {% url 'vacation:schedule_export_pdf' plan.id %}{% if base_unit %}?unit_id={{ base_unit.id }}{% endif %}"
+            <a href="{% url 'vacation:schedule_export_pdf' plan.id %}{% if base_unit %}?unit_id={{ base_unit.id }}{% endif %}"
                class="btn-danger"
                target="_blank"
                title="Generar reporte en formato PDF imprimible">
@@ -251,5 +252,71 @@
                 });
             });
         });
+
+        function clearMonthScheduleAjax(url, monthName, totalRecords) {
+            // Obtención segura del token CSRF
+            let csrfToken = '';
+            const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (csrfInput) {
+                csrfToken = csrfInput.value;
+            } else if (typeof getCSRF === 'function') {
+                csrfToken = getCSRF();
+            } else {
+                const match = document.cookie.match(/csrftoken=([^;]+)/);
+                if (match) csrfToken = match[1];
+            }
+
+            Swal.fire({
+                title: `¿Vaciar el mes de ${monthName}?`,
+                text: `Se eliminarán las ${totalRecords} asignaciones de este mes y el personal recuperará sus días disponibles en el banquillo.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, Vaciar Mes',
+                cancelButtonText: 'Cancelar',
+                customClass: {
+                    confirmButton: 'swal2-confirm btn-swal-danger',
+                    cancelButton: 'swal2-cancel btn-swal-cancel'
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.showLoading();
+                    fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRFToken': csrfToken
+                        }
+                    })
+                    .then(async res => {
+                        const data = await res.json();
+                        if (res.ok && data.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Mes Vaciado',
+                                text: data.message,
+                                timer: 1500,
+                                showConfirmButton: false
+                            }).then(() => {
+                                window.location.reload();
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Atención',
+                                text: data.message || 'No se pudo vaciar el mes.'
+                            });
+                        }
+                    })
+                    .catch(err => {
+                        console.error("Error en la petición:", err);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error de Conexión',
+                            text: 'Ocurrió un problema de comunicación con el servidor.'
+                        });
+                    });
+                }
+            });
+        }
     </script>
 {% endblock %}
