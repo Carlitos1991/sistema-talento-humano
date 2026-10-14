@@ -1540,23 +1540,20 @@ class VacationScheduleDropModalView(LoginRequiredMixin, PermissionRequiredMixin,
 
         month_int = int(month)
 
-        # 1. Usar el servicio centralizado para calcular los días acumulados a ese mes específico
+        # Usar la función probada en el shell
         allowed_int, ceiling, is_proportional, display_val = calculate_available_days_for_month(
             employee, plan.year, month_int
         )
-        # Tope real al mes seleccionado (ej: 17 días para Enero si tenía 17.5)
         annual_cap = allowed_int
 
-        # 2. Días que ya tiene programados en este plan anual
+        # Sumar los días ya planificados en este cronograma
         planned_so_far = VacationScheduleItem.objects.filter(
             plan=plan,
             employee=employee
         ).aggregate(total=Sum('days_quantity'))['total'] or 0
 
-        # 3. Cupo restante exacto para este mes
+        # Cupo restante exacto para este mes
         max_assignable = max(0, annual_cap - planned_so_far)
-
-        # Sugerir por defecto lo que quede o máximo 15 días
         default_days = min(15, max_assignable) if max_assignable > 0 else 0
 
         context = {
@@ -1587,11 +1584,11 @@ class VacationScheduleDropSaveView(LoginRequiredMixin, PermissionRequiredMixin, 
             return JsonResponse({
                 'status': 'error',
                 'success': False,
-                'message': 'El cronograma está Aprobado Oficialmente y no admite cambios.'
+                'message': 'El cronograma está Aprobado Oficialmente y no admite modificaciones.'
             }, status=400)
 
         month_str = request.POST.get('month')
-        days_str = request.POST.get('days_quantity')
+        days_str = request.POST.get('days_quantity') or request.POST.get('days')
         observation = request.POST.get('observation', '').strip()
 
         try:
@@ -1605,13 +1602,13 @@ class VacationScheduleDropSaveView(LoginRequiredMixin, PermissionRequiredMixin, 
             return JsonResponse({'status': 'error', 'success': False, 'message': 'Debe asignar al menos 1 día.'},
                                 status=400)
 
-        # 1. Obtener el cupo calculado por services.py al mes seleccionado
+        # Validación con la misma función de services.py
         allowed_int, ceiling, is_proportional, _ = calculate_available_days_for_month(
             employee, plan.year, month
         )
         annual_cap = allowed_int
 
-        # 2. No permitir doble asignación en el mismo mes para el mismo funcionario
+        # Evitar asignación duplicada en el mismo mes
         already_in_month = VacationScheduleItem.objects.filter(
             plan=plan,
             employee=employee,
@@ -1622,10 +1619,9 @@ class VacationScheduleDropSaveView(LoginRequiredMixin, PermissionRequiredMixin, 
             return JsonResponse({
                 'status': 'error',
                 'success': False,
-                'message': 'El funcionario ya cuenta con una fracción asignada en este mes.'
+                'message': 'El funcionario ya cuenta con vacaciones planificadas en este mes.'
             }, status=400)
 
-        # 3. Control estricto de cupo
         planned_so_far = VacationScheduleItem.objects.filter(
             plan=plan,
             employee=employee
@@ -1637,10 +1633,9 @@ class VacationScheduleDropSaveView(LoginRequiredMixin, PermissionRequiredMixin, 
             return JsonResponse({
                 'status': 'error',
                 'success': False,
-                'message': f'Excede el límite asignable para {MONTH_NAMES.get(month, "")}. Límite calculado a este mes: {annual_cap} días. Días disponibles: {disponible}.'
+                'message': f'Excede el límite. Ya programados: {planned_so_far}/{annual_cap}. Días disponibles: {disponible}.'
             }, status=400)
 
-        # 4. Fechas de referencia y guardado
         max_day = calendar.monthrange(plan.year, month)[1]
         start_date = dt.date(plan.year, month, 1)
         end_date = dt.date(plan.year, month, min(days_quantity, max_day))
@@ -1659,7 +1654,7 @@ class VacationScheduleDropSaveView(LoginRequiredMixin, PermissionRequiredMixin, 
         return JsonResponse({
             'status': 'success',
             'success': True,
-            'message': f'Se programaron {days_quantity} días en {MONTH_NAMES.get(month, "")} exitosamente.'
+            'message': f'Se programaron {days_quantity} días exitosamente.'
         })
 
 

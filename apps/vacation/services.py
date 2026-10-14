@@ -104,14 +104,19 @@ from contract.models import ManagementPeriod
 
 def get_real_entry_date(employee):
     """
-    Obtiene la fecha de ingreso real del empleado:
-    1. Si tiene contrato/nombramiento en ManagementPeriod, toma su start_date más reciente activo.
-    2. Si tiene fecha en institutional_data previa, la respeta.
+    Obtiene la fecha de ingreso oficial del empleado:
+    1. Expediente Institucional (institutional_data.entry_date).
+    2. Contrato o Nombramiento vigente (FIRMADO, ACTIVO o sin fecha fin).
     """
-    # Contrato o Nombramiento vigente
+    inst_data = getattr(employee, 'institutional_data', None)
+    if inst_data and getattr(inst_data, 'entry_date', None):
+        return inst_data.entry_date
+
+    # Contrato vigente: ya sea con estado FIRMADO, ACTIVO o end_date None
     active_contract = ManagementPeriod.objects.filter(
-        employee=employee,
-        status__code='ACTIVO'
+        employee=employee
+    ).exclude(
+        status__code='FINALIZADO'
     ).exclude(
         contract_type__code='SERVICIOS_PROFESIONALES'
     ).order_by('-start_date').first()
@@ -119,114 +124,125 @@ def get_real_entry_date(employee):
     if active_contract and active_contract.start_date:
         return active_contract.start_date
 
-    # Fallback al contrato más reciente si no está marcado como ACTIVO
-    last_contract = ManagementPeriod.objects.filter(
-        employee=employee
-    ).exclude(
-        contract_type__code='SERVICIOS_PROFESIONALES'
-    ).order_by('-start_date').first()
-
-    if last_contract and last_contract.start_date:
-        return last_contract.start_date
-
-    inst_data = getattr(employee, 'institutional_data', None)
-    if inst_data and getattr(inst_data, 'entry_date', None):
-        return inst_data.entry_date
-
     return getattr(employee, 'entry_date', None) or getattr(employee.person, 'entry_date', None)
-
-
-def get_vacation_regime_info(employee):
-    """
-    LOSEP: 30 días anuales (2.5 días/mes)
-    Código del Trabajo: 15 días anuales (1.25 días/mes)
-    """
-    regime_texts = []
-    if employee.employment_status:
-        regime_texts.append(str(employee.employment_status.code or ''))
-        regime_texts.append(str(employee.employment_status.name or ''))
-
-    active_contract = ManagementPeriod.objects.filter(
-        employee=employee
-    ).select_related('contract_type__labor_regime').order_by('-start_date').first()
-
-    if active_contract and active_contract.contract_type:
-        c_type = active_contract.contract_type
-        regime_texts.append(str(c_type.code or ''))
-        regime_texts.append(str(c_type.name or ''))
-        if c_type.labor_regime:
-            regime_texts.append(str(c_type.labor_regime.code or ''))
-            regime_texts.append(str(c_type.labor_regime.name or ''))
-
-    full_check = ' '.join(regime_texts).upper()
-    is_ct = any(k in full_check for k in ['TRABAJADOR', 'OBRERO', 'CODIGO_TRABAJO', 'CÓDIGO', 'CT'])
-
-    if is_ct:
-        return True, 15, 1.25
-    return False, 30, 2.50
 
 
 def calculate_available_days_for_month(employee, plan_year, target_month):
     """
-    Calcula los días acumulados disponibles para tomar al 1ro del mes evaluado.
-    Tope estricto:
-      - LOSEP / Empleado: Máximo 30 días.
-      - Código del Trabajo / Obrero: Máximo 15 días base + 1 día extra por año
-        a partir del 6to año de servicio (5 años cumplidos), tope 30 días.
+    Calcula los días de vacación proporcionales disponibles para un funcionario.
+
+    Regla:
+    - LOSEP: 2.5 días por cada mes laborado (Tope 30 días).
+    - Código del Trabajo: 1.25 días por cada mes laborado (Tope 15 + extras).
+
+    Ejemplo real (Jason Cabrera):
+      Ingreso: 02/02/2026. Plan: 2027. Mes evaluado: Enero (1).
+      - Meses laborados en 2026 (Febrero a Diciembre): 11 meses.
+      - Días generados al 1 de Enero de 2027: 11 * 2.5 = 27.5 días.
     """
     entry_date = get_real_entry_date(employee)
     is_ct, base_annual, monthly_factor = get_vacation_regime_info(employee)
 
-    # 1. Determinar el techo anual máximo legal que puede alcanzar en este año de plan
-    ceiling_days = 30
-    eval_date = date(int(plan_year), int(target_month), 1)
-
+    # 1. Si no tiene fecha de ingreso registrada, asume derecho completo
     if not entry_date:
         return base_annual, base_annual, False, f"{base_annual}"
 
-    # Si la fecha de evaluación es anterior a la fecha de ingreso
-    if entry_date >= eval_date:
-        return 0, base_annual, True, "0"
+    plan_year = int(plan_year)
+    target_month = int(target_month)
 
-    # Calcular años cumplidos al año del plan para obreros (Código del Trabajo)
+    # 2. Techo legal máximo para el año del plan
     if is_ct:
-        # Años cumplidos respecto al 31 de diciembre del año del cronograma
-        plan_end = date(int(plan_year), 12, 31)
+        plan_end = date(plan_year, 12, 31)
         years_completed = relativedelta(plan_end, entry_date).years
         bonus = max(0, years_completed - 4) if years_completed >= 5 else 0
         ceiling_days = min(15 + bonus, 30)
     else:
         ceiling_days = 30
 
-    # 2. Si ya tenía más de 1 año cumplido antes de arrancar el año del plan:
-    plan_start = date(int(plan_year), 1, 1)
-    diff_at_start = relativedelta(plan_start, entry_date)
-
-    if diff_at_start.years >= 1:
+    # 3. Caso: Más de 1 año cumplido ANTES de iniciar el año del plan
+    # (Ejemplo: ingresó en 2025 o antes, y el plan es 2027)
+    plan_start = date(plan_year, 1, 1)
+    if relativedelta(plan_start, entry_date).years >= 1:
         return ceiling_days, ceiling_days, False, f"{ceiling_days}"
 
-    # 3. CASO PROPORCIONAL (Ingresó en el año previo o año en curso):
-    diff = relativedelta(eval_date, entry_date)
-    total_months_worked = diff.years * 12 + diff.months
+    # 4. Cálculo de meses trabajados acumulados al inicio del mes evaluado
+    # Normalizamos el mes de inicio: si ingresó cualquier día de ese mes (ej: día 2),
+    # ese mes se considera trabajado si el mes ya concluyó.
+    entry_year = entry_date.year
+    entry_month = entry_date.month
 
-    # Multiplicar meses por factor mensual
+    # Si la fecha de ingreso es posterior al mes que se está evaluando:
+    if (entry_year > plan_year) or (entry_year == plan_year and entry_month > target_month):
+        return 0, ceiling_days, True, "0"
+
+    # Conteo exacto de meses completos transcurridos entre (entry_year, entry_month)
+    # y el 1ro del mes evaluado (plan_year, target_month)
+    total_months_worked = (plan_year - entry_year) * 12 + (target_month - entry_month)
+
+    # Si ingresó después del día 15 del mes de entrada, se le podría descontar medio mes,
+    # pero bajo la norma habitual de Talento Humano si ingresó a inicios de mes (ej: día 2),
+    # se computa el mes completo.
+    if total_months_worked <= 0:
+        return 0, ceiling_days, True, "0"
+
+    # Multiplicar meses por factor (2.5 en LOSEP, 1.25 en CT)
     raw_accrued = total_months_worked * monthly_factor
 
-    # TOPE MÁXIMO ESTRICTO: Nunca puede superar el techo anual (30 o 15+bonus)
+    # Tope máximo estricto: nunca superar el ceiling legal
     accrued = min(raw_accrued, float(ceiling_days))
 
-    # Formatear valor visual (si es entero muestra 30, si tiene decimal muestra 17.5)
+    # Formatear el valor visual
     if accrued % 1 == 0:
         display_val = f"{int(accrued)}"
     else:
         display_val = f"{accrued:.1f}"
 
     allowed_int = math.floor(accrued)
-
-    # Si ya topó el techo máximo legal, deja de ser proporcional con '+'
     is_proportional = (allowed_int < ceiling_days)
 
     return allowed_int, ceiling_days, is_proportional, display_val
+
+
+def get_vacation_regime_info(employee):
+    """
+    Determina si el empleado pertenece al Código del Trabajo (15 días) o a la LOSEP (30 días).
+    """
+    regime_name = ""
+    regime_code = ""
+
+    # Buscar contrato vigente (excluyendo FINALIZADOS)
+    active_contract = ManagementPeriod.objects.filter(
+        employee=employee
+    ).exclude(
+        status__code='FINALIZADO'
+    ).exclude(
+        contract_type__code='SERVICIOS_PROFESIONALES'
+    ).select_related('contract_type__labor_regime').order_by('-start_date').first()
+
+    if active_contract and active_contract.contract_type:
+        c_type = active_contract.contract_type
+        if c_type.labor_regime:
+            regime_code = (c_type.labor_regime.code or '').upper()
+            regime_name = (c_type.labor_regime.name or '').upper()
+        else:
+            regime_code = (c_type.code or '').upper()
+            regime_name = (c_type.name or '').upper()
+
+    if not regime_code and not regime_name and employee.employment_status:
+        regime_code = (employee.employment_status.code or '').upper()
+        regime_name = (employee.employment_status.name or '').upper()
+
+    combined_text = f"{regime_code} {regime_name}".strip()
+
+    # Si es LOSEP / Ocasional / Nombramiento -> 30 días
+    if 'LOSEP' in combined_text or 'NOMBRAMIENTO' in combined_text or 'OCASIONAL' in combined_text:
+        return False, 30, 2.50
+
+    ct_keywords = ['CODIGO DEL TRABAJO', 'CÓDIGO DEL TRABAJO', 'CODIGO_TRABAJO', 'OBRERO', 'TRABAJADOR']
+    if any(keyword in combined_text for keyword in ct_keywords):
+        return True, 15, 1.25
+
+    return False, 30, 2.50
 
 
 def resolve_scheduling_hierarchy(user, requested_unit_id=None):

@@ -32,9 +32,18 @@
 
             <div class="grid-dynamic">
                 {% for unit in units %}
-                    <a href="{% url 'institution:unit_detail_view' unit.id %}" class="general-card card-primary">
-                        <div class="card-header">
-                            <h3 class="card-title">{{ unit.name }}</h3>
+                    <a href="{% url 'institution:unit_detail_view' unit.id %}"
+                       class="general-card card-primary {% if unit.is_main_unit %}main-unit-highlight{% endif %}">
+                        <div class="card-header d-flex justify-content-between align-items-start gap-2">
+                            <h3 class="card-title m-0">{{ unit.name }}</h3>
+
+                            <!-- DISTINTIVO DE UNIDAD PRINCIPAL -->
+                            {% if unit.is_main_unit %}
+                                <span class="badge-main-unit"
+                                      title="Dependencia Principal Cabecera (Agrupa Cronograma y Reportes)">
+                            <i class="fa-solid fa-crown me-1"></i> Principal
+                        </span>
+                            {% endif %}
                         </div>
                         <div class="card-body">
                             <div class="card-info-item">
@@ -102,16 +111,16 @@
                                 </small>
                             </div>
 
-                            <!-- CARGO (OBTENIDO DE LA PARTIDA PRESUPUESTARIA) -->
+                            <!-- CARGO -->
                             <span class="employee-job">
-                            {% with partida=emp.current_budget_line.first %}
-                                {% if partida and partida.position_item %}
-                                    {{ partida.position_item.name|upper }}
-                                {% else %}
-                                    <span class="text-muted" style="font-size: 0.7rem;">SIN PARTIDA ASIGNADA</span>
-                                {% endif %}
-                            {% endwith %}
-                        </span>
+                        {% with partida=emp.current_budget_line.first %}
+                            {% if partida and partida.position_item %}
+                                {{ partida.position_item.name|upper }}
+                            {% else %}
+                                <span class="text-muted" style="font-size: 0.7rem;">SIN PARTIDA ASIGNADA</span>
+                            {% endif %}
+                        {% endwith %}
+                    </span>
 
                         </div>
                     {% empty %}
@@ -133,8 +142,16 @@
 
                 <div class="children-grid">
                     {% for child in children %}
-                        <a href="{% url 'institution:organigram_nav_detail' child.id %}" class="child-unit-btn">
-                            <i class="fas fa-users"></i> {{ child.name }}
+                        <a href="{% url 'institution:organigram_nav_detail' child.id %}"
+                           class="child-unit-btn d-flex align-items-center justify-content-between">
+                            <div>
+                                <i class="fas fa-users me-1"></i> {{ child.name }}
+                            </div>
+                            {% if child.is_main_unit %}
+                                <span class="badge-mini-main ms-2" title="Unidad Principal Cabecera">
+                            <i class="fa-solid fa-crown"></i>
+                        </span>
+                            {% endif %}
                         </a>
                     {% empty %}
                         <p class="text-muted small w-100 text-center">No existen sub-dependencias creadas.</p>

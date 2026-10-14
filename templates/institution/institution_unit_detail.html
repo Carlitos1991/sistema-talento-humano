@@ -16,7 +16,15 @@
                 </button>
             </div>
             <div class="header-center">
-                <span class="title title-wide">{{ unit.name }}</span>
+                <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                    <span class="title title-wide m-0">{{ unit.name }}</span>
+                    {% if unit.is_main_unit %}
+                        <span class="badge-main-unit"
+                              title="Dependencia Principal Cabecera (Agrupa Cronograma y Reportes)">
+                            Principal
+                        </span>
+                    {% endif %}
+                </div>
                 <div class="info-card-single info-card-compact header-data-card">
                     <div class="info-green-grid">
                         <div><b>Código:</b> <span>{{ unit.code|default:'-' }}</span></div>
@@ -258,6 +266,11 @@
                              onclick="window.location.href='/institution/units/detail/{{ sub.id }}/view/'">
                             <i class="fa-solid fa-users"></i>
                             <span class="sub-name">{{ sub.name }}</span>
+
+                            <!-- BADGE CENTRADO SOBRIO DEBAJO DEL NOMBRE -->
+                            {% if sub.is_main_unit %}
+                                <span class="sub-unit-center-badge">Principal</span>
+                            {% endif %}
                         </div>
                     {% endfor %}
                 {% else %}
