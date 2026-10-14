@@ -77,7 +77,14 @@
 
             emptyRow = document.createElement('tr');
             emptyRow.setAttribute('data-boss-empty-row', '1');
-            emptyRow.innerHTML = '<td colspan="8" style="padding:22px;text-align:center;color:#64748b;">No existen permisos para los filtros seleccionados.</td>';
+            emptyRow.innerHTML = `
+                <td colspan="7">
+                    <div class="table-empty-state">
+                        <div class="empty-icon-wrap"><i class="fa-regular fa-folder-open"></i></div>
+                        <h4>No hay permisos coincidentes</h4>
+                        <p>No se encontraron registros de permisos con los filtros seleccionados.</p>
+                    </div>
+                </td>`;
             tbody.appendChild(emptyRow);
             return emptyRow;
         }
@@ -111,39 +118,39 @@
             const toVal = toInput ? toInput.value : '';
 
             if (fromVal && toVal) {
-                listLabel.innerHTML = '<i class="fa-regular fa-calendar"></i> Listado de ' + formatInputDate(fromVal) + ' hasta ' + formatInputDate(toVal);
+                listLabel.innerHTML = '<i class="fa-regular fa-calendar"></i> Del ' + formatInputDate(fromVal) + ' al ' + formatInputDate(toVal);
                 return;
             }
             if (fromVal) {
-                listLabel.innerHTML = '<i class="fa-regular fa-calendar"></i> Listado desde ' + formatInputDate(fromVal);
+                listLabel.innerHTML = '<i class="fa-regular fa-calendar"></i> Desde ' + formatInputDate(fromVal);
                 return;
             }
             if (toVal) {
-                listLabel.innerHTML = '<i class="fa-regular fa-calendar"></i> Listado hasta ' + formatInputDate(toVal);
+                listLabel.innerHTML = '<i class="fa-regular fa-calendar"></i> Hasta ' + formatInputDate(toVal);
                 return;
             }
-            listLabel.innerHTML = '<i class="fa-regular fa-calendar"></i> Listado de permisos de la unidad';
+            listLabel.innerHTML = '<i class="fa-regular fa-calendar"></i> Listado general de permisos';
         }
 
         function buildStatusBadgeHtml(status) {
             if (status === 'APPROVED') {
-                return '<span style="display:inline-flex; align-items:center; padding: 4px 8px; border-radius: 999px; background:#dcfce7; color:#166534; font-size:0.78rem; font-weight:700;">Aprobado</span>';
+                return '<span class="badge-status badge-approved"><i class="fa-solid fa-check"></i> Aprobado</span>';
             }
             if (status === 'REJECTED') {
-                return '<span style="display:inline-flex; align-items:center; padding: 4px 8px; border-radius: 999px; background:#fee2e2; color:#991b1b; font-size:0.78rem; font-weight:700;">Rechazado</span>';
+                return '<span class="badge-status badge-rejected"><i class="fa-solid fa-xmark"></i> Rechazado</span>';
             }
-            return '<span style="display:inline-flex; align-items:center; padding: 4px 8px; border-radius: 999px; background:#fef3c7; color:#92400e; font-size:0.78rem; font-weight:700;">Solicitado</span>';
+            return '<span class="badge-status badge-requested"><i class="fa-solid fa-clock"></i> Solicitado</span>';
         }
 
         function buildActionsHtml(status, permitId) {
             let html = '';
             if (status === 'REQUESTED') {
-                html += '<button type="button" data-boss-open-response data-action="approve" data-permit-id="' + permitId + '" style="border:none; width:30px; height:30px; border-radius:8px; background:#dcfce7; color:#166534; cursor:pointer;" title="Aprobar permiso"><i class="fas fa-check"></i></button>';
-                html += '<button type="button" data-boss-open-response data-action="reject" data-permit-id="' + permitId + '" style="border:none; width:30px; height:30px; border-radius:8px; background:#fee2e2; color:#991b1b; cursor:pointer;" title="Rechazar permiso"><i class="fas fa-times"></i></button>';
+                html += '<button type="button" data-boss-open-response data-action="approve" data-permit-id="' + permitId + '" class="btn-action-round btn-action-approve" title="Aprobar Permiso"><i class="fas fa-check"></i></button>';
+                html += '<button type="button" data-boss-open-response data-action="reject" data-permit-id="' + permitId + '" class="btn-action-round btn-action-reject" title="Rechazar Permiso"><i class="fas fa-times"></i></button>';
             } else if (status === 'APPROVED') {
-                html += '<a href="/permitrequest/admin/' + permitId + '/report/" target="_blank" style="display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:8px; background:#dcfce7; color:#166534; text-decoration:none;" title="Imprimir permiso"><i class="fas fa-print"></i></a>';
+                html += '<a href="/permitrequest/admin/' + permitId + '/report/" target="_blank" class="btn-action-round btn-action-print" title="Imprimir Reporte"><i class="fas fa-print"></i></a>';
             }
-            html += '<a href="/permitrequest/admin/' + permitId + '/detail/" target="_blank" style="display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:8px; background:#e2e8f0; color:#0f172a; text-decoration:none;" title="Ver detalle"><i class="fas fa-eye"></i></a>';
+            html += '<a href="/permitrequest/admin/' + permitId + '/detail/" target="_blank" class="btn-action-round btn-action-view" title="Ver Expediente"><i class="fas fa-eye"></i></a>';
             return html;
         }
 
@@ -259,14 +266,14 @@
                                         row.dataset.status = nextStatus;
 
                                         const cells = row.querySelectorAll('td');
-                                        if (cells.length >= 8) {
-                                            cells[5].innerHTML = buildStatusBadgeHtml(nextStatus);
+                                        if (cells.length >= 7) {
+                                            cells[4].innerHTML = buildStatusBadgeHtml(nextStatus);
 
                                             if (typeof data.response_note === 'string' && data.response_note.trim()) {
-                                                cells[6].textContent = data.response_note;
+                                                cells[5].textContent = data.response_note;
                                             }
 
-                                            const actionsWrap = cells[7].querySelector('div');
+                                            const actionsWrap = cells[6].querySelector('.action-btn-group');
                                             if (actionsWrap) {
                                                 actionsWrap.innerHTML = buildActionsHtml(nextStatus, permitId);
                                             }
@@ -322,9 +329,15 @@
             });
         }
 
-        if (firstBtn) firstBtn.addEventListener('click', function () { goToPage(1); });
-        if (prevBtn) prevBtn.addEventListener('click', function () { goToPage(currentPage - 1); });
-        if (nextBtn) nextBtn.addEventListener('click', function () { goToPage(currentPage + 1); });
+        if (firstBtn) firstBtn.addEventListener('click', function () {
+            goToPage(1);
+        });
+        if (prevBtn) prevBtn.addEventListener('click', function () {
+            goToPage(currentPage - 1);
+        });
+        if (nextBtn) nextBtn.addEventListener('click', function () {
+            goToPage(currentPage + 1);
+        });
         if (lastBtn) {
             lastBtn.addEventListener('click', function () {
                 const totalRows = getFilteredRows().length;
@@ -333,7 +346,9 @@
             });
         }
         if (pageInput) {
-            pageInput.addEventListener('change', function () { goToPage(pageInput.value); });
+            pageInput.addEventListener('change', function () {
+                goToPage(pageInput.value);
+            });
             pageInput.addEventListener('keypress', function (e) {
                 if (e.key === 'Enter') {
                     e.preventDefault();

@@ -350,6 +350,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
     template_name = 'core/dashboard.html'
 
     def dispatch(self, request, *args, **kwargs):
+        """
         if request.user.is_authenticated:
             has_employee_dashboard = request.user.has_perm('auth.dashboard_empleado')
             has_hr_dashboard = request.user.has_perm('auth.dashboard_talento_humano')
@@ -357,7 +358,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
 
             if has_employee_dashboard and not has_hr_dashboard and not has_boss_dashboard:
                 return redirect('employee:self_dashboard')
-
+        """
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
@@ -367,6 +368,11 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         from function_manual.models import JobProfile
         from django.db.models import Count, Q
         from datetime import date, timedelta
+
+        # -------------------------------------------------------------
+        # Contexto Institucional (Logo y datos institucionales)
+        # -------------------------------------------------------------
+        context['system_config'] = SystemConfiguration.get_current()
 
         force_boss_view = self.request.GET.get('view') == 'jefe'
         has_boss_dashboard = self.request.user.has_perm('auth.dashboard_jefe')
@@ -380,6 +386,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         else:
             context['show_boss_dashboard'] = force_boss_view and can_use_boss_view
 
+        # Estadísticas de Talento Humano
         active_employees = Employee.objects.filter(is_active=True)
 
         employee_stats = active_employees.values(
@@ -434,26 +441,11 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 person__curriculum__academic_titles__education_level__code__in=levels
             ).values_list('person_id', flat=True).distinct()
             context['empleados_con_titulo'] = person_ids.count()
-
-            context['empleados_cuarto_nivel'] = Employee.objects.filter(
-                is_active=True,
-                person__curriculum__academic_titles__education_level__code='CUARTO_NIVEL'
-            ).values_list('person_id', flat=True).distinct().count()
-
-            context['empleados_tecnologo'] = Employee.objects.filter(
-                is_active=True,
-                person__curriculum__academic_titles__education_level__code='TECNOLOGO'
-            ).values_list('person_id', flat=True).distinct().count()
         except Exception:
             context['empleados_con_titulo'] = 0
-            context['empleados_cuarto_nivel'] = 0
-            context['empleados_tecnologo'] = 0
 
         context['empleados_con_discapacidad'] = active_employees.filter(person__has_disability=True).count()
         context['empleados_sustitutos'] = active_employees.filter(person__is_substitute=True).count()
-
-        fecha_jubilacion = date.today() - timedelta(days=365 * 60)
-        context['proximos_jubilados'] = active_employees.filter(person__birth_date__lte=fecha_jubilacion).count()
 
         top_areas = active_employees.values('area__name').annotate(total=Count('id')).order_by('-total')[:5]
         context['top_areas'] = [
@@ -486,20 +478,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             'values': [context['empleados_masculino'], context['empleados_femenino']]
         }
 
-        try:
-            qs_profiles = JobProfile.objects.all()
-            context['profiles_total'] = qs_profiles.count()
-            profiles_legalized = 0
-            for p in qs_profiles.only('prepared_by_id', 'reviewed_by_id', 'approved_by_id', 'legalized_document'):
-                if p.prepared_by_id and p.reviewed_by_id and p.approved_by_id and p.legalized_document:
-                    profiles_legalized += 1
-            context['profiles_legalized'] = profiles_legalized
-            context['profiles_pending'] = context['profiles_total'] - context['profiles_legalized']
-        except Exception:
-            context['profiles_total'] = 0
-            context['profiles_legalized'] = 0
-            context['profiles_pending'] = 0
-
+        # Lógica de Jefatura
         context['boss_unit'] = None
         context['boss_unit_detail_url'] = ''
         context['boss_total_personal'] = 0
@@ -523,15 +502,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                     if person_by_document:
                         employee_profile = getattr(person_by_document, 'employee_profile', None)
 
-                if not employee_profile and self.request.user.email:
-                    person_by_email = Person.objects.filter(
-                        email__iexact=self.request.user.email
-                    ).select_related('employee_profile').first()
-                    if person_by_email:
-                        employee_profile = getattr(person_by_email, 'employee_profile', None)
-
                 managed_unit = None
-
                 if employee_profile:
                     managed_unit = AdministrativeUnit.objects.filter(
                         boss=employee_profile,

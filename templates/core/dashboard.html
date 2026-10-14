@@ -11,9 +11,12 @@
 
     {% if perms.auth.dashboard_talento_humano and not show_boss_dashboard %}
 
+        <!-- ==============================================================
+             1. DASHBOARD DE TALENTO HUMANO
+             ============================================================== -->
+
         <!-- Estadísticas de Empleados ACTIVOS -->
         <div class="stats-grid">
-            <!-- TOTAL -->
             <div class="stat-card total">
                 <div class="stat-content">
                     <div class="stat-label">TOTAL ACTIVOS</div>
@@ -24,7 +27,6 @@
                 </div>
             </div>
 
-            <!-- EMPLEADOS -->
             <div class="stat-card">
                 <div class="stat-content">
                     <div class="stat-label">EMPLEADOS</div>
@@ -35,7 +37,6 @@
                 </div>
             </div>
 
-            <!-- TRABAJADORES -->
             <div class="stat-card">
                 <div class="stat-content">
                     <div class="stat-label">TRABAJADORES</div>
@@ -46,7 +47,6 @@
                 </div>
             </div>
 
-            <!-- CONTRATADOS -->
             <div class="stat-card">
                 <div class="stat-content">
                     <div class="stat-label">CONTRATADOS</div>
@@ -56,80 +56,53 @@
                     <i class="fas fa-user-clock"></i>
                 </div>
             </div>
-
-{#            <!-- PROFESIONALES -->#}
-{#            <div class="stat-card">#}
-{#                <div class="stat-content">#}
-{#                    <div class="stat-label">PROFESIONALES</div>#}
-{#                    <div class="stat-number">{{ profesionales }}</div>#}
-{#                </div>#}
-{#                <div class="stat-icon red">#}
-{#                    <i class="fas fa-user-graduate"></i>#}
-{#                </div>#}
-{#            </div>#}
         </div>
 
         <!-- Información Adicional -->
         <div class="stats-grid">
-            <!-- GÉNERO -->
             <div class="stat-card">
                 <div class="stat-content">
                     <div class="stat-label">MASCULINO / FEMENINO</div>
                     <div class="stat-number">{{ empleados_masculino }} / {{ empleados_femenino }}</div>
                 </div>
-                <div class="stat-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <div class="stat-icon purple-grad">
                     <i class="fas fa-venus-mars"></i>
                 </div>
             </div>
 
-            <!-- CON TÍTULO (click filtra la lista de personas por TERCER_NIVEL) -->
             <div class="stat-card">
                 <div class="stat-content">
                     <div class="stat-label">CON TÍTULO UNIVERSITARIO</div>
                     <div class="stat-number">{{ empleados_con_titulo }}</div>
                 </div>
-                <div class="stat-icon" style="background: linear-gradient(135deg, #a6c1ee 0%, #fbc2eb 100%);">
+                <div class="stat-icon pink-grad">
                     <i class="fas fa-graduation-cap"></i>
                 </div>
             </div>
 
-            <!-- CON DISCAPACIDAD -->
             <div class="stat-card">
                 <div class="stat-content">
                     <div class="stat-label">CON DISCAPACIDAD</div>
                     <div class="stat-number">{{ empleados_con_discapacidad }}</div>
                 </div>
-                <div class="stat-icon" style="background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);">
+                <div class="stat-icon yellow-grad">
                     <i class="fas fa-wheelchair"></i>
                 </div>
             </div>
 
-            <!-- SUSTITUTOS -->
             <div class="stat-card">
                 <div class="stat-content">
                     <div class="stat-label">EMPLEADOS SUSTITUTOS</div>
                     <div class="stat-number">{{ empleados_sustitutos }}</div>
                 </div>
-                <div class="stat-icon" style="background: linear-gradient(135deg, #81fbb8 0%, #28c76f 100%);">
+                <div class="stat-icon emerald-grad">
                     <i class="fas fa-user-friends"></i>
                 </div>
             </div>
-
-            <!-- PRÓXIMOS A JUBILACIÓN -->
-{#            <div class="stat-card">#}
-{#                <div class="stat-content">#}
-{#                    <div class="stat-label">PRÓXIMOS A JUBILACIÓN</div>#}
-{#                    <div class="stat-number">{{ proximos_jubilados }}</div>#}
-{#                </div>#}
-{#                <div class="stat-icon" style="background: linear-gradient(135deg, #f8b500 0%, #fceabb 100%);">#}
-{#                    <i class="fas fa-user-clock"></i>#}
-{#                </div>#}
-{#            </div>#}
         </div>
 
         <!-- Estadísticas de Partidas -->
         <div class="stats-grid">
-            <!-- TOTAL PARTIDAS -->
             <div class="stat-card total">
                 <div class="stat-content">
                     <div class="stat-label">TOTAL PARTIDAS</div>
@@ -140,7 +113,6 @@
                 </div>
             </div>
 
-            <!-- OCUPADAS -->
             <div class="stat-card">
                 <div class="stat-content">
                     <div class="stat-label">PARTIDAS OCUPADAS</div>
@@ -151,7 +123,6 @@
                 </div>
             </div>
 
-            <!-- LIBRES -->
             <div class="stat-card">
                 <div class="stat-content">
                     <div class="stat-label">PARTIDAS LIBRES</div>
@@ -162,7 +133,6 @@
                 </div>
             </div>
 
-            <!-- CONCURSO -->
             <div class="stat-card">
                 <div class="stat-content">
                     <div class="stat-label">PARTIDAS EN CONCURSO</div>
@@ -172,60 +142,49 @@
                     <i class="fas fa-trophy"></i>
                 </div>
             </div>
-
-            <!-- LITIGIO -->
-{#            <div class="stat-card">#}
-{#                <div class="stat-content">#}
-{#                    <div class="stat-label">PARTIDAS EN LITIGIO</div>#}
-{#                    <div class="stat-number">{{ partidas_litigio }}</div>#}
-{#                </div>#}
-{#                <div class="stat-icon red">#}
-{#                    <i class="fas fa-exclamation-triangle"></i>#}
-{#                </div>#}
-{#            </div>#}
         </div>
 
         <!-- Top Áreas con Más Empleados -->
         {% if top_areas %}
-            <div style="margin-top: 30px; background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                <h3 style="margin: 0 0 20px 0; color: #1f2937; display: flex; align-items: center; gap: 10px;">
-                    <i class="fas fa-building" style="color: #3b82f6;"></i>
+            <div class="top-areas-card">
+                <h3 class="top-areas-title">
+                    <i class="fas fa-building"></i>
                     Áreas con Más Personal Activo
                 </h3>
-                <div style="display: grid; gap: 12px;">
+                <div class="top-areas-list">
                     {% for area in top_areas %}
-                        <div style="display: flex; align-items: center; gap: 12px; padding: 12px; background: #f9fafb; border-radius: 8px;">
-                            <div style="min-width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px; font-weight: bold;">
+                        <div class="top-area-item">
+                            <div class="top-area-badge">
                                 {{ forloop.counter }}
                             </div>
-                            <div style="flex: 1;">
-                                <div style="font-weight: 600; color: #1f2937;">{{ area.name }}</div>
-                            </div>
-                            <div style="font-size: 24px; font-weight: bold; color: #3b82f6;">{{ area.total }}</div>
+                            <div class="top-area-name">{{ area.name }}</div>
+                            <div class="top-area-count">{{ area.total }}</div>
                         </div>
                     {% endfor %}
                 </div>
             </div>
         {% endif %}
 
-        <!-- Gráficos -->
+        <!-- Gráficos de Talento Humano con Contenedor Acotado -->
         <div class="charts-grid">
-            <!-- Gráfico de Barras -->
             <div class="chart-card">
                 <div class="chart-header">
                     <i class="fas fa-chart-bar"></i>
                     <h3>Distribución de Partidas Presupuestarias</h3>
                 </div>
-                <canvas id="budgetBarChart"></canvas>
+                <div class="chart-body">
+                    <canvas id="budgetBarChart"></canvas>
+                </div>
             </div>
 
-            <!-- Gráfico de Dona (Empleados) -->
             <div class="chart-card">
                 <div class="chart-header">
                     <i class="fas fa-chart-pie"></i>
                     <h3>Distribución de Personal Activo</h3>
                 </div>
-                <canvas id="employeeDonutChart"></canvas>
+                <div class="chart-body">
+                    <canvas id="employeeDonutChart"></canvas>
+                </div>
                 <div class="chart-legend">
                     <div class="legend-item">
                         <span class="legend-color" style="background: #f59e0b;"></span>
@@ -246,13 +205,14 @@
                 </div>
             </div>
 
-            <!-- Gráfico de Género -->
             <div class="chart-card">
                 <div class="chart-header">
                     <i class="fas fa-venus-mars"></i>
                     <h3>Distribución por Género</h3>
                 </div>
-                <canvas id="genderChart"></canvas>
+                <div class="chart-body">
+                    <canvas id="genderChart"></canvas>
+                </div>
                 <div class="chart-legend">
                     <div class="legend-item">
                         <span class="legend-color" style="background: #3b82f6;"></span>
@@ -268,29 +228,46 @@
 
     {% elif perms.auth.dashboard_jefe or show_boss_dashboard %}
 
-        <div style="margin-top: 20px; background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-            <h2 style="margin: 0; color: #1f2937; font-size: 1.35rem;">Oficina Virtual</h2>
+        <!-- ==============================================================
+             2. DASHBOARD DE JEFE (OFICINA VIRTUAL)
+             ============================================================== -->
+
+        <div class="boss-hero-card">
+            <div class="boss-hero-content">
+                <div class="boss-hero-avatar">
+                    <i class="fa-solid fa-user-tie"></i>
+                </div>
+                <div>
+                    <span class="boss-hero-kicker">Gestión de Dependencia</span>
+                    <h1 class="boss-hero-title">Oficina Virtual</h1>
+                    {% if boss_unit %}
+                        <p class="boss-unit-meta">
+                            <i class="fa-solid fa-briefcase"></i>
+                            Unidad Asignada: <strong class="badge-unit">{{ boss_unit.name }}</strong>
+                        </p>
+                    {% else %}
+                        <div class="unit-alert-danger">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                            <span>No se encontró una unidad administrativa asignada como jefatura a este usuario.</span>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
             {% if boss_unit %}
-                <p style="margin: 8px 0 0 0; color: #64748b;">
-                    Unidad asignada: <strong>{{ boss_unit.name }}</strong>
-                </p>
-            {% else %}
-                <p style="margin: 8px 0 0 0; color: #ef4444;">
-                    No se encontró una unidad administrativa asignada como jefatura para este usuario.
-                </p>
+                <a href="{{ boss_unit_detail_url }}" class="btn btn-filter-clear">
+                    <i class="fa-solid fa-building-user"></i> Ver Unidad
+                </a>
             {% endif %}
         </div>
 
         {% if boss_unit %}
-            <div class="stats-grid" style="margin-top: 20px;">
-                <div class="stat-card" style="padding: 0; overflow: hidden;">
-                    <a href="{{ boss_unit_detail_url }}" class="stat-card-link" style="padding: 24px;">
+            <div class="stats-grid">
+                <div class="stat-card stat-card-link-wrapper">
+                    <a href="{{ boss_unit_detail_url }}" class="stat-card-link" title="Ver detalle de la unidad">
                         <div class="stat-content">
                             <div class="stat-label">TOTAL PERSONAL</div>
                             <div class="stat-number">{{ boss_total_personal }}</div>
-                            <div style="font-size: 0.8rem; color: #64748b; margin-top: 6px;">Click para ver detalle de
-                                unidad
-                            </div>
+                            <div class="stat-hint">Click para ver detalle de unidad</div>
                         </div>
                         <div class="stat-icon blue">
                             <i class="fas fa-building"></i>
@@ -302,9 +279,7 @@
                     <div class="stat-content">
                         <div class="stat-label">PERMISOS PENDIENTES</div>
                         <div class="stat-number">{{ boss_pending_permits_count }}</div>
-                        <div style="font-size: 0.8rem; color: #64748b; margin-top: 6px;">Solicitudes en estado
-                            solicitado
-                        </div>
+                        <div class="stat-hint">Solicitudes en estado solicitado</div>
                     </div>
                     <div class="stat-icon orange">
                         <i class="fas fa-hourglass-half"></i>
@@ -312,357 +287,381 @@
                 </div>
             </div>
 
-            <div style="margin-top: 24px; background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-                <h3 style="margin: 0 0 14px 0; color: #1f2937; font-size: 1.05rem; display: flex; align-items: center; gap: 8px;">
-                    <i class="fas fa-list-check" style="color: #f59e0b;"></i>
-                    Permisos pendientes de la unidad
-                </h3>
+            <!-- Panel de Permisos -->
+            <div class="panel-card" data-boss-permit-manager>
+                <div class="panel-card-header">
+                    <div>
+                        <h3 class="panel-card-title">
+                            <i class="fas fa-list-check"></i>
+                            Permisos pendientes de la unidad
+                        </h3>
+                        <p class="panel-card-desc">Revisa y tramita las solicitudes emitidas por el personal de tu
+                            unidad.</p>
+                    </div>
+                    <div class="filter-subtitle" data-boss-list-label>
+                        <i class="fa-regular fa-calendar"></i> Listado general de permisos
+                    </div>
+                </div>
 
-                <div data-boss-permit-manager>
-                    <div class="table-controls"
-                         style="display:flex;justify-content:center;align-items:flex-end;gap:8px;flex-wrap:nowrap; margin-bottom: 10px;">
-                        <div class="form-group mb-0" style="min-width:150px;max-width:170px;">
-                            <label class="form-label" style="font-size:0.72rem;">Fecha Desde</label>
-                            <input type="date" class="input-field" data-boss-date-from
-                                   style="height:34px;padding:0.35rem 0.55rem;font-size:0.82rem;">
+                <!-- Barra de Filtros -->
+                <div class="table-filters-container">
+                    <div class="filters-row">
+                        <div class="form-group mb-0 filter-item">
+                            <label class="form-label" style="font-size:0.75rem;">Fecha Desde</label>
+                            <input type="date" class="input-field" data-boss-date-from>
                         </div>
-                        <div class="form-group mb-0" style="min-width:150px;max-width:170px;">
-                            <label class="form-label" style="font-size:0.72rem;">Fecha Hasta</label>
-                            <input type="date" class="input-field" data-boss-date-to
-                                   style="height:34px;padding:0.35rem 0.55rem;font-size:0.82rem;">
+                        <div class="form-group mb-0 filter-item">
+                            <label class="form-label" style="font-size:0.75rem;">Fecha Hasta</label>
+                            <input type="date" class="input-field" data-boss-date-to>
                         </div>
-                        <div class="form-group mb-0" style="min-width:170px;max-width:190px;">
-                            <label class="form-label" style="font-size:0.72rem;">Estado</label>
-                            <select class="input-field" data-boss-status
-                                    style="height:34px;padding:0.35rem 0.55rem;font-size:0.82rem;">
+                        <div class="form-group mb-0 filter-item">
+                            <label class="form-label" style="font-size:0.75rem;">Estado</label>
+                            <select class="input-field" data-boss-status>
                                 <option value="REQUESTED" selected>Solicitado</option>
                                 <option value="APPROVED">Aprobado</option>
                                 <option value="REJECTED">Rechazado</option>
                                 <option value="">Todos</option>
                             </select>
                         </div>
-                        <div class="form-group mb-0" style="min-width:220px;max-width:260px;">
-                            <label class="form-label" style="font-size:0.72rem;">Apellidos</label>
-                            <input type="text" class="input-field" data-boss-lastname placeholder="Buscar por apellidos"
-                                   style="height:34px;padding:0.35rem 0.55rem;font-size:0.82rem;">
-                        </div>
-                        <div class="form-group mb-0" style="min-width:90px;">
-                            <label class="form-label" style="font-size:0.72rem;visibility:hidden;">Accion</label>
-                            <button type="button" class="btn btn-cancel" data-boss-clear-btn
-                                    style="height:34px;padding:0.35rem 0.7rem;font-size:0.76rem;white-space:nowrap;">
-                                <i class="fa-solid fa-eraser"></i> Limpiar
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="mt-2 mb-3 text-muted small" data-boss-list-label>
-                        <i class="fa-regular fa-calendar"></i>
-                        Listado de permisos de la unidad
-                    </div>
-
-                    <div style="overflow-x: auto;">
-                        <table style="width: 100%; border-collapse: collapse; min-width: 920px;" data-boss-table>
-                            <thead>
-                            <tr style="background: #f8fafc; border-bottom: 1px solid #e2e8f0;">
-                                <th style="text-align:left; padding: 10px; font-size: 0.85rem; color: #475569;">
-                                    Empleado
-                                </th>
-                                <th style="text-align:left; padding: 10px; font-size: 0.85rem; color: #475569;">
-                                    Apellidos
-                                </th>
-                                <th style="text-align:left; padding: 10px; font-size: 0.85rem; color: #475569;">Tipo
-                                    permiso
-                                </th>
-                                <th style="text-align:left; padding: 10px; font-size: 0.85rem; color: #475569;">Fecha
-                                    inicio
-                                </th>
-                                <th style="text-align:left; padding: 10px; font-size: 0.85rem; color: #475569;">
-                                    Duración
-                                </th>
-                                <th style="text-align:left; padding: 10px; font-size: 0.85rem; color: #475569;">Estado
-                                </th>
-                                <th style="text-align:left; padding: 10px; font-size: 0.85rem; color: #475569;">
-                                    Observaciones
-                                </th>
-                                <th style="text-align:center; padding: 10px; font-size: 0.85rem; color: #475569;">
-                                    Acciones
-                                </th>
-                            </tr>
-                            </thead>
-                            <tbody data-boss-tbody>
-                            {% for p in boss_pending_permits %}
-                                <tr data-boss-permit-row
-                                    data-permit-id="{{ p.id }}"
-                                    data-start-date="{{ p.start_date|date:'Y-m-d' }}"
-                                    data-status="{{ p.status }}"
-                                    data-last-name="{{ p.employee.person.last_name|default:''|lower }}"
-                                    style="border-bottom: 1px solid #f1f5f9;">
-                                    <td style="padding: 10px; color: #0f172a;">{{ p.employee.person.full_name }}</td>
-                                    <td style="padding: 10px; color: #0f172a;">{{ p.employee.person.last_name|default:'—' }}</td>
-                                    <td style="padding: 10px; color: #0f172a;">{{ p.permit_type.name|default:'—' }}</td>
-                                    <td style="padding: 10px; color: #0f172a;">{{ p.start_date|date:'d/m/Y' }}</td>
-                                    <td style="padding: 10px; color: #0f172a;">
-                                        {% if p.days > 0 %}{{ p.days }} día(s){% endif %}
-                                        {% if p.hours > 0 %} {% if p.days > 0 %}|{% endif %} {{ p.hours }}
-                                            hora(s){% endif %}
-                                        {% if p.minutes > 0 %} {% if p.days > 0 or p.hours > 0 %}|{% endif %}
-                                            {{ p.minutes }} min{% endif %}
-                                        {% if p.days == 0 and p.hours == 0 and p.minutes == 0 %}N/A{% endif %}
-                                    </td>
-                                    <td style="padding: 10px;">
-                                        {% if p.status == 'REQUESTED' %}
-                                            <span style="display:inline-flex; align-items:center; padding: 4px 8px; border-radius: 999px; background:#fef3c7; color:#92400e; font-size:0.78rem; font-weight:700;">
-                                                Solicitado
-                                            </span>
-                                        {% elif p.status == 'APPROVED' %}
-                                            <span style="display:inline-flex; align-items:center; padding: 4px 8px; border-radius: 999px; background:#dcfce7; color:#166534; font-size:0.78rem; font-weight:700;">
-                                                Aprobado
-                                            </span>
-                                        {% elif p.status == 'REJECTED' %}
-                                            <span style="display:inline-flex; align-items:center; padding: 4px 8px; border-radius: 999px; background:#fee2e2; color:#991b1b; font-size:0.78rem; font-weight:700;">
-                                                Rechazado
-                                            </span>
-                                        {% else %}
-                                            <span style="display:inline-flex; align-items:center; padding: 4px 8px; border-radius: 999px; background:#e2e8f0; color:#334155; font-size:0.78rem; font-weight:700;">
-                                                {{ p.status|default:'—' }}
-                                            </span>
-                                        {% endif %}
-                                    </td>
-                                    <td style="padding: 10px; color: #334155; max-width: 260px; white-space: normal; word-break: break-word; line-height: 1.3;">
-                                        {{ p.response_note|default:'—' }}
-                                    </td>
-                                    <td style="padding: 10px; text-align:center;">
-                                        <div style="display:inline-flex; gap:6px; align-items:center;">
-                                            {% if p.status == 'REQUESTED' %}
-                                                <button type="button" data-boss-open-response data-action="approve"
-                                                        data-permit-id="{{ p.id }}"
-                                                        style="border:none; width:30px; height:30px; border-radius:8px; background:#dcfce7; color:#166534; cursor:pointer;"
-                                                        title="Aprobar permiso">
-                                                    <i class="fas fa-check"></i>
-                                                </button>
-                                                <button type="button" data-boss-open-response data-action="reject"
-                                                        data-permit-id="{{ p.id }}"
-                                                        style="border:none; width:30px; height:30px; border-radius:8px; background:#fee2e2; color:#991b1b; cursor:pointer;"
-                                                        title="Rechazar permiso">
-                                                    <i class="fas fa-times"></i>
-                                                </button>
-                                            {% elif p.status == 'APPROVED' %}
-                                                <a href="{% url 'permissions:permit_report' p.id %}" target="_blank"
-                                                   style="display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:8px; background:#dcfce7; color:#166534; text-decoration:none;"
-                                                   title="Imprimir permiso">
-                                                    <i class="fas fa-print"></i>
-                                                </a>
-                                            {% endif %}
-                                            <a href="{% url 'permissions:permit_detail' p.id %}" target="_blank"
-                                               style="display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:8px; background:#e2e8f0; color:#0f172a; text-decoration:none;"
-                                               title="Ver detalle">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                        </div>
-                                    </td>
-                                </tr>
-                            {% empty %}
-                                <tr data-boss-empty-row>
-                                    <td colspan="8" style="padding: 22px; text-align:center; color:#64748b;">
-                                        No existen permisos para la unidad con los filtros seleccionados.
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="pagination-container" style="margin-top: 12px;" data-boss-pagination>
-                        <div class="pagination-info" data-boss-page-info>Mostrando 0-0 de 0</div>
-                        <div class="pagination-controls" data-boss-controls>
-                            <button type="button" class="page-btn" title="Primera" data-boss-first>
-                                <i class="fas fa-angle-double-left"></i>
-                            </button>
-                            <button type="button" class="page-btn" title="Anterior" data-boss-prev>
-                                <i class="fas fa-angle-left"></i>
-                            </button>
-                            <div class="page-input-wrapper">
-                                <input type="number" class="page-input" min="1" value="1" data-boss-page-input>
-                                <span class="total-pages-badge" data-boss-total-pages>de 1</span>
+                        <div class="form-group mb-0 filter-search">
+                            <label class="form-label" style="font-size:0.75rem;">Buscar por Apellidos</label>
+                            <div class="search-input-wrapper">
+                                <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                                <input type="text" class="input-field pl-search" data-boss-lastname
+                                       placeholder="Escriba los apellidos...">
                             </div>
-                            <button type="button" class="page-btn" title="Siguiente" data-boss-next>
-                                <i class="fas fa-angle-right"></i>
-                            </button>
-                            <button type="button" class="page-btn" title="Última" data-boss-last>
-                                <i class="fas fa-angle-double-right"></i>
+                        </div>
+                        <div class="filter-actions">
+                            <button type="button" class="btn btn-filter-clear" data-boss-clear-btn>
+                                <i class="fa-solid fa-rotate-left"></i> Limpiar
                             </button>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div id="boss-permit-modal-response-overlay" class="modal-overlay hidden">
-                <div id="boss-permit-modal-response-container"></div>
+                <!-- Tabla de Permisos -->
+                <div class="table-responsive">
+                    <table class="table-custom" data-boss-table>
+                        <thead>
+                        <tr>
+                            <th>Empleado</th>
+                            <th>Tipo de Permiso</th>
+                            <th>Fecha Inicio</th>
+                            <th>Duración</th>
+                            <th class="text-center">Estado</th>
+                            <th>Observaciones</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                        </thead>
+                        <tbody data-boss-tbody>
+                        {% for p in boss_pending_permits %}
+                            <tr data-boss-permit-row
+                                data-permit-id="{{ p.id }}"
+                                data-start-date="{{ p.start_date|date:'Y-m-d' }}"
+                                data-status="{{ p.status }}"
+                                data-last-name="{{ p.employee.person.last_name|default:''|lower }}">
+                                <td>
+                                    <div class="emp-profile-cell">
+                                        <div class="emp-avatar">
+                                            {{ p.employee.person.first_name|first|upper }}{{ p.employee.person.last_name|first|upper }}</div>
+                                        <div class="emp-info">
+                                            <span class="emp-name">{{ p.employee.person.full_name }}</span>
+                                            <span class="emp-sub">{{ p.employee.person.last_name|default:'—' }}</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge-permit-type">{{ p.permit_type.name|default:'—' }}</span>
+                                </td>
+                                <td>
+                                    <span class="cell-date"><i
+                                            class="fa-regular fa-calendar-days"></i> {{ p.start_date|date:'d/m/Y' }}</span>
+                                </td>
+                                <td>
+                                    <span class="cell-duration">
+                                        {% if p.days > 0 %}{{ p.days }} día(s){% endif %}
+                                        {% if p.hours > 0 %}{% if p.days > 0 %} · {% endif %}{{ p.hours }}h{% endif %}
+                                        {% if p.minutes > 0 %}{% if p.days > 0 or p.hours > 0 %}
+                                            · {% endif %}{{ p.minutes }}m{% endif %}
+                                        {% if p.days == 0 and p.hours == 0 and p.minutes == 0 %}N/A{% endif %}
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    {% if p.status == 'REQUESTED' %}
+                                        <span class="badge-status badge-requested"><i class="fa-solid fa-clock"></i> Solicitado</span>
+                                    {% elif p.status == 'APPROVED' %}
+                                        <span class="badge-status badge-approved"><i class="fa-solid fa-check"></i> Aprobado</span>
+                                    {% elif p.status == 'REJECTED' %}
+                                        <span class="badge-status badge-rejected"><i class="fa-solid fa-xmark"></i> Rechazado</span>
+                                    {% else %}
+                                        <span class="badge-status badge-neutral">{{ p.status|default:'—' }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="cell-note" title="{{ p.response_note|default:'' }}">
+                                        {{ p.response_note|default:'—' }}
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <div class="action-btn-group">
+                                        {% if p.status == 'REQUESTED' %}
+                                            <button type="button" data-boss-open-response data-action="approve"
+                                                    data-permit-id="{{ p.id }}"
+                                                    class="btn-action-round btn-action-approve"
+                                                    title="Aprobar Permiso">
+                                                <i class="fas fa-check"></i>
+                                            </button>
+                                            <button type="button" data-boss-open-response data-action="reject"
+                                                    data-permit-id="{{ p.id }}"
+                                                    class="btn-action-round btn-action-reject"
+                                                    title="Rechazar Permiso">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        {% elif p.status == 'APPROVED' %}
+                                            <a href="{% url 'permissions:permit_report' p.id %}" target="_blank"
+                                               class="btn-action-round btn-action-print" title="Imprimir Reporte">
+                                                <i class="fas fa-print"></i>
+                                            </a>
+                                        {% endif %}
+                                        <a href="{% url 'permissions:permit_detail' p.id %}" target="_blank"
+                                           class="btn-action-round btn-action-view" title="Ver Detalle">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr data-boss-empty-row>
+                                <td colspan="7">
+                                    <div class="table-empty-state">
+                                        <div class="empty-icon-wrap"><i class="fa-regular fa-folder-open"></i></div>
+                                        <h4>No hay permisos pendientes</h4>
+                                        <p>No se encontraron solicitudes registradas para tu unidad con los filtros
+                                            aplicados.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Paginación -->
+                <div class="pagination-container" style="margin-top: 1rem;" data-boss-pagination>
+                    <div class="pagination-info" data-boss-page-info>Mostrando 0-0 de 0</div>
+                    <div class="pagination-controls" data-boss-controls>
+                        <button type="button" class="page-btn" title="Primera" data-boss-first>
+                            <i class="fas fa-angle-double-left"></i>
+                        </button>
+                        <button type="button" class="page-btn" title="Anterior" data-boss-prev>
+                            <i class="fas fa-angle-left"></i>
+                        </button>
+                        <div class="page-input-wrapper">
+                            <input type="number" class="page-input" min="1" value="1" data-boss-page-input>
+                            <span class="total-pages-badge" data-boss-total-pages>de 1</span>
+                        </div>
+                        <button type="button" class="page-btn" title="Siguiente" data-boss-next>
+                            <i class="fas fa-angle-right"></i>
+                        </button>
+                        <button type="button" class="page-btn" title="Última" data-boss-last>
+                            <i class="fas fa-angle-double-right"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
         {% endif %}
 
     {% elif perms.auth.dashboard_empleado %}
 
-        <div style="margin-top: 20px; background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-            <h1>Este usuario no tiene permisos para ver datos estadisticos de Talento Humano</h1>
+        <!-- ==============================================================
+             3. DASHBOARD DE EMPLEADO (PORTAL INSTITUCIONAL)
+             ============================================================== -->
+
+        <div class="employee-welcome-card">
+            <div class="employee-welcome-body">
+                {% if system_config and system_config.logo %}
+                    <div class="institutional-logo-wrapper">
+                        <img src="{{ system_config.logo.url }}"
+                             alt="{{ system_config.institution_name|default:'Logo Institucional' }}"
+                             class="institutional-logo">
+                    </div>
+                {% else %}
+                    <div class="institutional-logo-placeholder">
+                        <i class="fa-solid fa-landmark"></i>
+                    </div>
+                {% endif %}
+
+                <div class="employee-welcome-info">
+                    <span class="welcome-kicker">Portal del Colaborador</span>
+                    <h2 class="welcome-title">
+{#                        Bienvenido, {{ request.user.signature_name|default:request.user.get_full_name|default:request.user.username }}#}
+                        Bienvenido, Usuario
+                    </h2>
+                    <p class="welcome-institution">
+                        {{ system_config.institution_name|default:"Municipio de Loja" }}
+                    </p>
+                    {% if request.user.signature_position %}
+                        <div class="employee-badge-position">
+                            <i class="fa-solid fa-briefcase"></i>
+{#                            <span>{{ request.user.signature_position }}</span>#}
+                            <span>Servidor Municipal</span>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
         </div>
 
     {% else %}
 
-        <div style="margin-top: 20px;">
-            <p>No tiene permisos para ver el dashboard completo.</p>
+        <!-- Fallback Sin Permisos -->
+        <div class="no-permission-box">
+            <i class="fa-solid fa-lock"></i>
+            <h2>Acceso Restringido</h2>
+            <p>No cuentas con permisos para visualizar este panel.</p>
         </div>
 
+    {% endif %}
+
+{% endblock %}
+
+{% block modals %}
+    {% if boss_unit %}
+        <div id="boss-permit-modal-response-overlay" class="modal-overlay hidden">
+            <div id="boss-permit-modal-response-container"></div>
+        </div>
     {% endif %}
 {% endblock %}
 
 {% block extra_js %}
-    <script src="{% static 'js/core/boss_dashboard_permits.js' %}"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <script>
-        // Datos desde Django
-        const employeeData = {
-            labels: {{ employee_chart_data.labels|safe }},
-            values: {{ employee_chart_data.values|safe }}
-        };
+    {% if perms.auth.dashboard_talento_humano and not show_boss_dashboard %}
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                if (typeof Chart === 'undefined') return;
 
-        const budgetData = {
-            labels: {{ budget_chart_data.labels|safe }},
-            values: {{ budget_chart_data.values|safe }}
-        };
+                const employeeData = {
+                    labels: {{ employee_chart_data.labels|safe }},
+                    values: {{ employee_chart_data.values|safe }}
+                };
 
-        const genderData = {
-            labels: {{ gender_chart_data.labels|safe }},
-            values: {{ gender_chart_data.values|safe }}
-        };
+                const budgetData = {
+                    labels: {{ budget_chart_data.labels|safe }},
+                    values: {{ budget_chart_data.values|safe }}
+                };
 
-        // Configuración común para gráficos
-        Chart.defaults.font.family = "'Inter', 'Segoe UI', sans-serif";
-        Chart.defaults.font.size = 13;
+                const genderData = {
+                    labels: {{ gender_chart_data.labels|safe }},
+                    values: {{ gender_chart_data.values|safe }}
+                };
 
-        // Gráfico de Dona (Empleados Activos)
-        const donutCanvas = document.getElementById('employeeDonutChart');
-        if (donutCanvas) {
-            const donutCtx = donutCanvas.getContext('2d');
-            new Chart(donutCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: employeeData.labels,
-                    datasets: [{
-                        data: employeeData.values,
-                        backgroundColor: ['#f59e0b', '#10b981', '#3b82f6', '#ef4444'],
-                        borderWidth: 0,
-                        hoverOffset: 8
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: {
-                        legend: {
-                            display: false
+                Chart.defaults.font.family = "'Lexend', sans-serif";
+                Chart.defaults.font.size = 12;
+
+                // 1. Gráfico de Dona (Empleados Activos)
+                const donutCanvas = document.getElementById('employeeDonutChart');
+                if (donutCanvas) {
+                    new Chart(donutCanvas.getContext('2d'), {
+                        type: 'doughnut',
+                        data: {
+                            labels: employeeData.labels,
+                            datasets: [{
+                                data: employeeData.values,
+                                backgroundColor: ['#f59e0b', '#10b981', '#3b82f6', '#ef4444'],
+                                borderWidth: 0,
+                                hoverOffset: 6
+                            }]
                         },
-                        tooltip: {
-                            callbacks: {
-                                label: function (context) {
-                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                    const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                    return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {display: false},
+                                tooltip: {
+                                    callbacks: {
+                                        label: function (ctx) {
+                                            const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                                            const pct = ((ctx.parsed / total) * 100).toFixed(1);
+                                            return `${ctx.label}: ${ctx.parsed} (${pct}%)`;
+                                        }
+                                    }
                                 }
-                            }
-                        }
-                    },
-                    cutout: '70%'
-                }
-            });
-        }
-
-        // Gráfico de Barras (Partidas)
-        const barCanvas = document.getElementById('budgetBarChart');
-        if (barCanvas) {
-            const barCtx = barCanvas.getContext('2d');
-            new Chart(barCtx, {
-                type: 'bar',
-                data: {
-                    labels: budgetData.labels,
-                    datasets: [{
-                        label: 'Cantidad',
-                        data: budgetData.values,
-                        backgroundColor: ['#10b981', '#f59e0b', '#ef4444', '#3b82f6'],
-                        borderRadius: 8,
-                        barThickness: 60
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: {
-                        legend: {
-                            display: false
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function (context) {
-                                    return 'Partidas: ' + context.parsed.y;
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: {
-                                color: '#e5e7eb'
                             },
-                            ticks: {
-                                stepSize: 500
-                            }
-                        },
-                        x: {
-                            grid: {
-                                display: false
-                            }
+                            cutout: '72%'
                         }
-                    }
+                    });
                 }
-            });
-        }
 
-        // Gráfico de Género
-        const genderCanvas = document.getElementById('genderChart');
-        if (genderCanvas) {
-            const genderCtx = genderCanvas.getContext('2d');
-            new Chart(genderCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: genderData.labels,
-                    datasets: [{
-                        data: genderData.values,
-                        backgroundColor: ['#3b82f6', '#ec4899'],
-                        borderWidth: 0,
-                        hoverOffset: 8
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: {
-                        legend: {
-                            display: false
+                // 2. Gráfico de Barras (Partidas)
+                const barCanvas = document.getElementById('budgetBarChart');
+                if (barCanvas) {
+                    new Chart(barCanvas.getContext('2d'), {
+                        type: 'bar',
+                        data: {
+                            labels: budgetData.labels,
+                            datasets: [{
+                                label: 'Cantidad',
+                                data: budgetData.values,
+                                backgroundColor: ['#10b981', '#f59e0b', '#ef4444', '#3b82f6'],
+                                borderRadius: 6,
+                                maxBarThickness: 45
+                            }]
                         },
-                        tooltip: {
-                            callbacks: {
-                                label: function (context) {
-                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                    const percentage = ((context.parsed / total) * 100).toFixed(1);
-                                    return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {display: false}
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    grid: {color: '#f1f5f9'},
+                                    ticks: {stepSize: 500}
+                                },
+                                x: {
+                                    grid: {display: false}
                                 }
                             }
                         }
-                    },
-                    cutout: '70%'
+                    });
+                }
+
+                // 3. Gráfico de Género
+                const genderCanvas = document.getElementById('genderChart');
+                if (genderCanvas) {
+                    new Chart(genderCanvas.getContext('2d'), {
+                        type: 'doughnut',
+                        data: {
+                            labels: genderData.labels,
+                            datasets: [{
+                                data: genderData.values,
+                                backgroundColor: ['#3b82f6', '#ec4899'],
+                                borderWidth: 0,
+                                hoverOffset: 6
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {display: false},
+                                tooltip: {
+                                    callbacks: {
+                                        label: function (ctx) {
+                                            const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                                            const pct = ((ctx.parsed / total) * 100).toFixed(1);
+                                            return `${ctx.label}: ${ctx.parsed} (${pct}%)`;
+                                        }
+                                    }
+                                }
+                            },
+                            cutout: '72%'
+                        }
+                    });
                 }
             });
-        }
-    </script>
+        </script>
+    {% elif perms.auth.dashboard_jefe or show_boss_dashboard %}
+        <script src="{% static 'js/core/boss_dashboard_permits.js' %}"></script>
+    {% endif %}
 {% endblock %}
