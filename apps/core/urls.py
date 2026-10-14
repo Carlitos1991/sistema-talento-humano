@@ -9,6 +9,7 @@ urlpatterns = [
     # 1. Autenticación y Cuentas
     path('login/', views.CustomLoginView.as_view(), name='login'),
     path('forgot-password/', views.ForgotPasswordView.as_view(), name='forgot_password'),
+    path('reset-password/<str:token>/', views.LocalPasswordResetView.as_view(), name='local_password_reset'),
     path('change-password/', views.ChangePasswordView.as_view(), name='change_password'),
     path('sync-keycloak-password/', views.SyncKeycloakPasswordView.as_view(), name='sync_keycloak_password'),
     path('create-user/', views.CreateUserFromLoginView.as_view(), name='create_user_from_login'),

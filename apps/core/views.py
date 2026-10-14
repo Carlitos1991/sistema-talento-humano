@@ -4,15 +4,19 @@ from urllib.parse import urlencode
 from django.contrib import messages
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth import views as auth_views, get_user_model
+from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib.auth.views import LoginView
 from django.contrib.sessions.models import Session
 from django.core.exceptions import ObjectDoesNotExist
+from django.core import signing
+from django.core.mail import EmailMultiAlternatives
 from django.db import models
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import get_object_or_404, render, redirect
 from django.template.loader import render_to_string
+from django.utils.html import strip_tags
 from django.urls import reverse_lazy, reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
@@ -25,6 +29,36 @@ from .forms import (
 from .models import Catalog, CatalogItem, Location, SystemConfiguration, User
 
 logger = logging.getLogger(__name__)
+
+LOCAL_PASSWORD_RESET_SALT = 'core.local-password-reset'
+LOCAL_PASSWORD_RESET_MAX_AGE = 3600
+
+
+def _build_local_password_reset_token(user):
+    return signing.dumps(
+        {'user_id': user.pk, 'password_marker': user.password},
+        salt=LOCAL_PASSWORD_RESET_SALT,
+    )
+
+
+def _send_local_password_reset_email(user, email, request):
+    token = _build_local_password_reset_token(user)
+    reset_url = request.build_absolute_uri(
+        reverse('core:local_password_reset', kwargs={'token': token})
+    )
+    context = {
+        'nombre': user.get_full_name() or user.username,
+        'reset_url': reset_url,
+    }
+    html_content = render_to_string('core/emails/local_password_reset.html', context)
+    message = EmailMultiAlternatives(
+        subject='Recuperación de contraseña - SIGETH',
+        body=strip_tags(html_content),
+        from_email=None,
+        to=[email],
+    )
+    message.attach_alternative(html_content, 'text/html')
+    message.send(fail_silently=False)
 
 
 def _safe_related(instance, attr_name, default=None):
@@ -190,8 +224,34 @@ class ForgotPasswordView(TemplateView):
             if reset_result.get('reason') == 'sin email':
                 return JsonResponse({'status': 'error',
                                      'message': 'El usuario no tiene un correo configurado para recibir el enlace.'})
-            return JsonResponse({'status': 'error',
-                                 'message': 'No se pudo procesar la recuperación en Keycloak. Intente más tarde.'})
+            try:
+                _send_local_password_reset_email(user, institutional_email.lower(), request)
+                logger.warning(
+                    "[AUTH][RESET] Keycloak no disponible; se envió recuperación local para user_id=%s",
+                    user.pk,
+                )
+                email = institutional_email.lower()
+                masked_email = email
+                if '@' in email:
+                    parts = email.split('@')
+                    name_part = parts[0]
+                    masked_name = (
+                        f"{name_part[:2]}{'*' * (len(name_part) - 4)}{name_part[-2:]}"
+                        if len(name_part) > 4 else name_part
+                    )
+                    masked_email = f"{masked_name}@{parts[1]}"
+                return JsonResponse({
+                    'status': 'success',
+                    'message': f'Se ha enviado un enlace seguro de recuperación al correo {masked_email}',
+                })
+            except Exception:
+                logger.exception(
+                    "[AUTH][RESET] Falló también la recuperación local para user_id=%s", user.pk
+                )
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'No se pudo enviar el correo de recuperación. Intente más tarde.',
+                })
 
         email = reset_result['email']
         masked_email = email
@@ -206,6 +266,61 @@ class ForgotPasswordView(TemplateView):
             'status': 'success',
             'message': f'Se ha enviado un enlace seguro de recuperación al correo {masked_email}'
         })
+
+
+class LocalPasswordResetView(View):
+    template_name = 'core/local_password_reset.html'
+
+    def _get_user(self, token):
+        try:
+            payload = signing.loads(
+                token,
+                salt=LOCAL_PASSWORD_RESET_SALT,
+                max_age=LOCAL_PASSWORD_RESET_MAX_AGE,
+            )
+            user = get_user_model().objects.get(pk=payload['user_id'], is_active=True)
+            if payload.get('password_marker') != user.password:
+                return None
+            return user
+        except (signing.BadSignature, signing.SignatureExpired, KeyError,
+                get_user_model().DoesNotExist):
+            return None
+
+    def get(self, request, token):
+        user = self._get_user(token)
+        if user is None:
+            return render(request, self.template_name, {
+                'invalid_token': True,
+                'error': 'El enlace no es válido o ya expiró.',
+            }, status=400)
+        return render(request, self.template_name, {'token': token})
+
+    def post(self, request, token):
+        user = self._get_user(token)
+        if user is None:
+            return render(request, self.template_name, {
+                'invalid_token': True,
+                'error': 'El enlace no es válido o ya expiró.',
+            }, status=400)
+
+        password = request.POST.get('password') or ''
+        confirm_password = request.POST.get('confirm_password') or ''
+        if password != confirm_password:
+            return render(request, self.template_name, {
+                'token': token,
+                'error': 'Las contraseñas no coinciden.',
+            }, status=400)
+        try:
+            validate_password(password, user)
+        except Exception as exc:
+            return render(request, self.template_name, {
+                'token': token,
+                'error': ' '.join(exc.messages),
+            }, status=400)
+
+        user.set_password(password)
+        user.save(update_fields=['password'])
+        return render(request, self.template_name, {'completed': True})
 
 
 # Servicio o helper que verifica si existe en Keycloak
