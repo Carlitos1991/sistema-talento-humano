@@ -33,7 +33,7 @@ from personnel_actions.models import PersonnelAction, ActionType
 from .forms import *
 from .models import *
 from .services import (
-    calculate_available_days_for_month
+    calculate_available_days_for_month, get_vacation_regime_info
 )
 from .services import resolve_scheduling_hierarchy
 
@@ -1976,14 +1976,6 @@ class VacationSchedulePdfExportView(LoginRequiredMixin, View):
         )
 
         # 2. Empleados de toda la unidad principal y sus hijas
-        active_contract_prefetch = Prefetch(
-            'management_periods',
-            queryset=ManagementPeriod.objects.filter(
-                status__code='ACTIVO'
-            ).select_related('contract_type__labor_regime'),
-            to_attr='active_contracts'
-        )
-
         employees_qs = Employee.objects.filter(
             is_active=True,
             area_id__in=unit_ids
@@ -1995,8 +1987,6 @@ class VacationSchedulePdfExportView(LoginRequiredMixin, View):
             'person',
             'employment_status',
             'institutional_data'
-        ).prefetch_related(
-            active_contract_prefetch
         ).order_by('person__last_name', 'person__first_name')
 
         scheduled_items = VacationScheduleItem.objects.filter(
@@ -2016,26 +2006,20 @@ class VacationSchedulePdfExportView(LoginRequiredMixin, View):
             total_dias = sum(it.days_quantity for it in items)
             apellidos_nombres = f"{emp.person.last_name} {emp.person.first_name}".strip()
 
-            status_text = (emp.employment_status.name or '') if emp.employment_status else ''
-            tipo_display = "TRABAJADOR" if any(
-                k in status_text.upper() for k in ['TRABAJADOR', 'OBRERO', 'CODIGO']) else "EMPLEADO"
+            tipo_display = (
+                (emp.employment_status.name or emp.employment_status.code or '').strip().upper()
+                if emp.employment_status else 'SIN TIPO'
+            )
 
             inst_data = getattr(emp, 'institutional_data', None)
             fecha_ingreso = inst_data.entry_date.strftime('%d/%m/%Y') if (inst_data and inst_data.entry_date) else '-'
-
-            # Régimen del contrato
-            active_contract = emp.active_contracts[0] if getattr(emp, 'active_contracts', None) else None
-            regimen_nombre = "LOSEP"
-            if active_contract and active_contract.contract_type and active_contract.contract_type.labor_regime:
-                regimen_nombre = active_contract.contract_type.labor_regime.name or active_contract.contract_type.labor_regime.code
-            regimen_tipo = f"{regimen_nombre} / {tipo_display}"
 
             report_rows.append({
                 'secuencial': secuencial,
                 'cedula': emp.person.document_number,
                 'apellidos_nombres': apellidos_nombres,
                 'fecha_ingreso': fecha_ingreso,
-                'regimen_tipo': regimen_tipo,
+                'tipo': tipo_display,
                 'meses': meses_str,
                 'total_dias': total_dias,
             })
@@ -2161,58 +2145,29 @@ class VacationScheduleConsolidatedExportView(LoginRequiredMixin, View, Permissio
         # 3. Estructurar filas consolidadas
         report_rows = []
         secuencial = 1
-
         for emp in employees:
-            items = sorted(
-                [it for it in scheduled_items if it.employee_id == emp.id],
-                key=lambda x: x.start_date
-            )
+            items = [it for it in scheduled_items if it.employee_id == emp.id]
             if not items:
                 continue
 
-            # Apellidos y Nombres ordenados
+            meses_str = ", ".join(
+                [f"{full_month_names.get(it.start_date.month, '')} ({it.days_quantity}d)" for it in items]
+            )
+            total_dias = sum(it.days_quantity for it in items)
             apellidos_nombres = f"{emp.person.last_name} {emp.person.first_name}".strip()
 
-            # Fecha de Ingreso
-            inst_data = getattr(emp, 'institutional_data', None)
-            fecha_ingreso = inst_data.entry_date.strftime('%d/%m/%Y') if (inst_data and inst_data.entry_date) else '-'
-
-            # Régimen Laboral
-            active_contract = emp.active_contracts[0] if getattr(emp, 'active_contracts', None) else None
-            regimen = "LOSEP"
-            if active_contract and active_contract.contract_type and active_contract.contract_type.labor_regime:
-                regimen = active_contract.contract_type.labor_regime.name or active_contract.contract_type.labor_regime.code
-
-            # Unidad Administrativa
-            unidad_adm = emp.area.name if emp.area else "SIN ASIGNAR"
-
-            # Tipo (Empleado / Trabajador) y Días de Ley
-            tipo_laboral = (emp.employment_status.name or 'EMPLEADO').upper() if emp.employment_status else "EMPLEADO"
-            if 'TRABAJADOR' in tipo_laboral or 'CODIGO' in tipo_laboral:
-                tipo_display = "TRABAJADOR"
-                dias_ley = 15
-            else:
-                tipo_display = "EMPLEADO"
-                dias_ley = 30
-
-            # Meses concatenados por barra: Enero, Julio/Agosto, Enero/Julio/Agosto
-            meses_list = []
-            for it in items:
-                m_name = full_month_names.get(it.start_date.month, '')
-                if m_name and m_name not in meses_list:
-                    meses_list.append(m_name)
-            meses_str = "/".join(meses_list) if meses_list else "-"
+            # Determinación precisa
+            is_ct, _, _ = get_vacation_regime_info(emp)
+            tipo_limpio = "TRABAJADOR" if is_ct else "EMPLEADO"
 
             report_rows.append({
                 'secuencial': secuencial,
                 'cedula': emp.person.document_number,
                 'apellidos_nombres': apellidos_nombres,
-                'regimen': regimen,
-                'fecha_ingreso': fecha_ingreso,
-                'unidad': unidad_adm,
-                'tipo': tipo_display,
-                'dias_ley': f"{dias_ley} días",
+                'tipo': tipo_limpio,
+                'regimen_tipo': tipo_limpio,
                 'meses': meses_str,
+                'total_dias': total_dias,
             })
             secuencial += 1
 

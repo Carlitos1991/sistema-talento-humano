@@ -6,77 +6,92 @@
     <style>
         @page {
             size: a4 portrait;
-            margin-top: 3.5cm;
-            margin-bottom: 2.5cm;
-            margin-left: 1.5cm;
-            margin-right: 1.5cm;
+            margin: 0;
+            padding: 0;
 
         {% if letterhead_path %}
             background-image: url('{{ letterhead_path }}');
+            background-size: 100% 100%;
+            background-repeat: no-repeat;
         {% endif %}
 
+            /* Marco principal con márgenes simétricos a ambos lados */
+            @frame content_frame {
+            left: 1.8cm;
+            right: 1.8cm;
+            top: 3.4cm;       /* Margen superior para el logotipo */
+            bottom: 3.3cm;    /* Reserva espacio para firmas y numeración */
+        }
+
+            /* Marco exclusivo para la numeración de página centrado en la base */
             @frame footer_frame {
             -pdf-frame-content: page_footer;
-            bottom: 0.8cm;
-            left: 1.5cm;
-            right: 1.5cm;
-            height: 0.8cm;
+            left: 1.8cm;
+            right: 1.8cm;
+            bottom: 1.25cm;
+            height: 0.45cm;
         }
         }
 
         body {
             font-family: Helvetica, Arial, sans-serif;
+            font-size: 8pt;
             color: #1e293b;
-            font-size: 7.5pt;
+            line-height: 1.2;
         }
 
-        .header-title-box {
+        /* Encabezado */
+        .report-header {
             text-align: center;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
         }
 
-        .inst-title {
+        .header-title {
             font-size: 11pt;
             font-weight: bold;
-            color: #203c7d;
+            color: #1e3a8a;
+            margin: 0;
             text-transform: uppercase;
-            margin-bottom: 2px;
         }
 
-        .doc-title {
+        .header-subtitle {
             font-size: 9.5pt;
             font-weight: bold;
             color: #0f172a;
-            margin-bottom: 3px;
+            margin: 3px 0 0 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
-        .doc-sub {
+        .header-meta {
             font-size: 7.5pt;
             color: #475569;
+            margin-top: 4px;
         }
 
+        /* Tabla de Cronograma */
         table.data-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 8px;
+            margin-top: 6px;
         }
 
         table.data-table th {
-            background-color: #203c7d;
+            background-color: #1e3a8a;
             color: #ffffff;
+            font-size: 7.2pt;
             font-weight: bold;
-            font-size: 7pt;
             text-transform: uppercase;
             padding: 5px 3px;
             text-align: center;
-            border: 0.5pt solid #1e293b;
+            border: 0.5pt solid #1e3a8a;
         }
 
         table.data-table td {
+            font-size: 7pt;
             padding: 4px 3px;
             border: 0.5pt solid #cbd5e1;
             vertical-align: middle;
-            font-size: 7pt;
         }
 
         .text-center {
@@ -87,99 +102,83 @@
             text-align: left;
         }
 
-        .bold {
+        .font-bold {
             font-weight: bold;
         }
 
-        tr:nth-child(even) {
-            background-color: #f8fafc;
+        /* Firmas */
+        .signatures-wrapper {
+            margin-top: 45px;
+            width: 100%;
+            page-break-inside: avoid;
         }
 
-        table.signatures-table {
+        .sig-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 25px;
-            background: transparent !important;
         }
 
-        table.signatures-table tr {
-            background: transparent !important;
-            background-color: transparent !important;
-        }
-
-        table.signatures-table td {
-            border: none;
-            padding: 0;
+        .sig-table td {
+            width: 50%;
             text-align: center;
             vertical-align: top;
-            background: transparent !important;
-            background-color: transparent !important;
+            padding: 0 20px;
         }
 
         .sig-header {
-            font-size: 8pt;
+            font-size: 7.5pt;
             font-weight: bold;
-            color: #203c7d;
+            color: #1e3a8a;
+            margin-bottom: 48px;
             text-transform: uppercase;
-        }
-
-        .sig-space-cell {
-            height: 55px;
-            font-size: 1pt;
-            line-height: 55px;
-            background: transparent !important;
-            background-color: transparent !important;
-        }
-
-        .sig-bottom-cell {
-            border-top: 0.8pt solid #0f172a !important;
-            padding-top: 4px !important;
-            vertical-align: top;
-            background: transparent !important;
-            background-color: transparent !important;
-        }
-
-        .sig-text-block {
-            margin: 0;
-            padding: 0;
-            line-height: 1.15;
-            text-align: center;
         }
 
         .sig-name {
-            font-size: 7.5pt;
+            font-size: 7.8pt;
             font-weight: bold;
             color: #0f172a;
             text-transform: uppercase;
+            border-top: 0.8pt solid #334155;
+            padding-top: 4px;
+            margin: 0;
         }
 
-        .sig-position {
+        .sig-role {
             font-size: 6.8pt;
             color: #475569;
             text-transform: uppercase;
+            margin-top: 2px;
+        }
+
+        /* El frame del footer fija la numeración al borde inferior de cada página. */
+        #page_footer {
+            text-align: center;
+            font-size: 7.5pt;
+            color: #64748b;
         }
     </style>
 </head>
 <body>
 
-<div class="header-title-box">
-    <div class="inst-title">{{ sys_config.institution_name|default:"MUNICIPIO DE LOJA" }}</div>
-    <div class="doc-title">CRONOGRAMA ANUAL DE VACACIONES {{ plan.year }}</div>
-    <div class="doc-sub">
-        <strong>Dependencia:</strong> {{ base_unit.name|default:"General" }} &nbsp;|&nbsp;
-        <strong>Fecha Emisión:</strong> {{ today|date:"d/m/Y" }} &nbsp;|&nbsp;
-        <strong>Total Funcionarios:</strong> {{ total_funcionarios }}
+<!-- Encabezado -->
+<div class="report-header">
+    <h2 class="header-title">MUNICIPIO DE LOJA</h2>
+    <h3 class="header-subtitle">CRONOGRAMA ANUAL DE VACACIONES {{ plan.year }}</h3>
+    <div class="header-meta">
+        Dependencia: <strong>{{ base_unit.name|upper }}</strong> |
+        Fecha Emisión: <strong>{{ today|date:"d/m/Y" }}</strong> |
+        Total Funcionarios: <strong>{{ total_funcionarios }}</strong>
     </div>
 </div>
 
-<!-- Tabla Principal (6 Columnas exactas) -->
+<!-- Tabla Principal -->
 <table class="data-table">
     <thead>
     <tr>
         <th style="width: 5%;">N°</th>
         <th style="width: 14%;">CÉDULA</th>
-        <th style="width: 36%;">APELLIDOS Y NOMBRES</th>
-        <th style="width: 14%;">TIPO</th>
+        <th style="width: 35%;">APELLIDOS Y NOMBRES</th>
+        <th style="width: 15%;">TIPO</th>
         <th style="width: 23%;">MESES PROGRAMADOS</th>
         <th style="width: 8%;">TOTAL</th>
     </tr>
@@ -187,56 +186,44 @@
     <tbody>
     {% for r in report_rows %}
         <tr>
-            <td class="text-center">{{ r.secuencial }}</td>
-            <td class="text-center">{{ r.cedula }}</td>
-            <td class="text-left bold">{{ r.apellidos_nombres }}</td>
-            <td class="text-center">{{ r.tipo }}</td>
-            <td class="text-center">{{ r.meses }}</td>
-            <td class="text-center bold">{{ r.total_dias }}d</td>
+            <td class="text-center" style="width: 5%;">{{ r.secuencial }}</td>
+            <td class="text-center" style="width: 14%;">{{ r.cedula }}</td>
+            <td class="text-left font-bold" style="width: 35%;">{{ r.apellidos_nombres }}</td>
+            <td class="text-center font-bold" style="width: 15%;">{{ r.tipo }}</td>
+            <td class="text-center" style="width: 23%;">{{ r.meses }}</td>
+            <td class="text-center font-bold" style="width: 8%;">{{ r.total_dias }}</td>
         </tr>
     {% empty %}
         <tr>
             <td colspan="6" class="text-center" style="padding: 15px;">
-                No hay personal planificado en esta dependencia.
+                No existen asignaciones registradas para esta dependencia.
             </td>
         </tr>
     {% endfor %}
     </tbody>
 </table>
-
 <!-- Bloque de Firmas -->
-<table class="signatures-table">
-    <tr>
-        <td style="width: 44%;" class="sig-header">ELABORADO POR:</td>
-        <td style="width: 12%;"></td>
-        <td style="width: 44%;" class="sig-header">AUTORIZADO POR:</td>
-    </tr>
-    <tr>
-        <td class="sig-space-cell">&nbsp;</td>
-        <td></td>
-        <td class="sig-space-cell">&nbsp;</td>
-    </tr>
-    <tr>
-        <td class="sig-bottom-cell">
-            <p class="sig-text-block">
-                <span class="sig-name">{{ elaborado_nombre }}</span><br/>
-                <span class="sig-position">{{ elaborado_cargo }}</span>
-            </p>
-        </td>
-        <td></td>
-        <td class="sig-bottom-cell">
-            <p class="sig-text-block">
-                <span class="sig-name">{{ autorizado_nombre }}</span><br/>
-                <span class="sig-position">{{ autorizado_cargo }}</span>
-            </p>
-        </td>
-    </tr>
-</table>
-
+<div class="signatures-wrapper">
+    <table class="sig-table">
+        <tr>
+            <td>
+                <div class="sig-header">ELABORADO POR:</div>
+                <div class="sig-name">{{ elaborado_nombre }}</div>
+                <div class="sig-role">{{ elaborado_cargo }}</div>
+            </td>
+            <td>
+                <div class="sig-header">AUTORIZADO POR:</div>
+                <div class="sig-name">{{ autorizado_nombre }}</div>
+                <div class="sig-role">{{ autorizado_cargo }}</div>
+            </td>
+        </tr>
+    </table>
+</div>
+<!-- Contenedor conectado directamente al footer_frame -->
 <div id="page_footer">
-    SIGETH • Página
-    <pdf:pageNumber> de
-        <pdf:pageCount>
+    Página
+    <pdf:pagenumber> de
+        <pdf:pagecount>
 </div>
 
 </body>
