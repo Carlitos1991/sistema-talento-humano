@@ -83,6 +83,7 @@ class SIGETHSecurityMiddleware:
         public_paths = [
             login_url_resolved,  # Nuestra página de login (formulario propio)
             '/forgot-password/',  # Recuperación de contraseña (vía Keycloak)
+            '/reset-password/',  # Enlace local de recuperación (sin autenticación)
             '/create-user/',  # Auto-registro (crea la cuenta en Keycloak)
             '/oidc/',  # Flujo SSO por redirect (opcional, sigue disponible)
             '/admin/',  # El admin de Django (tiene su propio login)

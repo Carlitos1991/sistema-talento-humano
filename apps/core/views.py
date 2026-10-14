@@ -160,13 +160,27 @@ class ForgotPasswordView(TemplateView):
                 {'status': 'error', 'message': 'Debe ingresar su usuario o correo y la fecha de nacimiento.'})
 
         UserModel = get_user_model()
-        user = UserModel.objects.filter(Q(username=identificador) | Q(email=identificador)).first()
+        identifier_email = identificador.casefold()
+        user = UserModel.objects.filter(
+            Q(username__iexact=identificador) | Q(email__iexact=identifier_email)
+        ).first()
 
         person = getattr(user, 'person', None) if user else None
         if person is None:
             person = Person.objects.filter(
                 employee_profile__institutional_data__institutional_email__iexact=identificador
             ).select_related('employee_profile__institutional_data').first()
+            user = getattr(person, 'user', None) if person else None
+
+        if person is None:
+            # Algunas instalaciones tienen el correo institucional cargado,
+            # pero la relación inversa no queda disponible en la consulta
+            # inicial. Se busca directamente desde el modelo del empleado.
+            from employee.models import Employee
+            employee = Employee.objects.filter(
+                institutional_data__institutional_email__iexact=identifier_email
+            ).select_related('person__user', 'institutional_data').first()
+            person = getattr(employee, 'person', None) if employee else None
             user = getattr(person, 'user', None) if person else None
 
         if person is None:
