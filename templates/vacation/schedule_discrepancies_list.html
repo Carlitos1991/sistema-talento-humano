@@ -1,0 +1,422 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Novedades de Cronograma {{ plan.year }} - SIGETH{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/vacations.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="header-card mb-3">
+        <div class="header-card-body">
+            <h1>Novedades y Solicitudes de Personal</h1>
+            <p>
+                Cronograma: <strong>{{ plan.title }} ({{ plan.year }})</strong> •
+                Revisión y reasignación solicitada por las dependencias.
+            </p>
+        </div>
+        <div class="header-actions-group">
+            <a href="{% url 'vacation:schedule_plan_list' %}" class="btn-white-rectangle">
+                <i class="fa-solid fa-arrow-left me-1"></i> Volver a Planes
+            </a>
+        </div>
+    </div>
+
+    <!-- Filtros de Estado tipo Badge / Botones -->
+    <div class="d-flex align-items-center gap-2 mb-3">
+        <a href="?status=" class="btn-filter-pill {% if not current_status %}active{% endif %}">
+            Todas ({{ requests_list|length }})
+        </a>
+        <a href="?status=PENDING" class="btn-filter-pill {% if current_status == 'PENDING' %}active{% endif %}">
+            Pendientes ({{ count_pending }})
+        </a>
+        <a href="?status=RESOLVED" class="btn-filter-pill {% if current_status == 'RESOLVED' %}active{% endif %}">
+            Resueltas ({{ count_resolved }})
+        </a>
+        <a href="?status=REJECTED" class="btn-filter-pill {% if current_status == 'REJECTED' %}active{% endif %}">
+            Desestimadas ({{ count_rejected }})
+        </a>
+    </div>
+
+    <!-- Tabla al estilo managed-table de partial_schedule_plan_list.html -->
+    <div class="table-container">
+        <table class="managed-table" data-title="Novedades Cronograma {{ plan.year }}">
+            <thead>
+            <tr>
+                <th class="width-15">Tipo de Novedad</th>
+                <th class="width-25">Funcionario Afectado</th>
+                <th class="width-20">Dependencia Solicitante</th>
+                <th class="width-25">Motivo / Mensaje</th>
+                <th class="width-10 center">Estado</th>
+                <th class="width-15 no-sort text-center actions"><i class="fas fa-cogs"></i> Acciones</th>
+            </tr>
+            </thead>
+            <tbody id="table-body">
+            {% if requests_list %}
+                {% for req in requests_list %}
+                    <tr>
+                        <td>
+                            {% if req.request_type == 'WRONG_UNIT' %}
+                                <span class="badge badge-red">
+                                    <i class="fa-solid fa-user-minus me-1"></i> No Pertenece
+                                </span>
+                            {% else %}
+                                <span class="badge badge-blue">
+                                    <i class="fa-solid fa-user-plus me-1"></i> Falta en Unidad
+                                </span>
+                            {% endif %}
+                            <div class="small text-muted mt-1">{{ req.created_at|date:"d/m/Y H:i" }}</div>
+                        </td>
+                        <td>
+                            <div class="bold text-muted">{{ req.employee.person.full_name }}</div>
+                            <div class="small text-muted">CI: {{ req.employee.person.document_number }}</div>
+                            <div class="small text-muted">
+                                <i class="fa-solid fa-location-dot me-1"></i>Área actual:
+                                <strong>{{ req.employee.area.name|default:"Sin Dependencia" }}</strong>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="bold">{{ req.unit.name }}</span>
+                            <div class="small text-muted">
+                                Por: {{ req.created_by.get_full_name|default:req.created_by.username }}</div>
+                        </td>
+                        <td class="text-muted small">
+                            {{ req.observation|linebreaksbr }}
+                        </td>
+                        <td class="text-center">
+                            {% if req.status == 'PENDING' %}
+                                <span class="badge badge-yellow">Pendiente</span>
+                            {% elif req.status == 'RESOLVED' %}
+                                <span class="badge badge-green">Resuelto</span>
+                            {% else %}
+                                <span class="badge badge-gray">Desestimado</span>
+                            {% endif %}
+                        </td>
+                        <td class="actions text-center">
+                            <div class="actions-wrapper">
+                                {% if req.status == 'PENDING' %}
+                                    <button type="button"
+                                            class="btn-green-circle"
+                                            title="Reubicar funcionario y resolver"
+                                            onclick="openReassignModal('{{ req.id }}', '{{ req.employee.person.full_name|escapejs }}', '{{ req.request_type }}', '{{ req.unit.id }}', '{{ req.unit.name|escapejs }}')">
+                                        <i class="fa-solid fa-check"></i>
+                                    </button>
+                                    <button type="button"
+                                            class="btn-red-circle"
+                                            title="Desestimar novedad"
+                                            onclick="rejectRequestAjax('{{ req.id }}', '{{ req.employee.person.full_name|escapejs }}')">
+                                        <i class="fa-solid fa-xmark"></i>
+                                    </button>
+                                {% else %}
+                                    <span class="badge badge-gray" title="Gestionado"><i
+                                            class="fa-solid fa-lock"></i></span>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="6" class="center">
+                        <div class="empty-state-container">
+                            <i class="fas fa-inbox empty-state-icon"></i>
+                            <div class="empty-state-text">No se encontraron novedades o solicitudes en este estado.
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- MODAL DE REUBICACIÓN CON COMBOS DEPENDIENTES (DESDE NIVEL 1)  -->
+    <!-- ============================================================== -->
+    <div id="modalReassignDiscrepancy" class="modal-overlay hidden">
+        <div class="modal-container-medium">
+            <div class="modal-header">
+                <div class="header-content-group">
+                    <div class="header-icon-circle bg-emerald text-white">
+                        <i class="fa-solid fa-sitemap"></i>
+                    </div>
+                    <h3 class="header-title">Aprobar y Reubicar Servidor</h3>
+                </div>
+                <button type="button" class="btn-close-circle" onclick="closeModalCustom('modalReassignDiscrepancy')">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <form id="formReassignDiscrepancy" onsubmit="submitReassignForm(event)">
+                <div class="modal-body">
+                    <input type="hidden" id="reassignReqId">
+
+                    <div class="employee-card-badge mb-3">
+                        <div class="employee-card-details">
+                            <span class="employee-card-name" id="reassignEmpName">-</span>
+                            <span class="small text-muted" id="reassignHelpText">-</span>
+                        </div>
+                    </div>
+
+                    <p class="text-muted small mb-2">
+                        Seleccione la estructura organizacional oficial donde quedará asignado el funcionario:
+                    </p>
+
+                    <!-- Combo Nivel 1: Unidad Raíz / Dirección General -->
+                    <div class="form-group mb-2">
+                        <label class="form-label">Nivel 1: Dirección / Coordinación General *</label>
+                        <select id="selectUnitLevel1" class="input-field" required onchange="onLevel1Changed()">
+                            <option value="">Cargando unidades principales...</option>
+                        </select>
+                    </div>
+
+                    <!-- Combo Nivel 2: Subdependencia / Jefatura -->
+                    <div class="form-group mb-2" id="groupLevel2" style="display: none;">
+                        <label class="form-label">Nivel 2: Subdependencia / Jefatura</label>
+                        <select id="selectUnitLevel2" class="input-field" onchange="onLevel2Changed()">
+                            <option value="">-- Mantiene en la Unidad Principal --</option>
+                        </select>
+                    </div>
+
+                    <!-- Combo Nivel 3: Sección / Área específica -->
+                    <div class="form-group mb-3" id="groupLevel3" style="display: none;">
+                        <label class="form-label">Nivel 3: Área / Unidad Operativa</label>
+                        <select id="selectUnitLevel3" class="input-field">
+                            <option value="">-- Mantiene en Nivel 2 --</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="reassignAdminNote">Nota u Observación de Talento Humano
+                            (Opcional)</label>
+                        <textarea id="reassignAdminNote"
+                                  class="input-field"
+                                  rows="2"
+                                  placeholder="Ej: Reubicación aprobada según memorando de traslado..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-dark-blue-rectangle-outline"
+                            onclick="closeModalCustom('modalReassignDiscrepancy')">Cancelar
+                    </button>
+                    <button type="submit" class="btn-dark-blue-rectangle"><i class="fa-solid fa-check me-1"></i>
+                        Confirmar
+                        Reubicación
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script>
+        function getCsrfToken() {
+            const match = document.cookie.match(/csrftoken=([^;]+)/);
+            return match ? match[1] : '';
+        }
+
+        function closeModalCustom(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        // ==============================================================
+        // Modal de Reubicación en Cascada
+        // ==============================================================
+        function openReassignModal(reqId, empName, reqType, unitId, unitName) {
+            document.getElementById('reassignReqId').value = reqId;
+            document.getElementById('reassignEmpName').textContent = empName;
+            document.getElementById('reassignAdminNote').value = '';
+
+            if (reqType === 'MISSING_EMPLOYEE') {
+                document.getElementById('reassignHelpText').textContent = `Solicitud de ingreso a: ${unitName}`;
+            } else {
+                document.getElementById('reassignHelpText').textContent = `Reportado que NO pertenece a: ${unitName}. Seleccione la dependencia de destino real.`;
+            }
+
+            // Cargar Nivel 1 (unidades raíz)
+            loadLevelUnits(null, 'selectUnitLevel1', () => {
+                document.getElementById('groupLevel2').style.display = 'none';
+                document.getElementById('groupLevel3').style.display = 'none';
+                document.getElementById('modalReassignDiscrepancy').classList.remove('hidden');
+            });
+        }
+
+        function loadLevelUnits(parentId, targetSelectId, callback) {
+            const select = document.getElementById(targetSelectId);
+            select.innerHTML = '<option value="">Cargando...</option>';
+
+            // Si parentId es nulo/indefinido, consultamos la raíz (0)
+            const pid = parentId || 0;
+            const url = `/vacation/units/sub-units/${pid}/`;
+
+            fetch(url)
+                .then(res => res.json())
+                .then(data => {
+                    let html = parentId
+                        ? '<option value="">-- Mantiene en el nivel superior --</option>'
+                        : '<option value="">-- Seleccione Dirección General --</option>';
+
+                    const units = data.units || [];
+                    if (units.length > 0) {
+                        units.forEach(u => {
+                            html += `<option value="${u.id}">${u.name}</option>`;
+                        });
+                    }
+                    select.innerHTML = html;
+                    if (callback) callback();
+                })
+                .catch(err => {
+                    console.error("Error al cargar unidades:", err);
+                    select.innerHTML = '<option value="">Error al cargar unidades</option>';
+                });
+        }
+
+        function onLevel1Changed() {
+            const parentId = document.getElementById('selectUnitLevel1').value;
+            const group2 = document.getElementById('groupLevel2');
+            const group3 = document.getElementById('groupLevel3');
+            group3.style.display = 'none';
+
+            if (!parentId) {
+                group2.style.display = 'none';
+                return;
+            }
+
+            loadLevelUnits(parentId, 'selectUnitLevel2', () => {
+                const select2 = document.getElementById('selectUnitLevel2');
+                if (select2.options.length > 1) {
+                    group2.style.display = 'block';
+                } else {
+                    group2.style.display = 'none';
+                }
+            });
+        }
+
+        function onLevel2Changed() {
+            const parentId = document.getElementById('selectUnitLevel2').value;
+            const group3 = document.getElementById('groupLevel3');
+
+            if (!parentId) {
+                group3.style.display = 'none';
+                return;
+            }
+
+            loadLevelUnits(parentId, 'selectUnitLevel3', () => {
+                const select3 = document.getElementById('selectUnitLevel3');
+                if (select3.options.length > 1) {
+                    group3.style.display = 'block';
+                } else {
+                    group3.style.display = 'none';
+                }
+            });
+        }
+
+        function submitReassignForm(e) {
+            e.preventDefault();
+            const reqId = document.getElementById('reassignReqId').value;
+            const l3 = document.getElementById('selectUnitLevel3').value;
+            const l2 = document.getElementById('selectUnitLevel2').value;
+            const l1 = document.getElementById('selectUnitLevel1').value;
+            const adminNote = document.getElementById('reassignAdminNote').value.trim();
+
+            // El área final es la más específica seleccionada
+            const targetUnitId = l3 || l2 || l1;
+
+            if (!targetUnitId) {
+                Swal.fire('Atención', 'Debe seleccionar al menos una Dirección o Unidad de destino.', 'warning');
+                return;
+            }
+
+            Swal.fire({
+                title: '¿Confirmar Reubicación?',
+                text: 'El funcionario será reasignado al área elegida y la novedad quedará Resuelta.',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, Reubicar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.showLoading();
+                    const formData = new FormData();
+                    formData.append('action', 'resolve');
+                    formData.append('target_unit_id', targetUnitId);
+                    formData.append('admin_note', adminNote);
+
+                    fetch(`/vacation/schedule/discrepancies/${reqId}/resolve/`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': getCsrfToken(),
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: formData
+                    })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) {
+                                closeModalCustom('modalReassignDiscrepancy');
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Reubicación Exitosa',
+                                    text: data.message,
+                                    timer: 1500,
+                                    showConfirmButton: false
+                                }).then(() => window.location.reload());
+                            } else {
+                                Swal.fire('Error', data.message || 'No se pudo procesar.', 'error');
+                            }
+                        })
+                        .catch(() => Swal.fire('Error', 'Error de conexión con el servidor.', 'error'));
+                }
+            });
+        }
+
+        function rejectRequestAjax(reqId, empName) {
+            Swal.fire({
+                title: `¿Desestimar novedad de ${empName}?`,
+                text: 'La solicitud será archivada sin realizar traslados de personal.',
+                input: 'textarea',
+                inputPlaceholder: 'Motivo de rechazo para la dependencia...',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, Desestimar',
+                cancelButtonText: 'Cancelar',
+                customClass: {
+                    confirmButton: 'swal2-confirm btn-swal-danger',
+                    cancelButton: 'swal2-cancel btn-swal-cancel'
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.showLoading();
+                    const formData = new FormData();
+                    formData.append('action', 'reject');
+                    formData.append('admin_note', result.value || '');
+
+                    fetch(`/vacation/schedule/discrepancies/${reqId}/resolve/`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': getCsrfToken(),
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: formData
+                    })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Desestimada',
+                                    text: data.message,
+                                    timer: 1500,
+                                    showConfirmButton: false
+                                }).then(() => window.location.reload());
+                            } else {
+                                Swal.fire('Error', data.message || 'No se pudo procesar.', 'error');
+                            }
+                        })
+                        .catch(() => Swal.fire('Error', 'Error al comunicar con el servidor.', 'error'));
+                }
+            });
+        }
+    </script>
+{% endblock %}

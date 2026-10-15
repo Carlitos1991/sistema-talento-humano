@@ -7,10 +7,17 @@
             <thead>
             <tr>
                 <th class="width-10">Año</th>
-                <th class="width-35">Título</th>
-                <th class="width-20">Recepción</th>
-                <th class="width-15 center no-sort">Estado</th>
-                <th class="width-20 no-sort text-center actions"><i class="fas fa-cogs"></i> Acciones</th>
+                <th class="{% if perms.vacation.change_vacationscheduleplan %}width-25{% else %}width-45{% endif %}">
+                    Título
+                </th>
+                <th class="width-15">Recepción</th>
+                <th class="width-10 center no-sort">Estado</th>
+                {% if perms.vacation.change_vacationscheduleplan %}
+                    <th class="width-13 no-sort text-center actions"><i class="fa-solid fa-bell"></i> Notificaciones
+                    </th>
+                    <th class="width-12 no-sort text-center actions"><i class="fa-solid fa-print"></i> Reportes</th>
+                {% endif %}
+                <th class="width-15 no-sort text-center actions"><i class="fas fa-cogs"></i> Acciones</th>
             </tr>
             </thead>
             <tbody id="table-body">
@@ -39,17 +46,25 @@
                                 <span class="badge badge-gray">{{ plan.get_status_display }}</span>
                             {% endif %}
                         </td>
-                        <td class="actions text-center">
-                            <div class="actions-wrapper">
-                                <!-- BOTÓN EXCLUSIVO PARA SECRETARIAS / CONSULTA: Ver Matriz y Planificación -->
-                                <a href="{% url 'vacation:schedule_detail' plan.id %}"
-                                   class="btn-blue-circle"
-                                   title="Planificar Vacaciones">
-                                    <i class="fa-solid fa-calendar-days"></i>
-                                </a>
 
-                                <!-- ACCIONES PRIVILEGIADAS (Solo Talento Humano con permiso change_vacationscheduleplan) -->
-                                {% if perms.vacation.change_vacationscheduleplan %}
+                        <!-- COLUMNA 1 PRIVILEGIADA: Notificaciones (td completo condicional) -->
+                        {% if perms.vacation.change_vacationscheduleplan %}
+                            <td class="actions text-center">
+                                <div class="actions-wrapper">
+                                    <a href="{% url 'vacation:schedule_discrepancies_list' plan.id %}"
+                                       class="btn-blue-circle btn-notification-inline"
+                                       title="Gestionar novedades y solicitudes de dependencias">
+                                        <i class="fa-solid fa-bell"></i>
+                                        {% if plan.pending_discrepancies_count and plan.pending_discrepancies_count > 0 %}
+                                            <span class="badge-counter-inline">{{ plan.pending_discrepancies_count }}</span>
+                                        {% endif %}
+                                    </a>
+                                </div>
+                            </td>
+
+                            <!-- COLUMNA 2 PRIVILEGIADA: Reportes (td completo condicional) -->
+                            <td class="actions text-center">
+                                <div class="actions-wrapper">
                                     <!-- 1. Reporte Consolidado General -->
                                     <button type="button"
                                             class="btn-green-circle"
@@ -57,23 +72,40 @@
                                             onclick="openAjaxModal('{% url 'vacation:schedule_consolidated_modal' plan.id %}')">
                                         <i class="fa-solid fa-file-invoice"></i>
                                     </button>
+
+                                    <!-- 2. Reporte por Dependencia -->
                                     <button type="button"
                                             class="btn-blue-circle"
                                             onclick="openUnitReportModal('{{ plan.id }}')"
                                             title="Reporte por Dependencia (Comprobación)">
-                                        <i class="fa-solid fa-sitemap"></i>
+                                        <i class="fa-solid fa-file-pdf"></i>
                                     </button>
+                                </div>
+                            </td>
+                        {% endif %}
 
+                        <!-- COLUMNA COMÚN: Acciones -->
+                        <td class="actions text-center">
+                            <div class="actions-wrapper">
+                                <!-- Matriz y Planificación (Siempre visible para todos los roles) -->
+                                <a href="{% url 'vacation:schedule_detail' plan.id %}"
+                                   class="btn-blue-circle"
+                                   title="Planificar Vacaciones">
+                                    <i class="fa-solid fa-calendar-days"></i>
+                                </a>
+
+                                <!-- Acciones avanzadas solo para Talento Humano -->
+                                {% if perms.vacation.change_vacationscheduleplan %}
                                     {% if plan.status != 'APPROVED' %}
-                                        <!-- 2. Aprobar Oficialmente y Cerrar -->
+                                        <!-- Aprobar Oficialmente y Cerrar -->
                                         <button type="button"
                                                 class="btn-fifth"
                                                 title="Aprobar Oficialmente y Cerrar Cronograma"
                                                 onclick="approvePlanAjax('{% url 'vacation:schedule_plan_approve' plan.id %}', '{{ plan.year }}')">
-                                            <i class="fa-solid fa-stamp"></i>
+                                            <i class="fa-solid fa-clipboard-check"></i>
                                         </button>
 
-                                        <!-- 3. Editar Cronograma -->
+                                        <!-- Editar Cronograma -->
                                         <button type="button"
                                                 class="btn-yellow-circle"
                                                 title="Editar Cronograma"
@@ -81,7 +113,7 @@
                                             <i class="fas fa-edit"></i>
                                         </button>
 
-                                        <!-- 4. Baja / Reapertura -->
+                                        <!-- Baja / Reapertura -->
                                         {% if plan.status != 'CLOSED' %}
                                             <button type="button"
                                                     class="btn-red-circle"
@@ -111,7 +143,8 @@
                 {% endfor %}
             {% else %}
                 <tr>
-                    <td colspan="5" class="center">
+                    <td colspan="{% if perms.vacation.change_vacationscheduleplan %}7{% else %}5{% endif %}"
+                        class="center">
                         <div class="empty-state-container">
                             <i class="fas fa-calendar-times empty-state-icon"></i>
                             <div class="empty-state-text">No se encontraron cronogramas {% if show_inactive %}
@@ -148,7 +181,7 @@
                     {% if not page_obj.has_next %}disabled{% endif %}>
                 <i class="fas fa-angle-right"></i>
             </button>
-            <button class="page-btn" data-page="{{ paginator.num_pages }}"
+            <button class="page-btn" data-page="{{ page_obj.next_page_number|default:paginator.num_pages }}"
                     {% if not page_obj.has_next %}disabled{% endif %}>
                 <i class="fas fa-angle-double-right"></i>
             </button>

@@ -9,7 +9,7 @@ from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db import IntegrityError, transaction
-from django.db.models import Prefetch
+from django.db.models import Prefetch, Count
 from django.db.models import Q, F
 from django.http import HttpResponse
 from django.http import JsonResponse
@@ -1345,7 +1345,6 @@ class VacationSchedulePlanListView(LoginRequiredMixin, PermissionRequiredMixin, 
     def get_queryset(self):
         show_inactive = self.request.GET.get('show_inactive') == 'true'
 
-        # Si el switch está activo muestra SOLO inactivos (CLOSED); si está apagado, SOLO activos
         if show_inactive:
             qs = VacationSchedulePlan.objects.filter(status=VacationSchedulePlan.PlanStatus.CLOSED)
         else:
@@ -1355,23 +1354,15 @@ class VacationSchedulePlanListView(LoginRequiredMixin, PermissionRequiredMixin, 
         if q:
             qs = qs.filter(Q(title__icontains=q) | Q(year__icontains=q))
 
-        return qs.order_by('-year')
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['search_query'] = self.request.GET.get('q', '')
-        context['show_inactive'] = self.request.GET.get('show_inactive') == 'true'
-        return context
-
-    def render_to_response(self, context, **response_kwargs):
-        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            html = render_to_string(
-                'vacation/partials/partial_schedule_plan_list.html',
-                context,
-                request=self.request
+        # ANOTACIÓN: Conteo de solicitudes pendientes para la campana en el partial
+        qs = qs.annotate(
+            pending_discrepancies_count=Count(
+                'discrepancy_requests',
+                filter=Q(discrepancy_requests__status='PENDING')
             )
-            return HttpResponse(html)
-        return super().render_to_response(context, **response_kwargs)
+        )
+
+        return qs.order_by('-year')
 
 
 class VacationSchedulePlanCreateModalView(LoginRequiredMixin, CreateView, PermissionRequiredMixin):
@@ -2470,23 +2461,26 @@ class VacationScheduleUnitReportModalView(LoginRequiredMixin, View):
 class SubUnitsAjaxView(LoginRequiredMixin, View):
     """
     Endpoint AJAX para combos dependientes de unidades administrativas.
+    Si parent_id es 0, carga las unidades raíz (Nivel 1).
+    Si parent_id > 0, carga las unidades hijas dependientes.
     """
 
-    def get(self, request, parent_id):
-        parent = get_object_or_404(AdministrativeUnit, pk=parent_id, is_active=True)
-        children = AdministrativeUnit.objects.filter(parent=parent, is_active=True).order_by('name')
+    def get(self, request, parent_id=0):
+        parent_id = int(parent_id or 0)
 
-        # Incluimos la misma dirección padre como primera opción (para reportar toda la dirección)
-        data = [{
-            'id': parent.id,
-            'name': f"TODA LA DEPENDENCIA ({parent.name})"
-        }]
-        for ch in children:
-            data.append({
-                'id': ch.id,
-                'name': ch.name
-            })
-        return JsonResponse({'units': data})
+        if parent_id > 0:
+            parent = get_object_or_404(AdministrativeUnit, pk=parent_id, is_active=True)
+            children = AdministrativeUnit.objects.filter(parent=parent, is_active=True).order_by('name')
+            units_data = [{'id': ch.id, 'name': ch.name} for ch in children]
+        else:
+            # Nivel 1: Direcciones principales / unidades raíz
+            root_units = AdministrativeUnit.objects.filter(
+                is_active=True,
+                parent__isnull=True
+            ).order_by('name')
+            units_data = [{'id': u.id, 'name': u.name} for u in root_units]
+
+        return JsonResponse({'units': units_data})
 
 
 class VacationScheduleUnitReportPDFView(LoginRequiredMixin, View):
@@ -2862,3 +2856,93 @@ class VacationScheduleItemMoveMonthView(LoginRequiredMixin, PermissionRequiredMi
             'success': True,
             'message': f'Se movió la asignación exitosamente.'
         })
+
+
+class ScheduleDiscrepancyManageListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
+    """Bandeja de gestión de novedades y solicitudes de cronograma para Talento Humano."""
+    model = ScheduleDiscrepancyRequest
+    template_name = 'vacation/schedule_discrepancies_list.html'
+    context_object_name = 'requests_list'
+    permission_required = 'vacation.change_vacationscheduleplan'
+
+    def get_queryset(self):
+        plan_id = self.kwargs.get('plan_id')
+        qs = ScheduleDiscrepancyRequest.objects.filter(
+            plan_id=plan_id
+        ).select_related(
+            'employee__person',
+            'employee__area',
+            'unit',
+            'created_by'
+        ).order_by('-created_at')
+
+        status_filter = self.request.GET.get('status')
+        if status_filter:
+            qs = qs.filter(status=status_filter)
+        return qs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        plan = get_object_or_404(VacationSchedulePlan, pk=self.kwargs['plan_id'])
+        context['plan'] = plan
+        context['current_status'] = self.request.GET.get('status', '')
+
+        # Contadores rápidos
+        context['count_pending'] = ScheduleDiscrepancyRequest.objects.filter(plan=plan,
+                                                                             status=ScheduleDiscrepancyRequest.Status.PENDING).count()
+        context['count_resolved'] = ScheduleDiscrepancyRequest.objects.filter(plan=plan,
+                                                                              status=ScheduleDiscrepancyRequest.Status.RESOLVED).count()
+        context['count_rejected'] = ScheduleDiscrepancyRequest.objects.filter(plan=plan,
+                                                                              status=ScheduleDiscrepancyRequest.Status.REJECTED).count()
+        return context
+
+
+class ResolveDiscrepancyRequestView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'vacation.change_vacationscheduleplan'
+
+    def post(self, request, pk):
+        discrepancy = get_object_or_404(
+            ScheduleDiscrepancyRequest.objects.select_related('employee', 'unit', 'plan'),
+            pk=pk
+        )
+        action = request.POST.get('action')  # 'resolve' o 'reject'
+        admin_note = request.POST.get('admin_note', '').strip()
+        target_unit_id = request.POST.get('target_unit_id')
+
+        if action == 'resolve':
+            emp = discrepancy.employee
+            # Determinar a qué unidad reubicar
+            target_unit = None
+            if target_unit_id:
+                target_unit = AdministrativeUnit.objects.filter(pk=target_unit_id).first()
+            elif discrepancy.request_type == ScheduleDiscrepancyRequest.RequestType.MISSING_EMPLOYEE:
+                target_unit = discrepancy.unit
+
+            if target_unit:
+                emp.area = target_unit
+                emp.save(update_fields=['area'])
+
+            discrepancy.status = ScheduleDiscrepancyRequest.Status.RESOLVED
+            nota_th = f"\n[TH Resuelto]: Reubicado a {emp.area.name}."
+            if admin_note:
+                nota_th += f" Nota: {admin_note}"
+            discrepancy.observation += nota_th
+            discrepancy.save()
+
+            return JsonResponse({
+                'success': True,
+                'message': f'Novedad resuelta con éxito. {emp.person.full_name} reubicado a {emp.area.name}.'
+            })
+
+        elif action == 'reject':
+            discrepancy.status = ScheduleDiscrepancyRequest.Status.REJECTED
+            if admin_note:
+                discrepancy.observation += f"\n[TH Rechazado]: {admin_note}"
+            discrepancy.save()
+
+            return JsonResponse({
+                'success': True,
+                'message': 'La novedad ha sido desestimada.'
+            })
+
+        return JsonResponse({'success': False, 'message': 'Acción no válida.'}, status=400)

@@ -87,4 +87,10 @@ urlpatterns = [
          name='schedule_request_missing_employee'),
     path('schedule/item/<int:item_id>/move-month/', views.VacationScheduleItemMoveMonthView.as_view(),
          name='schedule_item_move_month'),
+    path('schedule/<int:plan_id>/discrepancies/', views.ScheduleDiscrepancyManageListView.as_view(),
+         name='schedule_discrepancies_list'),
+    path('schedule/discrepancies/<int:pk>/resolve/', views.ResolveDiscrepancyRequestView.as_view(),
+         name='schedule_discrepancy_resolve'),
+    path('units/sub-units/<int:parent_id>/', views.SubUnitsAjaxView.as_view(), name='sub_units_ajax'),
+    path('units/sub-units/', views.SubUnitsAjaxView.as_view(), name='sub_units_ajax_root'),
 ]

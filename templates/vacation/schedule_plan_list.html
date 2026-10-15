@@ -2,7 +2,9 @@
 {% load static %}
 
 {% block title %}Cronogramas de Vacaciones - SIGETH{% endblock %}
-
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/vacations.css' %}">
+{% endblock %}
 {% block content %}
     <div class="header-card">
         <div class="header-card-body">
@@ -31,7 +33,7 @@
                     </label>
                 </div>
             {% else %}
-                 <div class="toolbar-center">
+                <div class="toolbar-center">
                 </div>
             {% endif %}
             <div class="toolbar-right">

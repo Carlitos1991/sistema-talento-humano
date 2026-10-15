@@ -1166,3 +1166,165 @@
     border: 1.5px dashed #2563eb;
     transform: scale(0.96);
 }
+
+/* Filtros en píldora */
+.btn-filter-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 9999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #475569;
+    text-decoration: none;
+    transition: all 0.15s ease;
+}
+
+.btn-filter-pill:hover,
+.btn-filter-pill.active {
+    background: #2563eb;
+    color: #ffffff;
+    border-color: #2563eb;
+}
+
+.btn-filter-pill .indicator-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+/* Botones de acción rápida en la tabla */
+.btn-icon-success {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background-color: #dcfce7;
+    color: #15803d;
+    border: 1px solid #86efac;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-icon-success:hover {
+    background-color: #16a34a;
+    color: #ffffff;
+}
+
+.btn-icon-danger {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background-color: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fca5a5;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-icon-danger:hover {
+    background-color: #dc2626;
+    color: #ffffff;
+}
+
+/* Posicionamiento relativo necesario en el botón contenedor */
+.btn-blue-circle.position-relative {
+    position: relative !important;
+    overflow: visible !important;
+}
+
+/* Círculo rojo flotante en la esquina superior derecha */
+.badge-counter-floating {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    background-color: #ef4444; /* Rojo corporativo */
+    color: #ffffff;
+    font-size: 0.62rem;
+    font-weight: 800;
+    line-height: 18px;
+    text-align: center;
+    border-radius: 9999px;
+    border: 1.5px solid #ffffff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    z-index: 10;
+    pointer-events: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.badge-counter-floating-bottom {
+    position: absolute !important;
+    bottom: -3px !important;
+    right: -3px !important;
+    top: auto !important;
+    left: auto !important;
+    min-width: 17px !important;
+    height: 17px !important;
+    padding: 0 3px !important;
+    background-color: #ef4444 !important;
+    color: #ffffff !important;
+    font-size: 0.62rem !important;
+    font-weight: 800 !important;
+    line-height: 17px !important;
+    text-align: center !important;
+    border-radius: 9999px !important;
+    border: 1.5px solid #ffffff !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25) !important;
+    z-index: 10 !important;
+    pointer-events: none !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* Botón contenedor flexible */
+.btn-notification-inline {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 4px !important;
+    padding: 0 8px !important;
+    width: auto !important;
+    min-width: 34px !important;
+    height: 34px !important;
+    border-radius: 9999px !important; /* Estilo cápsula/píldora si hay número, círculo si no */
+    text-decoration: none !important;
+    box-sizing: border-box !important;
+}
+
+/* Icono de campana centrado */
+.btn-notification-inline i {
+    font-size: 0.85rem !important;
+    color: #ffffff !important;
+}
+
+/* Círculo rojo centrado verticalmente a la derecha */
+.badge-counter-inline {
+    background-color: #ef4444 !important;
+    color: #ffffff !important;
+    font-size: 0.65rem !important;
+    font-weight: 800 !important;
+    line-height: 1 !important;
+    min-width: 17px !important;
+    height: 17px !important;
+    padding: 0 4px !important;
+    border-radius: 9999px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border: 1px solid rgba(255, 255, 255, 0.9) !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25) !important;
+}
