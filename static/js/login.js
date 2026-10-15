@@ -3,48 +3,50 @@
 document.addEventListener('DOMContentLoaded', () => {
 
     // ------------------------------------------------
-    // 1. Lógica VUE.js (Toggle Password)
+    // 1. Toggle Password (Vanilla JS, sin Vue)
     // ------------------------------------------------
-    const {createApp, ref} = Vue;
+    const toggleBtn = document.querySelector('.toggle-password');
+    const passwordInput = document.querySelector('input[name="password"]');
 
-    if (document.getElementById('loginApp')) {
-        createApp({
-            setup() {
-                const passwordVisible = ref(false);
-                const togglePassword = () => {
-                    passwordVisible.value = !passwordVisible.value;
-                };
-                return {passwordVisible, togglePassword};
-            }
-        }).mount('#loginApp');
+    if (toggleBtn && passwordInput) {
+        toggleBtn.addEventListener('click', () => {
+            const isPassword = passwordInput.getAttribute('type') === 'password';
+            passwordInput.setAttribute('type', isPassword ? 'text' : 'password');
+            toggleBtn.classList.toggle('fa-eye', !isPassword);
+            toggleBtn.classList.toggle('fa-eye-slash', isPassword);
+        });
     }
 
     // ------------------------------------------------
     // 2. Lógica SweetAlert (Mensajes desde Django)
     // ------------------------------------------------
-    // Buscamos el script JSON que contiene los mensajes (Patrón Data Island)
     const messagesScript = document.getElementById('django-messages');
 
     if (messagesScript) {
-        // Parseamos el contenido JSON
-        const messages = JSON.parse(messagesScript.textContent);
+        let messages = [];
+        try {
+            messages = JSON.parse(messagesScript.textContent || '[]');
+        } catch (e) {
+            messages = [];
+        }
 
-        // Iteramos y mostramos alertas
-        messages.forEach(msg => {
-            Swal.fire({
-                icon: msg.tag === 'error' ? 'error' : 'success',
-                title: msg.tag === 'error' ? 'Error' : 'Éxito',
-                text: msg.text,
-                confirmButtonColor: '#2c3e50',
-                confirmButtonText: 'Entendido',
-                cancelButtonText: 'Cancelar',
-                showCancelButton: false,
-                showDenyButton: false,
-                showCloseButton: false,
-                allowOutsideClick: false,
-                allowEscapeKey: false,
-                buttonsStyling: true
+        if (Array.isArray(messages)) {
+            messages.forEach(msg => {
+                Swal.fire({
+                    icon: msg.tag === 'error' ? 'error' : 'success',
+                    title: msg.tag === 'error' ? 'Error' : 'Éxito',
+                    text: msg.text,
+                    confirmButtonColor: '#2c3e50',
+                    confirmButtonText: 'Entendido',
+                    cancelButtonText: 'Cancelar',
+                    showCancelButton: false,
+                    showDenyButton: false,
+                    showCloseButton: false,
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    buttonsStyling: true
+                });
             });
-        });
+        }
     }
 });

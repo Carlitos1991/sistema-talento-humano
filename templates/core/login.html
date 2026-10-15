@@ -49,18 +49,14 @@
             <!-- CAMPO CONTRASEÑA -->
             <div class="form-group">
                 <div class="input-icon-wrapper">
-                    <!-- Icono Izquierda (Candado) -->
                     <i class="fa-solid fa-lock input-icon-left"></i>
-                    <input :type="passwordVisible ? 'text' : 'password'" name="password" class="form-control with-icon"
+                    <input type="password" id="passwordInput" name="password" class="form-control with-icon"
                            placeholder="Contraseña" required>
-                    <i class="fa toggle-password" :class="passwordVisible ? 'fa-eye-slash' : 'fa-eye'"
-                       @click="togglePassword"></i>
+                    <i class="fa fa-eye toggle-password" id="togglePasswordBtn"></i>
                 </div>
 
-                <!-- Link Olvidé Contraseña (Debajo y a la derecha) -->
                 <div class="text-right mt-2">
-                    <a href="{% url 'core:forgot_password' %}" class="btn-link">¿Olvidaste tu
-                        contraseña?</a>
+                    <a href="{% url 'core:forgot_password' %}" class="btn-link">¿Olvidaste tu contraseña?</a>
                 </div>
             </div>
 
@@ -76,7 +72,6 @@
 </div>
 
 <!-- SCRIPTS -->
-<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <!-- DATA ISLAND (Mensajes Django) -->
