@@ -79,4 +79,12 @@ urlpatterns = [
          name='schedule_unit_report_pdf'),
     path('schedule/<int:plan_id>/clear-month/<int:month>/', views.VacationScheduleClearMonthView.as_view(),
          name='schedule_clear_month'),
+    path('schedule/<int:plan_id>/report-wrong-employee/<int:employee_id>/', views.ReportWrongUnitEmployeeView.as_view(),
+         name='schedule_report_wrong_employee'),
+    path('schedule/search-employee-ajax/', views.SearchEmployeeForScheduleView.as_view(),
+         name='schedule_search_employee_ajax'),
+    path('schedule/<int:plan_id>/request-missing-employee/', views.RequestAddMissingEmployeeView.as_view(),
+         name='schedule_request_missing_employee'),
+    path('schedule/item/<int:item_id>/move-month/', views.VacationScheduleItemMoveMonthView.as_view(),
+         name='schedule_item_move_month'),
 ]

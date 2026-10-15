@@ -1021,3 +1021,148 @@
     border-color: #dc2626;
     transform: scale(1.1);
 }
+
+/* Posicionamiento del botón rojo en la esquina inferior derecha */
+.employee-drag-card {
+    position: relative;
+    padding-bottom: 8px;
+}
+
+.btn-report-wrong-emp {
+    position: absolute;
+    bottom: 6px;
+    right: 6px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #ef4444;
+    color: #ffffff;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.4);
+    transition: transform 0.15s ease, background-color 0.15s ease;
+    z-index: 5;
+}
+
+.btn-report-wrong-emp:hover {
+    background: #dc2626;
+    transform: scale(1.15);
+}
+
+/* Dropdown flotante de búsqueda de empleados */
+.employee-search-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: 220px;
+    overflow-y: auto;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+    z-index: 100;
+    margin-top: 4px;
+}
+
+.employee-search-item {
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    border-bottom: 1px solid #f1f5f9;
+    transition: background 0.15s ease;
+}
+
+.employee-search-item:hover {
+    background-color: #eff6ff;
+}
+
+.employee-search-item:last-child {
+    border-bottom: none;
+}
+
+/* Tarjeta reportada como no perteneciente: Bloqueada y rojo claro */
+.employee-drag-card.card-reported-blocked {
+    background-color: #fee2e2 !important;
+    border: 1.5px solid #f87171 !important;
+    opacity: 0.85;
+    cursor: not-allowed !important;
+    user-select: none;
+    box-shadow: none !important;
+}
+
+.employee-drag-card.card-reported-blocked:hover {
+    transform: none !important;
+    border-color: #ef4444 !important;
+}
+
+/* Ocultar o atenuar el botón rojo si ya fue reportado */
+.employee-drag-card.card-reported-blocked .btn-report-wrong-emp {
+    background-color: #991b1b !important;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* Distintivo de estado reportado */
+.badge-reported-pill {
+    display: inline-block;
+    background-color: #ef4444;
+    color: #ffffff;
+    font-size: 0.6rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    padding: 1px 6px;
+    border-radius: 4px;
+    margin-top: 2px;
+}
+
+/* Tarjeta Fantasma: Empleado Solicitado Pendiente en TH */
+.employee-drag-card.card-requested-ghost {
+    background-color: #f1f5f9 !important;
+    border: 1.5px dashed #94a3b8 !important;
+    opacity: 0.65;
+    filter: grayscale(80%);
+    cursor: not-allowed !important;
+    user-select: none;
+    box-shadow: none !important;
+}
+
+.employee-drag-card.card-requested-ghost:hover {
+    transform: none !important;
+    box-shadow: none !important;
+    border-color: #64748b !important;
+}
+
+.badge-ghost-pill {
+    display: inline-block;
+    background-color: #64748b;
+    color: #ffffff;
+    font-size: 0.58rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    padding: 1px 6px;
+    border-radius: 4px;
+    margin-top: 2px;
+}
+
+/* Tarjetas asignadas de mes que ahora son arrastrables entre meses */
+.assigned-schedule-card-compact[draggable="true"] {
+    cursor: grab;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.assigned-schedule-card-compact[draggable="true"]:active {
+    cursor: grabbing;
+}
+
+.assigned-schedule-card-compact.is-moving {
+    opacity: 0.35;
+    border: 1.5px dashed #2563eb;
+    transform: scale(0.96);
+}

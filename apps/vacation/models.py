@@ -9,7 +9,7 @@ from django.utils.translation import gettext_lazy as _
 # Importaciones de otros módulos
 from employee.models import Employee
 from permitrequest.models import PermitRequest
-
+from institution.models import AdministrativeUnit
 # Constantes para lógica de cálculo
 WORK_DAY_HOURS = 8
 FACTOR_DAY = Decimal('1.0')
@@ -273,3 +273,58 @@ class VacationScheduleItem(models.Model):
 
     def __str__(self):
         return f'{self.employee} | {self.start_date} al {self.end_date} ({self.days_quantity} días)'
+
+
+class ScheduleDiscrepancyRequest(models.Model):
+    class RequestType(models.TextChoices):
+        WRONG_UNIT = 'WRONG_UNIT', 'No pertenece a esta dependencia'
+        MISSING_EMPLOYEE = 'MISSING_EMPLOYEE', 'Falta en esta dependencia'
+
+    class Status(models.TextChoices):
+        PENDING = 'PENDING', 'Pendiente'
+        RESOLVED = 'RESOLVED', 'Resuelto'
+        REJECTED = 'REJECTED', 'Desestimado'
+
+    plan = models.ForeignKey(
+        'VacationSchedulePlan',
+        on_delete=models.CASCADE,
+        related_name='discrepancy_requests'
+    )
+    unit = models.ForeignKey(
+        AdministrativeUnit,
+        on_delete=models.CASCADE,
+        related_name='schedule_discrepancies'
+    )
+    employee = models.ForeignKey(
+        Employee,
+        on_delete=models.CASCADE,
+        related_name='schedule_discrepancies'
+    )
+    request_type = models.CharField(
+        max_length=20,
+        choices=RequestType.choices
+    )
+    observation = models.TextField(
+        help_text="Motivo o mensaje descriptivo para Talento Humano"
+    )
+    status = models.CharField(
+        max_length=15,
+        choices=Status.choices,
+        default=Status.PENDING
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='created_schedule_discrepancies'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Novedad de Cronograma'
+        verbose_name_plural = 'Novedades de Cronograma'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.get_request_type_display()} - {self.employee} ({self.get_status_display()})"

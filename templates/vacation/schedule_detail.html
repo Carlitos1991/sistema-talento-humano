@@ -21,6 +21,11 @@
             </p>
         </div>
         <div class="header-actions-group">
+            {% if plan.status != 'APPROVED' %}
+                <button type="button" class="btn-blue-rectangle" onclick="openRequestEmployeeModal()">
+                    <i class="fa-solid fa-user-plus"></i> Solicitar Personal
+                </button>
+            {% endif %}
             <a href="{% url 'vacation:schedule_plan_list' %}" class="btn-white-rectangle">
                 <i class="fa-solid fa-arrow-left"></i> Volver a Planes
             </a>
@@ -55,12 +60,13 @@
             <!-- Tira de Miniaturas Arrastrables -->
             <div class="drag-bench-grid" id="dragBenchGrid">
                 {% for item in employee_cards %}
-                    <div class="employee-drag-card"
-                         draggable="true"
+                    <div class="employee-drag-card {% if item.is_reported_wrong %}card-reported-blocked{% elif item.is_requested_ghost %}card-requested-ghost{% endif %}"
+                         id="emp-card-{{ item.employee.id }}"
+                         draggable="{% if item.is_reported_wrong or item.is_requested_ghost %}false{% else %}true{% endif %}"
                          data-employee-id="{{ item.employee.id }}"
                          data-employee-name="{{ item.employee.person.full_name }}"
                          data-search-text="{{ item.employee.person.document_number }} {{ item.employee.person.first_name }} {{ item.employee.person.last_name }}"
-                         title="Pendiente por asignar: {{ item.remaining_days }} días (Registrado: {{ item.total_planned_days }}/{{ item.display_max }})">
+                         title="{% if item.is_reported_wrong %}REPORTADO A TH: En revisión de dependencia{% elif item.is_requested_ghost %}SOLICITADO A TH: En espera de reubicación oficial{% else %}Pendiente por asignar: {{ item.remaining_days }} días (Registrado: {{ item.total_planned_days }}/{{ item.display_max }}){% endif %}">
 
                         {% if item.employee.person.photo %}
                             <img src="{{ item.employee.person.photo.url }}" class="drag-avatar-img" alt="Foto">
@@ -73,10 +79,27 @@
                         <div class="drag-info-texts">
                             <span class="drag-name">{{ item.employee.person.first_name }} {{ item.employee.person.last_name }}</span>
                             <span class="drag-role">{{ item.employee.person.document_number }}</span>
-                            <span class="small text-muted font-bold">
-                                {{ item.total_planned_days }}/{{ item.display_max }} días
-                            </span>
+
+                            {% if item.is_reported_wrong %}
+                                <span class="badge-reported-pill">En Revisión TH</span>
+                            {% elif item.is_requested_ghost %}
+                                <span class="badge-ghost-pill"><i class="fa-solid fa-clock me-1"></i>Pendiente TH</span>
+                            {% else %}
+                                <span class="small text-muted font-bold">
+                                    {{ item.total_planned_days }}/{{ item.display_max }} días
+                                </span>
+                            {% endif %}
                         </div>
+
+                        <!-- Mini Botón Rojo solo para tarjetas activas no reportadas -->
+                        {% if not item.is_reported_wrong and not item.is_requested_ghost %}
+                            <button type="button"
+                                    class="btn-report-wrong-emp"
+                                    title="Notificar a Talento Humano que este funcionario no pertenece a esta unidad"
+                                    onclick="event.stopPropagation(); event.preventDefault(); openReportWrongModal('{{ item.employee.id }}', '{{ item.employee.person.first_name|escapejs }} {{ item.employee.person.last_name|escapejs }}', '{{ item.employee.person.document_number }}');">
+                                <i class="fa-solid fa-flag"></i>
+                            </button>
+                        {% endif %}
                     </div>
                 {% empty %}
                     <div class="text-center w-100 py-3 text-muted">
@@ -97,19 +120,18 @@
     <div class="months-grid-6-cols">
         {% for m in months_cards %}
             <div class="month-dropzone-card" data-month-number="{{ m.number }}">
-                <!-- Header con Título, Contador y Botón Basurero -->
                 <div class="month-card-header d-flex align-items-center justify-content-between">
                     <span class="month-title">{{ m.name|upper }}</span>
 
                     <div class="d-flex align-items-center gap-2">
                         <span class="month-count-badge">{{ m.items|length }}</span>
 
-                        <!-- Botón de Basurero sin saltos de línea en el onclick -->
                         {% if plan.status != 'APPROVED' and m.items|length > 0 %}
                             <button type="button"
                                     class="btn-trash-month"
                                     title="Vaciar toda la planificación de {{ m.name }}"
-                                    onclick="event.stopPropagation(); event.preventDefault(); clearMonthScheduleAjax('{% url 'vacation:schedule_clear_month' plan.id m.number %}{% if base_unit %}?unit_id={{ base_unit.id }}{% endif %}', '{{ m.name }}', {{ m.items|length }});">
+                                    onclick="event.stopPropagation(); event.preventDefault(); clearMonthScheduleAjax('
+                                            {% url 'vacation:schedule_clear_month' plan.id m.number %}{% if base_unit %}?unit_id={{ base_unit.id }}{% endif %}', '{{ m.name }}', {{ m.items|length }});">
                                 <i class="fa-regular fa-trash-can" style="pointer-events: none;"></i>
                             </button>
                         {% endif %}
@@ -118,12 +140,17 @@
 
                 <div class="month-card-body" id="dropzone-month-{{ m.number }}">
                     {% for it in m.items %}
+                        <!-- Tarjetas del mes ahora son Arrastrables para cambiar de mes -->
                         <div class="assigned-schedule-card-compact"
-                             title="{{ it.employee.person.full_name }} - {{ it.days_quantity }} días">
+                             draggable="{% if plan.status != 'APPROVED' %}true{% else %}false{% endif %}"
+                             data-item-id="{{ it.id }}"
+                             data-current-month="{{ m.number }}"
+                             title="Arrastra a otro mes para reubicar. ({{ it.employee.person.full_name }} - {{ it.days_quantity }} días)">
                             <div class="assigned-card-top">
                                 <div class="assigned-user-info">
                                     {% if it.employee.person.photo %}
-                                        <img src="{{ it.employee.person.photo.url }}" class="assigned-avatar-mini" alt="Foto">
+                                        <img src="{{ it.employee.person.photo.url }}" class="assigned-avatar-mini"
+                                             alt="Foto">
                                     {% else %}
                                         <div class="assigned-avatar-mini-placeholder">
                                             {{ it.employee.person.first_name|first }}{{ it.employee.person.last_name|first }}
@@ -160,15 +187,19 @@
         {% endfor %}
     </div>
 
-    <!-- Sección de Exportación Limpia -->
+    <!-- Exportación -->
     <div class="schedule-export-section">
         <div class="schedule-export-buttons-group">
-            <a href="{% url 'vacation:schedule_export_excel' plan.id %}{% if base_unit %}?unit_id={{ base_unit.id }}{% endif %}"
+            <a href="
+
+                    {% url 'vacation:schedule_export_excel' plan.id %}{% if base_unit %}?unit_id={{ base_unit.id }}{% endif %}"
                class="btn-success"
                title="Descargar reporte en formato Excel">
                 <i class="fa-solid fa-file-excel me-1"></i> Exportar Excel
             </a>
-            <a href="{% url 'vacation:schedule_export_pdf' plan.id %}{% if base_unit %}?unit_id={{ base_unit.id }}{% endif %}"
+            <a href="
+
+                    {% url 'vacation:schedule_export_pdf' plan.id %}{% if base_unit %}?unit_id={{ base_unit.id }}{% endif %}"
                class="btn-danger"
                target="_blank"
                title="Generar reporte en formato PDF imprimible">
@@ -176,18 +207,297 @@
             </a>
         </div>
     </div>
+
+    <!-- MODAL 1: REPORTAR QUE NO PERTENECE -->
+    <div id="modalReportWrong" class="modal-overlay hidden">
+        <div class="modal-container-small">
+            <div class="modal-header">
+                <div class="header-content-group">
+                    <div class="header-icon-circle bg-danger text-white">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                    </div>
+                    <h3 class="header-title">Reportar Discrepancia</h3>
+                </div>
+                <button type="button" class="btn-close-circle" onclick="closeModalCustom('modalReportWrong')">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <form id="formReportWrong" onsubmit="submitReportWrong(event)">
+                <div class="modal-body">
+                    <input type="hidden" id="reportWrongEmpId">
+                    <p class="text-muted small mb-2">
+                        Notificarás a <strong>Talento Humano</strong> que este funcionario está figurando erróneamente
+                        en esta dependencia.
+                    </p>
+                    <div class="employee-card-badge mb-3">
+                        <div class="employee-card-details">
+                            <span class="employee-card-name" id="reportWrongEmpName">-</span>
+                            <span class="employee-card-doc" id="reportWrongEmpDoc">-</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="reportWrongObs">Motivo / Aclaración *</label>
+                        <textarea id="reportWrongObs"
+                                  class="input-field"
+                                  rows="3"
+                                  required
+                                  placeholder="Ej: El funcionario fue reubicado a la Dirección de Higiene el mes pasado..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-white-rectangle" onclick="closeModalCustom('modalReportWrong')">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn-danger"><i class="fa-solid fa-paper-plane"></i> Enviar a TH
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 2: SOLICITAR PERSONAL FALTANTE -->
+    <div id="modalRequestEmployee" class="modal-overlay hidden">
+        <div class="modal-container-medium">
+            <div class="modal-header">
+                <div class="header-content-group">
+                    <div class="header-icon-circle bg-primary text-white">
+                        <i class="fa-solid fa-user-plus"></i>
+                    </div>
+                    <h3 class="header-title">Solicitar Personal Faltante</h3>
+                </div>
+                <button type="button" class="btn-close-circle" onclick="closeModalCustom('modalRequestEmployee')">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <form id="formRequestEmployee" onsubmit="submitRequestEmployee(event)">
+                <div class="modal-body">
+                    <p class="text-muted small mb-3">
+                        Selecciona al servidor o trabajador activo que labora en
+                        <strong>{{ base_unit.name|default:"esta unidad" }}</strong> para que Talento Humano lo incorpore
+                        a tu cronograma[cite: 18].
+                    </p>
+
+                    <div class="form-group mb-3">
+                        <label class="form-label" for="requestEmployeeSelect">Seleccionar Funcionario Activo *</label>
+                        <select id="requestEmployeeSelect" class="input-field" style="width: 100%;" required>
+                            <option value="">Buscar por cédula o nombres...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="requestEmpObs">Mensaje / Justificación *</label>
+                        <textarea id="requestEmpObs"
+                                  class="input-field"
+                                  rows="3"
+                                  required
+                                  placeholder="Ej: Labora en nuestra unidad en la coordinación/area bajo memorando Nro... y no figura en la lista."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-white-rectangle"
+                            onclick="closeModalCustom('modalRequestEmployee')">Cancelar
+                    </button>
+                    <button type="submit" class="btn-blue-rectangle"><i class="fa-solid fa-paper-plane"></i> Enviar
+                        Solicitud
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 {% endblock %}
 
 {% block extra_js %}
     <script>
+        function getCsrfToken() {
+            const input = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (input) return input.value;
+            const match = document.cookie.match(/csrftoken=([^;]+)/);
+            return match ? match[1] : '';
+        }
+
+        function closeModalCustom(id) {
+            const modal = document.getElementById(id);
+            if (modal) modal.classList.add('hidden');
+        }
+
+        // ==============================================================
+        // 1. Reportar que NO pertenece (Bloqueo en Rojo Claro)
+        // ==============================================================
+        function openReportWrongModal(empId, empName, empDoc) {
+            document.getElementById('reportWrongEmpId').value = empId;
+            document.getElementById('reportWrongEmpName').textContent = empName;
+            document.getElementById('reportWrongEmpDoc').textContent = 'CI: ' + empDoc;
+            document.getElementById('reportWrongObs').value = '';
+            document.getElementById('modalReportWrong').classList.remove('hidden');
+        }
+
+        function submitReportWrong(e) {
+            e.preventDefault();
+            const empId = document.getElementById('reportWrongEmpId').value;
+            const obs = document.getElementById('reportWrongObs').value.trim();
+            const unitId = '{{ base_unit.id|default:"" }}';
+
+            Swal.fire({
+                title: '¿Enviar reporte a Talento Humano?',
+                text: 'Se notificará que este colaborador no debe formar parte de esta dependencia.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, Enviar',
+                cancelButtonText: 'Cancelar'
+            }).then((res) => {
+                if (res.isConfirmed) {
+                    Swal.showLoading();
+                    const formData = new FormData();
+                    formData.append('observation', obs);
+                    formData.append('unit_id', unitId);
+
+                    fetch(`/vacation/schedule/{{ plan.id }}/report-wrong-employee/${empId}/`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': getCsrfToken(),
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: formData
+                    })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) {
+                                closeModalCustom('modalReportWrong');
+
+                                const card = document.getElementById(`emp-card-${empId}`);
+                                if (card) {
+                                    card.classList.add('card-reported-blocked');
+                                    card.setAttribute('draggable', 'false');
+                                    card.title = 'REPORTADO A TH: En revisión de dependencia';
+
+                                    const btn = card.querySelector('.btn-report-wrong-emp');
+                                    if (btn) btn.remove();
+
+                                    const daysText = card.querySelector('.drag-info-texts .font-bold');
+                                    if (daysText) {
+                                        daysText.outerHTML = '<span class="badge-reported-pill">En Revisión TH</span>';
+                                    }
+                                }
+
+                                Swal.fire('Notificación Enviada', data.message, 'success');
+                            } else {
+                                Swal.fire('Atención', data.message || 'No se pudo enviar la solicitud.', 'error');
+                            }
+                        })
+                        .catch(() => Swal.fire('Error', 'Hubo un error de comunicación.', 'error'));
+                }
+            });
+        }
+
+        // ==============================================================
+        // 2. Solicitar Personal Faltante (Select2)
+        // ==============================================================
+        let select2Initialized = false;
+
+        function openRequestEmployeeModal() {
+            document.getElementById('requestEmpObs').value = '';
+            document.getElementById('modalRequestEmployee').classList.remove('hidden');
+
+            const selectEl = $('#requestEmployeeSelect');
+
+            if (!select2Initialized) {
+                selectEl.select2({
+                    dropdownParent: $('#modalRequestEmployee .modal-body'),
+                    placeholder: 'Escribe cédula o nombres...',
+                    minimumInputLength: 2,
+                    allowClear: true,
+                    language: {
+                        inputTooShort: () => 'Ingresa al menos 2 caracteres...',
+                        searching: () => 'Buscando personal activo...',
+                        noResults: () => 'No se encontró ningún empleado activo (o ya pertenece a su unidad).'
+                    },
+                    ajax: {
+                        url: '/vacation/schedule/search-employee-ajax/',
+                        dataType: 'json',
+                        delay: 250,
+                        data: function (params) {
+                            return {
+                                q: params.term,
+                                unit_id: '{{ base_unit.id|default:"" }}'
+                            };
+                        },
+                        processResults: function (data) {
+                            return {results: data.results};
+                        },
+                        cache: true
+                    }
+                });
+                select2Initialized = true;
+            } else {
+                selectEl.val(null).trigger('change');
+            }
+        }
+
+        function submitRequestEmployee(e) {
+            e.preventDefault();
+            const empId = $('#requestEmployeeSelect').val();
+            const obs = document.getElementById('requestEmpObs').value.trim();
+            const unitId = '{{ base_unit.id|default:"" }}';
+
+            if (!empId) {
+                Swal.fire('Atención', 'Debe seleccionar un funcionario de la lista.', 'warning');
+                return;
+            }
+
+            Swal.fire({
+                title: '¿Enviar solicitud a Talento Humano?',
+                text: 'Se solicitará que este colaborador sea agregado a tu cronograma.',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, Solicitar',
+                cancelButtonText: 'Cancelar'
+            }).then((res) => {
+                if (res.isConfirmed) {
+                    Swal.showLoading();
+                    const formData = new FormData();
+                    formData.append('employee_id', empId);
+                    formData.append('unit_id', unitId);
+                    formData.append('observation', obs);
+
+                    fetch(`/vacation/schedule/{{ plan.id }}/request-missing-employee/`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': getCsrfToken(),
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: formData
+                    })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) {
+                                closeModalCustom('modalRequestEmployee');
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Solicitud Registrada',
+                                    text: data.message,
+                                    timer: 1500,
+                                    showConfirmButton: false
+                                }).then(() => window.location.reload());
+                            } else {
+                                Swal.fire('Error', data.message || 'No se pudo procesar la solicitud.', 'error');
+                            }
+                        })
+                        .catch(() => Swal.fire('Error', 'Hubo un error de conexión.', 'error'));
+                }
+            });
+        }
+
+        // ==============================================================
+        // 3. Drag & Drop Unificado: Banquillo -> Mes & Mes -> Mes
+        // ==============================================================
         document.addEventListener('DOMContentLoaded', () => {
-            // 1. Buscador en tiempo real de empleados en el banquillo
-            const searchInput = document.getElementById('benchSearchInput');
+            // Buscador del banquillo
+            const benchSearch = document.getElementById('benchSearchInput');
             const cards = Array.from(document.querySelectorAll('.employee-drag-card'));
             const counterEl = document.getElementById('benchCounter');
 
-            if (searchInput) {
-                searchInput.addEventListener('input', (e) => {
+            if (benchSearch) {
+                benchSearch.addEventListener('input', (e) => {
                     const query = e.target.value.toLowerCase().trim();
                     let visibleCount = 0;
 
@@ -207,15 +517,15 @@
                 });
             }
 
-            // 2. Drag and Drop Nativo
-            let draggedEmployeeId = null;
-
+            // A. Drag desde el banquillo
             document.querySelectorAll('.employee-drag-card[draggable="true"]').forEach(card => {
                 card.addEventListener('dragstart', (e) => {
-                    draggedEmployeeId = card.dataset.employeeId;
-                    card.classList.add('is-dragging');
-                    e.dataTransfer.setData('text/plain', draggedEmployeeId);
+                    e.dataTransfer.setData('application/json', JSON.stringify({
+                        type: 'BENCH_NEW',
+                        employeeId: card.dataset.employeeId
+                    }));
                     e.dataTransfer.effectAllowed = 'move';
+                    card.classList.add('is-dragging');
                 });
 
                 card.addEventListener('dragend', () => {
@@ -223,6 +533,25 @@
                 });
             });
 
+            // B. Drag desde un mes ya asignado (para mover entre meses)
+            document.querySelectorAll('.assigned-schedule-card-compact[draggable="true"]').forEach(card => {
+                card.addEventListener('dragstart', (e) => {
+                    e.stopPropagation();
+                    e.dataTransfer.setData('application/json', JSON.stringify({
+                        type: 'MOVE_ITEM',
+                        itemId: card.dataset.itemId,
+                        currentMonth: card.dataset.currentMonth
+                    }));
+                    e.dataTransfer.effectAllowed = 'move';
+                    card.classList.add('is-moving');
+                });
+
+                card.addEventListener('dragend', () => {
+                    card.classList.remove('is-moving');
+                });
+            });
+
+            // C. Dropzones mensuales
             document.querySelectorAll('.month-dropzone-card').forEach(dropzone => {
                 dropzone.addEventListener('dragover', (e) => {
                     e.preventDefault();
@@ -238,34 +567,52 @@
                     e.preventDefault();
                     dropzone.classList.remove('drag-over');
 
-                    const month = dropzone.dataset.monthNumber;
-                    const empId = draggedEmployeeId || e.dataTransfer.getData('text/plain');
+                    const rawData = e.dataTransfer.getData('application/json');
+                    if (!rawData) return;
 
-                    if (empId && month) {
-                        const modalUrl = `/vacation/schedule/{{ plan.id }}/drop-modal/${empId}/${month}/`;
+                    const data = JSON.parse(rawData);
+                    const targetMonth = dropzone.dataset.monthNumber;
+
+                    // Caso 1: Nuevo arrastre desde el banquillo
+                    if (data.type === 'BENCH_NEW') {
+                        const modalUrl = `/vacation/schedule/{{ plan.id }}/drop-modal/${data.employeeId}/${targetMonth}/`;
                         openAjaxModal(modalUrl, () => {
                             if (typeof initModalDateCalculator === 'function') {
                                 initModalDateCalculator();
                             }
                         });
                     }
+                    // Caso 2: Mover tarjeta existente de un mes a otro
+                    else if (data.type === 'MOVE_ITEM') {
+                        if (data.currentMonth == targetMonth) return; // Mismo mes
+
+                        Swal.showLoading();
+                        const formData = new FormData();
+                        formData.append('target_month', targetMonth);
+
+                        fetch(`/vacation/schedule/item/${data.itemId}/move-month/`, {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRFToken': getCsrfToken(),
+                                'X-Requested-With': 'XMLHttpRequest'
+                            },
+                            body: formData
+                        })
+                            .then(res => res.json())
+                            .then(resData => {
+                                if (resData.success) {
+                                    window.location.reload();
+                                } else {
+                                    Swal.fire('No se pudo mover', resData.message, 'warning');
+                                }
+                            })
+                            .catch(() => Swal.fire('Error', 'Hubo un error al mover la asignación.', 'error'));
+                    }
                 });
             });
         });
 
         function clearMonthScheduleAjax(url, monthName, totalRecords) {
-            // Obtención segura del token CSRF
-            let csrfToken = '';
-            const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
-            if (csrfInput) {
-                csrfToken = csrfInput.value;
-            } else if (typeof getCSRF === 'function') {
-                csrfToken = getCSRF();
-            } else {
-                const match = document.cookie.match(/csrftoken=([^;]+)/);
-                if (match) csrfToken = match[1];
-            }
-
             Swal.fire({
                 title: `¿Vaciar el mes de ${monthName}?`,
                 text: `Se eliminarán las ${totalRecords} asignaciones de este mes y el personal recuperará sus días disponibles en el banquillo.`,
@@ -284,37 +631,24 @@
                         method: 'POST',
                         headers: {
                             'X-Requested-With': 'XMLHttpRequest',
-                            'X-CSRFToken': csrfToken
+                            'X-CSRFToken': getCsrfToken()
                         }
                     })
-                    .then(async res => {
-                        const data = await res.json();
-                        if (res.ok && data.success) {
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Mes Vaciado',
-                                text: data.message,
-                                timer: 1500,
-                                showConfirmButton: false
-                            }).then(() => {
-                                window.location.reload();
-                            });
-                        } else {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Atención',
-                                text: data.message || 'No se pudo vaciar el mes.'
-                            });
-                        }
-                    })
-                    .catch(err => {
-                        console.error("Error en la petición:", err);
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error de Conexión',
-                            text: 'Ocurrió un problema de comunicación con el servidor.'
-                        });
-                    });
+                        .then(async res => {
+                            const data = await res.json();
+                            if (res.ok && data.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Mes Vaciado',
+                                    text: data.message,
+                                    timer: 1500,
+                                    showConfirmButton: false
+                                }).then(() => window.location.reload());
+                            } else {
+                                Swal.fire('Atención', data.message || 'No se pudo vaciar el mes.', 'error');
+                            }
+                        })
+                        .catch(() => Swal.fire('Error', 'Ocurrió un problema de comunicación.', 'error'));
                 }
             });
         }

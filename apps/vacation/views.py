@@ -1,5 +1,6 @@
 import calendar
 import datetime as dt
+from datetime import date as dt_date
 from io import BytesIO
 
 import openpyxl
@@ -26,7 +27,6 @@ from xhtml2pdf import pisa
 from budget.models import BudgetLine
 from contract.models import ManagementPeriod
 from core.models import SystemConfiguration
-from institution.models import AdministrativeUnit
 from permitrequest.models import PermitType
 from person.models import Person
 from personnel_actions.models import PersonnelAction, ActionType
@@ -1497,7 +1497,24 @@ class VacationScheduleDetailView(LoginRequiredMixin, TemplateView, PermissionReq
                 'items': items_in_m
             })
 
-        # 4. Banquillo con cálculo proporcional
+        # 4. Obtener IDs de empleados reportados como "No pertenece"
+        reported_emp_ids = set(
+            ScheduleDiscrepancyRequest.objects.filter(
+                plan=plan,
+                request_type=ScheduleDiscrepancyRequest.RequestType.WRONG_UNIT,
+                status=ScheduleDiscrepancyRequest.Status.PENDING
+            ).values_list('employee_id', flat=True)
+        )
+
+        # 4.1 Obtener empleados SOLICITADOS pendientes de incorporar a esta unidad
+        requested_discrepancies = ScheduleDiscrepancyRequest.objects.filter(
+            plan=plan,
+            unit=base_unit,
+            request_type=ScheduleDiscrepancyRequest.RequestType.MISSING_EMPLOYEE,
+            status=ScheduleDiscrepancyRequest.Status.PENDING
+        ).select_related('employee__person', 'employee__employment_status')
+
+        # 5. Banquillo con cálculo proporcional y banderas
         employee_cards = []
         for emp in employees_qs:
             allowed_days, ceiling, is_proportional, display_val = calculate_available_days_for_month(
@@ -1515,17 +1532,36 @@ class VacationScheduleDetailView(LoginRequiredMixin, TemplateView, PermissionReq
                     'remaining_days': remaining,
                     'max_days': max_assignable_plan,
                     'display_max': display_max,
-                    'is_proportional': is_proportional
+                    'is_proportional': is_proportional,
+                    'is_reported_wrong': emp.id in reported_emp_ids,
+                    'is_requested_ghost': False
+                })
+
+        # 5.1 Agregar las tarjetas "fantasma" solicitadas
+        for disc in requested_discrepancies:
+            emp = disc.employee
+            # Si no está ya en la lista
+            if not any(c['employee'].id == emp.id for c in employee_cards):
+                allowed_days, ceiling, is_proportional, display_val = calculate_available_days_for_month(
+                    emp, plan.year, 1
+                )
+                employee_cards.append({
+                    'employee': emp,
+                    'total_planned_days': 0,
+                    'remaining_days': allowed_days,
+                    'max_days': allowed_days,
+                    'display_max': display_val,
+                    'is_proportional': is_proportional,
+                    'is_reported_wrong': False,
+                    'is_requested_ghost': True,
                 })
 
         context['plan'] = plan
-        context['base_unit'] = base_unit  # Aquí llega la unidad principal resuelta
+        context['base_unit'] = base_unit
         context['employee_cards'] = employee_cards
         context['months_cards'] = months_cards
         return context
 
-
-# vacation/views.py
 
 class VacationScheduleDropModalView(LoginRequiredMixin, PermissionRequiredMixin, View):
     template_name = 'vacation/modals/modal_schedule_drop_form.html'
@@ -2177,7 +2213,7 @@ class VacationScheduleConsolidatedExportView(LoginRequiredMixin, View, Permissio
                 labor_regime = active_contract.contract_type.labor_regime
                 if labor_regime:
                     regimen = (
-                        labor_regime.name or labor_regime.code or regimen
+                            labor_regime.name or labor_regime.code or regimen
                     ).strip().upper()
             unidad = (emp.area.name if emp.area else 'SIN ASIGNAR').strip().upper()
 
@@ -2620,4 +2656,209 @@ class VacationScheduleClearMonthView(LoginRequiredMixin, PermissionRequiredMixin
             'status': 'success',
             'success': True,
             'message': f'Se vació la planificación de {month_names.get(month_int, "")}. Se liberaron {total_deleted} registros.'
+        })
+
+
+class ReportWrongUnitEmployeeView(LoginRequiredMixin, View):
+    """Registra la novedad de que un funcionario no pertenece a la unidad actual."""
+
+    def post(self, request, plan_id, employee_id):
+        plan = get_object_or_404(VacationSchedulePlan, pk=plan_id)
+        employee = get_object_or_404(Employee, pk=employee_id)
+        unit_id = request.POST.get('unit_id')
+        observation = request.POST.get('observation', '').strip()
+
+        unit = AdministrativeUnit.objects.filter(pk=unit_id).first() or employee.area
+
+        if not observation:
+            return JsonResponse({'success': False, 'message': 'Debe ingresar un motivo para Talento Humano.'},
+                                status=400)
+
+        ScheduleDiscrepancyRequest.objects.create(
+            plan=plan,
+            unit=unit,
+            employee=employee,
+            request_type=ScheduleDiscrepancyRequest.RequestType.WRONG_UNIT,
+            observation=observation,
+            created_by=request.user
+        )
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Se notificó la novedad a Talento Humano exitosamente.'
+        })
+
+
+class SearchEmployeeForScheduleView(LoginRequiredMixin, View):
+    """Endpoint para el Select2 remoto con búsqueda de personal activo."""
+
+    def get(self, request):
+        term = request.GET.get('q', '').strip()
+        unit_id = request.GET.get('unit_id')
+
+        if len(term) < 2:
+            return JsonResponse({'results': []})
+
+        # Excluir personal que ya pertenezca a la unidad actual
+        exclude_unit_ids = []
+        if unit_id:
+            _, exclude_unit_ids = resolve_scheduling_hierarchy(
+                user=request.user,
+                requested_unit_id=unit_id
+            )
+
+        employees = Employee.objects.select_related('person', 'area').filter(
+            Q(person__document_number__icontains=term) |
+            Q(person__first_name__icontains=term) |
+            Q(person__last_name__icontains=term)
+        ).filter(is_active=True)
+
+        if exclude_unit_ids:
+            employees = employees.exclude(area_id__in=exclude_unit_ids)
+
+        employees = employees[:25]
+
+        results = []
+        for emp in employees:
+            area_name = emp.area.name if emp.area else 'Sin Dependencia'
+            full_name = f"{emp.person.last_name} {emp.person.first_name}".strip()
+            results.append({
+                'id': emp.id,
+                'text': f"{full_name} (CI: {emp.person.document_number}) - {area_name}"
+            })
+
+        return JsonResponse({'results': results})
+
+
+class RequestAddMissingEmployeeView(LoginRequiredMixin, View):
+    """Registra la solicitud de incorporación de personal faltante en la unidad."""
+
+    def post(self, request, plan_id):
+        plan = get_object_or_404(VacationSchedulePlan, pk=plan_id)
+        employee_id = request.POST.get('employee_id')
+        unit_id = request.POST.get('unit_id')
+        observation = request.POST.get('observation', '').strip()
+
+        if not employee_id:
+            return JsonResponse({'success': False, 'message': 'Debe seleccionar un servidor/trabajador.'}, status=400)
+
+        if not observation:
+            return JsonResponse({'success': False, 'message': 'Debe ingresar una justificación o mensaje.'}, status=400)
+
+        employee = get_object_or_404(
+            Employee.objects.select_related('person', 'area'),
+            pk=employee_id
+        )
+        unit = get_object_or_404(AdministrativeUnit, pk=unit_id)
+
+        # 1. VALIDACIÓN: ¿El servidor ya pertenece a esta dependencia o sus subdependencias?
+        _, unit_ids = resolve_scheduling_hierarchy(
+            user=request.user,
+            requested_unit_id=unit.id
+        )
+        if employee.area_id in unit_ids:
+            nombre = f"{employee.person.first_name} {employee.person.last_name}"
+            return JsonResponse({
+                'success': False,
+                'message': f'El servidor {nombre} ya pertenece a esta dependencia ({employee.area.name}).'
+            }, status=400)
+
+        # 2. VALIDACIÓN: ¿Ya existe una solicitud pendiente para este servidor en esta unidad?
+        already_requested = ScheduleDiscrepancyRequest.objects.filter(
+            plan=plan,
+            unit=unit,
+            employee=employee,
+            request_type=ScheduleDiscrepancyRequest.RequestType.MISSING_EMPLOYEE,
+            status=ScheduleDiscrepancyRequest.Status.PENDING
+        ).exists()
+
+        if already_requested:
+            return JsonResponse({
+                'success': False,
+                'message': f'Ya existe una solicitud pendiente enviada a Talento Humano para {employee.person.full_name}.'
+            }, status=400)
+
+        # 3. Crear solicitud
+        ScheduleDiscrepancyRequest.objects.create(
+            plan=plan,
+            unit=unit,
+            employee=employee,
+            request_type=ScheduleDiscrepancyRequest.RequestType.MISSING_EMPLOYEE,
+            observation=observation,
+            created_by=request.user
+        )
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Se ha enviado la solicitud de personal a Talento Humano.'
+        })
+
+
+class VacationScheduleItemMoveMonthView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """Mueve una asignación de un mes a otro mes destino."""
+    permission_required = 'vacation.view_vacationscheduleplan'
+
+    def post(self, request, item_id):
+        item = get_object_or_404(
+            VacationScheduleItem.objects.select_related('plan', 'employee'),
+            pk=item_id
+        )
+        plan = item.plan
+
+        if plan.status == VacationSchedulePlan.PlanStatus.APPROVED:
+            return JsonResponse({'success': False, 'message': 'El cronograma está aprobado y bloqueado.'}, status=400)
+
+        new_month = request.POST.get('target_month')
+        try:
+            new_month = int(new_month)
+            if not (1 <= new_month <= 12):
+                raise ValueError()
+        except (ValueError, TypeError):
+            return JsonResponse({'success': False, 'message': 'Mes destino no válido.'}, status=400)
+
+        # Si se soltó en el mismo mes donde ya estaba
+        if item.start_date.month == new_month:
+            return JsonResponse({'success': True, 'message': 'Sin cambios.'})
+
+        # Verificar si el empleado ya tiene otra tarjeta en el mes destino
+        already_in_target = VacationScheduleItem.objects.filter(
+            plan=plan,
+            employee=item.employee,
+            start_date__month=new_month
+        ).exclude(pk=item.id).exists()
+
+        if already_in_target:
+            return JsonResponse({
+                'success': False,
+                'message': f'{item.employee.person.full_name} ya tiene una planificación asignada en ese mes.'
+            }, status=400)
+
+        # Recalcular cupo permitido en el nuevo mes por si es proporcional
+        allowed_int, _, _, _ = calculate_available_days_for_month(
+            item.employee, plan.year, new_month
+        )
+
+        # Sumar los otros meses sin contar este item
+        other_days = VacationScheduleItem.objects.filter(
+            plan=plan,
+            employee=item.employee
+        ).exclude(pk=item.id).aggregate(total=models.Sum('days_quantity'))['total'] or 0
+
+        disponible_en_nuevo_mes = max(0, allowed_int - other_days)
+
+        if item.days_quantity > disponible_en_nuevo_mes:
+            return JsonResponse({
+                'success': False,
+                'message': f'Por proporcionalidad acumulada, en ese mes solo dispone de hasta {disponible_en_nuevo_mes} días (el bloque actual tiene {item.days_quantity}d).'
+            }, status=400)
+
+        # Actualizar fechas al nuevo mes
+        max_day = calendar.monthrange(plan.year, new_month)[1]
+        item.start_date = dt_date(plan.year, new_month, 1)
+        item.end_date = dt_date(plan.year, new_month, min(item.days_quantity, max_day))
+        item.save()
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Se movió la asignación exitosamente.'
         })
