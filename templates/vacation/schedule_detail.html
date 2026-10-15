@@ -97,7 +97,7 @@
                                     class="btn-report-wrong-emp"
                                     title="Notificar a Talento Humano que este funcionario no pertenece a esta unidad"
                                     onclick="event.stopPropagation(); event.preventDefault(); openReportWrongModal('{{ item.employee.id }}', '{{ item.employee.person.first_name|escapejs }} {{ item.employee.person.last_name|escapejs }}', '{{ item.employee.person.document_number }}');">
-                                <i class="fa-solid fa-flag"></i>
+                                <i class="fa-solid fa-user-minus"></i>
                             </button>
                         {% endif %}
                     </div>
@@ -274,7 +274,7 @@
                     <p class="text-muted small mb-3">
                         Selecciona al servidor o trabajador activo que labora en
                         <strong>{{ base_unit.name|default:"esta unidad" }}</strong> para que Talento Humano lo incorpore
-                        a tu cronograma[cite: 18].
+                        a tu cronograma.
                     </p>
 
                     <div class="form-group mb-3">
