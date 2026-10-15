@@ -218,7 +218,7 @@ class PeriodListView(LoginRequiredMixin, ListView):
     def render_to_response(self, context, **response_kwargs):
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
             html = render_to_string(
-                'vacation/partials/partial_period_list.html',
+                'vacation/partials/partial_period_vacation_table.html',
                 context,
                 request=self.request
             )
@@ -1353,8 +1353,6 @@ class VacationSchedulePlanListView(LoginRequiredMixin, PermissionRequiredMixin, 
         q = self.request.GET.get('q', '').strip()
         if q:
             qs = qs.filter(Q(title__icontains=q) | Q(year__icontains=q))
-
-        # ANOTACIÓN: Conteo de solicitudes pendientes para la campana en el partial
         qs = qs.annotate(
             pending_discrepancies_count=Count(
                 'discrepancy_requests',
@@ -1363,6 +1361,26 @@ class VacationSchedulePlanListView(LoginRequiredMixin, PermissionRequiredMixin, 
         )
 
         return qs.order_by('-year')
+
+    def render_to_response(self, context, **response_kwargs):
+        # Detección robusta de petición AJAX
+        is_ajax = (
+                self.request.headers.get('x-requested-with') == 'XMLHttpRequest' or
+                self.request.headers.get('X-Requested-With') == 'XMLHttpRequest' or
+                self.request.META.get('HTTP_X_REQUESTED_WITH') == 'XMLHttpRequest' or
+                self.request.GET.get('ajax') == 'true' or
+                self.request.GET.get('format') == 'json'
+        )
+
+        if is_ajax:
+            html = render_to_string(
+                'vacation/partials/partial_schedule_plan_list.html',
+                context,
+                request=self.request
+            )
+            return HttpResponse(html)
+
+        return super().render_to_response(context, **response_kwargs)
 
 
 class VacationSchedulePlanCreateModalView(LoginRequiredMixin, CreateView, PermissionRequiredMixin):

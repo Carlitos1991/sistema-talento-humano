@@ -99,10 +99,10 @@
                                     {% if plan.status != 'APPROVED' %}
                                         <!-- Aprobar Oficialmente y Cerrar -->
                                         <button type="button"
-                                                class="btn-fifth"
+                                                class="btn-dark-blue-circle"
                                                 title="Aprobar Oficialmente y Cerrar Cronograma"
                                                 onclick="approvePlanAjax('{% url 'vacation:schedule_plan_approve' plan.id %}', '{{ plan.year }}')">
-                                            <i class="fa-solid fa-clipboard-check"></i>
+                                            <i class="fa-solid fa-lock"></i>
                                         </button>
 
                                         <!-- Editar Cronograma -->
@@ -119,7 +119,7 @@
                                                     class="btn-red-circle"
                                                     title="Dar de baja / Cerrar"
                                                     onclick="toggleStatusAjax('{% url 'vacation:schedule_plan_toggle_status' plan.id %}', 'el cronograma {{ plan.year }}', true)">
-                                                <i class="fa-solid fa-power-off"></i>
+                                                <i class="fa-solid fa-trash-can"></i>
                                             </button>
                                         {% else %}
                                             <button type="button"
