@@ -8,7 +8,7 @@
 {% endblock %}
 
 {% block content %}
-    <!-- Header Corporativo Estándar -->
+    <!-- Header -->
     <div class="header-card">
         <div class="header-card-body">
             <h1>{{ plan.title }}</h1>
@@ -16,7 +16,7 @@
                 Dependencia: <strong>{{ base_unit.name|default:"General" }}</strong> •
                 Estado: <strong>{{ plan.get_status_display }}</strong>
                 {% if plan.status == 'APPROVED' %}
-                    <span class="badge badge-emerald ms-2"><i class="fa-solid fa-lock me-1"></i> Aprobado Oficialmente</span>
+                    <span class="badge badge-emerald"><i class="fa-solid fa-lock me-1"></i> Aprobado Oficialmente</span>
                 {% endif %}
             </p>
         </div>

@@ -2112,8 +2112,12 @@ class VacationScheduleConsolidatedExportView(LoginRequiredMixin, View, Permissio
         # 1. Traer TODOS los empleados de la institución que no sean SERVICIOS PROFESIONALES
         active_contract_prefetch = Prefetch(
             'management_periods',
-            queryset=ManagementPeriod.objects.filter(status__code='ACTIVO').select_related(
-                'contract_type__labor_regime'),
+            queryset=ManagementPeriod.objects.filter(
+                Q(status__code__icontains='FIRMADO') |
+                Q(status__name__icontains='FIRMADO')
+            ).select_related(
+                'contract_type__labor_regime'
+            ).order_by('-start_date', '-pk'),
             to_attr='active_contracts'
         )
 
@@ -2156,16 +2160,36 @@ class VacationScheduleConsolidatedExportView(LoginRequiredMixin, View, Permissio
             total_dias = sum(it.days_quantity for it in items)
             apellidos_nombres = f"{emp.person.last_name} {emp.person.first_name}".strip()
 
-            # Determinación precisa
-            is_ct, _, _ = get_vacation_regime_info(emp)
-            tipo_limpio = "TRABAJADOR" if is_ct else "EMPLEADO"
+            # Datos laborales reales del empleado.
+            tipo_limpio = (
+                (emp.employment_status.name or emp.employment_status.code or '').strip().upper()
+                if emp.employment_status else 'SIN TIPO'
+            )
+            _, dias_ley, _ = get_vacation_regime_info(emp)
+            inst_data = getattr(emp, 'institutional_data', None)
+            fecha_ingreso = (
+                inst_data.entry_date.strftime('%d/%m/%Y')
+                if inst_data and inst_data.entry_date else '-'
+            )
+            active_contract = emp.active_contracts[0] if emp.active_contracts else None
+            regimen = 'SIN RÉGIMEN'
+            if active_contract and active_contract.contract_type:
+                labor_regime = active_contract.contract_type.labor_regime
+                if labor_regime:
+                    regimen = (
+                        labor_regime.name or labor_regime.code or regimen
+                    ).strip().upper()
+            unidad = (emp.area.name if emp.area else 'SIN ASIGNAR').strip().upper()
 
             report_rows.append({
                 'secuencial': secuencial,
                 'cedula': emp.person.document_number,
                 'apellidos_nombres': apellidos_nombres,
+                'regimen': regimen,
+                'fecha_ingreso': fecha_ingreso,
+                'unidad': unidad,
                 'tipo': tipo_limpio,
-                'regimen_tipo': tipo_limpio,
+                'dias_ley': f'{dias_ley} días',
                 'meses': meses_str,
                 'total_dias': total_dias,
             })

@@ -6,33 +6,43 @@
     <style>
         @page {
             size: a4 portrait;
-            margin-top: 3.5cm;
-            margin-bottom: 2.2cm;
-            margin-left: 1.2cm;
-            margin-right: 1.2cm;
+            margin: 0;
+            padding: 0;
 
         {% if letterhead_path %}
             background-image: url('{{ letterhead_path }}');
+            background-size: 100% 100%;
+            background-repeat: no-repeat;
         {% endif %}
 
+            /* Marco principal del contenido */
+            @frame content_frame {
+            left: 1.4cm;
+            right: 1.4cm;
+            top: 3.4cm;
+            bottom: 3.3cm;
+        }
+
+            /* Marco del pie de página conectado directamente por su ID */
             @frame footer_frame {
             -pdf-frame-content: page_footer;
-            bottom: 0.8cm;
-            left: 1.2cm;
-            right: 1.2cm;
-            height: 0.8cm;
+            left: 1.4cm;
+            right: 1.4cm;
+            bottom: 1.25cm;
+            height: 0.45cm;
         }
         }
 
         body {
             font-family: Helvetica, Arial, sans-serif;
             color: #1e293b;
-            font-size: 7pt;
+            font-size: 7.2pt;
+            line-height: 1.1;
         }
 
         .header-title-box {
             text-align: center;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
 
         .inst-title {
@@ -40,14 +50,16 @@
             font-weight: bold;
             color: #203c7d;
             text-transform: uppercase;
-            margin-bottom: 2px;
+            margin: 0 0 2px 0;
         }
 
         .doc-title {
             font-size: 9.5pt;
             font-weight: bold;
             color: #0f172a;
-            margin-bottom: 3px;
+            margin: 0 0 3px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
         }
 
         .doc-sub {
@@ -55,10 +67,12 @@
             color: #475569;
         }
 
+        /* Tabla Principal: 9 columnas con anchos fijos y distribución exacta */
         table.data-table {
             width: 100%;
-            border-collapse: collapse;
+            table-layout: fixed;
             margin-top: 6px;
+            border-collapse: collapse;
         }
 
         table.data-table th {
@@ -67,16 +81,20 @@
             font-weight: bold;
             font-size: 6.8pt;
             text-transform: uppercase;
-            padding: 4px 2px;
+            padding: 4px 2.5px;
             text-align: center;
             border: 0.5pt solid #1e293b;
+            line-height: 1.05;
         }
 
         table.data-table td {
-            padding: 3.5px 2px;
+            padding: 4px 2.5px;
             border: 0.5pt solid #cbd5e1;
             vertical-align: middle;
-            font-size: 6.8pt;
+            font-size: 7pt;
+            line-height: 1.1;
+            overflow-wrap: break-word;
+            word-wrap: break-word;
         }
 
         .text-center {
@@ -91,46 +109,43 @@
             font-weight: bold;
         }
 
-        tr:nth-child(even) {
+        tr.row-even {
             background-color: #f8fafc;
         }
 
-        /* Bloque de 4 Firmas (2x2 para A4 vertical) */
+        /* Bloque de Firmas (2x2) */
         table.signatures-table {
             width: 100%;
-            border-collapse: collapse;
-            margin-top: 25px;
-            background: transparent !important;
-        }
-
-        table.signatures-table tr {
-            background: transparent !important;
+            table-layout: fixed;
+            margin-top: 35px;
+            background-color: transparent;
+            page-break-inside: avoid;
         }
 
         table.signatures-table td {
-            border: none;
+            border: 0 solid transparent;
             padding: 0;
             text-align: center;
             vertical-align: top;
-            background: transparent !important;
+            background-color: transparent;
         }
 
         .sig-header {
-            font-size: 7.5pt;
+            font-size: 7pt;
             font-weight: bold;
             color: #203c7d;
             text-transform: uppercase;
         }
 
         .sig-space-cell {
-            height: 48px;
+            height: 42px;
             font-size: 1pt;
-            line-height: 48px;
+            line-height: 42px;
         }
 
         .sig-bottom-cell {
-            border-top: 0.8pt solid #0f172a !important;
-            padding-top: 3px !important;
+            border-top: 0.8pt solid #0f172a;
+            padding-top: 3px;
             vertical-align: top;
         }
 
@@ -142,21 +157,22 @@
         }
 
         .sig-name {
-            font-size: 7pt;
+            font-size: 6.8pt;
             font-weight: bold;
             color: #0f172a;
             text-transform: uppercase;
         }
 
         .sig-position {
-            font-size: 6.5pt;
+            font-size: 6.2pt;
             color: #475569;
             text-transform: uppercase;
         }
 
+        /* Estilo del texto del pie de página */
         #page_footer {
-            text-align: right;
-            font-size: 6.8pt;
+            text-align: center;
+            font-size: 7pt;
             color: #64748b;
         }
     </style>
@@ -167,52 +183,58 @@
     <div class="inst-title">{{ sys_config.institution_name|default:"MUNICIPIO DE LOJA" }}</div>
     <div class="doc-title">CRONOGRAMA DE VACACIONES {{ plan.year }}</div>
     <div class="doc-sub">
-{#        <strong>Ámbito:</strong> Todas las Dependencias &nbsp;|&nbsp;#}
         <strong>Fecha Emisión:</strong> {{ today|date:"d/m/Y" }} &nbsp;|&nbsp;
         <strong>Total Funcionarios:</strong> {{ total_funcionarios }}
     </div>
 </div>
 
-<!-- Tabla Principal -->
-<table class="data-table">
-    <thead>
-    <tr>
-        <th style="width: 4%;">N°</th>
-        <th style="width: 10%;">CÉDULA</th>
-        <th style="width: 20%;">APELLIDOS Y NOMBRES</th>
-        <th style="width: 10%;">RÉGIMEN</th>
-        <th style="width: 9%;">F. INGRESO</th>
-        <th style="width: 19%;">UNIDAD ADMINISTRATIVA</th>
-        <th style="width: 8%;">TIPO</th>
-        <th style="width: 6%;">DÍAS</th>
-        <th style="width: 12%;">MESES</th>
-    </tr>
-    </thead>
-    <tbody>
-    {% for r in report_rows %}
+<!-- Tabla Principal: anchos definidos tanto en TH como en TD que suman 100% -->
+{% for r in report_rows %}
+    {% if forloop.first or forloop.counter0|divisibleby:13 %}
+        {% if not forloop.first %}
+            </tbody></table>
+            <pdf:nextpage/>
+        {% endif %}
+        <table class="data-table">
+        <thead>
         <tr>
-            <td class="text-center">{{ r.secuencial }}</td>
-            <td class="text-center">{{ r.cedula }}</td>
-            <td class="text-left bold">{{ r.apellidos_nombres }}</td>
-            <td class="text-center">{{ r.regimen }}</td>
-            <td class="text-center">{{ r.fecha_ingreso }}</td>
-            <td class="text-left">{{ r.unidad }}</td>
-            <td class="text-center">{{ r.tipo }}</td>
-            <td class="text-center bold">{{ r.dias_ley }}</td>
-            <td class="text-center">{{ r.meses }}</td>
+            <th style="width: 4%;">N°</th>
+            <th style="width: 10%;">CÉDULA</th>
+            <th style="width: 20%;">APELLIDOS Y NOMBRES</th>
+            <th style="width: 10%;">RÉGIMEN</th>
+            <th style="width: 9%;">F. INGRESO</th>
+            <th style="width: 19%;">UNIDAD ADMINISTRATIVA</th>
+            <th style="width: 10%;">TIPO</th>
+            <th style="width: 5%;">DÍAS</th>
+            <th style="width: 13%;">MESES</th>
         </tr>
-    {% empty %}
-        <tr>
-            <td colspan="9" class="text-center" style="padding: 15px;">No hay personal planificado en este cronograma.
-            </td>
-        </tr>
-    {% endfor %}
-    </tbody>
-</table>
+        </thead>
+        <tbody>
+    {% endif %}
 
-<!-- Bloque de 4 Firmas (Fila 1: Elaborado y Revisado | Fila 2: Visto Bueno y Aprobado) -->
+<tr {% if forloop.counter|divisibleby:2 %}class="row-even"{% endif %}>
+    <td class="text-center">{{ r.secuencial }}</td>
+    <td class="text-center">{{ r.cedula }}</td>
+    <td class="text-left bold">{{ r.apellidos_nombres }}</td>
+    <td class="text-center">{{ r.regimen }}</td>
+    <td class="text-center">{{ r.fecha_ingreso }}</td>
+    <td class="text-left">{{ r.unidad }}</td>
+    <td class="text-center bold">{{ r.tipo }}</td>
+    <td class="text-center bold">{{ r.dias_ley }}</td>
+    <td class="text-center">{{ r.meses }}</td>
+</tr>
+
+{% if forloop.last %}
+    </tbody></table>
+{% endif %}
+{% empty %}
+    <p class="text-center" style="padding: 15px;">
+        No hay personal planificado en este cronograma.
+    </p>
+{% endfor %}
+<!-- Bloque de 4 Firmas (2x2) -->
 <table class="signatures-table">
-    <!-- Par 1: Elaborado y Revisado -->
+    <!-- Fila 1: Elaborado y Revisado -->
     <tr>
         <td style="width: 45%;" class="sig-header">ELABORADO POR:</td>
         <td style="width: 10%;"></td>
@@ -239,14 +261,14 @@
         </td>
     </tr>
 
-    <!-- Espaciador entre filas de firmas -->
+    <!-- Espacio intermedio -->
     <tr>
-        <td style="height: 25px;">&nbsp;</td>
+        <td style="height: 24px;">&nbsp;</td>
         <td></td>
-        <td style="height: 25px;">&nbsp;</td>
+        <td style="height: 24px;">&nbsp;</td>
     </tr>
 
-    <!-- Par 2: Visto Bueno y Aprobado -->
+    <!-- Fila 2: Visto Bueno y Aprobado -->
     <tr>
         <td style="width: 45%;" class="sig-header">VISTO BUENO:</td>
         <td style="width: 10%;"></td>
@@ -274,10 +296,12 @@
     </tr>
 </table>
 
+<!-- Contenedor del pie de página conectado a footer_frame -->
 <div id="page_footer">
-    SIGETH • Página
-    <pdf:pageNumber> de
-        <pdf:pageCount>
+    Página
+    <pdf:pagenumber/>
+    de
+    <pdf:pagecount/>
 </div>
 </body>
 </html>
