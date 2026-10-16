@@ -4,17 +4,21 @@
 {% block title %}Archivo Digital - {{ employee.person.full_name }}{% endblock %}
 
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/payroll.css' %}">
     <link rel="stylesheet" href="{% static 'css/employee_archive.css' %}">
 {% endblock %}
 
 {% block content %}
+    <!-- 1. Encabezado con datos del empleado -->
     <div class="header-card archive-header-card archive-detail-header">
         <div class="archive-detail-person-block">
             <div class="archive-detail-photo-wrap">
                 {% if employee.person.photo %}
-                    <img src="{{ employee.person.photo.url }}" alt="Foto de {{ employee.person.full_name }}"
-                         class="archive-detail-photo">
+                    <img src="{{ employee.person.photo.url }}" alt="{{ employee.person.full_name }}"
+                         class="archive-detail-photo"
+                         onerror="this.classList.add('hidden'); if(this.nextElementSibling) this.nextElementSibling.classList.remove('hidden');">
+                    <div class="archive-detail-photo archive-detail-photo--placeholder hidden">
+                        <i class="fas fa-user"></i>
+                    </div>
                 {% else %}
                     <div class="archive-detail-photo archive-detail-photo--placeholder">
                         <i class="fas fa-user"></i>
@@ -29,28 +33,27 @@
             </div>
         </div>
         <div class="archive-detail-header-action">
-            <a href="{% url 'employee_archive:employee_list' %}" class="btn btn-create archive-back-btn">
+            <a href="{% url 'employee_archive:employee_list' %}" class="btn-white-rectangle archive-back-btn">
                 <i class="fas fa-arrow-left"></i> Volver al listado
             </a>
         </div>
     </div>
 
-
-
-
+    <!-- 2. Contenido de documentos digitales y pestañas -->
     <div class="content-table archive-content-table archive-spacing-bottom">
         <div class="archive-documents-header">
             <h4 class="archive-section-title">Documentos del archivo digital</h4>
             <div class="archive-documents-header-actions">
-                <button type="button" class="btn btn-outline-primary" onclick="openArchiveLoanHistoryModal()">
+                <button type="button" class="btn-dark-blue-rectangle-outline" onclick="openArchiveLoanHistoryModal()">
                     <i class="fas fa-clock-rotate-left"></i> Bitácora de Préstamos
                 </button>
-                <button type="button" class="btn btn-outline-primary" onclick="openArchiveAuditModal()">
+                <button type="button" class="btn-dark-blue-rectangle-outline" onclick="openArchiveAuditModal()">
                     <i class="fas fa-shield-halved"></i> Auditoría del archivo digital
                 </button>
             </div>
         </div>
 
+        <!-- Pestañas de tipos de documentos -->
         <div class="archive-tab-buttons" id="archiveDocumentTabs">
             {% for archive in archive_documents %}
                 {% if archive.document_type.code == 'EXPEDIENTE_INICIAL' %}
@@ -81,6 +84,7 @@
             {% endfor %}
         </div>
 
+        <!-- Paneles de tablas según la pestaña activa -->
         <div class="archive-tab-content-wrapper">
             {% for archive in archive_documents %}
                 <div id="archive-tab-{{ archive.id }}"
@@ -91,14 +95,14 @@
                                    data-title="Contratos vinculados">
                                 <thead>
                                 <tr>
-                                    <th class="sortable-header" data-sort-index="0" style="cursor:pointer;">Contrato
+                                    <th class="sortable-header cursor-pointer" data-sort-index="0">Contrato
                                         <span class="sort-arrow">⇅</span></th>
-                                    <th class="sortable-header" data-sort-index="1" style="cursor:pointer;">Referencia
+                                    <th class="sortable-header cursor-pointer" data-sort-index="1">Referencia
                                         <span class="sort-arrow">⇅</span></th>
-                                    <th class="sortable-header" data-sort-index="2" data-sort-type="date"
-                                        style="cursor:pointer;">Fecha <span class="sort-arrow">⇅</span></th>
+                                    <th class="sortable-header cursor-pointer" data-sort-index="2"
+                                        data-sort-type="date">Fecha <span class="sort-arrow">⇅</span></th>
                                     <th>Estado</th>
-                                    <th class="text-center">Acciones</th>
+                                    <th class="text-center actions">Acciones</th>
                                 </tr>
                                 </thead>
                                 <tbody>
@@ -119,7 +123,7 @@
                                             <td class="text-center actions">
                                                 <div class="actions-wrapper">
                                                     {% if task.is_scanned and task.version %}
-                                                        <a class="btn-icon btn-views-action"
+                                                        <a class="btn-red-circle"
                                                            href="{% url 'employee_archive:version_open' task.version.id %}"
                                                            target="_blank" title="Ver PDF">
                                                             <i class="fas fa-file-pdf"></i>
@@ -127,7 +131,7 @@
                                                     {% endif %}
                                                     {% if perms.employee_archive.add_employeearchiveversion %}
                                                         <button type="button"
-                                                                class="btn-icon btn-create-action"
+                                                                class="btn-green-circle"
                                                                 title="Subir PDF"
                                                                 data-document-name="{{ task.title }}"
                                                                 data-upload-url="{% url 'employee_archive:scan_task_upload' task.id %}"
@@ -146,7 +150,7 @@
                                             {% if perms.employee_archive.add_employeearchiveversion %}
                                                 <div class="archive-empty-upload-action">
                                                     <button type="button"
-                                                            class="btn btn-create"
+                                                            class="btn-dark-blue-rectangle"
                                                             data-document-name="{{ archive.document_type.name }}"
                                                             data-upload-url="{% url 'employee_archive:version_upload' archive.id %}"
                                                             onclick="openArchiveVersionUploadModal(this)">
@@ -168,7 +172,7 @@
                                     <th>Referencia</th>
                                     <th>Fecha</th>
                                     <th>Estado</th>
-                                    <th class="text-center">Acciones</th>
+                                    <th class="text-center actions">Acciones</th>
                                 </tr>
                                 </thead>
                                 <tbody>
@@ -189,7 +193,7 @@
                                             <td class="text-center actions">
                                                 <div class="actions-wrapper">
                                                     {% if task.is_scanned and task.version %}
-                                                        <a class="btn-icon btn-views-action"
+                                                        <a class="btn-red-circle"
                                                            href="{% url 'employee_archive:version_open' task.version.id %}"
                                                            target="_blank" title="Ver PDF">
                                                             <i class="fas fa-file-pdf"></i>
@@ -197,7 +201,7 @@
                                                     {% endif %}
                                                     {% if perms.employee_archive.add_employeearchiveversion %}
                                                         <button type="button"
-                                                                class="btn-icon btn-create-action"
+                                                                class="btn-green-circle"
                                                                 title="Subir PDF"
                                                                 data-document-name="{{ task.title }}"
                                                                 data-upload-url="{% url 'employee_archive:scan_task_upload' task.id %}"
@@ -216,7 +220,7 @@
                                             {% if perms.employee_archive.add_employeearchiveversion %}
                                                 <div class="archive-empty-upload-action">
                                                     <button type="button"
-                                                            class="btn btn-create"
+                                                            class="btn-dark-blue-rectangle"
                                                             data-document-name="{{ archive.document_type.name }}"
                                                             data-upload-url="{% url 'employee_archive:version_upload' archive.id %}"
                                                             onclick="openArchiveVersionUploadModal(this)">
@@ -239,7 +243,7 @@
                                     <th>Emisión</th>
                                     <th>Caducidad</th>
                                     <th>Observaciones</th>
-                                    <th class="text-center">Acciones</th>
+                                    <th class="text-center actions">Acciones</th>
                                 </tr>
                                 </thead>
                                 <tbody>
@@ -258,7 +262,7 @@
                                         <td class="text-center actions">
                                             <div class="actions-wrapper">
                                                 {% if version.file %}
-                                                    <a class="btn-icon btn-views-action"
+                                                    <a class="btn-red-circle"
                                                        href="{% url 'employee_archive:version_open' version.id %}"
                                                        target="_blank" title="Ver PDF">
                                                         <i class="fas fa-file-pdf"></i>
@@ -266,7 +270,7 @@
                                                 {% endif %}
                                                 {% if perms.employee_archive.add_employeearchiveversion %}
                                                     <button type="button"
-                                                            class="btn-icon btn-success-action"
+                                                            class="btn-green-circle"
                                                             title="Subir nueva versión"
                                                             data-document-name="{{ archive.document_type.name }}"
                                                             data-upload-url="{% url 'employee_archive:version_upload' archive.id %}"
@@ -284,7 +288,7 @@
                                             {% if perms.employee_archive.add_employeearchiveversion %}
                                                 <div class="archive-empty-upload-action">
                                                     <button type="button"
-                                                            class="btn btn-create"
+                                                            class="btn-dark-blue-rectangle"
                                                             data-document-name="{{ archive.document_type.name }}"
                                                             data-upload-url="{% url 'employee_archive:version_upload' archive.id %}"
                                                             onclick="openArchiveVersionUploadModal(this)">
@@ -304,19 +308,22 @@
         </div>
     </div>
 
+    <!-- 3. Modal: Subir archivo PDF -->
     <div id="archiveVersionUploadModal" class="modal-overlay hidden">
-        <div class="modal-container-medium shadow-card"
-             style="max-width: 620px; width: min(620px, calc(100vw - 2rem));">
+        <div class="modal-container-medium">
             <form id="archiveVersionUploadModalForm" method="post" enctype="multipart/form-data" action=""
                   class="archive-loan-request-form">
                 {% csrf_token %}
-                <div class="modal-header-medium modal-header-gradient">
-                    <h3 class="modal-title text-white">
-                        <i class="fas fa-upload me-2"></i>
-                        Subir archivo - <span id="archiveVersionUploadModalDocumentName"></span>
-                    </h3>
-                    <button type="button" class="btn-close-modal text-white-opacity"
-                            onclick="closeArchiveVersionUploadModal()">
+                <div class="modal-header">
+                    <div class="header-content-group">
+                        <div class="header-icon-circle">
+                            <i class="fas fa-upload"></i>
+                        </div>
+                        <h3 class="header-title">
+                            Subir archivo - <span id="archiveVersionUploadModalDocumentName"></span>
+                        </h3>
+                    </div>
+                    <button type="button" class="btn-close-circle" onclick="closeArchiveVersionUploadModal()">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
@@ -328,25 +335,27 @@
                     </div>
                     <textarea name="observations" class="form-control" rows="3" placeholder="Observaciones"></textarea>
                 </div>
-                <div class="modal-footer-medium d-flex justify-content-end gap-2 archive-loan-request-footer">
-                    <button type="button" class="btn btn-outline-secondary" onclick="closeArchiveVersionUploadModal()">
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary-outline" onclick="closeArchiveVersionUploadModal()">
                         Cancelar
                     </button>
-                    <button type="submit" class="btn btn-create">Subir PDF</button>
+                    <button type="submit" class="btn-dark-blue-rectangle">Subir PDF</button>
                 </div>
             </form>
         </div>
     </div>
 
+    <!-- 4. Modal: Bitácora de Préstamos -->
     <div id="archiveLoanHistoryModal" class="modal-overlay hidden">
-        <div class="modal-container-medium animate-scale-in archive-report-modal">
-            <div class="modal-header-medium modal-header-gradient">
-                <h3 class="modal-title text-white">
-                    <i class="fas fa-clock-rotate-left me-2"></i>
-                    Bitácora de Préstamos
-                </h3>
-                <button type="button" class="btn-close-modal text-white-opacity"
-                        onclick="closeArchiveLoanHistoryModal()">
+        <div class="modal-container-large archive-report-modal">
+            <div class="modal-header">
+                <div class="header-content-group">
+                    <div class="header-icon-circle">
+                        <i class="fas fa-clock-rotate-left"></i>
+                    </div>
+                    <h3 class="header-title">Bitácora de Préstamos</h3>
+                </div>
+                <button type="button" class="btn-close-circle" onclick="closeArchiveLoanHistoryModal()">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -363,11 +372,11 @@
                     <table id="loanHistoryTable" class="table table-hover" data-title="Bitacora de Prestamos">
                         <thead>
                         <tr>
-                            <th class="sortable-header" data-sort-index="0" data-sort-type="date"
-                                style="cursor:pointer;">Fecha <span class="sort-arrow">⇅</span></th>
-                            <th class="sortable-header" data-sort-index="1" style="cursor:pointer;">Usuario <span
+                            <th class="sortable-header cursor-pointer" data-sort-index="0" data-sort-type="date">Fecha
+                                <span class="sort-arrow">⇅</span></th>
+                            <th class="sortable-header cursor-pointer" data-sort-index="1">Usuario <span
                                     class="sort-arrow">⇅</span></th>
-                            <th class="sortable-header" data-sort-index="2" style="cursor:pointer;">Estado <span
+                            <th class="sortable-header cursor-pointer" data-sort-index="2">Estado <span
                                     class="sort-arrow">⇅</span></th>
                             <th>Observaciones</th>
                         </tr>
@@ -396,22 +405,25 @@
                 </div>
                 <div class="archive-mini-pagination" id="loanHistoryPagination"></div>
             </div>
-            <div class="modal-footer-medium d-flex justify-content-end gap-2 archive-report-modal-footer">
-                <button type="button" class="btn btn-outline-secondary" onclick="closeArchiveLoanHistoryModal()">
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary-outline" onclick="closeArchiveLoanHistoryModal()">
                     Cerrar
                 </button>
             </div>
         </div>
     </div>
 
+    <!-- 5. Modal: Auditoría del archivo digital -->
     <div id="archiveAuditModal" class="modal-overlay hidden">
-        <div class="modal-container-medium animate-scale-in archive-report-modal">
-            <div class="modal-header-medium modal-header-gradient">
-                <h3 class="modal-title text-white">
-                    <i class="fas fa-shield-halved me-2"></i>
-                    Auditoría del archivo digital
-                </h3>
-                <button type="button" class="btn-close-modal text-white-opacity" onclick="closeArchiveAuditModal()">
+        <div class="modal-container-large archive-report-modal">
+            <div class="modal-header">
+                <div class="header-content-group">
+                    <div class="header-icon-circle">
+                        <i class="fas fa-shield-halved"></i>
+                    </div>
+                    <h3 class="header-title">Auditoría del archivo digital</h3>
+                </div>
+                <button type="button" class="btn-close-circle" onclick="closeArchiveAuditModal()">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -428,15 +440,15 @@
                     <table id="auditTable" class="table table-hover" data-title="Auditoria Archivo Digital">
                         <thead>
                         <tr>
-                            <th class="sortable-header" data-sort-index="0" data-sort-type="date"
-                                style="cursor:pointer;">Fecha <span class="sort-arrow">⇅</span></th>
-                            <th class="sortable-header" data-sort-index="1" style="cursor:pointer;">Usuario <span
-                                    class="sort-arrow">⇅</span></th>
-                            <th class="sortable-header" data-sort-index="2" style="cursor:pointer;">Tipo de documento
+                            <th class="sortable-header cursor-pointer" data-sort-index="0" data-sort-type="date">Fecha
                                 <span class="sort-arrow">⇅</span></th>
-                            <th class="sortable-header" data-sort-index="3" style="cursor:pointer;">Referencia <span
+                            <th class="sortable-header cursor-pointer" data-sort-index="1">Usuario <span
                                     class="sort-arrow">⇅</span></th>
-                            <th class="sortable-header" data-sort-index="4" style="cursor:pointer;">Acción <span
+                            <th class="sortable-header cursor-pointer" data-sort-index="2">Tipo de documento <span
+                                    class="sort-arrow">⇅</span></th>
+                            <th class="sortable-header cursor-pointer" data-sort-index="3">Referencia <span
+                                    class="sort-arrow">⇅</span></th>
+                            <th class="sortable-header cursor-pointer" data-sort-index="4">Acción <span
                                     class="sort-arrow">⇅</span></th>
                             <th>IP</th>
                         </tr>
@@ -461,8 +473,9 @@
                 </div>
                 <div class="archive-mini-pagination" id="auditPagination"></div>
             </div>
-            <div class="modal-footer-medium d-flex justify-content-end gap-2 archive-report-modal-footer">
-                <button type="button" class="btn btn-outline-secondary" onclick="closeArchiveAuditModal()">Cerrar
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary-outline" onclick="closeArchiveAuditModal()">
+                    Cerrar
                 </button>
             </div>
         </div>
@@ -471,6 +484,7 @@
 
 {% block extra_js %}
     <script>
+        // Cambio de pestaña entre tipos de documentos
         function switchArchiveDocumentTab(targetId) {
             document.querySelectorAll('.archive-tab-btn').forEach(function (btn) {
                 const isActive = btn.dataset.tabTarget === targetId;
@@ -481,6 +495,7 @@
             });
         }
 
+        // Conversión de fechas de tabla en objetos Date
         function parseTableDate(value) {
             if (!value) {
                 return null;
@@ -497,6 +512,7 @@
             return new Date(year, month, day, hours, minutes);
         }
 
+        // Normalización de entradas de fecha
         function normalizeDateInput(value, endOfDay) {
             if (!value) {
                 return null;
@@ -514,6 +530,7 @@
             return new Date(year, month, day, 0, 0, 0, 0);
         }
 
+        // Configuración de ordenamiento, filtros y paginación para tablas auxiliares
         function setupEnhancedTable(options) {
             const table = document.getElementById(options.tableId);
             if (!table) {
@@ -616,7 +633,7 @@
                     pager.innerHTML = '';
                     const prevBtn = document.createElement('button');
                     prevBtn.type = 'button';
-                    prevBtn.className = 'btn btn-outline-secondary btn-sm';
+                    prevBtn.className = 'page-btn page-prev';
                     prevBtn.textContent = 'Anterior';
                     prevBtn.disabled = state.page <= 1;
                     prevBtn.addEventListener('click', function () {
@@ -630,7 +647,7 @@
 
                     const nextBtn = document.createElement('button');
                     nextBtn.type = 'button';
-                    nextBtn.className = 'btn btn-outline-secondary btn-sm';
+                    nextBtn.className = 'page-btn page-next';
                     nextBtn.textContent = 'Siguiente';
                     nextBtn.disabled = state.page >= totalPages;
                     nextBtn.addEventListener('click', function () {
@@ -684,6 +701,7 @@
             return {refresh: applyFilters};
         }
 
+        // Apertura y cierre de modales
         function openArchiveVersionUploadModal(buttonElement) {
             const modal = document.getElementById('archiveVersionUploadModal');
             const form = document.getElementById('archiveVersionUploadModalForm');
@@ -734,6 +752,7 @@
             }
         }
 
+        // Inicialización al cargar el DOM
         document.addEventListener('DOMContentLoaded', function () {
             const tabButtons = document.querySelectorAll('.archive-tab-btn');
             tabButtons.forEach(function (btn) {
@@ -777,6 +796,7 @@
             });
         });
 
+        // Escuchadores para cierre de modales
         document.addEventListener('keydown', function (event) {
             if (event.key === 'Escape') {
                 closeArchiveVersionUploadModal();

@@ -3,6 +3,10 @@
 
 {% block title %}Archivo Digital de Empleados | SIGETH{% endblock %}
 
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/employee_archive.css' %}">
+{% endblock %}
+
 {% block content %}
     <!-- 1. Encabezado Oficial -->
     <div class="header-card">
@@ -15,13 +19,14 @@
     <!-- 2. Tabla y Controles Estandarizados -->
     <div id="table-app">
         <div class="content-table">
+            <!-- Barra de herramientas con estructura de 3 columnas para alineación perfecta -->
             <div class="table-controls toolbar-row">
+
                 <div class="toolbar-center">
                     <div class="d-flex align-items-center position-relative">
                         <input type="checkbox" id="toggleLoanedExpedients"
                                class="switch-input switch-red"
-                               {% if request.GET.show_loaned == 'true' %}checked{% endif %}
-                               onchange="toggleLoanedExpedients(this.checked)">
+                               {% if request.GET.show_loaned == 'true' %}checked{% endif %}>
                         <label for="toggleLoanedExpedients" class="switch-wrapper">
                             <span class="switch-circle"></span>
                             <span class="switch-text">Mostrar Expedientes Prestados</span>
@@ -43,14 +48,16 @@
                 </div>
             </div>
 
-            <!-- Contenedor de la Tabla -->
+            <!-- Contenedor unificado para actualización dinámica de tabla y paginación vía AJAX -->
             <div id="table-content-wrapper">
                 <div class="table-container">
                     <div class="table-scroll-top">
                         <table class="managed-table exportable-table"
                                data-title="Archivo Digital por Empleado"
                                data-filename="Archivo_Digital_Empleados"
-                               data-page-size="10">
+                               data-page-size="10"
+                               data-external-pagination="true"
+                               data-external-search="true">
                             <thead>
                             <tr>
                                 <th class="width-30" data-field="employee">Empleado</th>
@@ -149,77 +156,238 @@
                         </table>
                     </div>
                 </div>
-            </div>
 
-            <!-- Paginación Global -->
-            <div class="pagination-container">
-                <span class="pagination-info">
-                    Mostrando {{ page_obj.start_index|default:"0" }}-{{ page_obj.end_index|default:"0" }} de {{ paginator.count|default:"0" }}
-                </span>
-                <div class="pagination-controls" {% if paginator.num_pages <= 1 %}style="visibility:hidden;"{% endif %}>
-                    <button type="button" class="page-btn page-first" title="Primera"
-                            {% if not page_obj.has_previous %}disabled{% endif %}
-                            onclick="goToArchivePage(1)">
-                        <i class="fas fa-angle-double-left"></i>
-                    </button>
-                    <button type="button" class="page-btn page-prev" title="Anterior"
-                            {% if not page_obj.has_previous %}disabled{% endif %}
-                            onclick="goToArchivePage(
-                                    {% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% else %}1{% endif %})">
-                        <i class="fas fa-angle-left"></i>
-                    </button>
-                    <div class="page-input-wrapper">
-                        <input type="number" class="page-input" value="{{ page_obj.number|default:1 }}" min="1"
-                               max="{{ paginator.num_pages|default:1 }}"
-                               onchange="goToArchivePage(parseInt(this.value)||1)"
-                               onkeypress="if(event.key==='Enter') goToArchivePage(parseInt(this.value)||1)">
-                        <span class="total-pages-badge">de {{ paginator.num_pages|default:1 }}</span>
+                <!-- Paginación Global -->
+                <div class="pagination-container" id="js-pagination">
+                    <span class="pagination-info">
+                        Mostrando {{ page_obj.start_index|default:"0" }}-{{ page_obj.end_index|default:"0" }} de {{ paginator.count|default:"0" }}
+                    </span>
+                    <div class="pagination-controls{% if paginator.num_pages <= 1 %} hidden{% endif %}">
+                        <button type="button" class="page-btn page-first" title="Primera"
+                                data-page="1"
+                                {% if not page_obj.has_previous %}disabled{% endif %}>
+                            <i class="fas fa-angle-double-left"></i>
+                        </button>
+                        <button type="button" class="page-btn page-prev" title="Anterior"
+                                data-page="
+                                        {% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% else %}1{% endif %}"
+                                {% if not page_obj.has_previous %}disabled{% endif %}>
+                            <i class="fas fa-angle-left"></i>
+                        </button>
+                        <div class="page-input-wrapper">
+                            <input type="number" class="page-input" id="archivePageInput"
+                                   value="{{ page_obj.number|default:1 }}" min="1"
+                                   max="{{ paginator.num_pages|default:1 }}"
+                                   data-total-pages="{{ paginator.num_pages|default:1 }}">
+                            <span class="total-pages-badge">de {{ paginator.num_pages|default:1 }}</span>
+                        </div>
+                        <button type="button" class="page-btn page-next" title="Siguiente"
+                                data-page="
+                                        {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages|default:1 }}{% endif %}"
+                                {% if not page_obj.has_next %}disabled{% endif %}>
+                            <i class="fas fa-angle-right"></i>
+                        </button>
+                        <button type="button" class="page-btn page-last" title="Última"
+                                data-page="{{ paginator.num_pages|default:1 }}"
+                                {% if not page_obj.has_next %}disabled{% endif %}>
+                            <i class="fas fa-angle-double-right"></i>
+                        </button>
                     </div>
-                    <button type="button" class="page-btn page-next" title="Siguiente"
-                            {% if not page_obj.has_next %}disabled{% endif %}
-                            onclick="goToArchivePage(
-                                    {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages|default:1 }}{% endif %})">
-                        <i class="fas fa-angle-right"></i>
-                    </button>
-                    <button type="button" class="page-btn page-last" title="Última"
-                            {% if not page_obj.has_next %}disabled{% endif %}
-                            onclick="goToArchivePage({{ paginator.num_pages|default:1 }})">
-                        <i class="fas fa-angle-double-right"></i>
-                    </button>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- Contenedor dinámico universal para modales AJAX de main.js -->
-    <div id="modal-root"></div>
 {% endblock %}
 
 {% block extra_js %}
     <script>
-        function toggleLoanedExpedients(isChecked) {
-            if (typeof window.refreshCurrentTable === 'function') {
-                window.refreshCurrentTable({show_loaned: isChecked ? 'true' : 'false', page: 1});
-            } else {
-                const params = new URLSearchParams(window.location.search);
-                if (isChecked) {
-                    params.set('show_loaned', 'true');
-                } else {
-                    params.delete('show_loaned');
-                }
-                params.set('page', '1');
-                window.location.search = params.toString();
+        // Función para actualizar tabla y paginación de forma parcial y segura mediante AJAX
+        function refreshArchiveTable(extraParams = {}) {
+            const tableContainer = document.querySelector('.table-container');
+            const paginationContainer = document.getElementById('js-pagination');
+
+            if (!tableContainer) {
+                window.location.reload();
+                return;
             }
+
+            const searchInput = document.getElementById('table-search');
+            const loanedSwitch = document.getElementById('toggleLoanedExpedients');
+            const requestUrl = new URL(window.location.href);
+
+            // Mantener búsqueda activa si existe
+            if (searchInput && searchInput.value.trim()) {
+                requestUrl.searchParams.set('q', searchInput.value.trim());
+            }
+
+            // Mantener o alternar filtro de expedientes prestados
+            if (!('show_loaned' in extraParams) && loanedSwitch) {
+                if (loanedSwitch.checked) {
+                    requestUrl.searchParams.set('show_loaned', 'true');
+                } else {
+                    requestUrl.searchParams.delete('show_loaned');
+                }
+            }
+
+            // Aplicar parámetros pasados explícitamente
+            Object.keys(extraParams).forEach(key => {
+                if (extraParams[key] !== null && extraParams[key] !== undefined && extraParams[key] !== '') {
+                    requestUrl.searchParams.set(key, extraParams[key]);
+                } else {
+                    requestUrl.searchParams.delete(key);
+                }
+            });
+
+            tableContainer.classList.add('table-loading');
+
+            fetch(requestUrl.toString(), {
+                headers: {'X-Requested-With': 'XMLHttpRequest'}
+            })
+                .then(response => {
+                    if (!response.ok) throw new Error('Error al consultar el servidor');
+                    return response.text();
+                })
+                .then(html => {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+
+                    // Extraer únicamente los contenedores necesarios sin importar si Django devuelve la plantilla completa
+                    const newTableContainer = doc.querySelector('.table-container');
+                    const newPagination = doc.querySelector('.pagination-container');
+
+                    if (newTableContainer && tableContainer) {
+                        tableContainer.replaceWith(newTableContainer);
+                    }
+                    if (newPagination && paginationContainer) {
+                        paginationContainer.replaceWith(newPagination);
+                    } else if (newPagination && !paginationContainer && newTableContainer) {
+                        newTableContainer.after(newPagination);
+                    }
+
+                    // Actualizar el contador numérico de expedientes prestados
+                    const newCountBadge = doc.querySelector('.badge-notification');
+                    const currentCountBadge = document.querySelector('.badge-notification');
+                    if (newCountBadge && currentCountBadge) {
+                        currentCountBadge.textContent = newCountBadge.textContent;
+                    }
+
+                    // Sincronizar la URL del navegador sin recargar para preservar filtros
+                    if (window.history && window.history.replaceState) {
+                        window.history.replaceState({}, '', requestUrl.toString());
+                    }
+
+                    // Re-inicializar TableManager sobre la nueva tabla para ordenamiento de columnas
+                    const newTable = document.querySelector('.managed-table');
+                    if (newTable && typeof TableManager !== 'undefined') {
+                        new TableManager(newTable);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error al actualizar la tabla de archivo digital:', error);
+                    window.location.href = requestUrl.toString();
+                })
+                .finally(() => {
+                    const updatedContainer = document.querySelector('.table-container');
+                    if (updatedContainer) {
+                        updatedContainer.classList.remove('table-loading');
+                    }
+                });
         }
 
-        function goToArchivePage(page) {
-            if (typeof window.refreshCurrentTable === 'function') {
-                window.refreshCurrentTable({page: page});
-            } else {
-                const params = new URLSearchParams(window.location.search);
-                params.set('page', page);
-                window.location.search = params.toString();
-            }
+        // Manejador del filtro de expedientes prestados
+        function handleLoanedToggle(isChecked) {
+            refreshArchiveTable({show_loaned: isChecked ? 'true' : 'false', page: 1});
         }
+
+        // Navegación de páginas para archivo digital
+        function navigateToArchivePage(pageNumber) {
+            const pageInput = document.getElementById('archivePageInput');
+            const totalPages = parseInt(pageInput?.dataset?.totalPages || '1', 10);
+            let targetPage = parseInt(pageNumber, 10);
+
+            if (isNaN(targetPage) || targetPage < 1) {
+                targetPage = 1;
+            } else if (targetPage > totalPages) {
+                targetPage = totalPages;
+            }
+
+            if (pageInput) {
+                pageInput.value = targetPage;
+            }
+
+            refreshArchiveTable({page: targetPage});
+        }
+
+        // Ejecución de búsqueda con actualización dinámica
+        function executeArchiveSearch(query) {
+            refreshArchiveTable({q: query, page: 1});
+        }
+
+        // Asignación de escuchadores de eventos
+        document.addEventListener('DOMContentLoaded', function () {
+            // Escuchador para el switch de expedientes prestados
+            const loanedSwitch = document.getElementById('toggleLoanedExpedients');
+            if (loanedSwitch) {
+                loanedSwitch.addEventListener('change', function () {
+                    handleLoanedToggle(this.checked);
+                });
+            }
+
+            // Escuchador con retardo (debounce) para el buscador
+            const searchInput = document.getElementById('table-search');
+            if (searchInput) {
+                let searchTimer = null;
+
+                searchInput.addEventListener('input', function () {
+                    clearTimeout(searchTimer);
+                    const query = this.value.trim();
+                    searchTimer = setTimeout(() => {
+                        executeArchiveSearch(query);
+                    }, 450);
+                });
+
+                searchInput.addEventListener('keydown', function (event) {
+                    if (event.key === 'Enter') {
+                        event.preventDefault();
+                        clearTimeout(searchTimer);
+                        executeArchiveSearch(this.value.trim());
+                    }
+                });
+            }
+        });
+
+        // Delegación de eventos para la paginación (botones y entrada numérica)
+        document.addEventListener('click', function (event) {
+            const pageButton = event.target.closest('.pagination-controls .page-btn');
+            if (!pageButton || pageButton.disabled) return;
+
+            event.preventDefault();
+            event.stopImmediatePropagation();
+
+            const targetPage = pageButton.dataset.page;
+            if (targetPage) {
+                navigateToArchivePage(targetPage);
+            }
+        }, true);
+
+        document.addEventListener('change', function (event) {
+            const target = event.target;
+            if (target && target.id === 'archivePageInput') {
+                navigateToArchivePage(target.value);
+            }
+        });
+
+        document.addEventListener('keydown', function (event) {
+            const target = event.target;
+            if (target && target.id === 'archivePageInput' && event.key === 'Enter') {
+                event.preventDefault();
+                navigateToArchivePage(target.value);
+            }
+        });
+
+        // Sobrescribir funciones globales para retrocompatibilidad total y evitar duplicación de plantilla
+        window.toggleLoanedExpedients = handleLoanedToggle;
+        window.goToArchivePage = navigateToArchivePage;
+        window.refreshCurrentTable = refreshArchiveTable;
     </script>
 {% endblock %}
