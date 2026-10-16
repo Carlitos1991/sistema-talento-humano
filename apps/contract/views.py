@@ -3,38 +3,43 @@ import json
 import mimetypes
 import os
 import re
-from pathlib import Path
 from datetime import datetime, timedelta
-import re
+from pathlib import Path
+import unicodedata
+from django.db.models import CharField, Q
+from django.db.models.functions import Coalesce, Lower
+from institution.models import AdministrativeUnit
+from .models import ManagementPeriod
 import openpyxl
+import unicodedata
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import Q, Count, Prefetch
+from django.db.models import Prefetch
+from django.db.models import Q, CharField
+from django.db.models.functions import Coalesce
+from django.db.models.functions import Lower
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.shortcuts import redirect
 from django.shortcuts import render
-from django.urls import reverse
-from django.db.models import Q, CharField
-from django.db.models.functions import Coalesce, Lower
 from django.template.loader import render_to_string
-from django.utils.decorators import method_decorator
 from django.utils import timezone
+from django.utils.decorators import method_decorator
 from django.utils.html import escape
 from django.utils.safestring import mark_safe
 from django.views.decorators.http import require_http_methods
 from django.views.generic import ListView, View
-from django.db.models.functions import Coalesce
+
 from budget.models import BudgetModificationHistory, BudgetAssignmentHistory
 from core.models import CatalogItem
 from core.models import SystemConfiguration
-from employee.models import Employee, InstitutionalData
-from person.models import Person
-from institution.models import AdministrativeUnit
-from schedule.models import Schedule
 from core.models import User
-from personnel_actions.models import ActionType, PersonnelAction
+from employee.models import Employee, InstitutionalData
+from institution.models import AdministrativeUnit
+from person.models import Person
+from personnel_actions.models import ActionType
+from schedule.models import Schedule
 from .forms import LaborRegimeForm, ContractTypeForm
 from .models import (
     LaborRegime,
@@ -46,15 +51,17 @@ from .models import (
 )
 
 PERIOD_SORT_FIELDS = {
-    'employee': 'employee_sort_name',
     'document_number': 'employee__person__document_number',
-    'budget_line': 'position_sort_name',
+    'last_name': 'employee__person__last_name',
+    'first_name': 'employee__person__first_name',
+    'position': 'position_sort_name',
+    'remuneration': 'budget_line__remuneration',
     'unit': 'administrative_unit__name',
     'contract_type': 'contract_type__name',
+    'regime': 'contract_type__labor_regime__name',
     'start_date': 'start_date',
     'end_date': 'end_date',
     'status': 'status__name',
-    'created_at': 'created_at',
 }
 
 
@@ -1117,44 +1124,75 @@ class JSONResponseMixin:
         return super().render_to_response(context, **response_kwargs)
 
 
+def _clean_text_accents(text):
+    if not text:
+        return ""
+    return (
+        unicodedata.normalize("NFKD", str(text))
+        .encode("ascii", "ignore")
+        .decode("utf-8")
+        .strip()
+        .lower()
+    )
+
+
 class ManagementPeriodListView(LoginRequiredMixin, PermissionRequiredMixin, JSONResponseMixin, ListView):
     model = ManagementPeriod
     template_name = 'contract/management_period_list.html'
     partial_template_name = 'contract/partials/partial_management_period_table.html'
+    export_template_name = 'contract/partials/partial_management_period_export.html'
     permission_required = 'contract.view_managementperiod'
     context_object_name = 'periods'
     paginate_by = 10
 
+    def get_paginate_by(self, queryset):
+        if self.request.GET.get('export') == 'true':
+            return None
+        return self.paginate_by
+
+    def get(self, request, *args, **kwargs):
+        if request.GET.get('export') == 'true':
+            self.object_list = self.get_queryset()
+            context = self.get_context_data()
+            return render(request, self.export_template_name, context)
+        return super().get(request, *args, **kwargs)
+
     def get_queryset(self):
-        # Anotamos el nombre del cargo unificado y en minúsculas para un orden alfabético estricto
-        queryset = ManagementPeriod.objects.select_related(
-            'employee__person',
-            'budget_line__position_item',
-            'contract_type__labor_regime',
-            'administrative_unit',
-            'status'
-        ).prefetch_related('history_set').annotate(
-            position_sort_name=Lower(
-                Coalesce(
-                    'budget_line__position_item__name',
-                    'manual_position',
-                    output_field=CharField()
-                )
-            ),
-            employee_sort_name=Lower('employee__person__last_name')
+        queryset = (
+            ManagementPeriod.objects.select_related(
+                "employee__person",
+                "budget_line__position_item",
+                "contract_type__labor_regime",
+                "administrative_unit",
+                "status",
+            )
+            .prefetch_related("history_set")
+            .annotate(
+                position_sort_name=Lower(
+                    Coalesce(
+                        "budget_line__position_item__name",
+                        "manual_position",
+                        output_field=CharField(),
+                    )
+                ),
+                employee_sort_name=Lower("employee__person__last_name"),
+            )
         )
 
-        # 1. Filtros de búsqueda
-        q = (self.request.GET.get('q') or '').strip()
-        regime_code = (self.request.GET.get('regime_code') or '').strip()
-        unit_id = (self.request.GET.get('unit') or '').strip()
-        status_code = (self.request.GET.get('status_code') or '').strip()
-        date_from = (self.request.GET.get('date_from') or '').strip()
-        date_to = (self.request.GET.get('date_to') or '').strip()
-        raw_document_numbers = (self.request.GET.get('document_numbers') or '').strip()
+        q = (self.request.GET.get("q") or "").strip()
+        regime_code = (self.request.GET.get("regime_code") or "").strip()
+        unit_id = (self.request.GET.get("unit") or "").strip()
+        status_code = (self.request.GET.get("status_code") or "").strip()
+        date_from = (self.request.GET.get("date_from") or "").strip()
+        date_to = (self.request.GET.get("date_to") or "").strip()
+        raw_document_numbers = (
+                self.request.GET.get("document_numbers") or ""
+        ).strip()
 
         if raw_document_numbers:
-            cedulas = [c.strip() for c in raw_document_numbers.split(',') if c.strip()]
+            cedulas = [
+                c.strip() for c in raw_document_numbers.split(",") if c.strip()
+            ]
             if cedulas:
                 queryset = queryset.filter(employee__person__document_number__in=cedulas)
 
@@ -1162,30 +1200,54 @@ class ManagementPeriodListView(LoginRequiredMixin, PermissionRequiredMixin, JSON
             tokens = [t for t in q.split() if t]
             for token in tokens:
                 queryset = queryset.filter(
-                    Q(employee__person__first_name__icontains=token) |
-                    Q(employee__person__last_name__icontains=token) |
-                    Q(employee__person__document_number__icontains=token) |
-                    Q(document_number__icontains=token) |
-                    Q(manual_position__icontains=token) |
-                    Q(budget_line__position_item__name__icontains=token)
+                    Q(employee__person__first_name__icontains=token)
+                    | Q(employee__person__last_name__icontains=token)
+                    | Q(employee__person__document_number__icontains=token)
+                    | Q(document_number__icontains=token)
+                    | Q(manual_position__icontains=token)
+                    | Q(budget_line__position_item__name__icontains=token)
                 )
 
         if regime_code:
             queryset = queryset.filter(contract_type__labor_regime__code=regime_code)
 
         if unit_id:
-            queryset = queryset.filter(administrative_unit_id=unit_id)
+            try:
+                selected_unit = AdministrativeUnit.objects.filter(pk=unit_id).first()
+                if selected_unit:
+                    clean_target = _clean_text_accents(selected_unit.name)
+                    all_units = AdministrativeUnit.objects.values_list("id", "name")
+                    equivalent_ids = [
+                        u_id
+                        for u_id, u_name in all_units
+                        if _clean_text_accents(u_name) == clean_target
+                    ]
+                    if int(unit_id) not in equivalent_ids:
+                        equivalent_ids.append(int(unit_id))
+                    queryset = queryset.filter(administrative_unit_id__in=equivalent_ids)
+                else:
+                    queryset = queryset.filter(administrative_unit_id=unit_id)
+            except Exception:
+                queryset = queryset.filter(administrative_unit_id=unit_id)
 
         if status_code:
             queryset = queryset.filter(status__code=status_code)
 
-        if date_from:
-            queryset = queryset.filter(start_date__gte=date_from)
-
-        if date_to:
+        if date_from and date_to:
+            queryset = queryset.filter(start_date__lte=date_to).filter(
+                Q(end_date__gte=date_from) | Q(end_date__isnull=True)
+            )
+        elif date_from:
+            queryset = queryset.filter(
+                Q(end_date__gte=date_from) | Q(end_date__isnull=True)
+            )
+        elif date_to:
             queryset = queryset.filter(start_date__lte=date_to)
 
-        # 2. Ordenamiento en Base de Datos de toda la búsqueda
+        sort_field = self.request.GET.get("sort_field")
+        if not sort_field:
+            return queryset.order_by("-start_date", "-pk")
+
         order_by = _parse_period_sort(self.request)
         return queryset.order_by(*order_by)
 
@@ -1209,7 +1271,7 @@ class ManagementPeriodListView(LoginRequiredMixin, PermissionRequiredMixin, JSON
             'date_from': (self.request.GET.get('date_from') or '').strip(),
             'date_to': (self.request.GET.get('date_to') or '').strip(),
             'document_numbers': (self.request.GET.get('document_numbers') or '').strip(),
-            'sort_field': self.request.GET.get('sort_field', 'created_at'),
+            'sort_field': self.request.GET.get('sort_field', 'start_date'),
             'sort_dir': self.request.GET.get('sort_dir', 'desc'),
         }
         return context

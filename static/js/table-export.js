@@ -122,8 +122,10 @@ async function getAllRowsFromServer(table) {
                 !tr.innerText.includes('No se encontraron') && tr.querySelectorAll('td').length > 1
             );
 
-            const validIndices = getExportableColumnIndices(table);
-            const ths = Array.from(table.querySelectorAll('thead th'));
+            const docTable = doc.querySelector('table');
+            const targetTable = docTable || table;
+            const validIndices = getExportableColumnIndices(targetTable);
+            const ths = Array.from(targetTable.querySelectorAll('thead th'));
             const headers = [validIndices.map(idx => getCleanText(ths[idx]))];
 
             const body = rows.map(tr => {

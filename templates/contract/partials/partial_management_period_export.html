@@ -1,0 +1,32 @@
+<table>
+    <thead>
+    <tr>
+        <th>Cédula</th>
+        <th>Apellidos</th>
+        <th>Nombres</th>
+        <th>Cargo</th>
+        <th>Remuneración</th>
+        <th>Dependencia</th>
+        <th>Modalidad</th>
+        <th>Régimen</th>
+        <th>Fecha Desde</th>
+        <th>Fecha Hasta</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for period in periods %}
+        <tr>
+            <td>{{ period.employee.person.document_number|default:'' }}</td>
+            <td>{{ period.employee.person.last_name|default:'' }}</td>
+            <td>{{ period.employee.person.first_name|default:'' }}</td>
+            <td>{{ period.list_display_position|default:'SIN CARGO' }}</td>
+            <td>{% if period.list_display_remuneration is not None %}$ {{ period.list_display_remuneration }}{% else %}-{% endif %}</td>
+            <td>{{ period.administrative_unit.name|default:'N/A' }}</td>
+            <td>{{ period.contract_type.name|default:'-' }}</td>
+            <td>{{ period.contract_type.labor_regime.name|default:'-' }}</td>
+            <td>{{ period.start_date|date:"d/m/Y" }}</td>
+            <td>{% if period.end_date %}{{ period.end_date|date:"d/m/Y" }}{% else %}Indefinido{% endif %}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>

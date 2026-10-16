@@ -33,12 +33,14 @@
                             {% endif %}
                             <div class="person-details">
                                 <h4>{{ period.employee.person.full_name }}</h4>
-                                <p><i class="fas fa-id-card me-1"></i> {{ period.employee.person.document_number }}</p>
+                                <p>
+                                    <i class="fas fa-id-card me-1"></i> {{ period.employee.person.document_number|default:'' }}
+                                </p>
                             </div>
                         </div>
                     </td>
                     <td>
-                        <div class="bold text-blue">{{ period.list_display_position }}</div>
+                        <div class="bold text-blue">{{ period.list_display_position|default:'SIN CARGO' }}</div>
                         {% if period.budget_line %}
                             <small class="text-muted d-block">
                                 Partida: {{ period.budget_line.number_individual|default:period.budget_line.code }}
@@ -118,7 +120,6 @@
     </div>
 </div>
 
-<!-- Paginación idéntica a permisos con data-page para main.js -->
 <div class="pagination-container" id="js-pagination">
     <span class="pagination-info">
         Mostrando {{ page_obj.start_index|default:"0" }}-{{ page_obj.end_index|default:"0" }} de {{ paginator.count|default:"0" }}
@@ -136,16 +137,14 @@
         </button>
         <div class="page-input-wrapper">
             <input type="number" class="page-input"
+                   id="period-page-input"
                    value="{{ page_obj.number|default:1 }}"
-                   min="1" max="{{ paginator.num_pages|default:1 }}"
-                   onchange="if(window.refreshCurrentTable){ window.refreshCurrentTable({page: this.value}); }">
+                   min="1" max="{{ paginator.num_pages|default:1 }}">
             <span class="total-pages-badge">de {{ paginator.num_pages|default:1 }}</span>
         </div>
         <button type="button" class="page-btn page-next" title="Siguiente"
                 {% if not page_obj.has_next %}disabled{% endif %}
                 data-page="
-
-
                         {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages|default:1 }}{% endif %}">
             <i class="fas fa-angle-right"></i>
         </button>

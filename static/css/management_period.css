@@ -286,3 +286,7 @@
 .wizard-footer-actions .btn-blue-rectangle {
     min-width: 140px;
 }
+
+.export-only-col {
+    display: none !important;
+}

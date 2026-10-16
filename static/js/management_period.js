@@ -19,6 +19,45 @@
     // 1. SELECT2 & FILTER MANAGEMENT
     // =========================================================================
 
+    function stripAccents(term) {
+        if (!term) return '';
+        return String(term).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+    }
+
+    function customSelect2Matcher(params, data) {
+        if (!params.term || $.trim(params.term) === '') {
+            return data;
+        }
+
+        if (!data.text && (!data.children || data.children.length === 0)) {
+            return null;
+        }
+
+        const term = stripAccents(params.term);
+        const text = stripAccents(data.text || '');
+
+        if (text.indexOf(term) > -1) {
+            return data;
+        }
+
+        if (data.children && data.children.length > 0) {
+            const matchedChildren = [];
+            for (let i = 0; i < data.children.length; i++) {
+                const child = data.children[i];
+                if (stripAccents(child.text || '').indexOf(term) > -1) {
+                    matchedChildren.push(child);
+                }
+            }
+            if (matchedChildren.length > 0) {
+                const modifiedData = $.extend({}, data, true);
+                modifiedData.children = matchedChildren;
+                return modifiedData;
+            }
+        }
+
+        return null;
+    }
+
     function initSelect2Filters() {
         if (!window.jQuery || !window.jQuery.fn.select2) return;
         $('#filtersForm select.select2').select2({
@@ -45,7 +84,6 @@
         const params = collectFilters();
         params.page = page;
 
-        // Conservar orden actual si existe
         if (window._currentTableSort) {
             const table = document.querySelector('.managed-table');
             if (table) {
@@ -79,7 +117,9 @@
                 $(form).find('select.select2').val('').trigger('change');
             }
         }
-        window.clearLoadedIdentifications();
+        if (typeof window.clearLoadedIdentifications === 'function') {
+            window.clearLoadedIdentifications();
+        }
 
         window.history.pushState(null, '', window.location.pathname);
         applyPeriodFilters(1);
@@ -533,7 +573,6 @@
             actionFields.classList.toggle('hidden', !isAction);
             contractFields.classList.toggle('hidden', isAction);
 
-            // Deshabilitar inputs del bloque inactivo para que FormData NO los envíe
             actionFields.querySelectorAll('input, select, textarea').forEach(el => {
                 el.disabled = !isAction;
             });
