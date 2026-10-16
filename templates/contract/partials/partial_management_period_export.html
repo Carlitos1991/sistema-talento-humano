@@ -14,18 +14,18 @@
     </tr>
     </thead>
     <tbody>
-    {% for period in periods %}
+    {% for r in export_rows %}
         <tr>
-            <td>{{ period.employee.person.document_number|default:'' }}</td>
-            <td>{{ period.employee.person.last_name|default:'' }}</td>
-            <td>{{ period.employee.person.first_name|default:'' }}</td>
-            <td>{{ period.list_display_position|default:'SIN CARGO' }}</td>
-            <td>{% if period.list_display_remuneration is not None %}$ {{ period.list_display_remuneration }}{% else %}-{% endif %}</td>
-            <td>{{ period.administrative_unit.name|default:'N/A' }}</td>
-            <td>{{ period.contract_type.name|default:'-' }}</td>
-            <td>{{ period.contract_type.labor_regime.name|default:'-' }}</td>
-            <td>{{ period.start_date|date:"d/m/Y" }}</td>
-            <td>{% if period.end_date %}{{ period.end_date|date:"d/m/Y" }}{% else %}Indefinido{% endif %}</td>
+            <td>{{ r.cedula }}</td>
+            <td>{{ r.apellidos }}</td>
+            <td>{{ r.nombres }}</td>
+            <td>{{ r.cargo }}</td>
+            <td>{{ r.remuneracion }}</td>
+            <td>{{ r.dependencia }}</td>
+            <td>{{ r.modalidad }}</td>
+            <td>{{ r.regimen }}</td>
+            <td>{{ r.fecha_desde }}</td>
+            <td>{{ r.fecha_hasta }}</td>
         </tr>
     {% endfor %}
     </tbody>

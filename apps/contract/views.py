@@ -1146,14 +1146,17 @@ class ManagementPeriodListView(LoginRequiredMixin, PermissionRequiredMixin, JSON
     paginate_by = 10
 
     def get_paginate_by(self, queryset):
+        # Desactiva la paginación de 10 registros cuando table-export.js pide todos los datos
         if self.request.GET.get('export') == 'true':
             return None
         return self.paginate_by
 
     def get(self, request, *args, **kwargs):
+        # Si la petición es para el Excel de table-export.js, sirve el partial limpio con los encargos
         if request.GET.get('export') == 'true':
             self.object_list = self.get_queryset()
             context = self.get_context_data()
+            context['export_rows'] = self._get_unified_export_rows()
             return render(request, self.export_template_name, context)
         return super().get(request, *args, **kwargs)
 
@@ -1185,14 +1188,10 @@ class ManagementPeriodListView(LoginRequiredMixin, PermissionRequiredMixin, JSON
         status_code = (self.request.GET.get("status_code") or "").strip()
         date_from = (self.request.GET.get("date_from") or "").strip()
         date_to = (self.request.GET.get("date_to") or "").strip()
-        raw_document_numbers = (
-                self.request.GET.get("document_numbers") or ""
-        ).strip()
+        raw_document_numbers = (self.request.GET.get("document_numbers") or "").strip()
 
         if raw_document_numbers:
-            cedulas = [
-                c.strip() for c in raw_document_numbers.split(",") if c.strip()
-            ]
+            cedulas = [c.strip() for c in raw_document_numbers.split(",") if c.strip()]
             if cedulas:
                 queryset = queryset.filter(employee__person__document_number__in=cedulas)
 
@@ -1233,6 +1232,7 @@ class ManagementPeriodListView(LoginRequiredMixin, PermissionRequiredMixin, JSON
         if status_code:
             queryset = queryset.filter(status__code=status_code)
 
+        # Lógica de solapamiento temporal exacto
         if date_from and date_to:
             queryset = queryset.filter(start_date__lte=date_to).filter(
                 Q(end_date__gte=date_from) | Q(end_date__isnull=True)
@@ -1244,6 +1244,7 @@ class ManagementPeriodListView(LoginRequiredMixin, PermissionRequiredMixin, JSON
         elif date_to:
             queryset = queryset.filter(start_date__lte=date_to)
 
+        # Orden por último ingreso por defecto
         sort_field = self.request.GET.get("sort_field")
         if not sort_field:
             return queryset.order_by("-start_date", "-pk")
@@ -1252,6 +1253,7 @@ class ManagementPeriodListView(LoginRequiredMixin, PermissionRequiredMixin, JSON
         return queryset.order_by(*order_by)
 
     def get_context_data(self, **kwargs):
+        # Este método es sagrado: carga las dependencias y regímenes que alimentan al Select2
         context = super().get_context_data(**kwargs)
         context['regimes'] = LaborRegime.objects.filter(is_active=True).prefetch_related(
             Prefetch(
@@ -1275,6 +1277,128 @@ class ManagementPeriodListView(LoginRequiredMixin, PermissionRequiredMixin, JSON
             'sort_dir': self.request.GET.get('sort_dir', 'desc'),
         }
         return context
+
+    def _get_unified_export_rows(self):
+        """
+        Unifica en memoria los contratos/nombramientos regulares de ManagementPeriod
+        con los encargos/subrogaciones de BudgetAssignmentHistory para el reporte Excel.
+        """
+        from budget.models import BudgetLine, BudgetAssignmentHistory
+
+        unit_id = (self.request.GET.get("unit") or "").strip()
+        date_from = (self.request.GET.get("date_from") or "").strip()
+        date_to = (self.request.GET.get("date_to") or "").strip()
+        q = (self.request.GET.get("q") or "").strip()
+        raw_document_numbers = (self.request.GET.get("document_numbers") or "").strip()
+
+        equivalent_unit_ids = []
+        unit_display_name = "N/A"
+        if unit_id:
+            selected_unit = AdministrativeUnit.objects.filter(pk=unit_id).first()
+            if selected_unit:
+                unit_display_name = selected_unit.name
+                clean_target = _clean_text_accents(selected_unit.name)
+                all_units = AdministrativeUnit.objects.values_list("id", "name")
+                equivalent_unit_ids = [
+                    u_id for u_id, u_name in all_units
+                    if _clean_text_accents(u_name) == clean_target
+                ]
+                if int(unit_id) not in equivalent_unit_ids:
+                    equivalent_unit_ids.append(int(unit_id))
+            else:
+                try:
+                    equivalent_unit_ids = [int(unit_id)]
+                except ValueError:
+                    equivalent_unit_ids = []
+
+        export_rows = []
+
+        # 1. Agregar contratos regulares
+        for p in self.object_list:
+            person = getattr(getattr(p, 'employee', None), 'person', None)
+            regime_name = p.contract_type.labor_regime.name if p.contract_type and p.contract_type.labor_regime else '-'
+            export_rows.append({
+                'cedula': person.document_number if person else '',
+                'apellidos': person.last_name if person else '',
+                'nombres': person.first_name if person else '',
+                'cargo': p.list_display_position or 'SIN CARGO',
+                'remuneracion': f"$ {p.list_display_remuneration}" if p.list_display_remuneration is not None else '-',
+                'dependencia': p.administrative_unit.name if p.administrative_unit else unit_display_name,
+                'modalidad': p.contract_type.name if p.contract_type else '-',
+                'regimen': regime_name,
+                'fecha_desde': p.start_date.strftime('%d/%m/%Y') if p.start_date else '',
+                'fecha_hasta': p.end_date.strftime('%d/%m/%Y') if p.end_date else 'Indefinido',
+                'sort_date': p.start_date or timezone.now().date(),
+            })
+
+        # 2. Agregar encargos/subrogaciones si se filtró una dependencia
+        if equivalent_unit_ids:
+            partidas_unidad_ids = BudgetLine.objects.filter(
+                Q(managementperiod__administrative_unit_id__in=equivalent_unit_ids) |
+                Q(assignments__employee__area_id__in=equivalent_unit_ids)
+            ).distinct().values_list('id', flat=True)
+
+            encargos_qs = BudgetAssignmentHistory.objects.filter(
+                budget_line_id__in=partidas_unidad_ids
+            ).filter(
+                Q(is_acting=True) |
+                Q(observation__icontains='encargo') |
+                Q(observation__icontains='subrog')
+            ).select_related(
+                'employee__person',
+                'budget_line__position_item',
+                'budget_line__regime_item'
+            )
+
+            if date_from and date_to:
+                encargos_qs = encargos_qs.filter(start_date__lte=date_to).filter(
+                    Q(end_date__gte=date_from) | Q(end_date__isnull=True)
+                )
+            elif date_from:
+                encargos_qs = encargos_qs.filter(
+                    Q(end_date__gte=date_from) | Q(end_date__isnull=True)
+                )
+            elif date_to:
+                encargos_qs = encargos_qs.filter(start_date__lte=date_to)
+
+            if raw_document_numbers:
+                cedulas = [c.strip() for c in raw_document_numbers.split(',') if c.strip()]
+                if cedulas:
+                    encargos_qs = encargos_qs.filter(employee__person__document_number__in=cedulas)
+
+            if q:
+                for token in [t for t in q.split() if t]:
+                    encargos_qs = encargos_qs.filter(
+                        Q(employee__person__first_name__icontains=token) |
+                        Q(employee__person__last_name__icontains=token) |
+                        Q(employee__person__document_number__icontains=token) |
+                        Q(budget_line__position_item__name__icontains=token)
+                    )
+
+            for enc in encargos_qs:
+                person = getattr(getattr(enc, 'employee', None), 'person', None)
+                cargo_nombre = enc.budget_line.position_item.name if enc.budget_line and enc.budget_line.position_item else 'SIN CARGO'
+                partida_num = enc.budget_line.number_individual or enc.budget_line.code if enc.budget_line else ''
+                remun = f"$ {enc.budget_line.remuneration}" if enc.budget_line and enc.budget_line.remuneration else '-'
+                regimen_enc = enc.budget_line.regime_item.name if enc.budget_line and enc.budget_line.regime_item else 'LOSEP'
+
+                export_rows.append({
+                    'cedula': person.document_number if person else '',
+                    'apellidos': person.last_name if person else '',
+                    'nombres': person.first_name if person else '',
+                    'cargo': f"{cargo_nombre} ({partida_num})" if partida_num else cargo_nombre,
+                    'remuneracion': remun,
+                    'dependencia': unit_display_name,
+                    'modalidad': 'ENCARGO / SUBROGACIÓN',
+                    'regimen': regimen_enc,
+                    'fecha_desde': enc.start_date.strftime('%d/%m/%Y') if enc.start_date else '',
+                    'fecha_hasta': enc.end_date.strftime('%d/%m/%Y') if enc.end_date else 'Indefinido',
+                    'sort_date': enc.start_date or timezone.now().date(),
+                })
+
+        # Ordenar toda la lista por fecha de inicio descendente
+        export_rows.sort(key=lambda r: r['sort_date'], reverse=True)
+        return export_rows
 
 
 class ManagementPeriodTerminateView(LoginRequiredMixin, PermissionRequiredMixin, View):
