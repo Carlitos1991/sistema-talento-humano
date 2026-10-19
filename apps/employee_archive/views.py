@@ -97,8 +97,10 @@ def _log_access(user, employee, action, ip_address, archive_document=None, versi
 def _archive_staff_users():
     return User.objects.filter(
         Q(is_superuser=True)
-        | Q(user_permissions__codename='can_manage_archive_loans', user_permissions__content_type__app_label='employee_archive')
-        | Q(groups__permissions__codename='can_manage_archive_loans', groups__permissions__content_type__app_label='employee_archive')
+        | Q(user_permissions__codename='can_manage_archive_loans',
+            user_permissions__content_type__app_label='employee_archive')
+        | Q(groups__permissions__codename='can_manage_archive_loans',
+            groups__permissions__content_type__app_label='employee_archive')
     ).distinct()
 
 
@@ -207,12 +209,20 @@ def _sync_employee_scan_tasks(employee, actor, docs_map):
                 task.save()
 
 
+# En employee_archive/views.py
+
 class EmployeeArchiveListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     model = Employee
     template_name = 'employee_archive/employee_archive_list.html'
     context_object_name = 'employees'
-    paginate_by = 15
+    paginate_by = 10
     permission_required = 'employee_archive.view_employeearchivedocument'
+
+    def get_template_names(self):
+        # Si la petición viene por AJAX (recarga parcial de tabla / búsqueda), devolvemos solo el partial
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return ['employee_archive/partials/partial_employee_archive_table.html']
+        return [self.template_name]
 
     def get_queryset(self):
         queryset = Employee.objects.select_related('person', 'institutional_data').annotate(
@@ -232,10 +242,8 @@ class EmployeeArchiveListView(LoginRequiredMixin, PermissionRequiredMixin, ListV
                     | Q(institutional_data__file_number__icontains=term)
                 )
 
-        # Filtrar solo expedientes prestados si se solicita
         show_loaned = self.request.GET.get('show_loaned', 'false')
         if show_loaned.lower() == 'true':
-            # Mostrar solo empleados que tienen un préstamo activo (ON_LOAN)
             queryset = queryset.filter(
                 archive_loans__status=EmployeeArchiveLoan.Status.ON_LOAN,
                 archive_loans__is_active=True
@@ -259,7 +267,6 @@ class EmployeeArchiveListView(LoginRequiredMixin, PermissionRequiredMixin, ListV
         employees_page = list(context.get('employees', []))
         employee_ids = [row.id for row in employees_page]
 
-        # Contar total de expedientes prestados (ON_LOAN)
         total_loaned = EmployeeArchiveLoan.objects.filter(
             status=EmployeeArchiveLoan.Status.ON_LOAN,
             is_active=True
@@ -284,25 +291,19 @@ class EmployeeArchiveListView(LoginRequiredMixin, PermissionRequiredMixin, ListV
             for loan in active_loans:
                 if loan.employee_id not in request_state_by_employee:
                     if loan.status == EmployeeArchiveLoan.Status.REQUESTED:
-                        request_state_by_employee[loan.employee_id] = {
-                            'label': 'Solicitado',
-                            'at': loan.requested_at,
-                        }
+                        request_state_by_employee[loan.employee_id] = {'label': 'Solicitado', 'at': loan.requested_at}
                         deliver_loan_by_employee[loan.employee_id] = loan.id
                     elif loan.status == EmployeeArchiveLoan.Status.RETURN_REPORTED:
-                        request_state_by_employee[loan.employee_id] = {
-                            'label': 'Pendiente validacion',
-                            'at': loan.return_reported_at or loan.delivered_at or loan.requested_at,
-                        }
+                        request_state_by_employee[loan.employee_id] = {'label': 'Pendiente validacion',
+                                                                       'at': loan.return_reported_at or loan.delivered_at or loan.requested_at}
                         validate_loan_by_employee[loan.employee_id] = loan.id
                     else:
-                        request_state_by_employee[loan.employee_id] = {
-                            'label': 'Entregado',
-                            'at': loan.delivered_at or loan.requested_at,
-                        }
+                        request_state_by_employee[loan.employee_id] = {'label': 'Entregado',
+                                                                       'at': loan.delivered_at or loan.requested_at}
                         validate_loan_by_employee[loan.employee_id] = loan.id
 
-                if loan.status in [EmployeeArchiveLoan.Status.ON_LOAN, EmployeeArchiveLoan.Status.RETURN_REPORTED] and loan.employee_id not in holder_by_employee:
+                if loan.status in [EmployeeArchiveLoan.Status.ON_LOAN,
+                                   EmployeeArchiveLoan.Status.RETURN_REPORTED] and loan.employee_id not in holder_by_employee:
                     full_name = f'{loan.borrower_user.first_name or ""} {loan.borrower_user.last_name or ""}'.strip()
                     holder_by_employee[loan.employee_id] = full_name or loan.borrower_user.username
 
@@ -314,7 +315,6 @@ class EmployeeArchiveListView(LoginRequiredMixin, PermissionRequiredMixin, ListV
             row.deliver_loan_id = deliver_loan_by_employee.get(row.id)
             row.validate_loan_id = validate_loan_by_employee.get(row.id)
 
-        context['manual_loan_form'] = ArchiveManualLoanForm()
         return context
 
 
@@ -363,7 +363,8 @@ class EmployeeArchiveDetailView(LoginRequiredMixin, PermissionRequiredMixin, Tem
 
         current_loan = EmployeeArchiveLoan.objects.filter(
             employee=employee,
-            status__in=[EmployeeArchiveLoan.Status.REQUESTED, EmployeeArchiveLoan.Status.ON_LOAN, EmployeeArchiveLoan.Status.RETURN_REPORTED]
+            status__in=[EmployeeArchiveLoan.Status.REQUESTED, EmployeeArchiveLoan.Status.ON_LOAN,
+                        EmployeeArchiveLoan.Status.RETURN_REPORTED]
         ).select_related('borrower_user', 'requested_by', 'delivered_by').first()
 
         loan_history = EmployeeArchiveLoan.objects.filter(employee=employee).select_related(
@@ -466,7 +467,8 @@ def upload_archive_version(request, archive_id):
         for field_errors in form.errors.values():
             for error in field_errors:
                 messages.error(request, error)
-        return HttpResponseRedirect(reverse('employee_archive:employee_detail', kwargs={'employee_id': archive.employee_id}))
+        return HttpResponseRedirect(
+            reverse('employee_archive:employee_detail', kwargs={'employee_id': archive.employee_id}))
 
     last_version = archive.versions.order_by('-version_number').first()
     next_version = (last_version.version_number + 1) if last_version else 1
@@ -485,7 +487,8 @@ def upload_archive_version(request, archive_id):
     )
 
     messages.success(request, 'Nueva version cargada correctamente.')
-    return HttpResponseRedirect(reverse('employee_archive:employee_detail', kwargs={'employee_id': archive.employee_id}))
+    return HttpResponseRedirect(
+        reverse('employee_archive:employee_detail', kwargs={'employee_id': archive.employee_id}))
 
 
 @permission_required('employee_archive.add_employeearchiveversion', raise_exception=True)
@@ -518,7 +521,8 @@ def upload_scan_task_version(request, task_id):
         for field_errors in form.errors.values():
             for error in field_errors:
                 messages.error(request, error)
-        return HttpResponseRedirect(reverse('employee_archive:employee_detail', kwargs={'employee_id': task.employee_id}))
+        return HttpResponseRedirect(
+            reverse('employee_archive:employee_detail', kwargs={'employee_id': task.employee_id}))
 
     last_version = archive_document.versions.order_by('-version_number').first()
     next_version = (last_version.version_number + 1) if last_version else 1
@@ -581,7 +585,8 @@ def request_archive_loan(request, employee_id):
 
     active_exists = EmployeeArchiveLoan.objects.filter(
         employee=employee,
-        status__in=[EmployeeArchiveLoan.Status.REQUESTED, EmployeeArchiveLoan.Status.ON_LOAN, EmployeeArchiveLoan.Status.RETURN_REPORTED]
+        status__in=[EmployeeArchiveLoan.Status.REQUESTED, EmployeeArchiveLoan.Status.ON_LOAN,
+                    EmployeeArchiveLoan.Status.RETURN_REPORTED]
     ).exists()
     if active_exists:
         messages.error(request, 'Ya existe un prestamo activo para este expediente.')
@@ -635,7 +640,8 @@ def create_manual_archive_loan(request, employee_id):
 
     active_exists = EmployeeArchiveLoan.objects.filter(
         employee=employee,
-        status__in=[EmployeeArchiveLoan.Status.REQUESTED, EmployeeArchiveLoan.Status.ON_LOAN, EmployeeArchiveLoan.Status.RETURN_REPORTED]
+        status__in=[EmployeeArchiveLoan.Status.REQUESTED, EmployeeArchiveLoan.Status.ON_LOAN,
+                    EmployeeArchiveLoan.Status.RETURN_REPORTED]
     ).exists()
     if active_exists:
         messages.error(request, 'Ya existe un prestamo activo para este expediente.')
@@ -812,7 +818,7 @@ class EmployeeArchiveLoanListView(LoginRequiredMixin, PermissionRequiredMixin, L
             queryset = queryset.filter(status=status)
 
         if self.request.user.has_perm('employee_archive.can_manage_archive_loans') or _can_create_manual_archive_loan(
-            self.request.user
+                self.request.user
         ):
             return queryset
         return queryset.filter(Q(borrower_user=self.request.user) | Q(requested_by=self.request.user))
@@ -872,7 +878,7 @@ class EmployeeDocumentTypeListView(LoginRequiredMixin, PermissionRequiredMixin, 
     model = EmployeeDocumentType
     template_name = 'employee_archive/document_type_list.html'
     context_object_name = 'types'
-    paginate_by = 15
+    paginate_by = 10
     permission_required = 'employee_archive.view_employeedocumenttype'
 
     def get_queryset(self):
@@ -924,3 +930,54 @@ class EmployeeDocumentTypeUpdateView(LoginRequiredMixin, PermissionRequiredMixin
             for error in field_errors:
                 messages.error(self.request, error)
         return self.render_to_response(self.get_context_data(form=form))
+
+
+@login_required
+def loan_manual_modal(request, employee_id):
+    if not _can_create_manual_archive_loan(request.user):
+        return JsonResponse({'status': 'error', 'message': 'No tiene permisos.'}, status=403)
+
+    employee = get_object_or_404(Employee.objects.select_related('person', 'institutional_data'), pk=employee_id)
+    form = ArchiveManualLoanForm()
+
+    if request.method == 'POST':
+        form = ArchiveManualLoanForm(request.POST)
+        if form.is_valid():
+            active_exists = EmployeeArchiveLoan.objects.filter(
+                employee=employee,
+                status__in=[
+                    EmployeeArchiveLoan.Status.REQUESTED,
+                    EmployeeArchiveLoan.Status.ON_LOAN,
+                    EmployeeArchiveLoan.Status.RETURN_REPORTED
+                ]
+            ).exists()
+            if active_exists:
+                return JsonResponse(
+                    {'status': 'error', 'message': 'Ya existe un préstamo activo para este expediente.'}, status=400)
+
+            loan = EmployeeArchiveLoan.objects.create(
+                employee=employee,
+                expediente_number=_expediente_number(employee),
+                borrower_user=form.cleaned_data['borrower_user'],
+                requested_by=request.user,
+                delivered_by=request.user,
+                status=EmployeeArchiveLoan.Status.ON_LOAN,
+                delivered_at=timezone.now(),
+                delivery_observation=form.cleaned_data.get('delivery_observation', ''),
+                created_by=request.user,
+                updated_by=request.user,
+            )
+            _log_loan_action(loan, 'MANUAL_LOAN', request.user, _client_ip(request), loan.delivery_observation)
+            return JsonResponse({'status': 'success',
+                                 'message': f'Préstamo manual del expediente {loan.expediente_number} registrado con éxito.'})
+        else:
+            return JsonResponse({'status': 'error', 'message': 'Formulario inválido.', 'errors': form.errors},
+                                status=400)
+
+    from django.template.loader import render_to_string
+    html = render_to_string('employee_archive/modals/modal_loan_manual.html', {
+        'employee': employee,
+        'form': form,
+        'expediente_number': _expediente_number(employee),
+    }, request=request)
+    return JsonResponse({'html': html})

@@ -108,6 +108,11 @@ class AdministrativeUnit(BaseModel):
         verbose_name="Es Dependencia Principal",
         help_text="Define si esta unidad actúa como cabecera/padre de planificación de cronogramas y reportes."
     )
+    is_human_resources = models.BooleanField(
+        default=False,
+        verbose_name="Es Unidad de Talento Humano",
+        help_text="Define si esta unidad administrativa corresponde a Talento Humano para asignación de préstamos de archivo."
+    )
 
     def get_scheduling_root_unit(self):
         """
@@ -123,6 +128,14 @@ class AdministrativeUnit(BaseModel):
                 return current
             current = current.parent
         return self
+
+    def get_descendant_ids(self):
+        """Retorna una lista con el ID actual y todos los IDs de sus subdependencias recursivamente."""
+        descendants = [self.id]
+        children = AdministrativeUnit.objects.filter(parent=self, is_active=True)
+        for child in children:
+            descendants.extend(child.get_descendant_ids())
+        return descendants
 
     class Meta:
         verbose_name = "Unidad Administrativa"

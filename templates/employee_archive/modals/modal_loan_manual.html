@@ -1,0 +1,48 @@
+<div class="modal-overlay hidden" id="manualLoanModal">
+    <div class="modal-container-medium">
+        <form method="post" action="{% url 'employee_archive:loan_manual_modal' employee.id %}"
+              onsubmit="submitAjaxForm(event)">
+            {% csrf_token %}
+            <div class="modal-header">
+                <div class="header-content-group">
+                    <div class="header-icon-circle">
+                        <i class="fa-solid fa-person-chalkboard"></i>
+                    </div>
+                    <h3 class="header-title">Prestar Expediente Físico</h3>
+                </div>
+                <button type="button" class="btn-close-circle" onclick="closeModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="modal-body-custom">
+                <div class="form-section-card mb-3">
+                    <p class="mb-1"><strong>Empleado:</strong> {{ employee.person.name_and_last_name }}</p>
+                    <p class="mb-0"><strong>Expediente Nro:</strong> <span
+                            class="badge badge-gray font-monospace">{{ expediente_number }}</span></p>
+                </div>
+
+                <div class="form-section-card">
+                    <div class="form-group mb-3">
+                        <label class="form-label" for="id_borrower_user">
+                            Prestar a (Funcionario de Talento Humano) <span class="text-red">*</span>
+                        </label>
+                        {{ form.borrower_user }}
+                    </div>
+
+                    <div class="form-group mb-0">
+                        <label class="form-label" for="id_delivery_observation">Observación de Entrega</label>
+                        {{ form.delivery_observation }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary-outline" onclick="closeModal()">Cancelar</button>
+                <button type="submit" class="btn-dark-blue-rectangle">
+                    <i class="fas fa-save me-1"></i> Confirmar Préstamo
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

@@ -1,9 +1,10 @@
-/* Estilos del modulo Archivo Digital de Empleados, alineados al look de Nomina */
+/* ==========================================================================
+   ARCHIVO DIGITAL DE EMPLEADOS (ESTILOS ESPECÍFICOS DEL MÓDULO)
+   Los componentes base (modales, tablas, botones, badges y switches)
+   se heredan directamente de style.css.
+   ========================================================================== */
 
-.archive-header-card {
-    margin-bottom: 1rem;
-}
-
+/* Cabecera / Detalle del Empleado */
 .archive-detail-header {
     display: flex;
     justify-content: space-between;
@@ -14,21 +15,17 @@
 .archive-detail-person-block {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 1.25rem;
     min-width: 0;
 }
 
-.archive-detail-photo-wrap {
-    flex-shrink: 0;
-}
-
 .archive-detail-photo {
-    width: 76px;
-    height: 76px;
+    width: 72px;
+    height: 72px;
     border-radius: 50%;
     object-fit: cover;
     border: 3px solid #dbeafe;
-    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.12);
+    box-shadow: var(--shadow-soft);
 }
 
 .archive-detail-photo--placeholder {
@@ -40,372 +37,30 @@
     font-size: 1.5rem;
 }
 
-.archive-detail-person-data {
-    min-width: 0;
-}
-
-.archive-detail-person-data p {
-    margin: 0.1rem 0;
-}
-
-.archive-detail-header-action {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.archive-header-actions {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-}
-
-.archive-content-table {
-    margin-bottom: 1rem;
-}
-
-.archive-employee-list-width {
-    max-width: 1360px;
-    margin-left: auto;
-    margin-right: auto;
-}
-
-.archive-employee-list-table-container {
-    overflow-x: auto;
-}
-
-.archive-employee-list-table {
-    min-width: 980px;
-}
-
-.archive-employee-list-table .archive-col-employee {
-    min-width: 260px;
-    max-width: 360px;
-    white-space: normal;
-}
-
-.archive-employee-list-table .archive-col-document {
-    min-width: 140px;
-    white-space: nowrap;
-}
-
-.archive-employee-list-table .archive-col-expediente,
-.archive-employee-list-table .archive-col-holder {
-    min-width: 180px;
-    white-space: nowrap;
-}
-
-.archive-employee-list-table .archive-actions-col {
-    min-width: 170px;
-    width: 170px;
-    position: sticky;
-    right: 0;
-    z-index: 2;
-    box-shadow: -10px 0 14px -14px rgba(15, 23, 42, 0.5);
-}
-
-.archive-employee-list-table thead .archive-actions-col {
-    z-index: 3;
-    background: #f8fafc;
-}
-
-.archive-employee-list-table tbody .archive-actions-col {
-    background: #ffffff;
-}
-
-.archive-employee-list-table tbody .archive-actions-col .actions-wrapper {
-    justify-content: center;
-    min-width: 140px;
-}
-
-.archive-employee-row--active > td {
-    background: #f0fdf4;
-}
-
-.archive-employee-row--inactive > td {
-    background: #fef2f2;
-}
-
-.archive-employee-row--active:hover > td {
-    background: #dcfce7;
-}
-
-.archive-employee-row--inactive:hover > td {
-    background: #fee2e2;
-}
-
-.archive-employee-row--active .archive-actions-col,
-.archive-employee-row--inactive .archive-actions-col {
-    background: inherit;
-}
-
-.archive-employee-state-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 88px;
-    padding: 0.25rem 0.7rem;
-    border-radius: 999px;
-    font-size: 0.8rem;
-    font-weight: 700;
-    margin-right: 0.45rem;
-}
-
-.archive-employee-state-badge--active {
-    background: #dcfce7;
-    color: #15803d;
-    border: 1px solid #86efac;
-}
-
-.archive-employee-state-badge--inactive {
-    background: #fee2e2;
-    color: #b91c1c;
-    border: 1px solid #fca5a5;
-}
-
-.archive-notification-summary {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 1rem;
-    margin-bottom: 1rem;
-}
-
-.archive-notification-summary-text {
-    margin: 0;
-    color: #64748b;
-}
-
-.archive-counter-pill {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 3rem;
-    padding: 0.45rem 0.8rem;
-    border-radius: 999px;
-    background: #eff6ff;
-    border: 1px solid #93c5fd;
-    color: #1d4ed8;
-    font-weight: 700;
-    font-size: 1rem;
-}
-
-.archive-return-table-container {
-    margin-bottom: 0;
-}
-
-.archive-return-form {
-    display: grid;
-    gap: 0.45rem;
-}
-
-.archive-empty-state {
-    padding: 0.9rem 1rem;
-    border: 1px dashed #cbd5e1;
-    border-radius: 8px;
-    background: #f8fafc;
-    color: #475569;
-}
-
-.archive-controls {
-    justify-content: flex-end;
-}
-
-.archive-search-box {
-    max-width: 420px;
-    margin-left: auto;
-}
-
-.archive-spacing-bottom {
-    margin-bottom: 1rem;
-}
-
-.archive-section-title {
-    margin: 0 0 1rem;
-    font-size: 1.08rem;
-    font-weight: 700;
-    color: #1f2937;
-}
-
-.archive-form-grid {
-    display: grid;
-    gap: 0.65rem;
-}
-
-.archive-check-label {
-    display: flex;
-    align-items: center;
-    gap: 0.55rem;
-    margin: 0;
-    font-weight: 500;
-    color: #334155;
-}
-
-.archive-form-actions {
-    display: flex;
-    gap: 0.5rem;
-}
-
-.archive-fit-btn {
-    width: fit-content;
-}
-
-.archive-back-btn {
-    white-space: nowrap;
-}
-
-.archive-upload-form {
-    display: grid;
-    gap: 0.45rem;
-}
-
-.archive-upload-dates {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.45rem;
-}
-
-.archive-upload-btn {
-    width: fit-content;
-}
-
-.archive-pagination-nav {
-    margin-top: 0.85rem;
-}
-
-.archive-expediente-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 120px;
-    padding: 4px 12px;
-    text-align: center;
-}
-
-.archive-physical-holder-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 110px;
-    padding: 0.3rem 0.7rem;
-    border-radius: 999px;
-    border: 1px solid #cbd5e1;
-    background: #f8fafc;
-    color: #334155;
-    font-weight: 600;
-    font-size: 0.85rem;
-}
-
-.archive-physical-holder-badge--archive {
-    border-color: #bfdbfe;
-    background: #eff6ff;
-    color: #1d4ed8;
-}
-
-.archive-physical-holder-badge--loaned {
-    border-color: #fcd34d;
-    background: #fef3c7;
-    color: #92400e;
-}
-
-.archive-request-status-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 110px;
-    padding: 0.3rem 0.7rem;
-    border-radius: 999px;
-    font-weight: 600;
-    font-size: 0.83rem;
-}
-
-.archive-request-status-badge--requested {
-    border: 1px solid #93c5fd;
-    background: #eff6ff;
-    color: #1d4ed8;
-}
-
-.archive-request-status-badge--delivered {
-    border: 1px solid #86efac;
-    background: #ecfdf5;
-    color: #15803d;
-}
-
-.archive-request-status-badge--return-reported {
-    border: 1px solid #fcd34d;
-    background: #fef3c7;
-    color: #92400e;
-}
-
-.archive-request-status-badge--empty {
-    border: 1px solid #e2e8f0;
-    background: #f8fafc;
-    color: #64748b;
-}
-
-.btn-loan-manual-action {
-    background: linear-gradient(to right, #045f68, #16a4b1);
-}
-
-.btn-loan-manual-action:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 18px rgba(2, 6, 23, 0.1);
-}
-
-.archive-request-status-subtitle {
-    margin-top: 0.25rem;
-    font-size: 0.78rem;
-    color: #64748b;
-    line-height: 1.1;
-}
-
-.archive-form-max-width {
-    max-width: 760px;
-    margin: 0 auto;
-}
-
-.archive-version-lines {
-    display: grid;
-    gap: 0.25rem;
-}
-
-.archive-documents-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.9rem;
-    margin-bottom: 0.9rem;
-}
-
-.archive-documents-header-actions {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    flex-wrap: wrap;
-}
-
+/* Pestañas de Carpetas / Categorías de Archivo */
 .archive-tab-buttons {
     display: flex;
     gap: 0.55rem;
     flex-wrap: wrap;
-    margin-bottom: 0.85rem;
+    margin-bottom: 1rem;
 }
 
 .archive-tab-btn {
     border: 1px solid #cbd5e1;
     background: #ffffff;
     color: #334155;
-    border-radius: 999px;
-    padding: 0.45rem 0.9rem;
-    font-weight: 600;
-    font-size: 0.82rem;
-    transition: all 0.18s ease;
+    border-radius: 50px;
+    padding: 0.45rem 1.1rem;
+    font-weight: 700;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
 }
 
 .archive-tab-btn:hover {
     border-color: #93c5fd;
     color: #1d4ed8;
+    background-color: #f8fafc;
 }
 
 .archive-tab-btn.is-active {
@@ -422,12 +77,13 @@
     display: block;
 }
 
+/* Indicador de Versión Actual */
 .archive-current-version {
     display: inline-flex;
     align-items: center;
     margin-left: 0.4rem;
-    padding: 0.12rem 0.42rem;
-    border-radius: 999px;
+    padding: 0.15rem 0.5rem;
+    border-radius: 50px;
     border: 1px solid #86efac;
     background: #ecfdf5;
     color: #15803d;
@@ -435,268 +91,38 @@
     font-weight: 700;
 }
 
-.archive-empty-upload-action {
-    margin-top: 0.65rem;
-}
-
-.archive-table-tools {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-    margin-bottom: 0.75rem;
-    flex-wrap: wrap;
-}
-
-.archive-modal-tools {
-    padding: 0.25rem 0.1rem 0.35rem;
-}
-
-.archive-report-modal {
-    width: min(980px, calc(100vw - 2rem));
-    max-height: 90vh;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-.archive-report-modal-body {
-    display: flex;
-    flex-direction: column;
-    gap: 0.85rem;
-    padding: 1.2rem 1.4rem 1rem;
-    background: #f8fafc;
-    overflow: hidden;
-}
-
-.archive-report-table-container {
-    flex: 1;
-    min-height: 280px;
-    overflow: auto;
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-}
-
-.archive-report-table-container .table {
-    margin-bottom: 0;
-}
-
-.archive-report-table-container thead th {
-    white-space: nowrap;
-}
-
-.archive-report-modal-footer {
-    border-top: 1px solid #e2e8f0;
-    background: #ffffff;
-}
-
-.archive-search-box-inline {
-    max-width: 420px;
-    width: 100%;
-}
-
+/* Rango de Fechas para Modales de Auditoría / Reporte */
 .archive-date-range-filters {
     display: grid;
-    grid-template-columns: auto 170px auto 170px;
-    gap: 0.45rem;
+    grid-template-columns: auto 160px auto 160px;
+    gap: 0.5rem;
     align-items: center;
 }
 
 .archive-date-range-filters label {
     margin: 0;
     font-size: 0.8rem;
-    font-weight: 600;
+    font-weight: 700;
     color: #475569;
 }
 
-.archive-mini-pagination {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 0.55rem;
-    margin-top: 0.7rem;
-}
-
-.archive-mini-pagination-info {
-    font-size: 0.82rem;
-    color: #475569;
-    min-width: 112px;
-    text-align: center;
-}
-
-.archive-loan-state-box {
-    border: 1px solid #d1d5db;
-    border-left: 4px solid #2563eb;
-    border-radius: 8px;
-    background: #f8fafc;
-    padding: 0.8rem 1rem;
-    margin-bottom: 1rem;
-}
-
-.archive-loan-state-box p {
-    margin: 0.15rem 0;
-}
-
-.archive-loan-actions-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.9rem;
-}
-
-.archive-form-label {
-    font-weight: 600;
-    color: #334155;
-}
-
-.archive-inline-filters {
-    display: grid;
-    grid-template-columns: minmax(320px, 1fr) 220px;
-    gap: 0.7rem;
-    width: 100%;
-    align-items: center;
-}
-
-.archive-status-filter {
-    width: 100%;
-}
-
-.content-table .table-controls.archive-controls-row {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    align-items: center;
-    gap: 1rem;
-    width: 100%;
-}
-
-.archive-export-actions {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    justify-self: start;
-}
-
-.archive-controls-row .archive-toggle-notify {
-    justify-self: center;
-}
-
-.content-table .table-controls.archive-controls-row .archive-search-right {
-    justify-self: end;
-    margin-left: 0;
-}
-
-.archive-toggle-notify {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-}
-
-.archive-loaned-badge {
+/* Contador flotante de préstamos pendientes */
+.archive-counter-pill {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 32px;
-    height: 32px;
-    padding: 0 8px;
-    border-radius: 999px;
-    background: #ef4444;
-    color: #ffffff;
-    font-weight: 700;
-    font-size: 0.94rem;
-    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    min-width: 2.5rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 50px;
+    background: #eff6ff;
+    border: 1px solid #93c5fd;
+    color: #1d4ed8;
+    font-weight: 800;
+    font-size: 0.95rem;
 }
 
-.archive-loaned-badge--attached {
-    position: absolute;
-    top: -8px;
-    right: -10px;
-    min-width: 24px;
-    height: 24px;
-    padding: 0 6px;
-    font-size: 0.78rem;
-    border: 2px solid #ffffff;
-    box-shadow: 0 4px 10px rgba(239, 68, 68, 0.35);
-}
-
-.archive-toggle-blue .modern-toggle-circle {
-    background: #cbd5e1;
-    transition: all 0.3s ease;
-}
-
-.archive-toggle-blue:checked + .modern-toggle-wrapper .modern-toggle-circle {
-    background: #ffffff;
-    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.2);
-}
-
-.archive-toggle-blue:checked + .modern-toggle-wrapper {
-    background: linear-gradient(to right, #1e3a8a, #0284c7) !important;
-}
-
-.archive-loan-request-form {
-    margin: 0;
-}
-
-.archive-loan-request-body {
-    padding: 1.25rem 1.5rem 1rem;
-}
-
-.archive-loan-request-employee {
-    margin: 0 0 1rem;
-    color: #334155;
-}
-
-.archive-loan-request-label {
-    display: block;
-    margin-bottom: 0.5rem;
-}
-
-.archive-loan-request-body textarea {
-    min-height: 120px;
-    margin-top: 0.25rem;
-}
-
-.archive-loan-request-footer {
-    padding: 0 1.5rem 1.25rem;
-}
-
-@media (max-width: 900px) {
-    .archive-controls-row {
-        grid-template-columns: 1fr;
-        gap: 0.75rem;
-    }
-
-    .archive-export-actions,
-    .archive-controls-row .archive-toggle-notify,
-    .archive-search-right {
-        justify-self: stretch;
-    }
-
-    .archive-export-actions {
-        justify-content: flex-start;
-    }
-
+@media (max-width: 768px) {
     .archive-detail-header {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .archive-detail-person-block {
-        align-items: flex-start;
-    }
-
-    .archive-detail-header-action {
-        justify-content: flex-start;
-    }
-
-    .archive-search-box {
-        max-width: 100%;
-    }
-
-    .archive-upload-dates {
-        grid-template-columns: 1fr;
-    }
-
-    .archive-documents-header {
         flex-direction: column;
         align-items: flex-start;
     }
@@ -705,42 +131,44 @@
         grid-template-columns: 1fr;
         width: 100%;
     }
+}
 
-    .archive-mini-pagination {
-        justify-content: center;
-    }
+/* Colores de filas según estado activo/inactivo */
+.table-container tbody tr.archive-employee-row--active > td {
+    background-color: #f0fdf4 !important;
+}
 
-    .archive-expediente-badge,
-    .archive-request-status-badge,
-    .archive-physical-holder-badge {
-        min-width: 0;
-        width: 100%;
-    }
+.table-container tbody tr.archive-employee-row--inactive > td {
+    background-color: #fef2f2 !important;
+}
 
-    .archive-loan-actions-grid {
-        grid-template-columns: 1fr;
-    }
+.table-container tbody tr.archive-employee-row--active:hover > td {
+    background-color: #dcfce7 !important;
+}
 
-    .archive-inline-filters {
-        grid-template-columns: 1fr;
-    }
+.table-container tbody tr.archive-employee-row--inactive:hover > td {
+    background-color: #fee2e2 !important;
+}
 
-    .archive-report-modal-body {
-        padding: 1rem;
-    }
+/* Mantener celdas transparentes para que el fondo del tr gobierne */
+.table-container tbody tr.archive-employee-row--active td.actions,
+.table-container tbody tr.archive-employee-row--inactive td.actions {
+    background-color: inherit !important;
+}
 
-    .archive-loan-request-body,
-    .archive-loan-request-footer {
-        padding-left: 1rem;
-        padding-right: 1rem;
-    }
+/* Asegurar centrado vertical absoluto del modal sin desplazamientos */
+#modal-root .modal-overlay {
+    position: fixed !important;
+    inset: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    z-index: 999999 !important;
+    padding: 1rem !important;
+    overflow-y: auto !important;
+}
 
-    .archive-employee-list-table {
-        min-width: 760px;
-    }
-
-    .archive-employee-list-table .archive-actions-col {
-        min-width: 130px;
-        width: 130px;
-    }
+#modal-root .modal-container-medium {
+    margin: auto !important;
+    max-height: 90vh !important;
 }

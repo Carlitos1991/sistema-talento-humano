@@ -3,12 +3,11 @@
         <form action="{{ request.path }}" method="POST" id="unitForm" onsubmit="submitAjaxForm(event)">
             {% csrf_token %}
 
-            <!-- TODOS LOS CAMPOS OCULTOS -->
+            <!-- CAMPOS OCULTOS DE CONTEXTO -->
             <div style="display: none;">
                 {{ form.level }}
                 {{ form.parent }}
                 {{ form.boss }}
-                {{ form.is_active }}
                 <input type="hidden" id="modal-context-parent" value="{{ request.GET.parent_id|default:'' }}">
             </div>
 
@@ -31,11 +30,12 @@
                     </div>
                 {% endif %}
 
+                <!-- DATOS PRINCIPALES -->
                 <div class="form-section-card mb-3">
                     <div class="row g-3">
                         <div class="col-md-6 form-group">
                             <label class="form-label">
-                                Código <span class="text-danger">*</span>
+                                Código <span class="text-red">*</span>
                             </label>
                             {{ form.code }}
                             {% if form.code.errors %}
@@ -43,7 +43,7 @@
                             {% endif %}
                         </div>
                         <div class="col-md-6 form-group">
-                            <label class="form-label">Nombre de la Unidad <span class="text-danger">*</span></label>
+                            <label class="form-label">Nombre de la Unidad <span class="text-red">*</span></label>
                             {{ form.name }}
                             {% if form.name.errors %}
                                 <div class="text-error">{{ form.name.errors.0 }}</div>
@@ -62,25 +62,64 @@
                     </div>
                 </div>
 
-                <!-- SWITCH: DEPENDENCIA PRINCIPAL -->
-                <div class="form-section-card py-2 px-3 border rounded bg-white">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <div class="me-3">
-                            <label for="id_is_main_unit"
-                                   class="form-label font-bold text-dark mb-0 cursor-pointer d-flex align-items-center gap-2">
-                                <i class="fa-solid fa-sitemap text-primary"></i> Dependencia Principal Cabecera
+                <!-- 3 SWITCHES EN UNA MISMA FILA CON ESTILO INSTITUCIONAL -->
+                <div class="form-section-card py-3 px-3">
+                    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: stretch;">
+
+                        <!-- 1. ESTADO ACTIVO -->
+                        <div class="d-flex flex-column justify-content-between align-items-center p-2 rounded border bg-light"
+                             style="min-height: 90px; text-align: center;">
+                            <label for="id_is_active"
+                                   class="form-label font-bold text-dark mb-2 cursor-pointer d-flex align-items-center justify-content-center gap-1">
+                                <i class="fa-solid fa-power-off text-green"></i> Estado
                             </label>
-                            <span class="small text-muted d-block mt-1">
-                                Si se activa, esta unidad agrupa la planificación del cronograma de vacaciones y reportes institucionales de ella y de todas sus subdependencias.
-                            </span>
+                            <div class="d-flex align-items-center justify-content-center w-100">
+                                {{ form.is_active }}
+                                <label class="switch-wrapper" for="id_is_active"
+                                       style="min-width: 110px; padding: 4px 10px;">
+                                    <div class="switch-circle"></div>
+                                    <span class="switch-text">Activa</span>
+                                </label>
+                            </div>
                         </div>
-                        <div class="form-check form-switch m-0">
-                            {{ form.is_main_unit }}
+
+                        <!-- 2. DEPENDENCIA PRINCIPAL -->
+                        <div class="d-flex flex-column justify-content-between align-items-center p-2 rounded border bg-light"
+                             style="min-height: 90px; text-align: center;">
+                            <label for="id_is_main_unit"
+                                   class="form-label font-bold text-dark mb-2 cursor-pointer d-flex align-items-center justify-content-center gap-1"
+                                   title="Dependencia Principal Cabecera">
+                                <i class="fa-solid fa-sitemap text-blue"></i> Cabecera
+                            </label>
+                            <div class="d-flex align-items-center justify-content-center w-100">
+                                {{ form.is_main_unit }}
+                                <label class="switch-wrapper" for="id_is_main_unit"
+                                       style="min-width: 110px; padding: 4px 10px;">
+                                    <div class="switch-circle"></div>
+                                    <span class="switch-text">Principal</span>
+                                </label>
+                            </div>
                         </div>
+
+                        <!-- 3. UNIDAD DE TALENTO HUMANO -->
+                        <div class="d-flex flex-column justify-content-between align-items-center p-2 rounded border bg-light"
+                             style="min-height: 90px; text-align: center;">
+                            <label for="id_is_human_resources"
+                                   class="form-label font-bold text-dark mb-2 cursor-pointer d-flex align-items-center justify-content-center gap-1"
+                                   title="Unidad de Talento Humano y sus dependencias">
+                                <i class="fa-solid fa-users-gear" style="color: #d97706;"></i> Es TTHH?
+                            </label>
+                            <div class="d-flex align-items-center justify-content-center w-100">
+                                {{ form.is_human_resources }}
+                                <label class="switch-wrapper" for="id_is_human_resources"
+                                       style="min-width: 110px; padding: 4px 10px;">
+                                    <div class="switch-circle"></div>
+                                    <span class="switch-text">Área TH</span>
+                                </label>
+                            </div>
+                        </div>
+
                     </div>
-                    {% if form.is_main_unit.errors %}
-                        <div class="text-error mt-1">{{ form.is_main_unit.errors.0 }}</div>
-                    {% endif %}
                 </div>
 
             </div>

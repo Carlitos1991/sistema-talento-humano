@@ -1,14 +1,14 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Préstamos de Expedientes{% endblock %}
+{% block title %}Préstamos de Expedientes | SIGETH{% endblock %}
 
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/payroll.css' %}">
     <link rel="stylesheet" href="{% static 'css/employee_archive.css' %}">
 {% endblock %}
 
 {% block content %}
+    <!-- 1. Encabezado Oficial -->
     <div class="header-card archive-header-card">
         <div>
             <h1>Préstamos de Expedientes</h1>
@@ -16,191 +16,268 @@
         </div>
     </div>
 
-    <div class="content-table archive-content-table archive-spacing-bottom">
-        <div class="table-controls archive-controls">
-            <form method="get" class="archive-inline-filters" id="archiveLoanFilterForm">
-                <div class="search-box archive-search-box">
+    <!-- 2. Tabla y Controles Estandarizados en una sola tarjeta -->
+    <div id="table-app">
+        <div class="content-table archive-content-table">
+            <form method="get" id="archiveLoanFilterForm">
+                <div class="table-controls toolbar-row">
 
-                    <input type="text" name="q" class="table-search-input" placeholder="Buscar por expediente, empleado o usuario" value="{{ request.GET.q }}">
+                    <!-- Centro: Filtro por estado del préstamo -->
+                    <div class="toolbar-center">
+                        <select name="status" id="loanStatusFilter" class="form-control archive-status-select">
+                            <option value="">Todos los estados</option>
+                            <option value="REQUESTED" {% if request.GET.status == 'REQUESTED' %}selected{% endif %}>
+                                Solicitado
+                            </option>
+                            <option value="ON_LOAN" {% if request.GET.status == 'ON_LOAN' %}selected{% endif %}>En
+                                préstamo
+                            </option>
+                            <option value="RETURN_REPORTED"
+                                    {% if request.GET.status == 'RETURN_REPORTED' %}selected{% endif %}>Devolución
+                                reportada
+                            </option>
+                            <option value="RETURN_VALIDATED"
+                                    {% if request.GET.status == 'RETURN_VALIDATED' %}selected{% endif %}>Devuelto
+                            </option>
+                        </select>
+                    </div>
+
+                    <!-- Derecha: Buscador Global Estandarizado -->
+                    <div class="toolbar-right">
+                        <input type="text" id="table-search" name="q"
+                               class="table-search-input table-search-input--large"
+                               placeholder="Buscar por expediente, empleado o usuario"
+                               value="{{ request.GET.q|default:'' }}">
+                    </div>
                 </div>
-                <select name="status" class="form-control archive-status-filter">
-                    <option value="">Todos los estados</option>
-                    <option value="REQUESTED" {% if request.GET.status == 'REQUESTED' %}selected{% endif %}>Solicitado</option>
-                    <option value="ON_LOAN" {% if request.GET.status == 'ON_LOAN' %}selected{% endif %}>En préstamo</option>
-                    <option value="RETURN_REPORTED" {% if request.GET.status == 'RETURN_REPORTED' %}selected{% endif %}>Devolución reportada</option>
-                    <option value="RETURN_VALIDATED" {% if request.GET.status == 'RETURN_VALIDATED' %}selected{% endif %}>Devuelto</option>
-                </select>
             </form>
+
+            <!-- Contenedor unificado para la tabla con scroll horizontal -->
+            <div id="table-content-wrapper">
+                <div class="table-container">
+                    <div class="table-scroll-top">
+                        <table class="managed-table exportable-table"
+                               data-title="Préstamos de Expedientes"
+                               data-filename="Prestamos_Expedientes"
+                               data-page-size="20">
+                            <thead>
+                            <tr>
+                                <th class="width-13">Fecha solicitud</th>
+                                <th class="width-12 text-center">Expediente</th>
+                                <th class="width-20">Empleado</th>
+                                <th class="width-15">Prestado a</th>
+                                <th class="width-15">Registrado por</th>
+                                <th class="width-15">Observación solicitud</th>
+                                <th class="width-10 text-center">Estado</th>
+                                <th class="width-10 text-center no-sort actions"><i class="fas fa-cogs"></i> Acciones
+                                </th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for loan in loans %}
+                                <tr>
+                                    <td>{{ loan.requested_at|date:'d/m/Y H:i' }}</td>
+                                    <td class="text-center">
+                                        <span class="badge badge-gray font-monospace">{{ loan.expediente_number }}</span>
+                                    </td>
+                                    <td><strong>{{ loan.employee.person.full_name }}</strong></td>
+                                    <td>
+                                        {% if loan.borrower_user %}
+                                            {% if loan.borrower_user.first_name or loan.borrower_user.last_name %}
+                                                {{ loan.borrower_user.first_name }} {{ loan.borrower_user.last_name }}
+                                            {% else %}
+                                                {{ loan.borrower_user.username }}
+                                            {% endif %}
+                                        {% elif loan.requested_by %}
+                                            {% if loan.requested_by.first_name or loan.requested_by.last_name %}
+                                                {{ loan.requested_by.first_name }} {{ loan.requested_by.last_name }}
+                                            {% else %}
+                                                {{ loan.requested_by.username }}
+                                            {% endif %}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if loan.requested_by %}
+                                            {% if loan.requested_by.first_name or loan.requested_by.last_name %}
+                                                {{ loan.requested_by.first_name }} {{ loan.requested_by.last_name }}
+                                            {% else %}
+                                                {{ loan.requested_by.username }}
+                                            {% endif %}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ loan.request_observation|default:'-' }}</td>
+                                    <td class="text-center">
+                                        {% if loan.status == 'REQUESTED' %}
+                                            <span class="badge badge-blue">Solicitado</span>
+                                        {% elif loan.status == 'ON_LOAN' %}
+                                            <span class="badge badge-amber"><i
+                                                    class="fa-solid fa-hand-holding-hand me-1"></i> En préstamo</span>
+                                        {% elif loan.status == 'RETURN_REPORTED' %}
+                                            <span class="badge badge-yellow"><i
+                                                    class="fa-solid fa-clock-rotate-left me-1"></i> Dev. reportada</span>
+                                        {% elif loan.status == 'RETURN_VALIDATED' %}
+                                            <span class="badge badge-green"><i class="fa-solid fa-box-archive me-1"></i> Devuelto</span>
+                                        {% else %}
+                                            <span class="badge badge-gray">{{ loan.get_status_display }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="actions text-center">
+                                        <div class="actions-wrapper">
+                                            <!-- Ver detalle de observaciones -->
+                                            <button type="button"
+                                                    class="btn-blue-circle"
+                                                    title="Ver detalle de observaciones"
+                                                    data-employee-name="{{ loan.employee.person.full_name }}"
+                                                    data-expediente-number="{{ loan.expediente_number }}"
+                                                    data-request-observation="{{ loan.request_observation|default_if_none:'' }}"
+                                                    data-delivery-observation="{{ loan.delivery_observation|default_if_none:'' }}"
+                                                    data-return-observation="{{ loan.return_observation|default_if_none:'' }}"
+                                                    data-validation-observation="{{ loan.validation_observation|default_if_none:'' }}"
+                                                    onclick="openLoanListObservationModal(this)">
+                                                <i class="fa-solid fa-list-check"></i>
+                                            </button>
+
+                                            <!-- Entregar expediente físico -->
+                                            {% if loan.status == 'REQUESTED' and perms.employee_archive.can_manage_archive_loans %}
+                                                <button type="button"
+                                                        class="btn-yellow-circle"
+                                                        title="Entregar expediente"
+                                                        data-employee-name="{{ loan.employee.person.full_name }}"
+                                                        data-expediente-number="{{ loan.expediente_number }}"
+                                                        data-deliver-url="{% url 'employee_archive:loan_deliver' loan.id %}"
+                                                        onclick="openLoanListDeliverModal(this)">
+                                                    <i class="fa-solid fa-box-open"></i>
+                                                </button>
+                                            {% endif %}
+
+                                            <!-- Validar devolución de expediente -->
+                                            {% if loan.status == 'RETURN_REPORTED' and perms.employee_archive.can_validate_archive_returns %}
+                                                <button type="button"
+                                                        class="btn-red-circle"
+                                                        title="Validar devolución"
+                                                        data-employee-name="{{ loan.employee.person.full_name }}"
+                                                        data-expediente-number="{{ loan.expediente_number }}"
+                                                        data-validate-url="{% url 'employee_archive:loan_return_validate' loan.id %}"
+                                                        onclick="openLoanListValidateModal(this)">
+                                                    <i class="fa-solid fa-clipboard-check"></i>
+                                                </button>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="8">
+                                        <div class="empty-state-container">
+                                            <i class="fa-solid fa-inbox empty-state-icon"></i>
+                                            <p class="empty-state-text">No hay préstamos registrados.</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <div class="content-table archive-content-table">
-        <div class="table-container">
-            <table class="table managed-table exportable-table table-hover" data-page-size="20" data-title="Prestamos de Expedientes">
-                <thead>
-                <tr>
-                    <th>Fecha solicitud</th>
-                    <th>Expediente</th>
-                    <th>Empleado</th>
-                    <th>Prestado a</th>
-                    <th>Registrado por</th>
-                    <th>Observación solicitud</th>
-                    <th>Estado</th>
-                    <th class="text-center">Acciones</th>
-                </tr>
-                </thead>
-                <tbody>
-                {% for loan in loans %}
-                    <tr>
-                        <td>{{ loan.requested_at|date:'d/m/Y H:i' }}</td>
-                        <td><span class="payroll-code">{{ loan.expediente_number }}</span></td>
-                        <td>{{ loan.employee.person.full_name }}</td>
-                        <td>
-                            {% if loan.borrower_user %}
-                                {% if loan.borrower_user.first_name or loan.borrower_user.last_name %}
-                                    {{ loan.borrower_user.first_name }} {{ loan.borrower_user.last_name }}
-                                {% else %}
-                                    {{ loan.borrower_user.username }}
-                                {% endif %}
-                            {% elif loan.requested_by %}
-                                {% if loan.requested_by.first_name or loan.requested_by.last_name %}
-                                    {{ loan.requested_by.first_name }} {{ loan.requested_by.last_name }}
-                                {% else %}
-                                    {{ loan.requested_by.username }}
-                                {% endif %}
-                            {% else %}
-                                -
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if loan.requested_by %}
-                                {% if loan.requested_by.first_name or loan.requested_by.last_name %}
-                                    {{ loan.requested_by.first_name }} {{ loan.requested_by.last_name }}
-                                {% else %}
-                                    {{ loan.requested_by.username }}
-                                {% endif %}
-                            {% else %}
-                                -
-                            {% endif %}
-                        </td>
-                        <td>{{ loan.request_observation|default:'-' }}</td>
-                        <td>{{ loan.get_status_display }}</td>
-                        <td class="text-center actions">
-                            <div class="actions-wrapper">
-                                <button type="button"
-                                        class="btn-green-circle"
-                                        title="Ver detalle de observaciones"
-                                        data-employee-name="{{ loan.employee.person.full_name }}"
-                                        data-expediente-number="{{ loan.expediente_number }}"
-                                        data-request-observation="{{ loan.request_observation|default_if_none:'' }}"
-                                        data-delivery-observation="{{ loan.delivery_observation|default_if_none:'' }}"
-                                        data-return-observation="{{ loan.return_observation|default_if_none:'' }}"
-                                        data-validation-observation="{{ loan.validation_observation|default_if_none:'' }}"
-                                        onclick="openLoanListObservationModal(this)">
-                                    <i class="fa-solid fa-list-check"></i>
-                                </button>
-                                {% if loan.status == 'REQUESTED' and perms.employee_archive.can_manage_archive_loans %}
-                                    <button type="button"
-                                            class="btn-icon btn-restore-action"
-                                            title="Entregar expediente"
-                                            data-employee-name="{{ loan.employee.person.full_name }}"
-                                            data-expediente-number="{{ loan.expediente_number }}"
-                                            data-deliver-url="{% url 'employee_archive:loan_deliver' loan.id %}"
-                                            onclick="openLoanListDeliverModal(this)">
-                                        <i class="fa-solid fa-box-open"></i>
-                                    </button>
-                                {% endif %}
-                                {% if loan.status == 'RETURN_REPORTED' and perms.employee_archive.can_validate_archive_returns %}
-                                    <button type="button"
-                                            class="btn-icon btn-info-action"
-                                            title="Validar devolución"
-                                            data-employee-name="{{ loan.employee.person.full_name }}"
-                                            data-expediente-number="{{ loan.expediente_number }}"
-                                            data-validate-url="{% url 'employee_archive:loan_return_validate' loan.id %}"
-                                            onclick="openLoanListValidateModal(this)">
-                                        <i class="fa-solid fa-clipboard-check"></i>
-                                    </button>
-                                {% endif %}
-                            </div>
-                        </td>
-                    </tr>
-                {% empty %}
-                    <tr><td colspan="8" class="text-center">No hay préstamos registrados.</td></tr>
-                {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-
+    <!-- 3. Modal: Entregar expediente -->
     <div id="loanListDeliverModal" class="modal-overlay hidden">
-        <div class="modal-container-medium shadow-card" style="max-width: 560px; width: min(560px, calc(100vw - 2rem));">
+        <div class="modal-container-medium">
             <form id="loanListDeliverForm" method="post" action="" class="archive-loan-request-form">
                 {% csrf_token %}
-                <div class="modal-header-medium modal-header-gradient">
-                    <h3 class="modal-title text-white">
-                        <i class="fas fa-box-open me-2"></i>
-                        Entregar expediente
-                    </h3>
-                    <button type="button" class="btn-close-modal text-white-opacity" onclick="closeLoanListDeliverModal()">
+                <div class="modal-header">
+                    <div class="header-content-group">
+                        <div class="header-icon-circle">
+                            <i class="fas fa-box-open"></i>
+                        </div>
+                        <h3 class="header-title">Entregar expediente</h3>
+                    </div>
+                    <button type="button" class="btn-close-circle" onclick="closeLoanListDeliverModal()">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="archive-loan-request-body">
-                    <p class="archive-loan-request-employee"><strong>Empleado:</strong> <span id="loanListDeliverEmployeeName"></span></p>
-                    <p class="archive-loan-request-employee"><strong>Expediente:</strong> <span id="loanListDeliverExpedienteNumber"></span></p>
-                    <label class="archive-form-label archive-loan-request-label" for="loanListDeliveryObservation">Observación de entrega</label>
-                    <textarea id="loanListDeliveryObservation" name="delivery_observation" class="form-control" rows="4" placeholder="Puedes registrar una observación de entrega"></textarea>
+                    <p class="archive-loan-request-employee"><strong>Empleado:</strong> <span
+                            id="loanListDeliverEmployeeName"></span></p>
+                    <p class="archive-loan-request-employee"><strong>Expediente:</strong> <span
+                            id="loanListDeliverExpedienteNumber"></span></p>
+                    <label class="archive-form-label archive-loan-request-label" for="loanListDeliveryObservation">Observación
+                        de entrega</label>
+                    <textarea id="loanListDeliveryObservation" name="delivery_observation" class="form-control" rows="4"
+                              placeholder="Puedes registrar una observación de entrega"></textarea>
                 </div>
-                <div class="modal-footer-medium d-flex justify-content-end gap-2 archive-loan-request-footer">
-                    <button type="button" class="btn btn-outline-secondary" onclick="closeLoanListDeliverModal()">Cancelar</button>
-                    <button type="submit" class="btn btn-create">Entregar</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary-outline" onclick="closeLoanListDeliverModal()">Cancelar
+                    </button>
+                    <button type="submit" class="btn-dark-blue-rectangle">Entregar</button>
                 </div>
             </form>
         </div>
     </div>
 
+    <!-- 4. Modal: Validar devolución -->
     <div id="loanListValidateModal" class="modal-overlay hidden">
-        <div class="modal-container-medium shadow-card" style="max-width: 560px; width: min(560px, calc(100vw - 2rem));">
+        <div class="modal-container-medium">
             <form id="loanListValidateForm" method="post" action="" class="archive-loan-request-form">
                 {% csrf_token %}
                 <input type="hidden" name="next" value="{% url 'employee_archive:loan_list' %}">
-                <div class="modal-header-medium modal-header-gradient">
-                    <h3 class="modal-title text-white">
-                        <i class="fas fa-clipboard-check me-2"></i>
-                        Validar devolución
-                    </h3>
-                    <button type="button" class="btn-close-modal text-white-opacity" onclick="closeLoanListValidateModal()">
+                <div class="modal-header">
+                    <div class="header-content-group">
+                        <div class="header-icon-circle">
+                            <i class="fas fa-clipboard-check"></i>
+                        </div>
+                        <h3 class="header-title">Validar devolución</h3>
+                    </div>
+                    <button type="button" class="btn-close-circle" onclick="closeLoanListValidateModal()">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="archive-loan-request-body">
-                    <p class="archive-loan-request-employee"><strong>Empleado:</strong> <span id="loanListValidateEmployeeName"></span></p>
-                    <p class="archive-loan-request-employee"><strong>Expediente:</strong> <span id="loanListValidateExpedienteNumber"></span></p>
-                    <label class="archive-form-label archive-loan-request-label" for="loanListValidationObservation">Observación de validación</label>
-                    <textarea id="loanListValidationObservation" name="validation_observation" class="form-control" rows="4" placeholder="Puedes registrar una observación de validación"></textarea>
+                    <p class="archive-loan-request-employee"><strong>Empleado:</strong> <span
+                            id="loanListValidateEmployeeName"></span></p>
+                    <p class="archive-loan-request-employee"><strong>Expediente:</strong> <span
+                            id="loanListValidateExpedienteNumber"></span></p>
+                    <label class="archive-form-label archive-loan-request-label" for="loanListValidationObservation">Observación
+                        de validación</label>
+                    <textarea id="loanListValidationObservation" name="validation_observation" class="form-control"
+                              rows="4" placeholder="Puedes registrar una observación de validación"></textarea>
                 </div>
-                <div class="modal-footer-medium d-flex justify-content-end gap-2 archive-loan-request-footer">
-                    <button type="button" class="btn btn-outline-secondary" onclick="closeLoanListValidateModal()">Cancelar</button>
-                    <button type="submit" class="btn btn-create">Validar devolución</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary-outline" onclick="closeLoanListValidateModal()">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn-dark-blue-rectangle">Validar devolución</button>
                 </div>
             </form>
         </div>
     </div>
 
+    <!-- 5. Modal: Detalle de observaciones -->
     <div id="loanListObservationModal" class="modal-overlay hidden">
-        <div class="modal-container-medium shadow-card" style="max-width: 640px; width: min(640px, calc(100vw - 2rem));">
-            <div class="modal-header-medium modal-header-gradient">
-                <h3 class="modal-title text-white">
-                    <i class="fas fa-list-check me-2"></i>
-                    Detalle de observaciones
-                </h3>
-                <button type="button" class="btn-close-modal text-white-opacity" onclick="closeLoanListObservationModal()">
+        <div class="modal-container-medium">
+            <div class="modal-header">
+                <div class="header-content-group">
+                    <div class="header-icon-circle">
+                        <i class="fas fa-list-check"></i>
+                    </div>
+                    <h3 class="header-title">Detalle de observaciones</h3>
+                </div>
+                <button type="button" class="btn-close-circle" onclick="closeLoanListObservationModal()">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
             <div class="archive-loan-request-body">
-                <p class="archive-loan-request-employee"><strong>Empleado:</strong> <span id="loanListObservationEmployeeName"></span></p>
-                <p class="archive-loan-request-employee"><strong>Expediente:</strong> <span id="loanListObservationExpedienteNumber"></span></p>
+                <p class="archive-loan-request-employee"><strong>Empleado:</strong> <span
+                        id="loanListObservationEmployeeName"></span></p>
+                <p class="archive-loan-request-employee"><strong>Expediente:</strong> <span
+                        id="loanListObservationExpedienteNumber"></span></p>
 
                 <div class="archive-form-grid">
                     <div><strong>Solicitud:</strong> <span id="loanListObservationRequest">-</span></div>
@@ -209,8 +286,9 @@
                     <div><strong>Validación:</strong> <span id="loanListObservationValidation">-</span></div>
                 </div>
             </div>
-            <div class="modal-footer-medium d-flex justify-content-end gap-2 archive-loan-request-footer">
-                <button type="button" class="btn btn-outline-secondary" onclick="closeLoanListObservationModal()">Cerrar</button>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary-outline" onclick="closeLoanListObservationModal()">Cerrar
+                </button>
             </div>
         </div>
     </div>
@@ -218,6 +296,7 @@
 
 {% block extra_js %}
     <script>
+        // Apertura y preparación de modal de entrega
         function openLoanListDeliverModal(buttonElement) {
             const modal = document.getElementById('loanListDeliverModal');
             const form = document.getElementById('loanListDeliverForm');
@@ -244,6 +323,7 @@
             }
         }
 
+        // Apertura y preparación de modal de validación
         function openLoanListValidateModal(buttonElement) {
             const modal = document.getElementById('loanListValidateModal');
             const form = document.getElementById('loanListValidateForm');
@@ -270,6 +350,7 @@
             }
         }
 
+        // Apertura y preparación de modal de observaciones
         function openLoanListObservationModal(buttonElement) {
             const modal = document.getElementById('loanListObservationModal');
             const employeeLabel = document.getElementById('loanListObservationEmployeeName');
@@ -299,6 +380,38 @@
             }
         }
 
+        // Enlace de eventos de filtrado y búsqueda con debounce
+        document.addEventListener('DOMContentLoaded', function () {
+            const filterForm = document.getElementById('archiveLoanFilterForm');
+            const statusSelect = document.getElementById('loanStatusFilter');
+            const searchInput = document.getElementById('table-search');
+
+            if (statusSelect && filterForm) {
+                statusSelect.addEventListener('change', function () {
+                    filterForm.submit();
+                });
+            }
+
+            if (searchInput && filterForm) {
+                let searchTimer = null;
+                searchInput.addEventListener('input', function () {
+                    clearTimeout(searchTimer);
+                    searchTimer = setTimeout(function () {
+                        filterForm.submit();
+                    }, 450);
+                });
+
+                searchInput.addEventListener('keydown', function (event) {
+                    if (event.key === 'Enter') {
+                        event.preventDefault();
+                        clearTimeout(searchTimer);
+                        filterForm.submit();
+                    }
+                });
+            }
+        });
+
+        // Escuchador global de tecla Escape para cerrar modales
         document.addEventListener('keydown', function (event) {
             if (event.key === 'Escape') {
                 closeLoanListDeliverModal();
@@ -306,6 +419,19 @@
                 closeLoanListObservationModal();
             }
         });
+
+        // Cierre de modales al hacer clic sobre el fondo
+        document.getElementById('loanListDeliverModal')?.addEventListener('click', function (event) {
+            if (event.target === this) closeLoanListDeliverModal();
+        });
+
+        document.getElementById('loanListValidateModal')?.addEventListener('click', function (event) {
+            if (event.target === this) closeLoanListValidateModal();
+        });
+
+        document.getElementById('loanListObservationModal')?.addEventListener('click', function (event) {
+            if (event.target === this) closeLoanListObservationModal();
+        });
     </script>
-    <script src="{% static 'js/employee_archive/employee_archive.js' %}"></script>
+    <script src="{% static 'js/employee_archive/../../static/js/employee_archive.js' %}"></script>
 {% endblock %}

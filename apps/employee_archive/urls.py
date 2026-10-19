@@ -9,7 +9,8 @@ urlpatterns = [
 
     path('employees/', views.EmployeeArchiveListView.as_view(), name='employee_list'),
     path('employees/<int:employee_id>/', views.EmployeeArchiveDetailView.as_view(), name='employee_detail'),
-    path('employees/<int:employee_id>/documents/create/', views.EmployeeArchiveDocumentCreateView.as_view(), name='document_create'),
+    path('employees/<int:employee_id>/documents/create/', views.EmployeeArchiveDocumentCreateView.as_view(),
+         name='document_create'),
     path('documents/<int:archive_id>/upload/', views.upload_archive_version, name='version_upload'),
     path('scan-tasks/<int:task_id>/upload/', views.upload_scan_task_version, name='scan_task_upload'),
     path('versions/<int:version_id>/open/', views.open_archive_version, name='version_open'),
@@ -25,4 +26,5 @@ urlpatterns = [
     path('document-types/', views.EmployeeDocumentTypeListView.as_view(), name='archive_type_list'),
     path('document-types/create/', views.EmployeeDocumentTypeCreateView.as_view(), name='archive_type_create'),
     path('document-types/<int:pk>/update/', views.EmployeeDocumentTypeUpdateView.as_view(), name='archive_type_update'),
+    path('employees/<int:employee_id>/loan/manual/modal/', views.loan_manual_modal, name='loan_manual_modal'),
 ]

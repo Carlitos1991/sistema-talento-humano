@@ -88,6 +88,7 @@ html {
     padding: 0;
     overflow-x: hidden;
     overflow-y: scroll;
+    /*scrollbar-gutter: stable;*/
 }
 
 body {
@@ -2320,7 +2321,7 @@ input.is-valid:focus, select.is-valid:focus, textarea.is-valid:focus, .input-fie
 }
 
 .btn-secondary-outline:hover {
-    background-color: #a872d8;
+    background-color: #0272a3;
     color: #ffffff;
 }
 

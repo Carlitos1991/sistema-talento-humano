@@ -22,7 +22,8 @@ from .models import (
 class AdministrativeUnitForm(BaseFormMixin, forms.ModelForm):
     """
     Formulario para creación y actualización de unidades administrativas.
-    Incluye validación de código único, control de jerarquía y dependencia principal.
+    Incluye validación de código único, control de jerarquía, estado,
+    dependencia principal y unidad de talento humano.
     """
 
     class Meta:
@@ -35,8 +36,9 @@ class AdministrativeUnitForm(BaseFormMixin, forms.ModelForm):
             'code',
             'address',
             'phone',
-            'is_main_unit',  # <-- NUEVO CAMPO
-            'is_active'
+            'is_active',  # <-- 1. Estado
+            'is_main_unit',  # <-- 2. Dependencia Principal
+            'is_human_resources',  # <-- 3. Talento Humano
         ]
         widgets = {
             'name': forms.TextInput(attrs={
@@ -57,19 +59,28 @@ class AdministrativeUnitForm(BaseFormMixin, forms.ModelForm):
                 'class': 'input-field',
                 'placeholder': 'Extensión'
             }),
+            'is_active': forms.CheckboxInput(attrs={
+                'class': 'switch-input switch-green',
+                'id': 'id_is_active'
+            }),
             'is_main_unit': forms.CheckboxInput(attrs={
-                'class': 'custom-switch-input',
+                'class': 'switch-input switch-blue',
                 'id': 'id_is_main_unit'
+            }),
+            'is_human_resources': forms.CheckboxInput(attrs={
+                'class': 'switch-input switch-yellow',
+                'id': 'id_is_human_resources'
             }),
             'level': forms.HiddenInput(),
             'parent': forms.HiddenInput(),
             'boss': forms.HiddenInput(),
-            'is_active': forms.HiddenInput(),
         }
         labels = {
             'name': 'Nombre de la Unidad',
             'code': 'Código / Partida (Único)',
-            'is_main_unit': '¿Es Dependencia Principal?'
+            'is_active': 'Estado Activo',
+            'is_main_unit': '¿Es Dependencia Principal?',
+            'is_human_resources': '¿Es Unidad de Talento Humano?'
         }
 
     def __init__(self, *args, **kwargs):
@@ -77,7 +88,13 @@ class AdministrativeUnitForm(BaseFormMixin, forms.ModelForm):
         self.fields['boss'].required = False
         self.fields['parent'].required = False
         self.fields['level'].required = False
-        self.fields['is_main_unit'].required = False  # <-- Booleano opcional
+        self.fields['is_active'].required = False
+        self.fields['is_main_unit'].required = False
+        self.fields['is_human_resources'].required = False
+
+        # Si es un registro nuevo, el estado activo viene marcado por defecto
+        if not self.instance.pk and 'is_active' in self.fields:
+            self.initial['is_active'] = True
 
     def clean_code(self):
         """Valida que el código no esté repetido entre unidades activas."""

@@ -1,0 +1,157 @@
+{% load static %}
+<div class="table-container">
+    <div class="table-scroll-top">
+        <table class="managed-table exportable-table"
+               data-title="Archivo Digital por Empleado"
+               data-filename="Archivo_Digital_Empleados"
+               data-list-url="{% url 'employee_archive:employee_list' %}"
+               data-external-pagination="true"
+               data-external-search="true">
+            <thead>
+            <tr>
+                <th class="width-25" data-field="employee">Empleado</th>
+                <th class="width-10" data-field="document">Cédula</th>
+                <th class="width-15 text-center" data-field="expediente">Nro. Expediente</th>
+                <th class="width-25 text-center no-sort">Expediente Físico</th>
+                <th class="width-25 text-center no-sort actions"><i class="fas fa-cogs"></i> Acciones</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for employee in employees %}
+                <tr id="row-{{ employee.id }}"
+                    class="{% if employee.is_active or employee.person.is_active %}archive-employee-row--active{% else %}archive-employee-row--inactive{% endif %}"
+                    data-status="{% if employee.is_active or employee.person.is_active %}true{% else %}false{% endif %}">
+                    <td>
+                        <strong>{{ employee.person.name_and_last_name }}</strong>
+                    </td>
+                    <td>{{ employee.person.document_number|default:'-' }}</td>
+                    <td class="text-center">
+                        <span class="badge badge-gray font-monospace">
+                            {{ employee.institutional_data.file_number|default:employee.person.document_number|default:employee.id }}
+                        </span>
+                    </td>
+                    <td class="text-center">
+                        {% if employee.physical_holder_full_name %}
+                            <span class="badge badge-amber"
+                                  title="Prestado a: {{ employee.physical_holder_full_name }}">
+                                <i class="fa-solid fa-hand-holding-hand me-1"></i> {{ employee.physical_holder_full_name }}
+                            </span>
+                        {% else %}
+                            <span class="badge badge-green">
+                                <i class="fa-solid fa-box-archive me-1"></i> Archivo
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td class="actions text-center">
+                        <div class="actions-wrapper">
+                            <!-- 1. Solicitar archivo -->
+                            {% if perms.employee_archive.view_employeearchivedocument and employee.request_status_label == 'Sin solicitar' and not perms.employee_archive.add_employeearchivedocument and not perms.employee_archive.change_employeearchivedocument %}
+                                <button type="button" class="btn-blue-circle"
+                                        title="Solicitar archivo"
+                                        onclick="openAjaxModal('{% url 'employee_archive:loan_request' employee.id %}')">
+                                    <i class="fa-solid fa-hand-holding-medical"></i>
+                                </button>
+                            {% endif %}
+
+                            <!-- 2. Prestar expediente -->
+                            {% if perms.employee_archive.can_create_archive_manual_loan or perms.employee_archive.change_employeearchivedocument or perms.employee_archive.add_employeearchivedocument %}
+                                {% if not employee.physical_holder_full_name or employee.request_status_label == 'Sin solicitar' or not employee.request_status_label %}
+                                    <button type="button" class="btn-green-circle"
+                                            title="Prestar expediente"
+                                            onclick="openAjaxModal('{% url 'employee_archive:loan_manual_modal' employee.id %}')">
+                                        <i class="fa-solid fa-person-chalkboard"></i>
+                                    </button>
+                                {% endif %}
+                            {% endif %}
+
+                            <!-- 3. Entregar expediente -->
+                            {% if perms.employee_archive.can_manage_archive_loans and employee.deliver_loan_id %}
+                                <button type="button" class="btn-yellow-circle"
+                                        title="Entregar expediente"
+                                        onclick="openAjaxModal('{% url 'employee_archive:loan_deliver' employee.deliver_loan_id %}')">
+                                    <i class="fa-solid fa-box-open"></i>
+                                </button>
+                            {% endif %}
+
+                            <!-- 4. Validar devolución -->
+                            {% if employee.validate_loan_id and employee.physical_holder_full_name or perms.employee_archive.change_employeearchivedocument and employee.physical_holder_full_name %}
+                                <button type="button" class="btn-red-circle"
+                                        title="Validar devolución"
+                                        onclick="openAjaxModal('{% url 'employee_archive:loan_return_validate' employee.validate_loan_id %}')">
+                                    <i class="fa-solid fa-clipboard-check"></i>
+                                </button>
+                            {% endif %}
+
+                            <!-- 5. Bitácora de Préstamos -->
+                            <button type="button" class="btn-blue-circle"
+                                    title="Bitácora de Préstamos"
+                                    onclick="openEmployeeLoanHistoryModal('{% url 'employee_archive:employee_detail' employee.id %}', '{{ employee.person.name_and_last_name|escapejs }}')">
+                                <i class="fas fa-clock-rotate-left"></i>
+                            </button>
+
+                            <!-- 6. Auditoría del archivo digital -->
+                            <button type="button" class="btn-dark-blue-circle"
+                                    title="Auditoría del archivo digital"
+                                    onclick="openEmployeeAuditModal('{% url 'employee_archive:employee_detail' employee.id %}', '{{ employee.person.name_and_last_name|escapejs }}')">
+                                <i class="fas fa-shield-halved"></i>
+                            </button>
+
+                            <!-- 7. Administrar archivo general -->
+                            {% if perms.employee_archive.add_employeearchivedocument or perms.employee_archive.change_employeearchivedocument %}
+                                <a class="btn-gray-circle"
+                                   href="{% url 'employee_archive:employee_detail' employee.id %}"
+                                   title="Administrar archivo digital">
+                                    <i class="fas fa-folder-open"></i>
+                                </a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="5">
+                        <div class="empty-state-container">
+                            <i class="fa-solid fa-inbox empty-state-icon"></i>
+                            <p class="empty-state-text">No se encontraron empleados registrados en el archivo.</p>
+                        </div>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if is_paginated %}
+    <div class="pagination-container" id="js-pagination">
+        <span class="pagination-info">
+            Mostrando {{ page_obj.start_index|default:"0" }}-{{ page_obj.end_index|default:"0" }} de {{ paginator.count|default:"0" }}
+        </span>
+        <div class="pagination-controls">
+            <button type="button" class="page-btn page-first" title="Primera"
+                    data-page="1" {% if not page_obj.has_previous %}disabled{% endif %}>
+                <i class="fas fa-angle-double-left"></i>
+            </button>
+            <button type="button" class="page-btn page-prev" title="Anterior"
+                    data-page="{% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% else %}1{% endif %}"
+                    {% if not page_obj.has_previous %}disabled{% endif %}>
+                <i class="fas fa-angle-left"></i>
+            </button>
+            <div class="page-input-wrapper">
+                <input type="number" class="page-input" id="archivePageInput"
+                       value="{{ page_obj.number }}" min="1" max="{{ paginator.num_pages }}">
+                <span class="total-pages-badge">de {{ paginator.num_pages }}</span>
+            </div>
+            <button type="button" class="page-btn page-next" title="Siguiente"
+                    data-page="
+                            {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages }}{% endif %}"
+                    {% if not page_obj.has_next %}disabled{% endif %}>
+                <i class="fas fa-angle-right"></i>
+            </button>
+            <button type="button" class="page-btn page-last" title="Última"
+                    data-page="{{ paginator.num_pages }}" {% if not page_obj.has_next %}disabled{% endif %}>
+                <i class="fas fa-angle-double-right"></i>
+            </button>
+        </div>
+    </div>
+{% endif %}

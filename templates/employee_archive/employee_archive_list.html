@@ -8,7 +8,6 @@
 {% endblock %}
 
 {% block content %}
-    <!-- 1. Encabezado Oficial -->
     <div class="header-card">
         <div>
             <h1>Archivo Digital de Empleados</h1>
@@ -16,378 +15,42 @@
         </div>
     </div>
 
-    <!-- 2. Tabla y Controles Estandarizados -->
-    <div id="table-app">
-        <div class="content-table">
-            <!-- Barra de herramientas con estructura de 3 columnas para alineación perfecta -->
-            <div class="table-controls toolbar-row">
+    <div class="content-table">
+        <div class="table-controls toolbar-row">
 
-                <div class="toolbar-center">
-                    <div class="d-flex align-items-center position-relative">
-                        <input type="checkbox" id="toggleLoanedExpedients"
-                               class="switch-input switch-red"
-                               {% if request.GET.show_loaned == 'true' %}checked{% endif %}>
-                        <label for="toggleLoanedExpedients" class="switch-wrapper">
-                            <span class="switch-circle"></span>
-                            <span class="switch-text">Mostrar Expedientes Prestados</span>
-                        </label>
-                        {% if total_loaned_count > 0 %}
-                            <span class="badge badge-notification" title="Expedientes prestados actualmente">
-                                {{ total_loaned_count }}
-                            </span>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <!-- Derecha: Buscador Global -->
-                <div class="toolbar-right">
-                    <input type="text" id="table-search" name="q"
-                           class="table-search-input table-search-input--large"
-                           placeholder="Buscar por nombre, cédula o expediente"
-                           value="{{ request.GET.q|default:'' }}">
-                </div>
-            </div>
-
-            <!-- Contenedor unificado para actualización dinámica de tabla y paginación vía AJAX -->
-            <div id="table-content-wrapper">
-                <div class="table-container">
-                    <div class="table-scroll-top">
-                        <table class="managed-table exportable-table"
-                               data-title="Archivo Digital por Empleado"
-                               data-filename="Archivo_Digital_Empleados"
-                               data-page-size="10"
-                               data-external-pagination="true"
-                               data-external-search="true">
-                            <thead>
-                            <tr>
-                                <th class="width-30" data-field="employee">Empleado</th>
-                                <th class="width-15" data-field="document">Cédula</th>
-                                <th class="width-20 text-center" data-field="expediente">Nro. Expediente</th>
-                                <th class="width-20 text-center no-sort">Expediente Físico</th>
-                                <th class="width-15 text-center no-sort actions"><i class="fas fa-cogs"></i> Acciones
-                                </th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            {% for employee in employees %}
-                                <tr>
-                                    <td>
-                                        <strong>{{ employee.person.name_and_last_name }}</strong>
-                                    </td>
-                                    <td>{{ employee.person.document_number|default:'-' }}</td>
-                                    <td class="text-center">
-                                        <span class="badge badge-gray font-monospace">
-                                            {{ employee.institutional_data.file_number|default:employee.person.document_number|default:employee.id }}
-                                        </span>
-                                    </td>
-                                    <td class="text-center">
-                                        {% if employee.physical_holder_full_name %}
-                                            <span class="badge badge-amber"
-                                                  title="Prestado a: {{ employee.physical_holder_full_name }}">
-                                                <i class="fa-solid fa-hand-holding-hand me-1"></i> {{ employee.physical_holder_full_name }}
-                                            </span>
-                                        {% else %}
-                                            <span class="badge badge-green">
-                                                <i class="fa-solid fa-box-archive me-1"></i> Archivo
-                                            </span>
-                                        {% endif %}
-                                    </td>
-                                    <td class="actions text-center">
-                                        <div class="actions-wrapper">
-                                            <!-- Solicitar archivo -->
-                                            {% if perms.employee_archive.view_employeearchivedocument and employee.request_status_label == 'Sin solicitar' and not perms.employee_archive.add_employeearchivedocument and not perms.employee_archive.change_employeearchivedocument %}
-                                                <button type="button" class="btn-blue-circle"
-                                                        title="Solicitar archivo"
-                                                        onclick="openAjaxModal('{% url 'employee_archive:loan_request' employee.id %}')">
-                                                    <i class="fa-solid fa-hand-holding-medical"></i>
-                                                </button>
-                                            {% endif %}
-
-                                            <!-- Prestar expediente -->
-                                            {% if perms.employee_archive.can_create_archive_manual_loan and employee.request_status_label == 'Sin solicitar' or perms.employee_archive.change_employeearchivedocument and employee.request_status_label == 'Sin solicitar' %}
-                                                <button type="button" class="btn-green-circle"
-                                                        title="Prestar expediente"
-                                                        onclick="openAjaxModal('{% url 'employee_archive:loan_manual_create' employee.id %}')">
-                                                    <i class="fa-solid fa-person-chalkboard"></i>
-                                                </button>
-                                            {% endif %}
-
-                                            <!-- Entregar expediente -->
-                                            {% if perms.employee_archive.can_manage_archive_loans and employee.deliver_loan_id %}
-                                                <button type="button" class="btn-yellow-circle"
-                                                        title="Entregar expediente"
-                                                        onclick="openAjaxModal('{% url 'employee_archive:loan_deliver' employee.deliver_loan_id %}')">
-                                                    <i class="fa-solid fa-box-open"></i>
-                                                </button>
-                                            {% endif %}
-
-                                            <!-- Validar devolución -->
-                                            {% if employee.validate_loan_id and employee.physical_holder_full_name or perms.employee_archive.change_employeearchivedocument and employee.physical_holder_full_name %}
-                                                <button type="button" class="btn-red-circle"
-                                                        title="Validar devolución"
-                                                        onclick="openAjaxModal('{% url 'employee_archive:loan_return_validate' employee.validate_loan_id %}')">
-                                                    <i class="fa-solid fa-clipboard-check"></i>
-                                                </button>
-                                            {% endif %}
-
-                                            <!-- Administrar archivo general -->
-                                            {% if perms.employee_archive.add_employeearchivedocument or perms.employee_archive.change_employeearchivedocument %}
-                                                <a class="btn-gray-circle"
-                                                   href="{% url 'employee_archive:employee_detail' employee.id %}"
-                                                   title="Administrar archivo digital">
-                                                    <i class="fas fa-folder-open"></i>
-                                                </a>
-                                            {% endif %}
-                                        </div>
-                                    </td>
-                                </tr>
-                            {% empty %}
-                                <tr>
-                                    <td colspan="5">
-                                        <div class="empty-state-container">
-                                            <i class="fa-solid fa-inbox empty-state-icon"></i>
-                                            <p class="empty-state-text">No se encontraron empleados registrados en el
-                                                archivo.</p>
-                                        </div>
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Paginación Global -->
-                <div class="pagination-container" id="js-pagination">
-                    <span class="pagination-info">
-                        Mostrando {{ page_obj.start_index|default:"0" }}-{{ page_obj.end_index|default:"0" }} de {{ paginator.count|default:"0" }}
+            <!-- Centro: Filtro de prestados -->
+            <div class="toolbar-center">
+                <div class="d-flex align-items-center position-relative">
+                    <input type="checkbox" id="toggleLoanedExpedients"
+                           class="switch-input switch-red"
+                           {% if request.GET.show_loaned == 'true' %}checked{% endif %}>
+                    <label for="toggleLoanedExpedients" class="switch-wrapper">
+                        <span class="switch-circle"></span>
+                        <span class="switch-text">Mostrar Expedientes Prestados</span>
+                    </label>
+                    <span class="badge badge-notification" id="loanedCountBadge"
+                          title="Expedientes prestados actualmente">
+                        {{ total_loaned_count|default:"0" }}
                     </span>
-                    <div class="pagination-controls{% if paginator.num_pages <= 1 %} hidden{% endif %}">
-                        <button type="button" class="page-btn page-first" title="Primera"
-                                data-page="1"
-                                {% if not page_obj.has_previous %}disabled{% endif %}>
-                            <i class="fas fa-angle-double-left"></i>
-                        </button>
-                        <button type="button" class="page-btn page-prev" title="Anterior"
-                                data-page="
-                                        {% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% else %}1{% endif %}"
-                                {% if not page_obj.has_previous %}disabled{% endif %}>
-                            <i class="fas fa-angle-left"></i>
-                        </button>
-                        <div class="page-input-wrapper">
-                            <input type="number" class="page-input" id="archivePageInput"
-                                   value="{{ page_obj.number|default:1 }}" min="1"
-                                   max="{{ paginator.num_pages|default:1 }}"
-                                   data-total-pages="{{ paginator.num_pages|default:1 }}">
-                            <span class="total-pages-badge">de {{ paginator.num_pages|default:1 }}</span>
-                        </div>
-                        <button type="button" class="page-btn page-next" title="Siguiente"
-                                data-page="
-                                        {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages|default:1 }}{% endif %}"
-                                {% if not page_obj.has_next %}disabled{% endif %}>
-                            <i class="fas fa-angle-right"></i>
-                        </button>
-                        <button type="button" class="page-btn page-last" title="Última"
-                                data-page="{{ paginator.num_pages|default:1 }}"
-                                {% if not page_obj.has_next %}disabled{% endif %}>
-                            <i class="fas fa-angle-double-right"></i>
-                        </button>
-                    </div>
                 </div>
             </div>
+
+            <!-- Derecha: Buscador Server-Side -->
+            <div class="toolbar-right">
+                <input type="text" id="table-search" name="q"
+                       class="table-search-input table-search-input--large"
+                       placeholder="Buscar por nombre, cédula o expediente"
+                       value="{{ request.GET.q|default:'' }}">
+            </div>
+        </div>
+
+        <!-- Contenedor dinámico de la tabla y paginación AJAX Server-Side -->
+        <div id="table-content-wrapper">
+            {% include 'employee_archive/partials/partial_employee_archive_table.html' %}
         </div>
     </div>
 {% endblock %}
 
 {% block extra_js %}
-    <script>
-        // Función para actualizar tabla y paginación de forma parcial y segura mediante AJAX
-        function refreshArchiveTable(extraParams = {}) {
-            const tableContainer = document.querySelector('.table-container');
-            const paginationContainer = document.getElementById('js-pagination');
-
-            if (!tableContainer) {
-                window.location.reload();
-                return;
-            }
-
-            const searchInput = document.getElementById('table-search');
-            const loanedSwitch = document.getElementById('toggleLoanedExpedients');
-            const requestUrl = new URL(window.location.href);
-
-            // Mantener búsqueda activa si existe
-            if (searchInput && searchInput.value.trim()) {
-                requestUrl.searchParams.set('q', searchInput.value.trim());
-            }
-
-            // Mantener o alternar filtro de expedientes prestados
-            if (!('show_loaned' in extraParams) && loanedSwitch) {
-                if (loanedSwitch.checked) {
-                    requestUrl.searchParams.set('show_loaned', 'true');
-                } else {
-                    requestUrl.searchParams.delete('show_loaned');
-                }
-            }
-
-            // Aplicar parámetros pasados explícitamente
-            Object.keys(extraParams).forEach(key => {
-                if (extraParams[key] !== null && extraParams[key] !== undefined && extraParams[key] !== '') {
-                    requestUrl.searchParams.set(key, extraParams[key]);
-                } else {
-                    requestUrl.searchParams.delete(key);
-                }
-            });
-
-            tableContainer.classList.add('table-loading');
-
-            fetch(requestUrl.toString(), {
-                headers: {'X-Requested-With': 'XMLHttpRequest'}
-            })
-                .then(response => {
-                    if (!response.ok) throw new Error('Error al consultar el servidor');
-                    return response.text();
-                })
-                .then(html => {
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(html, 'text/html');
-
-                    // Extraer únicamente los contenedores necesarios sin importar si Django devuelve la plantilla completa
-                    const newTableContainer = doc.querySelector('.table-container');
-                    const newPagination = doc.querySelector('.pagination-container');
-
-                    if (newTableContainer && tableContainer) {
-                        tableContainer.replaceWith(newTableContainer);
-                    }
-                    if (newPagination && paginationContainer) {
-                        paginationContainer.replaceWith(newPagination);
-                    } else if (newPagination && !paginationContainer && newTableContainer) {
-                        newTableContainer.after(newPagination);
-                    }
-
-                    // Actualizar el contador numérico de expedientes prestados
-                    const newCountBadge = doc.querySelector('.badge-notification');
-                    const currentCountBadge = document.querySelector('.badge-notification');
-                    if (newCountBadge && currentCountBadge) {
-                        currentCountBadge.textContent = newCountBadge.textContent;
-                    }
-
-                    // Sincronizar la URL del navegador sin recargar para preservar filtros
-                    if (window.history && window.history.replaceState) {
-                        window.history.replaceState({}, '', requestUrl.toString());
-                    }
-
-                    // Re-inicializar TableManager sobre la nueva tabla para ordenamiento de columnas
-                    const newTable = document.querySelector('.managed-table');
-                    if (newTable && typeof TableManager !== 'undefined') {
-                        new TableManager(newTable);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error al actualizar la tabla de archivo digital:', error);
-                    window.location.href = requestUrl.toString();
-                })
-                .finally(() => {
-                    const updatedContainer = document.querySelector('.table-container');
-                    if (updatedContainer) {
-                        updatedContainer.classList.remove('table-loading');
-                    }
-                });
-        }
-
-        // Manejador del filtro de expedientes prestados
-        function handleLoanedToggle(isChecked) {
-            refreshArchiveTable({show_loaned: isChecked ? 'true' : 'false', page: 1});
-        }
-
-        // Navegación de páginas para archivo digital
-        function navigateToArchivePage(pageNumber) {
-            const pageInput = document.getElementById('archivePageInput');
-            const totalPages = parseInt(pageInput?.dataset?.totalPages || '1', 10);
-            let targetPage = parseInt(pageNumber, 10);
-
-            if (isNaN(targetPage) || targetPage < 1) {
-                targetPage = 1;
-            } else if (targetPage > totalPages) {
-                targetPage = totalPages;
-            }
-
-            if (pageInput) {
-                pageInput.value = targetPage;
-            }
-
-            refreshArchiveTable({page: targetPage});
-        }
-
-        // Ejecución de búsqueda con actualización dinámica
-        function executeArchiveSearch(query) {
-            refreshArchiveTable({q: query, page: 1});
-        }
-
-        // Asignación de escuchadores de eventos
-        document.addEventListener('DOMContentLoaded', function () {
-            // Escuchador para el switch de expedientes prestados
-            const loanedSwitch = document.getElementById('toggleLoanedExpedients');
-            if (loanedSwitch) {
-                loanedSwitch.addEventListener('change', function () {
-                    handleLoanedToggle(this.checked);
-                });
-            }
-
-            // Escuchador con retardo (debounce) para el buscador
-            const searchInput = document.getElementById('table-search');
-            if (searchInput) {
-                let searchTimer = null;
-
-                searchInput.addEventListener('input', function () {
-                    clearTimeout(searchTimer);
-                    const query = this.value.trim();
-                    searchTimer = setTimeout(() => {
-                        executeArchiveSearch(query);
-                    }, 450);
-                });
-
-                searchInput.addEventListener('keydown', function (event) {
-                    if (event.key === 'Enter') {
-                        event.preventDefault();
-                        clearTimeout(searchTimer);
-                        executeArchiveSearch(this.value.trim());
-                    }
-                });
-            }
-        });
-
-        // Delegación de eventos para la paginación (botones y entrada numérica)
-        document.addEventListener('click', function (event) {
-            const pageButton = event.target.closest('.pagination-controls .page-btn');
-            if (!pageButton || pageButton.disabled) return;
-
-            event.preventDefault();
-            event.stopImmediatePropagation();
-
-            const targetPage = pageButton.dataset.page;
-            if (targetPage) {
-                navigateToArchivePage(targetPage);
-            }
-        }, true);
-
-        document.addEventListener('change', function (event) {
-            const target = event.target;
-            if (target && target.id === 'archivePageInput') {
-                navigateToArchivePage(target.value);
-            }
-        });
-
-        document.addEventListener('keydown', function (event) {
-            const target = event.target;
-            if (target && target.id === 'archivePageInput' && event.key === 'Enter') {
-                event.preventDefault();
-                navigateToArchivePage(target.value);
-            }
-        });
-
-        // Sobrescribir funciones globales para retrocompatibilidad total y evitar duplicación de plantilla
-        window.toggleLoanedExpedients = handleLoanedToggle;
-        window.goToArchivePage = navigateToArchivePage;
-        window.refreshCurrentTable = refreshArchiveTable;
-    </script>
+    <script src="{% static 'js/employee_archive.js' %}"></script>
 {% endblock %}
