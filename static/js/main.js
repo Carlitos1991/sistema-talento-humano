@@ -281,8 +281,14 @@ window.openAjaxModal = function (url, callback = null) {
                                     url: ajaxUrl,
                                     dataType: 'json',
                                     delay: 250,
-                                    data: params => ({q: params.term || ''}),
-                                    processResults: data => ({results: data.results || []}),
+                                    data: params => ({
+                                        q: params.term || '',
+                                        page: params.page || 1
+                                    }),
+                                    processResults: data => ({
+                                        results: data.results || [],
+                                        pagination: data.pagination || {more: false}
+                                    }),
                                     cache: true
                                 };
                             }

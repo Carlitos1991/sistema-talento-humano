@@ -661,7 +661,12 @@ class EmployeeSearchJsonView(LoginRequiredMixin, View):
     """Buscador asíncrono de funcionarios para componentes Select2."""
 
     def get(self, request):
-        term = request.GET.get('term', '').strip()
+        term = (request.GET.get('q') or request.GET.get('term') or '').strip()
+        try:
+            page = max(int(request.GET.get('page', 1) or 1), 1)
+        except (TypeError, ValueError):
+            page = 1
+        page_size = 20
         qs = Employee.objects.filter(is_active=True).select_related('person')
 
         if term:
@@ -671,12 +676,23 @@ class EmployeeSearchJsonView(LoginRequiredMixin, View):
                 Q(person__document_number__icontains=term)
             )
 
+        start = (page - 1) * page_size
+        employees = qs.order_by(
+            'person__last_name',
+            'person__first_name',
+            'pk'
+        )[start:start + page_size + 1]
+        has_more = len(employees) > page_size
+        employees = employees[:page_size]
         results = [
             {'id': str(emp.id),
              'text': f"{emp.person.last_name} {emp.person.first_name} ({emp.person.document_number})"}
-            for emp in qs[:20]
+            for emp in employees
         ]
-        return JsonResponse({'results': results})
+        return JsonResponse({
+            'results': results,
+            'pagination': {'more': has_more}
+        })
 
 
 def api_get_administrative_children(request):
