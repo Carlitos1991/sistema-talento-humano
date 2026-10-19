@@ -1,0 +1,79 @@
+<div class="modal-overlay hidden" id="auditModal">
+    <div class="modal-container-large">
+        <div class="modal-header">
+            <div class="header-content-group">
+                <div class="header-icon-circle">
+                    <i class="fas fa-shield-halved"></i>
+                </div>
+                <h3 class="header-title">
+                    Auditoría del Archivo Digital - {{ employee.person.name_and_last_name }}
+                </h3>
+            </div>
+            <button type="button" class="btn-close-circle" onclick="closeModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div class="modal-body-custom">
+            <!-- Barra informativa -->
+            <div class="form-section-card py-2 px-3 mb-3 d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="small text-muted d-block">Expediente Asociado</span>
+                    <span class="badge badge-gray font-monospace">{{ expediente_number }}</span>
+                </div>
+                <div class="text-right">
+                    <span class="small text-muted d-block">Últimos Eventos Registrados</span>
+                    <span class="badge badge-emerald-solid">{{ access_logs|length }}</span>
+                </div>
+            </div>
+
+            <!-- Tabla de Auditoría -->
+            <div class="table-container" style="min-height: 280px; max-height: 400px;">
+                <table class="managed-table exportable-table" data-page-size="10" data-title="Auditoría Archivo Digital">
+                    <thead>
+                    <tr>
+                        <th class="width-16">Fecha y Hora</th>
+                        <th class="width-20">Usuario</th>
+                        <th class="width-20">Tipo Documental</th>
+                        <th class="width-24">Referencia</th>
+                        <th class="width-10 text-center">Acción</th>
+                        <th class="width-10 text-center">Dirección IP</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for log in access_logs %}
+                        <tr>
+                            <td class="font-monospace small">{{ log.created_at|date:'d/m/Y H:i:s' }}</td>
+                            <td>
+                                <strong>{{ log.user.get_full_name|default:log.user.username }}</strong>
+                            </td>
+                            <td>{{ log.document_type_label }}</td>
+                            <td class="small text-muted">{{ log.reference_label }}</td>
+                            <td class="text-center">
+                                {% if log.action == 'VIEW_EMPLOYEE_ARCHIVE' %}
+                                    <span class="badge badge-blue">Consulta</span>
+                                {% elif log.action == 'VIEW_PDF' %}
+                                    <span class="badge badge-teal">Ver PDF</span>
+                                {% elif log.action == 'UPLOAD_PDF' %}
+                                    <span class="badge badge-green">Subida</span>
+                                {% else %}
+                                    <span class="badge badge-gray">{{ log.get_action_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center font-monospace small">
+                                {{ log.ip_address|default:'-' }}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <!-- TableManager maneja el mensaje vacío -->
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button type="button" class="btn-secondary-outline" onclick="closeModal()">Cerrar</button>
+        </div>
+    </div>
+</div>

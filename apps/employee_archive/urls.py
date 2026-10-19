@@ -27,4 +27,10 @@ urlpatterns = [
     path('document-types/create/', views.EmployeeDocumentTypeCreateView.as_view(), name='archive_type_create'),
     path('document-types/<int:pk>/update/', views.EmployeeDocumentTypeUpdateView.as_view(), name='archive_type_update'),
     path('employees/<int:employee_id>/loan/manual/modal/', views.loan_manual_modal, name='loan_manual_modal'),
+    path('loans/<int:loan_id>/return/modal/', views.loan_return_modal, name='loan_return_modal'),
+    path('employees/<int:employee_id>/loan-history/modal/', views.employee_loan_history_modal,
+         name='employee_loan_history_modal'),
+    path('employees/<int:employee_id>/audit/modal/', views.employee_audit_modal, name='employee_audit_modal'),
+    path('documents/<int:archive_id>/upload/modal/', views.upload_version_modal, name='version_upload_modal'),
+    path('scan-tasks/<int:task_id>/upload/modal/', views.upload_version_modal, name='scan_task_upload_modal'),
 ]

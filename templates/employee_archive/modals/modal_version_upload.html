@@ -1,0 +1,51 @@
+<div class="modal-overlay hidden" id="archiveVersionUploadModal">
+    <div class="modal-container-medium">
+        <form method="post" enctype="multipart/form-data" action="{{ action_url }}">
+            {% csrf_token %}
+            <div class="modal-header">
+                <div class="header-content-group">
+                    <div class="header-icon-circle">
+                        <i class="fas fa-upload"></i>
+                    </div>
+                    <h3 class="header-title">Subir Archivo PDF - {{ target_name }}</h3>
+                </div>
+                <button type="button" class="btn-close-circle" onclick="closeModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="modal-body-custom">
+                <div class="form-section-card">
+                    <div class="form-group mb-3">
+                        <label class="form-label" for="id_file">Archivo PDF <span class="text-red">*</span></label>
+                        <input type="file" id="id_file" name="file" accept=".pdf" class="form-control" required>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6 form-group">
+                            <label class="form-label" for="id_issue_date">Fecha de Emisión</label>
+                            <input type="date" id="id_issue_date" name="issue_date" class="form-control">
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label class="form-label" for="id_expiration_date">Fecha de Caducidad</label>
+                            <input type="date" id="id_expiration_date" name="expiration_date" class="form-control">
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-0">
+                        <label class="form-label" for="id_observations">Observaciones</label>
+                        <textarea id="id_observations" name="observations" class="form-control" rows="3"
+                                  placeholder="Observaciones de la versión..."></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary-outline" onclick="closeModal()">Cancelar</button>
+                <button type="submit" class="btn-dark-blue-rectangle">
+                    <i class="fas fa-save me-1"></i> Subir PDF
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

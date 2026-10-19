@@ -1,0 +1,63 @@
+<div class="modal-overlay hidden" id="loanReturnModal">
+    <div class="modal-container-medium">
+        <form method="post" action="{% url 'employee_archive:loan_return_modal' loan.id %}" onsubmit="submitAjaxForm(event)">
+            {% csrf_token %}
+            <div class="modal-header">
+                <div class="header-content-group">
+                    <div class="header-icon-circle">
+                        <i class="fa-solid fa-clipboard-check"></i>
+                    </div>
+                    <h3 class="header-title">
+                        {% if is_validator %}Validar Devolución Física{% else %}Reportar Devolución{% endif %}
+                    </h3>
+                </div>
+                <button type="button" class="btn-close-circle" onclick="closeModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="modal-body-custom">
+                <div class="form-section-card mb-3">
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <span class="label-muted">Empleado Titular</span>
+                            <span class="value-bold mb-1">{{ loan.employee.person.name_and_last_name }}</span>
+                        </div>
+                        <div class="col-md-6">
+                            <span class="label-muted">Nro. Expediente</span>
+                            <span class="badge badge-gray font-monospace">{{ loan.expediente_number }}</span>
+                        </div>
+                        <div class="col-md-6">
+                            <span class="label-muted">Prestado a</span>
+                            <span class="fw-bold text-dark">{{ loan.borrower_user.get_full_name|default:loan.borrower_user.username }}</span>
+                        </div>
+                        <div class="col-md-6">
+                            <span class="label-muted">Fecha de Entrega</span>
+                            <span class="text-muted small">{{ loan.delivered_at|date:'d/m/Y H:i'|default:'-' }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section-card">
+                    <div class="form-group mb-0">
+                        <label class="form-label" for="id_observation">
+                            {% if is_validator %}Observación de Validación Física{% else %}Observación de Devolución{% endif %}
+                        </label>
+                        {% if is_validator %}
+                            <textarea id="id_validation_observation" name="validation_observation" class="form-control" rows="3" placeholder="Verificación del estado físico del expediente..."></textarea>
+                        {% else %}
+                            <textarea id="id_return_observation" name="return_observation" class="form-control" rows="3" placeholder="Detalle de entrega o devolución..."></textarea>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary-outline" onclick="closeModal()">Cancelar</button>
+                <button type="submit" class="btn-dark-blue-rectangle">
+                    <i class="fas fa-check-circle me-1"></i> {% if is_validator %}Validar Devolución{% else %}Confirmar Entrega{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

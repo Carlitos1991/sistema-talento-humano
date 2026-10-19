@@ -53,7 +53,7 @@
                                 </button>
                             {% endif %}
 
-                            <!-- 2. Prestar expediente -->
+                            <!-- 2. Prestar expediente (Modal con selector de funcionarios de Talento Humano) -->
                             {% if perms.employee_archive.can_create_archive_manual_loan or perms.employee_archive.change_employeearchivedocument or perms.employee_archive.add_employeearchivedocument %}
                                 {% if not employee.physical_holder_full_name or employee.request_status_label == 'Sin solicitar' or not employee.request_status_label %}
                                     <button type="button" class="btn-green-circle"
@@ -73,26 +73,26 @@
                                 </button>
                             {% endif %}
 
-                            <!-- 4. Validar devolución -->
+                            <!-- 4. Devolver / Validar devolución física -->
                             {% if employee.validate_loan_id and employee.physical_holder_full_name or perms.employee_archive.change_employeearchivedocument and employee.physical_holder_full_name %}
                                 <button type="button" class="btn-red-circle"
-                                        title="Validar devolución"
-                                        onclick="openAjaxModal('{% url 'employee_archive:loan_return_validate' employee.validate_loan_id %}')">
+                                        title="Validar / Devolver archivo"
+                                        onclick="openAjaxModal('{% url 'employee_archive:loan_return_modal' employee.validate_loan_id %}')">
                                     <i class="fa-solid fa-clipboard-check"></i>
                                 </button>
                             {% endif %}
 
-                            <!-- 5. Bitácora de Préstamos -->
+                            <!-- 5. Bitácora de Préstamos (Modal AJAX directo) -->
                             <button type="button" class="btn-blue-circle"
                                     title="Bitácora de Préstamos"
-                                    onclick="openEmployeeLoanHistoryModal('{% url 'employee_archive:employee_detail' employee.id %}', '{{ employee.person.name_and_last_name|escapejs }}')">
+                                    onclick="openAjaxModal('{% url 'employee_archive:employee_loan_history_modal' employee.id %}')">
                                 <i class="fas fa-clock-rotate-left"></i>
                             </button>
 
-                            <!-- 6. Auditoría del archivo digital -->
+                            <!-- 6. Auditoría del archivo digital (Modal AJAX directo) -->
                             <button type="button" class="btn-dark-blue-circle"
                                     title="Auditoría del archivo digital"
-                                    onclick="openEmployeeAuditModal('{% url 'employee_archive:employee_detail' employee.id %}', '{{ employee.person.name_and_last_name|escapejs }}')">
+                                    onclick="openAjaxModal('{% url 'employee_archive:employee_audit_modal' employee.id %}')">
                                 <i class="fas fa-shield-halved"></i>
                             </button>
 
@@ -144,6 +144,7 @@
             </div>
             <button type="button" class="page-btn page-next" title="Siguiente"
                     data-page="
+
                             {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages }}{% endif %}"
                     {% if not page_obj.has_next %}disabled{% endif %}>
                 <i class="fas fa-angle-right"></i>

@@ -1,0 +1,89 @@
+<div class="modal-overlay hidden" id="loanHistoryModal">
+    <div class="modal-container-large">
+        <div class="modal-header">
+            <div class="header-content-group">
+                <div class="header-icon-circle">
+                    <i class="fas fa-clock-rotate-left"></i>
+                </div>
+                <h3 class="header-title">
+                    Bitácora de Préstamos - {{ employee.person.name_and_last_name }}
+                </h3>
+            </div>
+            <button type="button" class="btn-close-circle" onclick="closeModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div class="modal-body-custom">
+            <!-- Resumen superior -->
+            <div class="form-section-card py-2 px-3 mb-3 d-flex justify-content-between align-items-center">
+                <div>
+                    <span class="small text-muted d-block">Número de Expediente Físico</span>
+                    <span class="badge badge-gray font-monospace">{{ expediente_number }}</span>
+                </div>
+                <div class="text-right">
+                    <span class="small text-muted d-block">Total de Movimientos</span>
+                    <span class="badge badge-blue">{{ loans|length }}</span>
+                </div>
+            </div>
+
+            <!-- Tabla de bitácora -->
+            <div class="table-container" style="min-height: 260px; max-height: 380px;">
+                <table class="managed-table exportable-table" data-page-size="8" data-title="Bitácora de Préstamos">
+                    <thead>
+                    <tr>
+                        <th class="width-15">Fecha Solicitud</th>
+                        <th class="width-20">Funcionario Receptor</th>
+                        <th class="width-15 text-center">Estado</th>
+                        <th class="width-20">Observaciones</th>
+                        <th class="width-15 text-center">Fecha Devolución</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for loan in loans %}
+                        <tr>
+                            <td>{{ loan.requested_at|date:'d/m/Y H:i' }}</td>
+                            <td>
+                                <strong>{{ loan.borrower_user.get_full_name|default:loan.borrower_user.username }}</strong>
+                            </td>
+                            <td class="text-center">
+                                {% if loan.status == 'REQUESTED' %}
+                                    <span class="badge badge-blue">Solicitado</span>
+                                {% elif loan.status == 'ON_LOAN' %}
+                                    <span class="badge badge-amber"><i class="fa-solid fa-hand-holding-hand me-1"></i> En Préstamo</span>
+                                {% elif loan.status == 'RETURN_REPORTED' %}
+                                    <span class="badge badge-yellow"><i class="fa-solid fa-clock-rotate-left me-1"></i> Dev. Reportada</span>
+                                {% elif loan.status == 'RETURN_VALIDATED' %}
+                                    <span class="badge badge-green"><i class="fa-solid fa-box-archive me-1"></i> Devuelto</span>
+                                {% else %}
+                                    <span class="badge badge-gray">{{ loan.get_status_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="small">
+                                {% if loan.delivery_observation %}
+                                    <div><strong>Entrega:</strong> {{ loan.delivery_observation }}</div>
+                                {% endif %}
+                                {% if loan.validation_observation %}
+                                    <div><strong>Validación:</strong> {{ loan.validation_observation }}</div>
+                                {% endif %}
+                                {% if not loan.delivery_observation and not loan.validation_observation %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center small">
+                                {{ loan.returned_at|date:'d/m/Y H:i'|default:'-' }}
+                            </td>
+                        </tr>
+                    {% empty %}
+                        <!-- TableManager maneja el mensaje vacío -->
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button type="button" class="btn-secondary-outline" onclick="closeModal()">Cerrar</button>
+        </div>
+    </div>
+</div>

@@ -981,3 +981,158 @@ def loan_manual_modal(request, employee_id):
         'expediente_number': _expediente_number(employee),
     }, request=request)
     return JsonResponse({'html': html})
+
+
+# --------------------------------------------------------------------------
+# MODALES AJAX ESTANDARIZADOS: DEVOLUCIÓN, BITÁCORA Y AUDITORÍA
+# --------------------------------------------------------------------------
+
+@login_required
+def loan_return_modal(request, loan_id):
+    """
+    Modal AJAX unificado para Devolución / Validación de entrega física.
+    """
+    loan = get_object_or_404(
+        EmployeeArchiveLoan.objects.select_related('employee', 'employee__person', 'borrower_user'),
+        pk=loan_id,
+        is_active=True
+    )
+
+    if request.method == 'POST':
+        # Si tiene permisos de validar o administrar archivo, finaliza la devolución
+        if _can_validate_archive_return(request.user):
+            form = ArchiveLoanReturnValidationForm(request.POST)
+            if form.is_valid():
+                loan.status = EmployeeArchiveLoan.Status.RETURN_VALIDATED
+                loan.returned_at = timezone.now()
+                loan.validation_observation = form.cleaned_data.get('validation_observation', '')
+                loan.updated_by = request.user
+                loan.save()
+
+                _log_loan_action(loan, 'RETURN_VALIDATED', request.user, _client_ip(request),
+                                 loan.validation_observation)
+                _create_notification(
+                    recipient=loan.borrower_user,
+                    title='Devolución validada',
+                    message=f'Se validó la devolución del expediente {loan.expediente_number}.',
+                    url=reverse('employee_archive:employee_detail', kwargs={'employee_id': loan.employee_id}),
+                )
+                return JsonResponse({'status': 'success',
+                                     'message': f'Devolución del expediente {loan.expediente_number} validada con éxito.'})
+            return JsonResponse({'status': 'error', 'message': 'Formulario inválido.', 'errors': form.errors},
+                                status=400)
+        else:
+            # Funcionario que solo reporta que ya entregó
+            form = ArchiveLoanReturnReportForm(request.POST)
+            if form.is_valid():
+                loan.status = EmployeeArchiveLoan.Status.RETURN_REPORTED
+                loan.return_reported_at = timezone.now()
+                loan.return_observation = form.cleaned_data.get('return_observation', '')
+                loan.updated_by = request.user
+                loan.save()
+
+                _log_loan_action(loan, 'RETURN_REPORTED', request.user, _client_ip(request), loan.return_observation)
+                for archive_user in _archive_staff_users():
+                    _create_notification(
+                        recipient=archive_user,
+                        title='Devolución reportada',
+                        message=f'Se reportó devolución del expediente {loan.expediente_number}. Valide la entrega física.',
+                        url=reverse('employee_archive:employee_detail', kwargs={'employee_id': loan.employee_id}),
+                    )
+                return JsonResponse({'status': 'success', 'message': 'Devolución reportada correctamente.'})
+            return JsonResponse({'status': 'error', 'message': 'Formulario inválido.', 'errors': form.errors},
+                                status=400)
+
+    from django.template.loader import render_to_string
+    is_validator = _can_validate_archive_return(request.user)
+    form = ArchiveLoanReturnValidationForm() if is_validator else ArchiveLoanReturnReportForm()
+
+    html = render_to_string('employee_archive/modals/modal_loan_return.html', {
+        'loan': loan,
+        'form': form,
+        'is_validator': is_validator
+    }, request=request)
+    return JsonResponse({'html': html})
+
+
+@login_required
+def employee_loan_history_modal(request, employee_id):
+    """
+    Modal AJAX: Bitácora de Préstamos del empleado.
+    """
+    employee = get_object_or_404(
+        Employee.objects.select_related('person', 'institutional_data'),
+        pk=employee_id
+    )
+    loans = EmployeeArchiveLoan.objects.filter(employee=employee).select_related(
+        'borrower_user', 'requested_by', 'delivered_by'
+    ).order_by('-requested_at')
+
+    from django.template.loader import render_to_string
+    html = render_to_string('employee_archive/modals/modal_loan_history.html', {
+        'employee': employee,
+        'loans': loans,
+        'expediente_number': _expediente_number(employee)
+    }, request=request)
+    return JsonResponse({'html': html})
+
+
+@login_required
+def employee_audit_modal(request, employee_id):
+    """
+    Modal AJAX: Auditoría de Acciones y Trazas del archivo digital.
+    """
+    employee = get_object_or_404(
+        Employee.objects.select_related('person', 'institutional_data'),
+        pk=employee_id
+    )
+    access_logs = EmployeeArchiveAccessLog.objects.filter(employee=employee).select_related(
+        'user', 'archive_document__document_type', 'version'
+    ).order_by('-created_at')[:50]
+
+    expediente_reference = _expediente_number(employee)
+    for log in access_logs:
+        document_type = getattr(getattr(log.archive_document, 'document_type', None), 'name', None)
+        log.document_type_label = document_type or 'General'
+        reference_parts = [f'Exp. {expediente_reference}']
+        if document_type:
+            reference_parts.append(document_type)
+        if log.version_id:
+            reference_parts.append(f'v{log.version.version_number}')
+            file_name = (log.version.file.name.rsplit('/', 1)[-1] if log.version and log.version.file else '')
+            if file_name:
+                reference_parts.append(file_name)
+        log.reference_label = ' · '.join(reference_parts)
+
+    from django.template.loader import render_to_string
+    html = render_to_string('employee_archive/modals/modal_audit.html', {
+        'employee': employee,
+        'access_logs': access_logs,
+        'expediente_number': expediente_reference
+    }, request=request)
+    return JsonResponse({'html': html})
+
+@login_required
+@permission_required('employee_archive.add_employeearchiveversion', raise_exception=True)
+def upload_version_modal(request, archive_id=None, task_id=None):
+    """
+    Modal AJAX unificado para subir PDF tanto a un documento como a una tarea de digitalización.
+    """
+    target_name = "Documento"
+    action_url = ""
+
+    if archive_id:
+        archive = get_object_or_404(EmployeeArchiveDocument.objects.select_related('document_type'), pk=archive_id, is_active=True)
+        target_name = archive.document_type.name
+        action_url = reverse('employee_archive:version_upload', kwargs={'archive_id': archive.id})
+    elif task_id:
+        task = get_object_or_404(EmployeeArchiveScanTask, pk=task_id, is_active=True)
+        target_name = task.title
+        action_url = reverse('employee_archive:scan_task_upload', kwargs={'task_id': task.id})
+
+    from django.template.loader import render_to_string
+    html = render_to_string('employee_archive/modals/modal_version_upload.html', {
+        'target_name': target_name,
+        'action_url': action_url,
+    }, request=request)
+    return JsonResponse({'html': html})
