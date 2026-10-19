@@ -247,9 +247,18 @@ class AssignBossForm(BaseFormMixin, forms.ModelForm):
     evitando la carga en memoria de miles de registros de empleados.
     """
 
+    keep_previous_assignment = forms.BooleanField(
+        required=False,
+        label='Mantener como jefe de otras unidades',
+        help_text='Actívelo solo en casos excepcionales en los que la persona dirigirá más de una dependencia.',
+        widget=forms.CheckboxInput(attrs={
+            'class': 'form-check-input',
+        })
+    )
+
     class Meta:
         model = AdministrativeUnit
-        fields = ['boss']
+        fields = ['boss', 'keep_previous_assignment']
         widgets = {
             'boss': forms.Select(attrs={
                 'class': 'form-control select2',

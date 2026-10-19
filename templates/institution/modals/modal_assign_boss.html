@@ -1,10 +1,10 @@
 <div class="modal-overlay hidden" id="modalAssignBoss">
     <div class="modal-container-medium">
         <!-- FORMULARIO CON CALLBACK DE RECARGA AUTOMÁTICA -->
-        <form action="{{ request.path }}" 
+        <form action="{{ request.path }}"
               method="POST" 
               id="assignBossForm" 
-              onsubmit="submitAjaxForm(event, () => location.reload())">
+              onsubmit="submitAjaxForm(event, reloadInstitutionPageAtPosition)">
             {% csrf_token %}
 
             <!-- HEADER -->
@@ -29,6 +29,14 @@
                         {% if form.boss.errors %}
                             <div class="text-error small mt-1">{{ form.boss.errors.0 }}</div>
                         {% endif %}
+                    </div>
+
+                    <div class="form-check mt-3">
+                        {{ form.keep_previous_assignment }}
+                        <label class="form-check-label" for="{{ form.keep_previous_assignment.id_for_label }}">
+                            {{ form.keep_previous_assignment.label }}
+                        </label>
+                        <div class="form-text">{{ form.keep_previous_assignment.help_text }}</div>
                     </div>
                 </div>
             </div>

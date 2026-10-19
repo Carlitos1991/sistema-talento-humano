@@ -8,6 +8,22 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
+    const returnPositionKey = 'institution-return-position';
+    const savedPosition = sessionStorage.getItem(returnPositionKey);
+    if (savedPosition) {
+        try {
+            const position = JSON.parse(savedPosition);
+            if (position.url === window.location.href) {
+                sessionStorage.removeItem(returnPositionKey);
+                window.requestAnimationFrame(() => {
+                    window.scrollTo(position.x || 0, position.y || 0);
+                });
+            }
+        } catch (error) {
+            sessionStorage.removeItem(returnPositionKey);
+            console.error('No se pudo restaurar la posición de la página:', error);
+        }
+    }
 
     // =========================================================================
     // 1. STAT CARDS & FILTRADO DE NIVELES (VISTA GENERAL)
@@ -17,6 +33,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const levelId = card.id.replace('card-filter-', '');
         levelCards[levelId] = card;
     });
+
+    window.reloadInstitutionPageAtPosition = function () {
+        sessionStorage.setItem('institution-return-position', JSON.stringify({
+            url: window.location.href,
+            x: window.scrollX,
+            y: window.scrollY
+        }));
+        window.location.reload();
+    };
 
     window.filterByLevel = function (levelId, clickedCard = null) {
         Object.values(levelCards).forEach(card => {

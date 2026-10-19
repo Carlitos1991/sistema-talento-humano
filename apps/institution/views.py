@@ -385,12 +385,21 @@ class UnitAssignBossView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView
 
         if form.is_valid():
             selected_boss = form.cleaned_data.get('boss')
-            reassigned_from = _get_reassigned_unit_names_for_boss(selected_boss, exclude_unit_id=self.object.id)
+            keep_previous_assignment = form.cleaned_data.get('keep_previous_assignment', False)
+            reassigned_from = []
+            if not keep_previous_assignment:
+                reassigned_from = _get_reassigned_unit_names_for_boss(
+                    selected_boss,
+                    exclude_unit_id=self.object.id
+                )
 
-            unit = form.save()
+            unit = form.save(commit=False)
+            unit.save(allow_multiple_boss_units=keep_previous_assignment)
             message = f'Jefe asignado correctamente a {unit.name}.'
             if reassigned_from:
                 message += f" Reasignado automáticamente desde: {', '.join(reassigned_from)}."
+            elif keep_previous_assignment and selected_boss:
+                message += ' Se mantuvieron sus asignaciones anteriores.'
 
             return JsonResponse({'success': True, 'message': message})
         return JsonResponse({'success': False, 'errors': form.errors}, status=400)

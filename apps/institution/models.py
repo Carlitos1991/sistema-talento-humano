@@ -169,10 +169,11 @@ class AdministrativeUnit(BaseModel):
     def save(self, *args, **kwargs):
         """
         Regla de negocio garantizada:
-        1. Un funcionario solo puede ser jefe titular de UNA unidad a la vez.
-        2. Si se asigna un jefe que ya lideraba otra unidad, se libera la asignación previa.
+        1. Por defecto, un funcionario solo puede ser jefe titular de UNA unidad.
+        2. Una asignación explícita puede conservar sus jefaturas anteriores.
         3. El flag `Employee.is_boss` se actualiza atómicamente de forma consistente.
         """
+        allow_multiple_boss_units = kwargs.pop('allow_multiple_boss_units', False)
         previous_boss_id = None
         if self.pk:
             previous_boss_id = AdministrativeUnit.objects.filter(pk=self.pk).values_list('boss_id', flat=True).first()
@@ -184,8 +185,11 @@ class AdministrativeUnit(BaseModel):
 
             # 1. Si se asignó un jefe a esta unidad:
             if self.boss_id:
-                # Quitarlo de cualquier otra unidad donde figuraba como jefe
-                AdministrativeUnit.objects.filter(boss_id=self.boss_id).exclude(pk=self.pk).update(boss=None)
+                if not allow_multiple_boss_units:
+                    # El comportamiento normal transfiere la jefatura a la nueva unidad.
+                    AdministrativeUnit.objects.filter(
+                        boss_id=self.boss_id
+                    ).exclude(pk=self.pk).update(boss=None)
 
                 # Asegurar que el empleado esté marcado como jefe
                 Employee.objects.filter(pk=self.boss_id).update(is_boss=True)
