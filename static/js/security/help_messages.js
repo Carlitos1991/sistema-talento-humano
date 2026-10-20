@@ -20,6 +20,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const openModal = (modal) => {
         if (!modal) return;
         modal.classList.remove('hidden');
+        document.documentElement.classList.add('no-scroll');
+        document.body.classList.add('no-scroll');
+    };
+
+    const initializeRecipientSelect = (modal) => {
+        if (!modal || !window.$ || !window.$.fn || !window.$.fn.select2) return;
+
+        window.$(modal).find('select.select2-field').each(function () {
+            const select = window.$(this);
+            if (select.hasClass('select2-hidden-accessible')) {
+                select.select2('destroy');
+            }
+            select.select2({
+                width: '100%',
+                dropdownParent: window.$(modal).find('.modal-body-custom').length
+                    ? window.$(modal).find('.modal-body-custom')
+                    : window.$(modal),
+                placeholder: 'Selecciona una persona',
+                allowClear: true
+            });
+        });
     };
 
     const syncUnreadBadge = (remaining) => {
@@ -90,6 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.helpMessagesActions = {
         openCreate() {
             openModal(createModal);
+            initializeRecipientSelect(createModal);
         },
         openDetail(button) {
             const detailSubject = document.getElementById('detailMessageSubject');
@@ -197,6 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 sumillaForm.action = button.dataset.sumillaUrl || sumillaForm.action;
             }
             openModal(sumillaModal);
+            initializeRecipientSelect(sumillaModal);
         },
         openClose(button) {
             const closeOriginalId = document.getElementById('closeOriginalMessageId');
@@ -219,6 +242,8 @@ document.addEventListener('DOMContentLoaded', () => {
             closeModal(replyModal);
             closeModal(sumillaModal);
             closeModal(closeModalEl);
+            document.documentElement.classList.remove('no-scroll');
+            document.body.classList.remove('no-scroll');
         }
     };
 
@@ -248,18 +273,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!modal) return;
         modal.addEventListener('click', (event) => {
             if (event.target === modal) {
-                closeModal(modal);
+                window.helpMessagesActions.closeAll();
             }
         });
     });
 
-    if (window.$ && window.$.fn && window.$.fn.select2) {
-        const sumillaRecipient = window.$('#id_help_sumilla_recipient');
-        if (sumillaRecipient.length) {
-            sumillaRecipient.select2({
-                width: '100%',
-                dropdownParent: window.$('#helpMessageSumillaModal')
-            });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            window.helpMessagesActions.closeAll();
         }
-    }
+    });
+
 });

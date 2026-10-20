@@ -23,38 +23,65 @@
         </div>
     </div>
 
-    <!-- Filtros de Estado tipo Badge / Botones -->
-    <div class="d-flex align-items-center gap-2 mb-3">
-        <a href="?status=" class="btn-filter-pill {% if not current_status %}active{% endif %}">
-            Todas ({{ requests_list|length }})
+    <!-- Estadísticas y filtros por estado -->
+    <div class="stats-row schedule-status-stats" aria-label="Filtrar novedades por estado">
+        <a href="?status=" class="stat-card color-one {% if current_status %}opacity-low{% endif %}">
+            <div class="stat-left">
+                <h3>Total</h3>
+                <div class="number">{{ count_total }}</div>
+            </div>
+            <i class="fa-solid fa-layer-group stat-icon" aria-hidden="true"></i>
         </a>
-        <a href="?status=PENDING" class="btn-filter-pill {% if current_status == 'PENDING' %}active{% endif %}">
-            Pendientes ({{ count_pending }})
+        <a href="?status=PENDING" class="stat-card color-two {% if current_status != 'PENDING' %}opacity-low{% endif %}">
+            <div class="stat-left">
+                <h3>Pendientes</h3>
+                <div class="number">{{ count_pending }}</div>
+            </div>
+            <i class="fa-solid fa-clock stat-icon" aria-hidden="true"></i>
         </a>
-        <a href="?status=RESOLVED" class="btn-filter-pill {% if current_status == 'RESOLVED' %}active{% endif %}">
-            Resueltas ({{ count_resolved }})
+        <a href="?status=RESOLVED" class="stat-card color-three {% if current_status != 'RESOLVED' %}opacity-low{% endif %}">
+            <div class="stat-left">
+                <h3>Resueltas</h3>
+                <div class="number">{{ count_resolved }}</div>
+            </div>
+            <i class="fa-solid fa-circle-check stat-icon" aria-hidden="true"></i>
         </a>
-        <a href="?status=REJECTED" class="btn-filter-pill {% if current_status == 'REJECTED' %}active{% endif %}">
-            Desestimadas ({{ count_rejected }})
+        <a href="?status=REJECTED" class="stat-card color-four {% if current_status != 'REJECTED' %}opacity-low{% endif %}">
+            <div class="stat-left">
+                <h3>Desestimadas</h3>
+                <div class="number">{{ count_rejected }}</div>
+            </div>
+            <i class="fa-solid fa-circle-xmark stat-icon" aria-hidden="true"></i>
         </a>
     </div>
 
     <!-- Tabla al estilo managed-table de partial_schedule_plan_list.html -->
-    <div class="table-container">
-        <table class="managed-table" data-title="Novedades Cronograma {{ plan.year }}">
-            <thead>
-            <tr>
-                <th class="width-15">Tipo de Novedad</th>
-                <th class="width-25">Funcionario Afectado</th>
-                <th class="width-20">Dependencia Solicitante</th>
-                <th class="width-25">Motivo / Mensaje</th>
-                <th class="width-10 center">Estado</th>
-                <th class="width-15 no-sort text-center actions"><i class="fas fa-cogs"></i> Acciones</th>
-            </tr>
-            </thead>
-            <tbody id="table-body">
-            {% if requests_list %}
-                {% for req in requests_list %}
+    <div class="content-table">
+        <div class="table-controls toolbar-row">
+            <div class="toolbar-center"></div>
+            <div class="toolbar-right">
+                <span class="text-muted small">
+                    <i class="fa-solid fa-file-export me-1"></i> Exportar reporte
+                </span>
+            </div>
+        </div>
+        <div class="table-container">
+            <table class="managed-table exportable-table"
+                   data-title="Novedades y Solicitudes de Personal - {{ plan.title }} ({{ plan.year }})"
+                   data-filename="Novedades_Cronograma_{{ plan.year }}">
+                <thead>
+                <tr>
+                    <th class="width-15">Tipo de Novedad</th>
+                    <th class="width-25">Funcionario Afectado</th>
+                    <th class="width-20">Dependencia Solicitante</th>
+                    <th class="width-25">Motivo / Mensaje</th>
+                    <th class="width-10 center">Estado</th>
+                    <th class="width-15 no-sort text-center actions"><i class="fas fa-cogs"></i> Acciones</th>
+                </tr>
+                </thead>
+                <tbody id="table-body">
+                {% if requests_list %}
+                    {% for req in requests_list %}
                     <tr>
                         <td>
                             {% if req.request_type == 'WRONG_UNIT' %}
@@ -115,20 +142,21 @@
                             </div>
                         </td>
                     </tr>
-                {% endfor %}
-            {% else %}
-                <tr>
-                    <td colspan="6" class="center">
-                        <div class="empty-state-container">
-                            <i class="fas fa-inbox empty-state-icon"></i>
-                            <div class="empty-state-text">No se encontraron novedades o solicitudes en este estado.
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="6" class="center">
+                            <div class="empty-state-container">
+                                <i class="fas fa-inbox empty-state-icon"></i>
+                                <div class="empty-state-text">No se encontraron novedades o solicitudes en este estado.
+                                </div>
                             </div>
-                        </div>
-                    </td>
-                </tr>
-            {% endif %}
-            </tbody>
-        </table>
+                        </td>
+                    </tr>
+                {% endif %}
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <!-- ============================================================== -->

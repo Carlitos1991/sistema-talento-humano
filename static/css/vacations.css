@@ -1168,26 +1168,118 @@
 }
 
 /* Filtros en píldora */
+.schedule-status-stats {
+    margin-bottom: 1.25rem;
+}
+
+.schedule-status-stats .stat-card {
+    flex-basis: calc(25% - 0.75rem);
+    min-width: 190px;
+    text-decoration: none;
+}
+
+.schedule-status-stats .stat-card:hover {
+    text-decoration: none;
+}
+
+.schedule-status-stats .stat-card:focus-visible {
+    outline: 3px solid rgba(37, 99, 235, 0.35);
+    outline-offset: 2px;
+}
+
+.schedule-status-filters {
+    flex-wrap: wrap;
+    padding: 0.35rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    background: #f8fafc;
+    width: fit-content;
+    max-width: 100%;
+}
+
 .btn-filter-pill {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 14px;
+    justify-content: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 8px 13px;
     background: #ffffff;
     border: 1px solid #cbd5e1;
     border-radius: 9999px;
-    font-size: 0.8rem;
-    font-weight: 600;
+    font-size: 0.82rem;
+    font-weight: 700;
     color: #475569;
     text-decoration: none;
-    transition: all 0.15s ease;
+    white-space: nowrap;
+    transition: color 0.18s ease, background-color 0.18s ease, border-color 0.18s ease,
+    box-shadow 0.18s ease, transform 0.18s ease;
 }
 
-.btn-filter-pill:hover,
+.btn-filter-pill:hover {
+    border-color: currentColor;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
+}
+
 .btn-filter-pill.active {
-    background: #2563eb;
     color: #ffffff;
-    border-color: #2563eb;
+    box-shadow: 0 5px 12px rgba(15, 23, 42, 0.16);
+}
+
+.btn-filter-pill .filter-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 7px;
+    border-radius: 999px;
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 0.75rem;
+    line-height: 1;
+}
+
+.btn-filter-pill.active .filter-count {
+    background: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+}
+
+.btn-filter-pill.filter-all {
+    color: #1d4ed8;
+}
+
+.btn-filter-pill.filter-all.active {
+    background: #1d4ed8;
+    border-color: #1d4ed8;
+}
+
+.btn-filter-pill.filter-pending {
+    color: #b45309;
+}
+
+.btn-filter-pill.filter-pending.active {
+    background: #d97706;
+    border-color: #d97706;
+}
+
+.btn-filter-pill.filter-resolved {
+    color: #15803d;
+}
+
+.btn-filter-pill.filter-resolved.active {
+    background: #15803d;
+    border-color: #15803d;
+}
+
+.btn-filter-pill.filter-rejected {
+    color: #b91c1c;
+}
+
+.btn-filter-pill.filter-rejected.active {
+    background: #b91c1c;
+    border-color: #b91c1c;
 }
 
 .btn-filter-pill .indicator-dot {

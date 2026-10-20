@@ -107,6 +107,7 @@ TEMPLATES = [
                 'core.context_processors.employee_archive_notifications',
                 'core.context_processors.contract_notifications',
                 'security.context_processors.help_messages_notifications',
+                'vacation.context_processors.schedule_discrepancy_notifications',
                 'sanctions.context_processors.pending_assignments',
             ],
         },

@@ -3,6 +3,7 @@
 {% block title %}Ayuda | SIGETH{% endblock %}
 
 {% block content %}
+    <div class="help-messages-page">
     <div class="header-card">
         <div>
             <h1>Ayuda y Mensajería</h1>
@@ -45,7 +46,7 @@
     </div>
 
     <div class="content-table">
-        <div class="table-controls">
+        <div class="table-controls message-toolbar">
             <div class="message-tabs" role="tablist" aria-label="Filtro de conversaciones">
                 <a href="?tab=received{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"
                    class="message-tab {% if active_tab == 'received' %}is-active{% endif %}">
@@ -60,9 +61,10 @@
                     Atendidos
                 </a>
             </div>
-            <form method="get" class="search-box" style="min-width: 340px; width: 100%; max-width: 520px;">
+            <form method="get" class="toolbar-right message-search-form">
                 <input type="hidden" name="tab" value="{{ active_tab|default:'received' }}">
-                <input type="text" name="q" class="input-field" placeholder="Buscar por asunto, detalle o usuario"
+                <input type="text" name="q" class="table-search-input table-search-input--large"
+                       placeholder="Buscar por asunto, detalle o usuario"
                        value="{{ request.GET.q }}">
             </form>
         </div>
@@ -89,10 +91,157 @@
             </div>
         {% endif %}
     </div>
+    </div>
 {% endblock %}
 
 {% block extra_css %}
     <style>
+        .help-messages-page {
+            --message-primary: #0f3f8f;
+            --message-primary-dark: #0b2f6b;
+            --message-border: #dce5f1;
+            --message-muted: #64748b;
+        }
+
+        .help-messages-page .header-card {
+            background: linear-gradient(135deg, #0f3f8f 0%, #1769aa 100%);
+            color: #fff;
+            border: 0;
+            box-shadow: 0 14px 30px rgba(15, 63, 143, .16);
+        }
+
+        .help-messages-page .header-card p {
+            color: rgba(255, 255, 255, .82);
+        }
+
+        .help-messages-page .content-table {
+            border: 1px solid var(--message-border);
+            box-shadow: 0 12px 28px rgba(15, 23, 42, .06);
+        }
+
+        .help-messages-page .message-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: nowrap;
+            gap: 1rem;
+            padding: 1rem 1.25rem;
+            background: #f8fafc;
+            border-bottom: 1px solid var(--message-border);
+        }
+
+        .help-messages-page .message-tabs {
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+
+        .help-messages-page .message-search-form {
+            flex: 0 1 420px;
+            width: 420px;
+            max-width: 42%;
+            margin-left: auto;
+        }
+
+        .help-messages-page .message-search-form .table-search-input {
+            width: 100%;
+            min-height: 42px;
+            border-radius: 10px;
+        }
+
+        .help-messages-page .message-search-form .table-search-input:focus {
+            border-color: #315fc4;
+            box-shadow: 0 0 0 3px rgba(49, 95, 196, .12);
+            outline: none;
+        }
+
+        .help-messages-page .search-box {
+            margin-left: auto;
+        }
+
+        .help-messages-page .search-box .input-field {
+            min-height: 40px;
+            border-radius: 10px;
+        }
+
+        .help-message-modal .modal-container-medium {
+            border: 1px solid #dbe5f0;
+            border-radius: 18px;
+            box-shadow: 0 24px 70px rgba(15, 23, 42, .25);
+        }
+
+        .help-message-modal .modal-header-refined {
+            padding: 1.15rem 1.5rem;
+            background: linear-gradient(135deg, #f8fbff 0%, #eef5ff 100%);
+            border-bottom: 1px solid var(--message-border);
+        }
+
+        .help-message-modal .modal-body-scrolled {
+            padding: 1.25rem 1.5rem 1.5rem !important;
+            background: #f8fafc;
+        }
+
+        .help-message-modal .section-card-standard {
+            padding: 1.15rem;
+            border-color: var(--message-border);
+            border-radius: 14px;
+            box-shadow: 0 4px 12px rgba(15, 23, 42, .03);
+        }
+
+        .help-message-modal .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .help-message-modal .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .help-message-modal .input-field,
+        .help-message-modal .select2-container .select2-selection--single {
+            min-height: 42px;
+            border-radius: 9px;
+            border-color: #cbd5e1;
+        }
+
+        .help-message-modal textarea.input-field {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .help-message-modal .select2-container {
+            width: 100% !important;
+        }
+
+        .help-message-modal .select2-container--open {
+            z-index: 100000;
+        }
+
+        .help-message-modal .modal-footer-fixed {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--message-border);
+            background: #fff;
+        }
+
+        @media (max-width: 768px) {
+            .help-messages-page .message-toolbar {
+                align-items: stretch;
+                flex-direction: column;
+                flex-wrap: wrap;
+            }
+
+            .help-messages-page .message-search-form {
+                width: 100%;
+                max-width: none !important;
+                min-width: 0 !important;
+            }
+
+            .help-message-modal .modal-header-refined,
+            .help-message-modal .modal-body-scrolled,
+            .help-message-modal .modal-footer-fixed {
+                padding-left: 1rem !important;
+                padding-right: 1rem !important;
+            }
+        }
+
         .message-tabs {
             display: flex;
             align-items: center;

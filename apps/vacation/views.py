@@ -2906,6 +2906,7 @@ class ScheduleDiscrepancyManageListView(LoginRequiredMixin, PermissionRequiredMi
         context['current_status'] = self.request.GET.get('status', '')
 
         # Contadores rápidos
+        context['count_total'] = ScheduleDiscrepancyRequest.objects.filter(plan=plan).count()
         context['count_pending'] = ScheduleDiscrepancyRequest.objects.filter(plan=plan,
                                                                              status=ScheduleDiscrepancyRequest.Status.PENDING).count()
         context['count_resolved'] = ScheduleDiscrepancyRequest.objects.filter(plan=plan,

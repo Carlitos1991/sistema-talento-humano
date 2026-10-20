@@ -307,6 +307,7 @@ class HelpMessageForm(BaseFormMixin, forms.Form):
     recipient_person = forms.ModelChoiceField(
         queryset=Person.objects.none(),
         label='Dirigido a',
+        empty_label='Seleccione una persona',
         widget=forms.Select(attrs={'class': 'input-field select2-field', 'id': 'id_help_recipient'}),
         error_messages={'required': 'Debes seleccionar un destinatario.'}
     )
@@ -331,6 +332,7 @@ class HelpMessageForm(BaseFormMixin, forms.Form):
         super().__init__(*args, **kwargs)
         self.fields['recipient_person'].queryset = Person.objects.filter(
             user__isnull=False,
+            user__is_active=True,
             is_active=True
         ).select_related('user').order_by('last_name', 'first_name')
 
@@ -371,6 +373,7 @@ class HelpMessageSumillaForm(BaseFormMixin, forms.Form):
         super().__init__(*args, **kwargs)
         queryset = Person.objects.filter(
             user__isnull=False,
+            user__is_active=True,
             is_active=True
         ).select_related('user').order_by('last_name', 'first_name')
         if current_user:

@@ -1,50 +1,62 @@
 {% load static %}
-<div id="helpMessageCreateModal" class="modal-overlay hidden">
-    <div class="modal-container-medium shadow-card">
-        <button type="button" class="btn-close-circle js-close-modal" title="Cerrar">
-            <i class="fas fa-times"></i>
-        </button>
-
-        <div class="modal-header-refined">
-            <div class="header-content-group">
-                <div class="header-icon-circle" style="background:#0ea5e9;">
-                    <i class="fa-solid fa-paper-plane"></i>
-                </div>
-                <h2 class="header-title-main">Nuevo Mensaje</h2>
-            </div>
-        </div>
-
+<div id="helpMessageCreateModal" class="modal-overlay help-message-modal hidden">
+    <div class="modal-container-medium">
         <form method="post" action="{% url 'security:help_message_create' %}" enctype="multipart/form-data">
             {% csrf_token %}
-            <div class="modal-body-scrolled">
-                <div class="section-card-standard">
+            <div class="modal-header-medium">
+                <h3 class="header-title">
+                    <i class="fa-solid fa-paper-plane me-2"></i>
+                    <span>Nuevo Mensaje</span>
+                </h3>
+                <button type="button" class="btn-close-circle js-close-modal" title="Cerrar" aria-label="Cerrar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="modal-body-content modal-body-custom">
+                <div class="form-section-card">
                     <div class="form-group">
-                        <label class="form-label">Dirigido a</label>
+                        <label class="form-label" for="{{ create_form.recipient_person.id_for_label }}">
+                            Dirigido a <span class="text-danger">*</span>
+                        </label>
                         {{ create_form.recipient_person }}
-                        {{ create_form.recipient_person.errors }}
+                        {% if create_form.recipient_person.errors %}
+                            <div class="text-error small mt-1">{{ create_form.recipient_person.errors.0 }}</div>
+                        {% endif %}
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Asunto</label>
+                        <label class="form-label" for="{{ create_form.subject.id_for_label }}">
+                            Asunto <span class="text-danger">*</span>
+                        </label>
                         {{ create_form.subject }}
-                        {{ create_form.subject.errors }}
+                        {% if create_form.subject.errors %}
+                            <div class="text-error small mt-1">{{ create_form.subject.errors.0 }}</div>
+                        {% endif %}
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Detalle</label>
+                        <label class="form-label" for="{{ create_form.detail.id_for_label }}">
+                            Detalle <span class="text-danger">*</span>
+                        </label>
                         {{ create_form.detail }}
-                        {{ create_form.detail.errors }}
+                        {% if create_form.detail.errors %}
+                            <div class="text-error small mt-1">{{ create_form.detail.errors.0 }}</div>
+                        {% endif %}
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Anexo</label>
+                        <label class="form-label" for="{{ create_form.attachment.id_for_label }}">Anexo</label>
                         {{ create_form.attachment }}
-                        {{ create_form.attachment.errors }}
+                        {% if create_form.attachment.errors %}
+                            <div class="text-error small mt-1">{{ create_form.attachment.errors.0 }}</div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
-            <div class="modal-footer-fixed">
-                <button type="button" class="btn-cancel js-close-modal">
-                    <i class="fas fa-times-circle"></i> Cancelar
+
+            <div class="modal-footer-medium modal-footer-spaced">
+                <button type="button" class="btn-dark-blue-rectangle-outline js-close-modal">
+                    Cancelar
                 </button>
-                <button type="submit" class="btn-save">
+                <button type="submit" class="btn-dark-blue-rectangle">
                     <i class="fas fa-paper-plane"></i> Enviar Mensaje
                 </button>
             </div>
