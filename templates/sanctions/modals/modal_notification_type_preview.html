@@ -1,60 +1,77 @@
 {% load static %}
-<div class="modal-overlay">
+<div class="modal-overlay hidden" id="modalNotificationTypePreview">
     <div class="modal-container-large">
 
-        <!-- HEADER -->
-        <div class="modal-header-medium">
+        <div class="modal-header">
             <div class="header-content-group">
                 <div class="header-icon-circle">
-                    <i class="fas fa-eye"></i>
+                    <i class="fas fa-layer-group"></i>
                 </div>
-                <h3 class="header-title">Vista previa: {{ notification_type.name }}</h3>
+                <h3 class="header-title">Templates de {{ notification_type.name }}</h3>
             </div>
             <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
                 <i class="fas fa-times"></i>
             </button>
         </div>
 
-        <!-- BODY -->
-        <div class="modal-body modal-body-custom">
-            <div class="form-section-card">
-                <div class="section-title"><i class="fas fa-info-circle text-green"></i> Información General</div>
-                {% if notification_type.description %}
-                    <p class="small text-muted mb-2">{{ notification_type.description }}</p>
-                {% endif %}
-                <div class="d-flex align-items-center gap-2">
-                    <span class="badge {% if notification_type.is_active %}badge-green{% else %}badge-gray{% endif %}">
-                        {% if notification_type.is_active %}ACTIVO{% else %}INACTIVO{% endif %}
-                    </span>
-                    <span class="badge badge-blue">{{ notification_type.regime_templates.count }} régimen(es) configurado(s)</span>
+        <div class="modal-body-custom">
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2 px-1">
+                <div>
+                    <strong>{{ total_regimes }} régimen(es) seleccionado(s)</strong>
+                </div>
+                <div class="small text-muted font-italic">
+                    Si no existe plantilla, puedes crearla desde aquí
                 </div>
             </div>
 
-            <div class="form-section-card mt-3">
-                <div class="section-title"><i class="fas fa-layer-group text-green"></i> Formatos Asociados por Régimen
-                </div>
-                {% if preview_rows %}
-                    <div class="d-grid gap-2">
-                        {% for row in preview_rows %}
-                            <div class="p-3 border rounded bg-white d-flex align-items-center justify-content-between">
-                                <div>
-                                    <strong>{{ row.link.labor_regime.code }}</strong> — {{ row.link.labor_regime.name }}
-                                </div>
-                                <span class="badge badge-blue">Template Activo</span>
-                            </div>
-                        {% endfor %}
+            <div class="d-grid gap-2">
+                {% for item in regime_items %}
+                    <div class="p-3 border rounded bg-white d-flex align-items-center justify-content-between flex-wrap gap-2 shadow-soft">
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="badge badge-blue font-monospace"
+                                  style="font-size: 0.85rem; padding: 4px 10px;">
+                                {{ item.regime_code }}
+                            </span>
+                            <span class="fw-bold text-dark" style="font-size: 0.95rem;">
+                                {{ item.regime_name }}
+                            </span>
+                            {% if item.has_template %}
+                                <span class="badge badge-green ms-2" style="font-size: 0.75rem;">
+                                    <i class="fas fa-check-circle me-1"></i> Plantilla creada
+                                </span>
+                            {% else %}
+                                <span class="badge badge-amber ms-2" style="font-size: 0.75rem;">
+                                    <i class="fas fa-circle-exclamation me-1"></i> Sin plantilla
+                                </span>
+                            {% endif %}
+                        </div>
+
+                        <div class="actions-wrapper">
+                            <a href="{{ item.target_url }}"
+                               class="btn-yellow-circle"
+                               style="width: 34px; height: 34px; font-size: 0.9rem;"
+                               title="{% if item.has_template %}Editar Plantilla{% else %}Crear Plantilla{% endif %}">
+                                <i class="fas fa-pencil"></i>
+                            </a>
+                            <a href="{{ item.target_url }}"
+                               class="btn-blue-circle"
+                               style="width: 34px; height: 34px; font-size: 0.9rem;"
+                               title="Abrir Diseñador de Plantilla">
+                                <i class="fas fa-arrow-up-right-from-square"></i>
+                            </a>
+                        </div>
                     </div>
-                {% else %}
-                    <div class="empty-state-container">
-                        <p class="empty-state-text">Este tipo de notificación no tiene formatos asociados.</p>
+                {% empty %}
+                    <div class="empty-state-container py-4">
+                        <i class="fas fa-layer-group empty-state-icon" style="font-size: 2.2rem;"></i>
+                        <p class="empty-state-text">Este tipo de notificación no tiene regímenes asignados.</p>
                     </div>
-                {% endif %}
+                {% endfor %}
             </div>
         </div>
 
-        <!-- FOOTER -->
-        <div class="modal-footer-fixed">
-            <button type="button" class="btn-default-outline" onclick="closeModal()">Cerrar</button>
+        <div class="modal-footer">
+            <button type="button" class="btn-secondary-outline" onclick="closeModal()">Cerrar</button>
         </div>
 
     </div>

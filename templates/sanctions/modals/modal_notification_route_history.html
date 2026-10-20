@@ -1,7 +1,7 @@
 {% load static %}
-<div class="modal-overlay">
+<div class="modal-overlay hidden" id="modalNotificationRouteHistory">
     <div class="modal-container-medium">
-        <div class="modal-header-medium">
+        <div class="modal-header">
             <div class="header-content-group">
                 <div class="header-icon-circle">
                     <i class="fas fa-timeline"></i>
@@ -13,30 +13,28 @@
             </button>
         </div>
 
-        <div class="modal-body modal-body-custom">
-            <div class="quick-view-banner-compact">
-                <div class="quick-view-header-col">
-                    <h2 class="quick-view-name">{{ notification.employee.person.full_name }}</h2>
-                    <span class="text-muted small">C.I. {{ notification.employee.person.document_number|default:"--" }}</span>
-                </div>
+        <div class="modal-body-custom">
+            <div class="form-section-card mb-3">
+                <span class="label-muted">Empleado Titular</span>
+                <span class="value-bold mb-1">{{ notification.employee.person.full_name }}</span>
+                <span class="badge badge-gray font-monospace">C.I. {{ notification.employee.person.document_number|default:"--" }}</span>
             </div>
 
-            <div class="form-section-card mt-3">
+            <div class="form-section-card">
                 <div class="section-title"><i class="fas fa-route text-green"></i> Trazabilidad de Asignaciones</div>
                 {% if assignments %}
-                    <div class="route-thread compact">
+                    <div class="timeline-container">
                         {% for item in assignments %}
-                            <div class="route-item {% if item.is_current %}is-current{% endif %}">
-                                <div class="route-meta">
-                                    <div><strong>{{ forloop.counter }}.</strong> {{ item.assigned_by.get_full_name }}
-                                        &rarr; {{ item.assigned_to.get_full_name }}</div>
-                                    <div>
-                                        {% if item.is_current %}
-                                            <span class="badge badge-green">Actual</span>
-                                        {% else %}
-                                            <span class="badge badge-gray">Cerrada</span>
-                                        {% endif %}
-                                    </div>
+                            <div class="timeline-item">
+                                <div class="timeline-marker {% if item.is_current %}status-actual{% else %}status-finalizado{% endif %}"></div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <strong>{{ forloop.counter }}. {{ item.assigned_by.get_full_name }}
+                                        &rarr; {{ item.assigned_to.get_full_name }}</strong>
+                                    {% if item.is_current %}
+                                        <span class="badge badge-green">En Curso</span>
+                                    {% else %}
+                                        <span class="badge badge-gray">Cerrada</span>
+                                    {% endif %}
                                 </div>
                                 <div class="small text-muted mt-1">
                                     Recepción: {{ item.start_date|date:"d/m/Y H:i" }} | Despacho:
@@ -57,8 +55,8 @@
             </div>
         </div>
 
-        <div class="modal-footer-fixed">
-            <button type="button" class="btn-default-outline" onclick="closeModal()">Cerrar</button>
+        <div class="modal-footer">
+            <button type="button" class="btn-secondary-outline" onclick="closeModal()">Cerrar</button>
         </div>
     </div>
 </div>

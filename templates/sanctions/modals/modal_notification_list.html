@@ -1,8 +1,7 @@
 {% load static %}
-<div class="modal-overlay">
+<div class="modal-overlay hidden" id="modalNotificationList">
     <div class="modal-container-large">
-        <!-- Header -->
-        <div class="modal-header-medium">
+        <div class="modal-header">
             <div class="header-content-group">
                 <div class="header-icon-circle">
                     <i class="fas fa-bell"></i>
@@ -17,36 +16,39 @@
             </button>
         </div>
 
-        <!-- Body -->
-        <div class="modal-body modal-body-custom">
+        <div class="modal-body-custom">
             {% if notifications %}
                 <div class="table-container" style="min-height: 250px; max-height: 440px;">
                     <table class="managed-table">
                         <thead>
                         <tr>
-                            <th class="width-13">Código</th>
+                            <th class="width-15">Código</th>
                             <th class="width-25">Empleado</th>
-                            <th class="width-20">Tipo</th>
-                            <th class="width-12">Fecha</th>
-                            <th class="width-15">Régimen</th>
-                            <th class="width-10 text-center actions">PDF</th>
+                            <th class="width-25">Tipo de Notificación</th>
+                            <th class="width-12 text-center">Fecha</th>
+                            <th class="width-13 text-center">Régimen</th>
+                            <th class="width-10 text-center actions no-sort"><i class="fas fa-cogs"></i> PDF</th>
                         </tr>
                         </thead>
                         <tbody>
                         {% for notification in notifications %}
                             <tr>
-                                <td><strong>{{ notification.sequential_code }}</strong></td>
+                                <td><span
+                                        class="badge badge-gray font-monospace">{{ notification.sequential_code }}</span>
+                                </td>
                                 <td>
-                                    <span class="bold">{{ notification.employee.person.full_name }}</span><br>
+                                    <strong>{{ notification.employee.person.full_name }}</strong><br>
                                     <small class="text-muted">{{ notification.employee.person.document_number }}</small>
                                 </td>
                                 <td>{{ notification.notification_type.name }}</td>
-                                <td>{{ notification.registration_date|date:'d/m/Y' }}</td>
-                                <td>{{ notification.labor_regime.name|default:"--" }}</td>
-                                <td class="actions">
+                                <td class="text-center">{{ notification.registration_date|date:'d/m/Y' }}</td>
+                                <td class="text-center">
+                                    <span class="badge badge-blue">{{ notification.labor_regime.code|default:"--" }}</span>
+                                </td>
+                                <td class="actions text-center">
                                     <div class="actions-wrapper">
                                         <a href="{% url 'sanctions:notification_pdf' notification.pk %}"
-                                           class="btn-icon btn-red-circle" target="_blank" rel="noopener"
+                                           class="btn-red-circle" target="_blank" rel="noopener"
                                            title="Ver Documento PDF">
                                             <i class="fa-solid fa-file-pdf"></i>
                                         </a>
@@ -65,11 +67,8 @@
             {% endif %}
         </div>
 
-        <!-- Footer -->
-        <div class="modal-footer-fixed">
-            <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">
-                Cerrar
-            </button>
+        <div class="modal-footer">
+            <button type="button" class="btn-secondary-outline" onclick="closeModal()">Cerrar</button>
         </div>
     </div>
 </div>

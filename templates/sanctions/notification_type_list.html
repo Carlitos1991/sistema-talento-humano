@@ -15,14 +15,14 @@
         </div>
         <div class="d-flex align-items-center gap-2 flex-wrap">
             <button type="button"
-                    class="btn-white-rectangle js-sanction-modal-btn"
-                    data-url="{% url 'sanctions:notification_type_help' %}">
+                    class="btn-white-rectangle"
+                    onclick="openAjaxModal('{% url 'sanctions:notification_type_help' %}')">
                 <i class="fas fa-circle-info"></i> Guía de Campos
             </button>
             {% if perms.sanctions.add_sanctionnotificationtype %}
                 <button type="button"
-                        class="btn-blue-rectangle js-sanction-modal-btn"
-                        data-url="{% url 'sanctions:notification_type_create' %}">
+                        class="btn-blue-rectangle"
+                        onclick="openAjaxModal('{% url 'sanctions:notification_type_create' %}')">
                     <i class="fas fa-plus"></i> Nuevo Tipo
                 </button>
             {% endif %}
@@ -42,9 +42,6 @@
             {% include 'sanctions/partials/partial_notification_type_list.html' %}
         </div>
     </div>
-
-    <!-- Contenedor único para modales AJAX de main.js -->
-    <div id="modal-root"></div>
 {% endblock %}
 
 {% block extra_js %}

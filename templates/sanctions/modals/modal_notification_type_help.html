@@ -1,9 +1,8 @@
 {% load static %}
-<div class="modal-overlay">
+<div class="modal-overlay hidden" id="modalNotificationTypeHelp">
     <div class="modal-container-large">
 
-        <!-- HEADER -->
-        <div class="modal-header-medium">
+        <div class="modal-header">
             <div class="header-content-group">
                 <div class="header-icon-circle">
                     <i class="fas fa-circle-info"></i>
@@ -15,8 +14,7 @@
             </button>
         </div>
 
-        <!-- BODY -->
-        <div class="modal-body modal-body-custom">
+        <div class="modal-body-custom">
             <div class="alert alert-info mb-3">
                 <i class="fas fa-circle-info"></i>
                 <div>
@@ -26,76 +24,75 @@
             </div>
 
             <div class="form-section-card">
-                <div class="section-title"><i class="fas fa-tags text-green"></i> Variables Disponibles</div>
                 <div class="modal-table-container">
                     <table class="modal-table">
                         <thead>
                         <tr>
-                            <th style="width: 30%;">Marcador</th>
-                            <th style="width: 30%;">Nombre Sugerido</th>
-                            <th>Descripción</th>
+                            <th class="width-25">Marcador</th>
+                            <th class="width-25">Nombre Sugerido</th>
+                            <th class="width-50">Descripción</th>
                         </tr>
                         </thead>
                         <tbody>
                         <tr>
-                            <td><code>[FULL_NAME]</code></td>
-                            <td>Nombre Completo</td>
-                            <td>Nombres y apellidos del empleado.</td>
+                            <td><span class="badge badge-gray font-monospace">[FULL_NAME]</span></td>
+                            <td><strong>Nombre Completo</strong></td>
+                            <td class="small">Nombres y apellidos del empleado.</td>
                         </tr>
                         <tr>
-                            <td><code>[DOCUMENT_NUMBER]</code></td>
-                            <td>Cédula</td>
-                            <td>Número de identificación oficial.</td>
+                            <td><span class="badge badge-gray font-monospace">[DOCUMENT_NUMBER]</span></td>
+                            <td><strong>Cédula</strong></td>
+                            <td class="small">Número de identificación oficial.</td>
                         </tr>
                         <tr>
-                            <td><code>[POSITION]</code></td>
-                            <td>Cargo</td>
-                            <td>Puesto asignado según partida presupuestaria.</td>
+                            <td><span class="badge badge-gray font-monospace">[POSITION]</span></td>
+                            <td><strong>Cargo</strong></td>
+                            <td class="small">Puesto asignado según partida presupuestaria.</td>
                         </tr>
                         <tr>
-                            <td><code>[UNIT]</code></td>
-                            <td>Dependencia</td>
-                            <td>Área o unidad administrativa.</td>
+                            <td><span class="badge badge-gray font-monospace">[UNIT]</span></td>
+                            <td><strong>Dependencia</strong></td>
+                            <td class="small">Área o unidad administrativa.</td>
                         </tr>
                         <tr>
-                            <td><code>[REGIME_NAME]</code></td>
-                            <td>Régimen</td>
-                            <td>Régimen laboral (LOSEP / Código del Trabajo).</td>
+                            <td><span class="badge badge-gray font-monospace">[REGIME_NAME]</span></td>
+                            <td><strong>Régimen</strong></td>
+                            <td class="small">Régimen laboral (LOSEP / Código del Trabajo).</td>
                         </tr>
                         <tr>
-                            <td><code>[MONTH_NAME]</code></td>
-                            <td>Mes</td>
-                            <td>Mes correspondiente en texto (Ej: Mayo).</td>
+                            <td><span class="badge badge-gray font-monospace">[MONTH_NAME]</span></td>
+                            <td><strong>Mes</strong></td>
+                            <td class="small">Mes correspondiente en texto (Ej: Mayo).</td>
                         </tr>
                         <tr>
-                            <td><code>[YEAR]</code></td>
-                            <td>Año</td>
-                            <td>Año de registro de la notificación.</td>
+                            <td><span class="badge badge-gray font-monospace">[YEAR]</span></td>
+                            <td><strong>Año</strong></td>
+                            <td class="small">Año de registro de la notificación.</td>
                         </tr>
                         <tr>
-                            <td><code>[today]</code></td>
-                            <td>Fecha Actual</td>
-                            <td>Fecha de generación en formato formal.</td>
+                            <td><span class="badge badge-gray font-monospace">[today]</span></td>
+                            <td><strong>Fecha Actual</strong></td>
+                            <td class="small">Fecha de generación en formato formal.</td>
                         </tr>
                         <tr>
-                            <td><code>[AUTHORITY_1_NAME]</code></td>
-                            <td>Firma 1</td>
-                            <td>Nombre de la primera autoridad.</td>
+                            <td><span class="badge badge-gray font-monospace">[AUTHORITY_1_NAME]</span></td>
+                            <td><strong>Firma 1</strong></td>
+                            <td class="small">Nombre de la primera autoridad.</td>
                         </tr>
                         <tr>
-                            <td><code>[AUTHORITY_2_NAME]</code></td>
-                            <td>Firma 2</td>
-                            <td>Nombre de la segunda autoridad.</td>
+                            <td><span class="badge badge-gray font-monospace">[AUTHORITY_2_NAME]</span></td>
+                            <td><strong>Firma 2</strong></td>
+                            <td class="small">Nombre de la segunda autoridad.</td>
                         </tr>
                         <tr>
-                            <td><code>[MINUTES_LATE]</code></td>
-                            <td>Minutos de Atraso</td>
-                            <td>Tiempo total de retrasos acumulados.</td>
+                            <td><span class="badge badge-gray font-monospace">[MINUTES_LATE]</span></td>
+                            <td><strong>Minutos de Atraso</strong></td>
+                            <td class="small">Tiempo total de retrasos acumulados.</td>
                         </tr>
                         <tr>
-                            <td><code>[DAYS_WITHOUT_MARK]</code></td>
-                            <td>Días sin Marcar</td>
-                            <td>Cantidad de días con omisión de marcación.</td>
+                            <td><span class="badge badge-gray font-monospace">[DAYS_WITHOUT_MARK]</span></td>
+                            <td><strong>Días sin Marcar</strong></td>
+                            <td class="small">Cantidad de días con omisión de marcación.</td>
                         </tr>
                         </tbody>
                     </table>
@@ -103,9 +100,8 @@
             </div>
         </div>
 
-        <!-- FOOTER -->
-        <div class="modal-footer-fixed">
-            <button type="button" class="btn-default-outline" onclick="closeModal()">Cerrar</button>
+        <div class="modal-footer">
+            <button type="button" class="btn-secondary-outline" onclick="closeModal()">Cerrar</button>
         </div>
 
     </div>

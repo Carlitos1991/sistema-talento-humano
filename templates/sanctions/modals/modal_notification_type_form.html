@@ -1,86 +1,98 @@
-<div class="modal-container-medium shadow-card animate-scale-in" style="max-width: 900px; width: min(900px, calc(100vw - 2rem));">
-    <form id="modalForm" method="post" enctype="multipart/form-data" action="{% if notification_type and notification_type.pk %}{% url 'sanctions:notification_type_update' notification_type.pk %}{% else %}{% url 'sanctions:notification_type_create' %}{% endif %}">
-        {% csrf_token %}
+<div class="modal-overlay hidden" id="modalNotificationTypeForm">
+    <div class="modal-container-medium">
+        <form id="notificationTypeForm" method="post"
+              action="
+                      {% if notification_type and notification_type.pk %}{% url 'sanctions:notification_type_update' notification_type.pk %}{% else %}{% url 'sanctions:notification_type_create' %}{% endif %}"
+              onsubmit="submitAjaxForm(event)">
+            {% csrf_token %}
 
-        <div class="modal-header-medium modal-header-gradient">
-            <h3 class="modal-title text-white">
-                <i class="fa-solid fa-bell me-2"></i>
-                {% if notification_type and notification_type.pk %}Editar Tipo de Notificación{% else %}Nuevo Tipo de Notificación{% endif %}
-            </h3>
-            <button type="button" class="btn-close-modal text-white-opacity js-close-modal">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-
-        <div class="modal-body-content modal-body-custom">
-            <div id="global-errors" style="display:none;" class="alert alert-danger mb-3"></div>
-
-            <div class="form-group mb-3">
-                <label class="form-label">
-                    <i class="fa-solid fa-tag"></i> Nombre <span class="text-danger">*</span>
-                </label>
-                {{ form.name }}
-                <div class="invalid-feedback"></div>
-            </div>
-
-            <div class="form-group mb-3">
-                <label class="form-label">
-                    <i class="fa-solid fa-align-left"></i> Descripción
-                </label>
-                {{ form.description }}
-                <div class="invalid-feedback"></div>
-            </div>
-
-            <div class="grid-2-cols mb-4">
-                <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-white">
-                    <label class="form-label mb-0" for="{{ form.is_active.id_for_label }}">Estado Activo</label>
-                    <label class="toggle-switch">
-                        {{ form.is_active }}
-                        <span class="toggle-slider"></span>
-                    </label>
+            <div class="modal-header">
+                <div class="header-content-group">
+                    <div class="header-icon-circle">
+                        <i class="fa-solid fa-bell"></i>
+                    </div>
+                    <h3 class="header-title">
+                        {% if notification_type and notification_type.pk %}Editar Tipo de Notificación{% else %}Nuevo
+                            Tipo de Notificación{% endif %}
+                    </h3>
                 </div>
+                <button type="button" class="btn-close-circle" onclick="closeModal()">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
 
-            <div class="section-title mt-3">
-                <i class="fa-solid fa-layer-group"></i> Regímenes laborales activos
-            </div>
+            <div class="modal-body-custom">
+                <div class="form-section-card mb-3">
+                    <div class="form-group mb-3">
+                        <label class="form-label" for="{{ form.name.id_for_label }}">
+                            <i class="fa-solid fa-tag"></i> Nombre <span class="text-red">*</span>
+                        </label>
+                        {{ form.name }}
+                    </div>
 
-            <div class="text-muted mb-3" style="font-size: .9rem;">
-                Seleccione al menos un régimen.
-                El contenido final se construye desde el Editor de Templates Dinámicos (títulos y párrafos).
-            </div>
+                    <div class="form-group mb-3">
+                        <label class="form-label" for="{{ form.description.id_for_label }}">
+                            <i class="fa-solid fa-align-left"></i> Descripción
+                        </label>
+                        {{ form.description }}
+                    </div>
 
-            {% if regime_rows %}
-                <div class="d-grid gap-3">
-                    {% for row in regime_rows %}
-                        <div class="border rounded p-3 bg-white" data-regime-card="{{ row.regime.id }}">
-                            <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
-                                <label class="form-check-label d-flex align-items-center gap-2 mb-0">
-                                    <input class="form-check-input js-regime-checkbox" type="checkbox"
-                                           name="regime_ids" value="{{ row.regime.id }}"
-                                           {% if row.selected %}checked{% endif %}>
-                                    <span><strong>{{ row.regime.code }}</strong> - {{ row.regime.name }}</span>
-                                </label>
-                                <span class="small text-muted">Template dinámico por régimen</span>
-                            </div>
+                    <!-- Switch de Estado Activo institucional -->
+                    <div class="d-flex align-items-center justify-content-between p-2 rounded border bg-light">
+                        <label class="form-label mb-0 cursor-pointer" for="{{ form.is_active.id_for_label }}">
+                            <i class="fa-solid fa-power-off text-green me-1"></i> Estado Activo
+                        </label>
+                        <div class="d-flex align-items-center">
+                            {{ form.is_active }}
+                            <label class="switch-wrapper" for="{{ form.is_active.id_for_label }}"
+                                   style="min-width: 110px; padding: 4px 10px;">
+                                <div class="switch-circle"></div>
+                                <span class="switch-text">Activo</span>
+                            </label>
                         </div>
-                    {% endfor %}
+                    </div>
                 </div>
-                <div id="regime-errors" class="invalid-feedback d-block mt-2" style="display:none;"></div>
-            {% else %}
-                <div class="alert alert-warning mb-0">
-                    No hay regímenes laborales activos disponibles.
-                </div>
-            {% endif %}
-        </div>
 
-        <div class="modal-footer-medium modal-footer-spaced">
-            <button type="button" class="btn-cancel js-close-modal">
-                <i class="fa-solid fa-times"></i> Cancelar
-            </button>
-            <button type="submit" class="btn-save">
-                <i class="fa-solid fa-save"></i> Guardar
-            </button>
-        </div>
-    </form>
+                <!-- Selección de Regímenes -->
+                <div class="form-section-card">
+                    <div class="section-title">
+                        <i class="fa-solid fa-layer-group text-green"></i> Regímenes Laborales Activos
+                    </div>
+
+                    <p class="small text-muted mb-3">
+                        Seleccione al menos un régimen para habilitar la plantilla correspondiente.
+                    </p>
+
+                    {% if regime_rows %}
+                        <div class="d-grid gap-2">
+                            {% for row in regime_rows %}
+                                <div class="border rounded p-2 bg-white d-flex align-items-center justify-content-between">
+                                    <label class="d-flex align-items-center gap-2 mb-0 cursor-pointer">
+                                        <input class="custom-checkbox" type="checkbox"
+                                               name="regime_ids" value="{{ row.regime.id }}"
+                                               {% if row.selected %}checked{% endif %}>
+                                        <span><strong>{{ row.regime.code }}</strong> - {{ row.regime.name }}</span>
+                                    </label>
+                                    <span class="badge badge-blue">Template dinámico</span>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning mb-0">
+                            No hay regímenes laborales activos disponibles.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary-outline" onclick="closeModal()">
+                    Cancelar
+                </button>
+                <button type="submit" class="btn-dark-blue-rectangle">
+                    <i class="fa-solid fa-save me-1"></i> Guardar
+                </button>
+            </div>
+        </form>
+    </div>
 </div>

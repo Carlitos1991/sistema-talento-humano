@@ -1079,19 +1079,41 @@ class SanctionNotificationTypePreviewView(LoginRequiredMixin, PermissionRequired
 
     def get(self, request, pk):
         notification_type = get_object_or_404(
-            SanctionNotificationType.objects.prefetch_related('regime_templates__labor_regime'),
+            SanctionNotificationType.objects.prefetch_related(
+                'regime_templates__labor_regime',
+                'dynamic_templates__labor_regime'
+            ),
             pk=pk,
         )
 
-        preview_rows = []
+        templates_by_regime = {
+            t.labor_regime_id: t for t in notification_type.dynamic_templates.all()
+        }
+
+        regime_items = []
         for link in notification_type.regime_templates.all():
-            preview_rows.append({
-                'link': link,
+            template = templates_by_regime.get(link.labor_regime_id)
+            has_template = template is not None
+
+            # Si ya existe va al detalle, si no existe va a la vista que lo crea automáticamente
+            target_url = (
+                reverse('sanctions:template_editor_detail', args=[template.pk])
+                if has_template
+                else reverse('sanctions:template_editor_create', args=[notification_type.pk, link.labor_regime_id])
+            )
+
+            regime_items.append({
+                'regime_id': link.labor_regime_id,
+                'regime_code': link.labor_regime.code,
+                'regime_name': link.labor_regime.name,
+                'has_template': has_template,
+                'target_url': target_url,
             })
 
         context = {
             'notification_type': notification_type,
-            'preview_rows': preview_rows,
+            'regime_items': regime_items,
+            'total_regimes': len(regime_items),
         }
 
         html = render_to_string('sanctions/modals/modal_notification_type_preview.html', context, request=request)
@@ -1121,6 +1143,7 @@ def _template_editor_render_inline_formatting(content):
 
 class TemplateEditorDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView):
     model = NotificationTemplate
+    # Ruta exacta a tu archivo template_editor.html
     template_name = 'sanctions/template_editor/template_editor.html'
     permission_required = 'sanctions.change_notificationtemplate'
     context_object_name = 'template'
@@ -1141,7 +1164,6 @@ class TemplateEditorDetailView(LoginRequiredMixin, PermissionRequiredMixin, Deta
             {'placeholder': '[CARGO_REVISOR]', 'label': 'Cargo del Revisor'},
             {'placeholder': '[NOMBRE_ELABORADOR]', 'label': 'Nombre del Elaborador'},
             {'placeholder': '[CARGO_ELABORADOR]', 'label': 'Cargo del Elaborador'},
-
             {'placeholder': '[MINUTES_LATE]', 'label': 'Minutos de atraso'},
             {'placeholder': '[OBSERVATIONS]', 'label': 'Observaciones'},
             {'placeholder': '[AÑO]', 'label': 'Año actual'},
@@ -1162,15 +1184,6 @@ class TemplateEditorDetailView(LoginRequiredMixin, PermissionRequiredMixin, Deta
 class TemplateEditorCreateView(LoginRequiredMixin, PermissionRequiredMixin, View):
     permission_required = 'sanctions.add_notificationtemplate'
 
-    def dispatch(self, request, *args, **kwargs):
-        if not request.user.has_perm(self.permission_required):
-            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return JsonResponse({'success': False, 'message': 'No tiene permisos para crear templates.'},
-                                    status=403)
-            from django.core.exceptions import PermissionDenied
-            raise PermissionDenied
-        return super().dispatch(request, *args, **kwargs)
-
     def get(self, request, type_id, regime_id):
         notification_type = get_object_or_404(SanctionNotificationType, pk=type_id)
         labor_regime = get_object_or_404(LaborRegime, pk=regime_id)
@@ -1183,11 +1196,6 @@ class TemplateEditorCreateView(LoginRequiredMixin, PermissionRequiredMixin, View
                 'updated_by': request.user,
             },
         )
-
-        if template.created_by is None:
-            template.created_by = request.user
-        template.updated_by = request.user
-        template.save(update_fields=['created_by', 'updated_by', 'updated_at'])
 
         return redirect('sanctions:template_editor_detail', pk=template.pk)
 

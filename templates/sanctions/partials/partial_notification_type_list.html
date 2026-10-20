@@ -13,13 +13,13 @@
                 <th class="width-25">Regímenes Asociados</th>
                 <th class="width-15 text-center">Templates</th>
                 <th class="width-15 text-center" data-field="is_active">Estado</th>
-                <th class="width-15 no-sort text-center actions">Acciones</th>
+                <th class="width-15 no-sort text-center actions"><i class="fas fa-cogs"></i> Acciones</th>
             </tr>
             </thead>
             <tbody id="table-body">
             {% if types %}
                 {% for type in types %}
-                    <tr class="location-row" id="row-notification-type-{{ type.id }}">
+                    <tr id="row-notification-type-{{ type.id }}">
                         <td>
                             <div class="bold text-primary">{{ type.name }}</div>
                             {% if type.description %}
@@ -29,35 +29,57 @@
                         <td>
                             <div class="d-flex flex-wrap gap-1">
                                 {% for link in type.regime_templates.all %}
-                                    <span class="badge badge-blue">{{ link.labor_regime.code }}</span>
+                                    <span class="badge badge-green" style="font-size: 0.75rem;">
+                                        {{ link.labor_regime.code }}
+                                    </span>
                                 {% empty %}
                                     <span class="badge badge-gray">Sin regímenes</span>
                                 {% endfor %}
                             </div>
                         </td>
                         <td class="text-center">
-                            <span class="badge badge-green">{{ type.template_regime_items|length }} plantillas</span>
+                            <!-- Abre el modal con las plantillas del tipo -->
+                            <button type="button"
+                                    class="btn-dark-blue-circle"
+                                    style="width: 32px; height: 32px; font-size: 0.85rem; font-weight: 700; display: inline-flex;"
+                                    onclick="openAjaxModal('{% url 'sanctions:notification_type_preview' type.pk %}')"
+                                    title="Ver templates por régimen">
+                                {{ type.regime_templates.count }}
+                            </button>
                         </td>
                         <td class="text-center">
                             {% if type.is_active %}
-                                <span class="badge badge-green">ACTIVO</span>
+                                <span class="badge badge-green">Activo</span>
                             {% else %}
-                                <span class="badge badge-gray">INACTIVO</span>
+                                <span class="badge badge-red">Inactivo</span>
                             {% endif %}
                         </td>
                         <td class="actions text-center">
                             <div class="actions-wrapper">
                                 {% if perms.sanctions.change_sanctionnotificationtype %}
-                                    <button type="button" class="btn-tenth js-sanction-modal-btn"
-                                            data-url="{% url 'sanctions:notification_type_update' type.pk %}"
+                                    <button type="button" class="btn-yellow-circle"
+                                            onclick="openAjaxModal('{% url 'sanctions:notification_type_update' type.pk %}')"
                                             title="Editar Tipo">
                                         <i class="fa-solid fa-pen-to-square"></i>
                                     </button>
-                                    <button type="button" class="btn-tenth js-sanction-modal-btn"
-                                            data-url="{% url 'sanctions:notification_type_preview' type.pk %}"
-                                            title="Ver Formatos Configurados">
-                                        <i class="fa-solid fa-eye text-blue"></i>
+                                    <button type="button" class="btn-blue-circle"
+                                            onclick="openAjaxModal('{% url 'sanctions:notification_type_preview' type.pk %}')"
+                                            title="Configurar Plantillas">
+                                        <i class="fa-solid fa-layer-group"></i>
                                     </button>
+                                    {% if type.is_active %}
+                                        <button type="button" class="btn-red-circle"
+                                                onclick="toggleStatusAjax('{% url 'sanctions:notification_type_toggle' type.pk %}', 'el tipo {{ type.name|escapejs }}', true)"
+                                                title="Desactivar">
+                                            <i class="fa-solid fa-toggle-off"></i>
+                                        </button>
+                                    {% else %}
+                                        <button type="button" class="btn-green-circle"
+                                                onclick="toggleStatusAjax('{% url 'sanctions:notification_type_toggle' type.pk %}', 'el tipo {{ type.name|escapejs }}', false)"
+                                                title="Activar">
+                                            <i class="fas fa-toggle-on"></i>
+                                        </button>
+                                    {% endif %}
                                 {% endif %}
                             </div>
                         </td>
@@ -84,11 +106,11 @@
             Mostrando {{ page_obj.start_index|default:"0" }}-{{ page_obj.end_index|default:"0" }} de {{ paginator.count|default:"0" }}
         </span>
         <div class="pagination-controls" {% if paginator.num_pages <= 1 %}style="visibility:hidden;"{% endif %}>
-            <button type="button" class="page-btn page-first {% if not page_obj.has_previous %}disabled{% endif %}"
+            <button type="button" class="page-btn page-first"
                     title="Primera" data-page="1" {% if not page_obj.has_previous %}disabled{% endif %}>
                 <i class="fas fa-angle-double-left"></i>
             </button>
-            <button type="button" class="page-btn page-prev {% if not page_obj.has_previous %}disabled{% endif %}"
+            <button type="button" class="page-btn page-prev"
                     title="Anterior"
                     data-page="{% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% else %}1{% endif %}"
                     {% if not page_obj.has_previous %}disabled{% endif %}>
@@ -96,17 +118,17 @@
             </button>
             <div class="page-input-wrapper">
                 <input type="number" class="page-input" value="{{ page_obj.number }}"
-                       min="1" max="{{ paginator.num_pages }}"
-                       data-max-page="{{ paginator.num_pages }}">
+                       min="1" max="{{ paginator.num_pages }}">
                 <span class="total-pages-badge">de {{ paginator.num_pages }}</span>
             </div>
-            <button type="button" class="page-btn page-next {% if not page_obj.has_next %}disabled{% endif %}"
-                    title="Siguiente" data-page="
-                    {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages }}{% endif %}"
+            <button type="button" class="page-btn page-next"
+                    title="Siguiente"
+                    data-page="
+                            {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages }}{% endif %}"
                     {% if not page_obj.has_next %}disabled{% endif %}>
                 <i class="fas fa-angle-right"></i>
             </button>
-            <button type="button" class="page-btn page-last {% if not page_obj.has_next %}disabled{% endif %}"
+            <button type="button" class="page-btn page-last"
                     title="Última" data-page="{{ paginator.num_pages }}"
                     {% if not page_obj.has_next %}disabled{% endif %}>
                 <i class="fas fa-angle-double-right"></i>

@@ -50,6 +50,7 @@ urlpatterns = [
     # --- Template Editor (Dynamic Templates) ---
     path('templates/create/<int:type_id>/<int:regime_id>/', views.TemplateEditorCreateView.as_view(),
          name='template_editor_create'),
+    path('templates/<int:pk>/editor/', views.TemplateEditorDetailView.as_view(), name='template_editor'),
     path('templates/editor/<int:pk>/', views.TemplateEditorDetailView.as_view(), name='template_editor_detail'),
     path('templates/<int:template_id>/sections/create/', views.TemplateSectionCreateAjaxView.as_view(),
          name='template_section_create'),
