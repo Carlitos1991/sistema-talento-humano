@@ -13,6 +13,7 @@
         initTableActions();
         initWizardEvents();
         initDetailEvents();
+        initPeriodPagination();
     });
 
     // =========================================================================
@@ -102,6 +103,45 @@
         if (typeof window.refreshCurrentTable === 'function') {
             window.refreshCurrentTable(params);
         }
+    }
+
+    function initPeriodPagination() {
+        document.addEventListener('click', (event) => {
+            const button = event.target.closest('#js-pagination .page-btn');
+            if (!button || button.disabled) return;
+
+            const table = document.querySelector('#managementPeriodTable');
+            if (!table || table.dataset.externalPagination !== 'true') return;
+
+            const page = Number.parseInt(button.dataset.page, 10);
+            if (!Number.isInteger(page) || page < 1) return;
+
+            event.preventDefault();
+            event.stopPropagation();
+            applyPeriodFilters(page);
+        });
+
+        document.addEventListener('change', (event) => {
+            const input = event.target.closest('#period-page-input');
+            if (!input) return;
+
+            const page = Number.parseInt(input.value, 10);
+            if (!Number.isInteger(page) || page < 1) return;
+
+            event.preventDefault();
+            applyPeriodFilters(page);
+        });
+
+        document.addEventListener('keydown', (event) => {
+            const input = event.target.closest('#period-page-input');
+            if (!input || event.key !== 'Enter') return;
+
+            event.preventDefault();
+            const page = Number.parseInt(input.value, 10);
+            if (!Number.isInteger(page) || page < 1) return;
+
+            applyPeriodFilters(page);
+        });
     }
 
     window.handlePeriodSearch = function (e) {

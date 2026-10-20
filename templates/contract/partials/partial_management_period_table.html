@@ -144,8 +144,7 @@
         </div>
         <button type="button" class="page-btn page-next" title="Siguiente"
                 {% if not page_obj.has_next %}disabled{% endif %}
-                data-page="
-                        {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages|default:1 }}{% endif %}">
+                data-page="{% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages|default:1 }}{% endif %}">
             <i class="fas fa-angle-right"></i>
         </button>
         <button type="button" class="page-btn page-last" title="Última"
