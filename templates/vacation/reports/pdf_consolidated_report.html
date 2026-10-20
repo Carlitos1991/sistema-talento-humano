@@ -188,9 +188,10 @@
     </div>
 </div>
 
-<!-- Tabla Principal: anchos definidos tanto en TH como en TD que suman 100% -->
+<!-- Tabla Principal: se conservan bloques fijos porque xhtml2pdf no divide
+     tablas largas de forma consistente con los estilos de paginación CSS. -->
 {% for r in report_rows %}
-    {% if forloop.first or forloop.counter0|divisibleby:13 %}
+    {% if forloop.first or forloop.counter0|divisibleby:18 %}
         {% if not forloop.first %}
             </tbody></table>
             <pdf:nextpage/>
