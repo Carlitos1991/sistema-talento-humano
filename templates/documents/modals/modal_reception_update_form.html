@@ -1,0 +1,108 @@
+{% load static %}
+<div class="modal-overlay hidden">
+    <div class="modal-container-medium modal-reception-compact">
+        <form id="receptionUpdateForm" method="POST"
+              action="{% url 'documents:procedure_reception_update' procedure.id %}"
+              enctype="multipart/form-data" onsubmit="submitAjaxForm(event);">
+            {% csrf_token %}
+
+            <div class="modal-header-medium">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="header-icon-circle">
+                        <i class="fa-solid fa-pen-to-square"></i>
+                    </div>
+                    <div>
+                        <h3 class="header-title">Editar Documento Externo</h3>
+                        <small class="text-white-50">Modificación de datos del trámite radicado</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="modal-body-content modal-body-custom py-3 px-4">
+                <div class="reception-suggested-banner mb-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fa-solid fa-hashtag text-blue"></i>
+                        <span class="small text-muted font-weight-bold">NRO. RADICADO:</span>
+                        <span class="badge badge-blue font-monospace fw-bold">{{ procedure.code }}</span>
+                    </div>
+                    <span class="badge badge-amber">{{ procedure.get_status_display }}</span>
+                </div>
+
+                <div class="form-section-card p-3 mb-0">
+                    <div class="row g-2">
+                        <div class="col-md-6 form-group form-group-compact">
+                            <label class="form-label" for="id_category">Tipo de Documento <span
+                                    class="text-red">*</span></label>
+                            {{ form.category }}
+                        </div>
+                        <div class="col-md-6 form-group form-group-compact">
+                            <label class="form-label" for="id_external_number">Nro. Oficio / Documento Externo</label>
+                            {{ form.external_number }}
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mt-1">
+                        <div class="col-md-6 form-group form-group-compact">
+                            <label class="form-label" for="id_external_sender">Remitente Externo <span class="text-red">*</span></label>
+                            {{ form.external_sender }}
+                        </div>
+                        <div class="col-md-6 form-group form-group-compact">
+                            <label class="form-label" for="id_external_id_card">Cédula / RUC</label>
+                            {{ form.external_id_card }}
+                        </div>
+                    </div>
+
+                    <div class="form-group form-group-compact mt-2">
+                        <label class="form-label" for="id_subject">Asunto del Trámite <span
+                                class="text-red">*</span></label>
+                        {{ form.subject }}
+                    </div>
+
+                    <div class="reception-bottom-grid mt-2">
+                        <div class="reception-left-fields">
+                            <div class="form-group form-group-compact mb-2">
+                                <label class="form-label" for="id_external_email">Correo para Notificación</label>
+                                {{ form.external_email }}
+                            </div>
+                            <div class="form-group form-group-compact mb-0">
+                                <label class="form-label" for="id_priority">Prioridad</label>
+                                {{ form.priority }}
+                            </div>
+                        </div>
+
+                        <div class="form-group form-group-compact mb-0 reception-right-pdf">
+                            <label class="form-label mb-1">Reemplazar PDF (Opcional)</label>
+                            <div class="pdf-uploader-card" id="pdfUploadZone">
+                                <input type="file"
+                                       name="scanned_file"
+                                       id="id_scanned_file"
+                                       class="pdf-hidden-input"
+                                       accept=".pdf"
+                                       onchange="handlePdfSelection(this)">
+                                <label for="id_scanned_file" class="pdf-upload-inner">
+                                    <div class="pdf-icon-wrapper mb-2" id="pdfIconWrapper">
+                                        <i class="fa-solid fa-file-pdf text-red"></i>
+                                    </div>
+                                    <div class="pdf-text-group w-100">
+                                        <span class="pdf-title d-block" id="pdfFileTitle">PDF actual conservado</span>
+                                        <span class="pdf-subtitle d-block" id="pdfFileSubtitle">Haga clic si desea reemplazarlo</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer-medium modal-footer-spaced py-2 px-4">
+                <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">Cancelar</button>
+                <button type="submit" class="btn-dark-blue-rectangle">
+                    <i class="fa-solid fa-save me-1"></i> Guardar Cambios
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

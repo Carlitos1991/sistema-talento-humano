@@ -15,10 +15,10 @@
             background-repeat: no-repeat;
         {% endif %}
 
-            /* Marco principal con márgenes simétricos a ambos lados */
+            /* Marco principal alineado con el reporte consolidado */
             @frame content_frame {
-            left: 1.8cm;
-            right: 1.8cm;
+            left: 1.4cm;
+            right: 1.4cm;
             top: 3.4cm;       /* Margen superior para el logotipo */
             bottom: 3.3cm;    /* Reserva espacio para firmas y numeración */
         }
@@ -26,8 +26,8 @@
             /* Marco exclusivo para la numeración de página centrado en la base */
             @frame footer_frame {
             -pdf-frame-content: page_footer;
-            left: 1.8cm;
-            right: 1.8cm;
+            left: 1.4cm;
+            right: 1.4cm;
             bottom: 1.25cm;
             height: 0.45cm;
         }
@@ -72,6 +72,7 @@
         /* Tabla de Cronograma */
         table.data-table {
             width: 100%;
+            table-layout: fixed;
             border-collapse: collapse;
             margin-top: 6px;
         }
@@ -85,13 +86,17 @@
             padding: 5px 3px;
             text-align: center;
             border: 0.5pt solid #1e3a8a;
+            line-height: 1.05;
         }
 
         table.data-table td {
             font-size: 7pt;
-            padding: 4px 3px;
+            padding: 4px 2.5px;
             border: 0.5pt solid #cbd5e1;
             vertical-align: middle;
+            line-height: 1.1;
+            overflow-wrap: break-word;
+            word-wrap: break-word;
         }
 
         .text-center {

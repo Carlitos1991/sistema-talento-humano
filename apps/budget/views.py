@@ -131,7 +131,9 @@ class BudgetListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
 
         # Ordenamiento
         sort_param = self.request.GET.get('sort', 'number_individual')
-        return qs.order_by(sort_param if sort_param else 'number_individual')
+        primary_sort = sort_param or 'number_individual'
+        tie_breaker = '-pk' if primary_sort.startswith('-') else 'pk'
+        return qs.order_by(primary_sort, tie_breaker)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

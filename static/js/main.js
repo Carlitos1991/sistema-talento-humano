@@ -265,9 +265,7 @@ window.openAjaxModal = function (url, callback = null) {
                             const ajaxUrl = $select.data('ajax-url');
                             const select2Options = {
                                 width: '100%',
-                                dropdownParent: $(modal).find('.modal-body-custom').length
-                                    ? $(modal).find('.modal-body-custom')
-                                    : $(modal)
+                                dropdownParent: $(modal)
                             };
 
                             if (ajaxUrl) {
@@ -319,10 +317,22 @@ window.openAjaxModal = function (url, callback = null) {
 window.closeModal = function (id = null) {
     if (id) {
         const modal = document.getElementById(id);
-        if (modal) modal.classList.add('hidden');
+        if (modal) {
+            $(modal).find('select.select2-hidden-accessible').each(function () {
+                $(this).select2('close');
+                $(this).select2('destroy');
+            });
+            modal.classList.add('hidden');
+        }
     }
     const root = document.getElementById('modal-root');
-    if (root) root.innerHTML = '';
+    if (root) {
+        $(root).find('select.select2-hidden-accessible').each(function () {
+            $(this).select2('close');
+            $(this).select2('destroy');
+        });
+        root.innerHTML = '';
+    }
 
     document.documentElement.classList.remove('no-scroll');
     document.body.classList.remove('no-scroll');
@@ -1078,7 +1088,8 @@ document.addEventListener('click', (e) => {
     const btn = e.target.closest('.page-btn');
     if (!btn) return;
 
-    if (document.getElementById('filtersForm')) return;
+    if (document.getElementById('filtersForm')
+        || document.getElementById('budget-filter-form')) return;
 
     const table = document.querySelector('.managed-table');
     if (!table || table.dataset.externalPagination !== 'true') return;

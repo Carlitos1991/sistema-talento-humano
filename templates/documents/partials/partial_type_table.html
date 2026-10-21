@@ -10,9 +10,11 @@
             <thead>
             <tr>
                 <th class="width-5 text-center">#</th>
-                <th class="width-60" data-field="name">Nombre</th>
-                <th class="width-15 no-sort text-center">Estado</th>
-                <th class="width-20 no-sort actions text-center"><i class="fas fa-cogs"></i> Acciones</th>
+                <th class="width-45" data-field="name">Nombre</th>
+                <th class="width-15 text-center">Prefijo</th>
+                <th class="width-15 text-center">Ámbito</th>
+                <th class="width-10 no-sort text-center">Estado</th>
+                <th class="width-10 no-sort actions text-center"><i class="fas fa-cogs"></i> Acciones</th>
             </tr>
             </thead>
             <tbody>
@@ -20,6 +22,20 @@
                 <tr data-status="{{ type.is_active|yesno:'true,false' }}">
                     <td class="text-center">{{ forloop.counter }}</td>
                     <td class="fw-bold">{{ type.name }}</td>
+                    <td class="text-center">
+                        {% if type.code_prefix %}
+                            <span class="badge badge-gray">{{ type.code_prefix }}</span>
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if type.is_external %}
+                            <span class="badge badge-blue">Recepción / Ventanilla</span>
+                        {% else %}
+                            <span class="badge badge-gray">Uso Interno</span>
+                        {% endif %}
+                    </td>
                     <td class="text-center">
                         {% if type.is_active %}
                             <span class="badge badge-green">Activo</span>
@@ -29,14 +45,12 @@
                     </td>
                     <td class="actions text-center">
                         <div class="actions-wrapper">
-                            <!-- Editar Tipo -->
                             {% if perms.documents.change_documenttype %}
                                 <button type="button" class="btn-yellow-circle"
                                         onclick="openAjaxModal('{% url 'documents:doc_type_update' type.pk %}')"
                                         title="Editar Tipo de Documento">
                                     <i class="fa-solid fa-pen-to-square"></i>
                                 </button>
-                                <!-- Toggle Activo / Inactivo con SweetAlert2 de main.js -->
                                 <button type="button"
                                         class="{% if type.is_active %}btn-green-circle{% else %}btn-red-circle{% endif %}"
                                         onclick="toggleStatusAjax('{% url 'documents:doc_type_status' type.pk %}', '{{ type.name|escapejs }}', {{ type.is_active|yesno:'true,false' }})"
@@ -49,7 +63,7 @@
                 </tr>
             {% empty %}
                 <tr>
-                    <td colspan="4">
+                    <td colspan="6">
                         <div class="empty-state-container">
                             <i class="fa-solid fa-inbox empty-state-icon"></i>
                             <p class="empty-state-text">No se encontraron tipos de documento registrados.</p>

@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Oficina Virtual | SIGETH{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/documents.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="container-fluid">
+        <!-- Header Principal -->
+        <div class="header-card">
+            <div>
+                <h1>Oficina Virtual de Despacho</h1>
+                <p>Gestión de expedientes, sumillas digitales y derivación institucional</p>
+            </div>
+            <div>
+                <span class="badge badge-glass">
+                    <i class="fa-solid fa-landmark me-1"></i> Despacho: {{ main_unit.name|default:user_unit.name }}
+                </span>
+                {% if user_unit and user_unit != main_unit %}
+                    <span class="badge badge-glass ms-2">
+                        <i class="fa-solid fa-sitemap me-1"></i> Área: {{ user_unit.name }}
+                    </span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Zonas de Despacho Interactivo -->
+        <div class="virtual-office-layout">
+            <!-- Columna Izquierda: Bandeja de Pendientes -->
+            <div class="virtual-office-tray">
+                <div class="section-card-standard h-100">
+                    <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                        <h4 class="section-title m-0">
+                            <i class="fa-solid fa-inbox"></i> Trámites en mi Bandeja
+                        </h4>
+                        <span class="badge badge-blue">{{ pending_tasks.count }} pendientes</span>
+                    </div>
+
+                    <div class="procedure-cards-container" id="procedureCardsContainer">
+                        {% for proc in pending_procedures %}
+                            <div class="procedure-card"
+                                 draggable="true"
+                                 data-procedure-id="{{ proc.id }}">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="badge badge-gray">{{ proc.code }}</span>
+                                    <span class="semaphore-dot semaphore-{{ proc.semaphore_status|lower }}"
+                                          title="Estado: {{ proc.semaphore_status }}"></span>
+                                </div>
+                                <h5 class="procedure-card-title">{{ proc.subject }}</h5>
+                                <div class="small text-muted mb-2">
+                                    <strong>Remitente:</strong> {{ proc.external_sender|default:proc.created_by.signature_name }}
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="badge badge-blue-mini">{{ proc.category.name }}</span>
+                                    <small class="text-muted"><i
+                                            class="fa-regular fa-clock"></i> {{ proc.created_at|date:"d/m/Y H:i" }}
+                                    </small>
+                                </div>
+                            </div>
+                        {% empty %}
+                            <div class="empty-state-container py-4">
+                                <i class="fa-solid fa-folder-open empty-state-icon"></i>
+                                <p class="empty-state-text">No tiene trámites pendientes en este despacho.</p>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Columna Derecha: Destinos de Derivación (Drop Targets) -->
+            <div class="virtual-office-targets">
+                <!-- 1. Nivel Superior: Devolver / Despachar a Dirección -->
+                {% if parent_unit %}
+                    <div class="drop-zone-card drop-zone-ascendant"
+                         data-unit-id="{{ parent_unit.id }}"
+                         data-unit-name="{{ parent_unit.name }}">
+                        <div class="drop-zone-icon"><i class="fa-solid fa-arrow-up-from-bracket"></i></div>
+                        <div class="drop-zone-info">
+                            <h4>Elevar a {{ parent_unit.name }}</h4>
+                            <p>Arrastre aquí para remitir respuesta o visto bueno a su superior</p>
+                        </div>
+                    </div>
+                {% endif %}
+
+                <!-- 2. Nivel Inferior: Dependencias Hijas / Jefaturas / Coordinaciones -->
+                <div class="section-card-standard mt-3">
+                    <h4 class="section-title">
+                        <i class="fa-solid fa-sitemap"></i> Dependencias Subordinadas (Sumillar / Delegar)
+                    </h4>
+                    <div class="drop-zones-grid">
+                        {% for child in child_units %}
+                            <div class="drop-zone-card drop-zone-descendant"
+                                 data-unit-id="{{ child.id }}"
+                                 data-unit-name="{{ child.name }}">
+                                <div class="drop-zone-icon"><i class="fa-solid fa-arrow-turn-down"></i></div>
+                                <div class="drop-zone-info">
+                                    <h4>{{ child.name }}</h4>
+                                    <p>Jefe: {{ child.boss.person.full_name|default:"Sin titular asignado" }}</p>
+                                </div>
+                            </div>
+                        {% empty %}
+                            <div class="col-12 text-center py-3 text-muted">
+                                <small>No hay dependencias subordinadas directas registradas.</small>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-root"></div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/documents/virtual_office.js' %}"></script>
+{% endblock %}

@@ -115,8 +115,8 @@
                     </ul>
                 </li>
             {% endif %}
-            <!-- MÓDULO GESTIÓN DOCUMENTAL -->
-            {% if perms.documents.view_document or perms.documents.view_documenttype %}
+            <!-- MÓDULO GESTIÓN DOCUMENTAL Y TRÁMITES -->
+            {% if perms.documents.view_document or perms.documents.view_documenttype or perms.documents.add_document %}
                 <li class="has-submenu">
                     <a href="#" class="{% if request.resolver_match.app_name == 'documents' %}active{% endif %}">
                         <i class="fa-solid fa-folder-tree"></i>
@@ -124,7 +124,35 @@
                         <i class="fa-solid fa-chevron-right chevron-icon"></i>
                     </a>
                     <ul class="submenu">
-                        <!-- 1. Listado Principal de Documentos -->
+                        <!-- 1. Recepción y Ventanilla (Ingreso de Trámites Externos) -->
+                        {% if perms.documents.add_document %}
+                            <li>
+                                <a href="{% url 'documents:procedure_reception_list' %}"
+                                   class="{% if request.resolver_match.url_name == 'procedure_reception_list' %}active-child{% endif %}">
+                                    <i class="fa-solid fa-inbox"></i>
+                                    <span class="menu-text">Recepción / Ventanilla</span>
+                                </a>
+                            </li>
+                        {% endif %}
+
+                        <!-- 2. Oficina Virtual de Despacho con Contador Rojo -->
+                        <li>
+                            <a href="{% url 'documents:virtual_office' %}"
+                               class="{% if request.resolver_match.url_name == 'virtual_office' %}active-child{% endif %} d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center">
+                                    <i class="fa-solid fa-desktop me-2"></i>
+                                    <span class="menu-text">Oficina Virtual</span>
+                                </div>
+                                {% if sidebar_pending_tramites_count and sidebar_pending_tramites_count > 0 %}
+                                    <span class="sidebar-badge" style="background-color: #ef4444; color: white;"
+                                          title="{{ sidebar_pending_tramites_count }} trámites pendientes por despachar">
+                                        {{ sidebar_pending_tramites_count }}
+                                    </span>
+                                {% endif %}
+                            </a>
+                        </li>
+
+                        <!-- 3. Documentos Propios (Memos, Oficios e Informes) -->
                         {% if perms.documents.view_document %}
                             <li>
                                 <a href="{% url 'documents:document_list' %}"
@@ -134,7 +162,8 @@
                                 </a>
                             </li>
                         {% endif %}
-                        <!-- 2. CRUD Tipos de Documento (Configuración) -->
+
+                        <!-- 4. Tipos de Documento (Configuración) -->
                         {% if perms.documents.view_documenttype %}
                             <li>
                                 <a href="{% url 'documents:doc_type_list' %}"

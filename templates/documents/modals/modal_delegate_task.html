@@ -1,0 +1,64 @@
+{% load static %}
+<div class="modal-overlay hidden">
+    <div class="modal-container-medium">
+        <form id="delegateTaskForm" method="POST" action="{% url 'documents:process_delegate_task' %}"
+              onsubmit="submitAjaxForm(event, onTaskDelegated);">
+            {% csrf_token %}
+            <input type="hidden" name="procedure_id" value="{{ procedure.id }}">
+            <input type="hidden" name="unit_id" value="{{ target_unit.id }}">
+
+            <div class="modal-header-medium">
+                <h3 class="header-title">
+                    <i class="fa-solid fa-stamp me-2"></i> Sumillar a {{ target_unit.name }}
+                </h3>
+                <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="modal-body-content modal-body-custom">
+                <div class="alert alert-info mb-3">
+                    <strong>Trámite:</strong> {{ procedure.code }} — {{ procedure.subject }}
+                </div>
+
+                <div class="form-section-card">
+                    <div class="form-group mb-3">
+                        <label class="form-label" for="id_assigned_to">Funcionario Destinatario <span
+                                class="text-red">*</span></label>
+                        {{ form.assigned_to }}
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-8 form-group">
+                            <label class="form-label" for="id_instruction">Instrucción Principal <span class="text-red">*</span></label>
+                            {{ form.instruction }}
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label class="form-label" for="id_days_limit">Días Término <span
+                                    class="text-red">*</span></label>
+                            {{ form.days_limit }}
+                        </div>
+                    </div>
+
+                    <div class="form-group mt-3">
+                        <label class="form-label" for="id_observation">Texto Detallado de la Sumilla</label>
+                        {{ form.observation }}
+                    </div>
+
+                    <div class="form-group mt-3 d-flex align-items-center gap-2">
+                        {{ form.is_main_task }}
+                        <label class="form-label m-0" for="id_is_main_task">Es Responsable Principal (Para consolidar
+                            expediente)</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer-medium modal-footer-spaced">
+                <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">Cancelar</button>
+                <button type="submit" class="btn-dark-blue-rectangle">
+                    <i class="fa-solid fa-paper-plane me-1"></i> Asignar y Sumillar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

@@ -2112,6 +2112,13 @@ input.is-valid:focus, select.is-valid:focus, textarea.is-valid:focus, .input-fie
     width: 100% !important;
 }
 
+/* El menú de Select2 debe flotar sobre el modal, no formar parte de su cuerpo
+   desplazable, para evitar que el contenedor cambie de altura al abrirlo. */
+.modal-overlay > .select2-container,
+.modal-overlay .select2-container--open {
+    z-index: 100001 !important;
+}
+
 .hidden-field {
     display: none;
 }

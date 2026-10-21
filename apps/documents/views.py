@@ -1,25 +1,32 @@
-from django.contrib.auth.decorators import permission_required
+import os
+import re
+from datetime import datetime
+from datetime import timedelta
+
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.db import transaction
+from django.db.models import Count, Q
+from django.http import Http404
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import get_object_or_404
-from django.template.loader import render_to_string
-from django.db.models import Count, Q
-from django.urls import reverse_lazy
-from django.views.decorators.http import require_POST
-from django.views.generic import ListView, CreateView, UpdateView
-from django.utils import timezone
-from datetime import datetime
-import re
-import os
 from django.shortcuts import render
+from django.template.loader import render_to_string
+from django.utils import timezone
+from django.views.decorators.clickjacking import xframe_options_sameorigin
+from django.views.decorators.http import require_POST
+from django.views.generic import ListView, CreateView
+from django.views.generic import UpdateView
+
+from institution.models import AdministrativeUnit
+from .forms import DelegateTaskForm
 from .forms import DocumentForm
 from .forms import DocumentTypeForm
-from .models import Document
+from .forms import ProcedureReceptionForm
+from .forms import UserSignatureUploadForm, UserProfileSettingsForm
 from .models import DocumentType
-from django.views.generic import UpdateView
-from django.http import HttpResponseBadRequest
-from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
+from .models import Procedure, ProcedureTask, ProcedureTrace, Document
+from .models import ProcedureSumilla
 
 
 class DocumentListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
@@ -564,3 +571,617 @@ def next_filing_code(request, category_id):
 
     next_code = f"{prefix}{next_num:03d}{('-' + initials) if initials else ''}"
     return JsonResponse({'success': True, 'code': next_code, 'next_number': next_num})
+
+
+@login_required
+@require_POST
+def update_user_settings(request):
+    """
+    Actualiza el nombre personalizado del usuario en su cuenta.
+    """
+    form = UserProfileSettingsForm(request.POST, instance=request.user)
+    if form.is_valid():
+        form.save()
+        return JsonResponse({
+            'success': True,
+            'message': 'Datos de perfil actualizados correctamente.'
+        })
+    return JsonResponse({
+        'success': False,
+        'message': 'Error al actualizar perfil.',
+        'errors': form.errors
+    }, status=400)
+
+
+@login_required
+@require_POST
+def upload_signature_certificate(request):
+    """
+    Valida en memoria el archivo .p12 con la clave provista y almacena los metadatos.
+    """
+    profile = getattr(request.user, 'signature_profile', None)
+    form = UserSignatureUploadForm(request.POST, request.FILES, instance=profile)
+
+    if form.is_valid():
+        cert_info = form.cleaned_data.get('cert_info', {})
+        sig_profile = form.save(commit=False)
+        sig_profile.user = request.user
+        sig_profile.issuer = cert_info.get('issuer')
+        sig_profile.subject_dn = cert_info.get('subject_dn')
+        sig_profile.serial_number = cert_info.get('serial_number')
+        sig_profile.valid_from = cert_info.get('valid_from')
+        sig_profile.valid_to = cert_info.get('valid_to')
+        sig_profile.save()
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Firma electrónica de "{cert_info.get("common_name")}" vinculada con éxito. Caduca el {cert_info.get("valid_to").strftime("%d/%m/%Y")}.'
+        })
+
+    errors = {k: v[0] for k, v in form.errors.items()}
+    error_msg = form.errors.get('__all__', ['No se pudo vincular la firma.'])[
+        0] if '__all__' in form.errors else 'Verifique los datos ingresados.'
+    return JsonResponse({
+        'success': False,
+        'message': error_msg,
+        'errors': errors
+    }, status=400)
+
+
+@login_required
+def pass_to_secretariat_modal(request, pk):
+    """
+    Modal AJAX para remitir el trámite a Despacho.
+    Lista a los servidores adscritos a la unidad principal más cercana y permite ingresar un mensaje opcional.
+    """
+    procedure = get_object_or_404(Procedure, pk=pk, is_active=True)
+
+    # Obtener la unidad principal más cercana
+    employee = getattr(getattr(request.user, 'person', None), 'employee_profile', None)
+    user_unit = employee.area if employee else None
+
+    target_unit = procedure.current_unit or user_unit
+    main_dispatch_unit = target_unit.get_scheduling_root_unit() if target_unit else None
+    if not main_dispatch_unit:
+        main_dispatch_unit = AdministrativeUnit.objects.filter(is_main_unit=True, is_active=True).first()
+
+    # Listar empleados de la unidad principal
+    dest_employees = []
+    if main_dispatch_unit:
+        from employee.models import Employee
+        dest_employees = Employee.objects.filter(
+            area=main_dispatch_unit,
+            is_active=True
+        ).select_related('person')
+
+    return render(request, 'documents/modals/modal_pass_to_despatch.html', {
+        'procedure': procedure,
+        'main_dispatch_unit': main_dispatch_unit,
+        'employees': dest_employees,
+    })
+
+
+@login_required
+@require_POST
+def process_pass_to_secretariat(request, pk):
+    """
+    Procesa la remisión formal a Despacho con el destinatario seleccionado y el mensaje opcional.
+    """
+    procedure = get_object_or_404(Procedure, pk=pk, is_active=True)
+    employee_id = request.POST.get('assigned_employee_id')
+    optional_message = (request.POST.get('message') or '').strip()
+
+    from employee.models import Employee
+    assigned_employee = Employee.objects.filter(pk=employee_id, is_active=True).select_related(
+        'person').first() if employee_id else None
+    assigned_user = assigned_employee.person.user if assigned_employee and hasattr(assigned_employee.person,
+                                                                                   'user') else None
+
+    # Unidad principal
+    main_dispatch_unit = assigned_employee.area.get_scheduling_root_unit() if assigned_employee else None
+    if not main_dispatch_unit:
+        main_dispatch_unit = AdministrativeUnit.objects.filter(is_main_unit=True, is_active=True).first()
+
+    with transaction.atomic():
+        procedure.status = Procedure.Status.IN_DESPATCH
+        procedure.current_unit = main_dispatch_unit
+        procedure.updated_by = request.user
+        procedure.save()
+
+        # Generar tarea para la unidad y servidor destinatario
+        task, created = ProcedureTask.objects.get_or_create(
+            procedure=procedure,
+            unit=main_dispatch_unit,
+            status=ProcedureTask.TaskStatus.PENDING,
+            defaults={
+                'assigned_to': assigned_user,
+                'assigned_by': request.user,
+                'created_by': request.user,
+                'is_main_task': True
+            }
+        )
+        if not created and assigned_user:
+            task.assigned_to = assigned_user
+            task.save()
+
+        # Registrar en la Hoja de Ruta
+        obs_text = f"Remitido al Despacho de {main_dispatch_unit.name}."
+        if assigned_employee:
+            obs_text += f" Atención inicial a cargo de: {assigned_employee.person.full_name}."
+        if optional_message:
+            obs_text += f" Nota de Ventanilla: {optional_message}"
+
+        ProcedureTrace.objects.create(
+            procedure=procedure,
+            task=task,
+            actor=request.user,
+            actor_name=request.user.signature_name,
+            actor_position=request.user.signature_position,
+            unit_name="Ventanilla Única / Recepción",
+            action=ProcedureTrace.TraceAction.PASSED_TO_DESPATCH,
+            observation=obs_text
+        )
+
+    return JsonResponse({
+        'success': True,
+        'message': f'Trámite {procedure.code} remitido al Despacho de {main_dispatch_unit.name} con éxito.'
+    })
+
+
+@login_required
+def procedure_view_pdf_modal(request, pk):
+    """
+    Modal grande para visualizar el PDF digitalizado de un trámite sin salir de la plataforma.
+    """
+    procedure = get_object_or_404(Procedure, pk=pk)
+    entry_doc = procedure.documents.filter(is_entry_document=True).first()
+
+    return render(request, 'documents/modals/modal_view_pdf.html', {
+        'procedure': procedure,
+        'doc': entry_doc,
+    })
+
+
+@login_required
+def virtual_office_view(request):
+    """
+    Escritorio virtual interactivo con zonas de soltado (Drag & Drop).
+    Permite visualizar trámites pendientes tanto para jefes titulares como
+    para secretarías y personal adscrito a la unidad principal.
+    """
+    user = request.user
+    employee = getattr(getattr(user, 'person', None), 'employee_profile', None)
+    user_unit = employee.area if employee else None
+
+    # Obtener la cabecera principal de la dirección
+    main_unit = user_unit.get_scheduling_root_unit() if user_unit else None
+    if not main_unit:
+        main_unit = AdministrativeUnit.objects.filter(is_main_unit=True, is_active=True).first()
+
+    # Reunir todos los IDs de la rama (cabecera + subcoordinaciones)
+    units_to_check = []
+    if main_unit:
+        units_to_check = main_unit.get_descendant_ids()
+    elif user_unit:
+        units_to_check = [user_unit.id]
+
+    # Trámites en despacho:
+    # 1. Trámites cuya unidad actual sea la cabecera o cualquier subdependencia adscrita
+    # 2. O tareas explícitamente asignadas al usuario o a su área
+    if user.is_superuser or user.has_perm('auth.dashboard_talento_humano') or (main_unit and user_unit):
+        pending_procedures = Procedure.objects.filter(
+            Q(current_unit_id__in=units_to_check) |
+            Q(tasks__unit_id__in=units_to_check) |
+            Q(tasks__assigned_to=user),
+            status__in=[Procedure.Status.IN_DESPATCH, Procedure.Status.IN_PROCESS],
+            is_active=True
+        ).distinct().select_related('category', 'created_by').order_by('-created_at')
+    else:
+        pending_procedures = Procedure.objects.filter(
+            tasks__assigned_to=user,
+            tasks__status__in=[ProcedureTask.TaskStatus.PENDING, ProcedureTask.TaskStatus.IN_PROCESS],
+            is_active=True
+        ).distinct().select_related('category', 'created_by').order_by('-created_at')
+
+    # Zonas de soltado (Dependencias hijas directas de la dirección)
+    child_units = []
+    parent_unit = None
+
+    if main_unit:
+        child_units = AdministrativeUnit.objects.filter(parent=main_unit, is_active=True)
+        if main_unit.parent:
+            parent_unit = main_unit.parent.get_scheduling_root_unit()
+
+    return render(request, 'documents/virtual_office.html', {
+        'pending_procedures': pending_procedures,
+        'user_unit': user_unit,
+        'main_unit': main_unit,
+        'child_units': child_units,
+        'parent_unit': parent_unit,
+    })
+
+
+@login_required
+def modal_delegate_task(request):
+    """
+    Modal AJAX que se despliega al soltar un trámite sobre una unidad destino.
+    """
+    procedure_id = request.GET.get('procedure_id')
+    unit_id = request.GET.get('unit_id')
+
+    procedure = get_object_or_404(Procedure, pk=procedure_id)
+    target_unit = get_object_or_404(AdministrativeUnit, pk=unit_id)
+
+    form = DelegateTaskForm(unit=target_unit)
+
+    return render(request, 'documents/modals/modal_delegate_task.html', {
+        'form': form,
+        'procedure': procedure,
+        'target_unit': target_unit,
+    })
+
+
+@login_required
+@require_POST
+def process_delegate_task(request):
+    """
+    Procesa la delegación, crea la tarea concurrente, registra la sumilla y guarda la traza inmutable.
+    """
+    procedure_id = request.POST.get('procedure_id')
+    unit_id = request.POST.get('unit_id')
+
+    procedure = get_object_or_404(Procedure, pk=procedure_id)
+    target_unit = get_object_or_404(AdministrativeUnit, pk=unit_id)
+
+    form = DelegateTaskForm(request.POST, unit=target_unit)
+    if not form.is_valid():
+        return JsonResponse({
+            'success': False,
+            'message': 'Corrija los errores en el formulario.',
+            'errors': form.errors
+        }, status=400)
+
+    assigned_to = form.cleaned_data['assigned_to']
+    instruction = form.cleaned_data['instruction']
+    days_limit = form.cleaned_data['days_limit']
+    is_main_task = form.cleaned_data['is_main_task']
+    observation = form.cleaned_data.get('observation', '')
+
+    with transaction.atomic():
+        now = timezone.now()
+        task_limit = now + timedelta(days=days_limit)
+
+        # 1. Crear Tarea de Trámite
+        task = ProcedureTask.objects.create(
+            procedure=procedure,
+            unit=target_unit,
+            assigned_to=assigned_to,
+            assigned_by=request.user,
+            is_main_task=is_main_task,
+            limit_date=task_limit,
+            status=ProcedureTask.TaskStatus.PENDING,
+            created_by=request.user
+        )
+
+        # 2. Registrar la Sumilla vinculada
+        ProcedureSumilla.objects.create(
+            task=task,
+            author=request.user,
+            instruction=instruction,
+            observation=observation,
+            is_signed=False,
+            created_by=request.user
+        )
+
+        # 3. Actualizar estado y unidad actual del trámite
+        procedure.current_unit = target_unit
+        procedure.status = Procedure.Status.IN_PROCESS
+        if not procedure.limit_date or procedure.limit_date < task_limit:
+            procedure.limit_date = task_limit
+        procedure.save()
+
+        # 4. Asentar en la Hoja de Ruta Inmutable (Contraloría)
+        ProcedureTrace.objects.create(
+            procedure=procedure,
+            task=task,
+            actor=request.user,
+            actor_name=request.user.signature_name,
+            actor_position=request.user.signature_position,
+            unit_name=target_unit.name,
+            action=ProcedureTrace.TraceAction.SUMILLED,
+            observation=f"Sumilla a {assigned_to.signature_name}: {instruction}. {observation}".strip()
+        )
+
+    return JsonResponse({
+        'success': True,
+        'message': f'Trámite {procedure.code} derivado exitosamente a {target_unit.name}.'
+    })
+
+
+class ProcedureReceptionListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
+    """
+    Bandeja de recepción donde ventanilla ingresa y audita los trámites radicados.
+    """
+    model = Procedure
+    template_name = 'documents/procedure_reception_list.html'
+    context_object_name = 'procedures'
+    paginate_by = 10
+    permission_required = 'documents.add_document'
+
+    def get_queryset(self):
+        qs = Procedure.objects.filter(
+            procedure_type=Procedure.ProcedureType.RECEPCION,
+            is_active=True
+        ).select_related('category', 'created_by').order_by('-created_at')
+
+        q = self.request.GET.get('q', '').strip()
+        if q:
+            qs = qs.filter(
+                Q(code__icontains=q) |
+                Q(subject__icontains=q) |
+                Q(external_sender__icontains=q) |
+                Q(external_number__icontains=q)
+            )
+        return qs
+
+    def render_to_response(self, context, **response_kwargs):
+        if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            html = render_to_string(
+                'documents/partials/partial_reception_table.html',
+                context,
+                request=self.request
+            )
+            return HttpResponse(html)
+        return super().render_to_response(context, **response_kwargs)
+
+
+@login_required
+def procedure_reception_create(request):
+    """
+    Modal AJAX para registrar el documento físico escaneado.
+    Genera el correlativo secuencial institucional: TR-YYYY-0001
+    """
+    year = timezone.now().year
+
+    if request.method == 'GET':
+        total_count = Procedure.objects.filter(created_at__year=year).count() + 1
+        suggested_code = f"TR-{year}-{total_count:04d}"
+
+        form = ProcedureReceptionForm()
+        return render(request, 'documents/modals/modal_reception_form.html', {
+            'form': form,
+            'suggested_code': suggested_code
+        })
+
+    if request.method == 'POST':
+        form = ProcedureReceptionForm(request.POST, request.FILES)
+        if not form.is_valid():
+            return JsonResponse({
+                'success': False,
+                'message': 'Corrija los errores en el formulario.',
+                'errors': form.errors
+            }, status=400)
+
+        with transaction.atomic():
+            total_count = Procedure.objects.filter(created_at__year=year).count() + 1
+            radicado_code = f"TR-{year}-{total_count:04d}"
+
+            procedure = form.save(commit=False)
+            procedure.code = radicado_code
+            procedure.procedure_type = Procedure.ProcedureType.RECEPCION
+            procedure.status = Procedure.Status.DRAFT
+            procedure.created_by = request.user
+            procedure.save()
+
+            scanned_file = form.cleaned_data['scanned_file']
+            Document.objects.create(
+                procedure=procedure,
+                filing_code=f"DOC-{radicado_code}",
+                category=procedure.category,
+                subject=procedure.subject,
+                sender_name=procedure.external_sender,
+                recipient_name="Despacho de Dirección",
+                file_attachment=scanned_file,
+                is_entry_document=True,
+                created_by=request.user
+            )
+
+            ProcedureTrace.objects.create(
+                procedure=procedure,
+                actor=request.user,
+                actor_name=request.user.signature_name,
+                actor_position=request.user.signature_position,
+                unit_name="Ventanilla Única / Recepción",
+                action=ProcedureTrace.TraceAction.RECEPTION,
+                observation=f"Documento registrado en ventanilla bajo radicado {radicado_code}."
+            )
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Trámite {radicado_code} registrado correctamente en Ventanilla.'
+        })
+
+
+@login_required
+def procedure_trace_modal(request, pk):
+    """
+    Modal AJAX que renderiza la Hoja de Ruta cronológica inmutable del trámite.
+    """
+    procedure = get_object_or_404(Procedure, pk=pk)
+    traces = procedure.traces.all().order_by('created_at')
+
+    return render(request, 'documents/modals/modal_procedure_trace.html', {
+        'procedure': procedure,
+        'traces': traces
+    })
+
+
+@login_required
+def procedure_reception_update(request, pk):
+    """
+    Permite editar los datos de un trámite siempre que no haya sido derivado a dependencias inferiores.
+    """
+    procedure = get_object_or_404(Procedure, pk=pk, is_active=True)
+
+    # Validación estricta: Si ya tiene tareas activas delegadas hacia abajo, no se puede alterar
+    if procedure.tasks.exists():
+        return HttpResponse("No se puede editar este trámite porque ya fue derivado a dependencias subordinadas.",
+                            status=403)
+
+    if request.method == 'GET':
+        form = ProcedureReceptionForm(instance=procedure)
+        # El archivo escaneado no es obligatorio en edición si ya existe
+        form.fields['scanned_file'].required = False
+        return render(request, 'documents/modals/modal_reception_update_form.html', {
+            'form': form,
+            'procedure': procedure
+        })
+
+    if request.method == 'POST':
+        form = ProcedureReceptionForm(request.POST, request.FILES, instance=procedure)
+        form.fields['scanned_file'].required = False
+
+        if not form.is_valid():
+            return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+
+        with transaction.atomic():
+            proc = form.save(commit=False)
+            proc.updated_by = request.user
+            proc.save()
+
+            # Si cargaron un nuevo PDF de reemplazo
+            if 'scanned_file' in request.FILES:
+                entry_doc = proc.documents.filter(is_entry_document=True).first()
+                if entry_doc:
+                    entry_doc.file_attachment = request.FILES['scanned_file']
+                    entry_doc.updated_by = request.user
+                    entry_doc.save()
+                else:
+                    Document.objects.create(
+                        procedure=proc,
+                        filing_code=f"DOC-{proc.code}",
+                        category=proc.category,
+                        subject=proc.subject,
+                        sender_name=proc.external_sender,
+                        recipient_name="Despacho de Dirección",
+                        file_attachment=request.FILES['scanned_file'],
+                        is_entry_document=True,
+                        created_by=request.user
+                    )
+
+            ProcedureTrace.objects.create(
+                procedure=proc,
+                actor=request.user,
+                actor_name=request.user.signature_name,
+                actor_position=request.user.signature_position,
+                unit_name="Ventanilla Única / Recepción",
+                action=ProcedureTrace.TraceAction.RECEPTION,
+                observation="Actualización de datos generales del trámite en ventanilla."
+            )
+
+        return JsonResponse({'success': True, 'message': 'Trámite actualizado correctamente.'})
+
+
+@login_required
+@require_POST
+def procedure_cancel_or_delete(request, pk):
+    """
+    - Si NO ha sido asignado: pasa is_active=False y libera el número de trámite.
+    - Si YA fue asignado: cambia a anulado (ARCHIVED) con motivo obligatorio.
+    """
+    procedure = get_object_or_404(Procedure, pk=pk, is_active=True)
+    reason = (request.POST.get('reason') or '').strip()
+
+    has_assignments = procedure.tasks.exists()
+
+    with transaction.atomic():
+        if not has_assignments:
+            # Caso A: No fue asignado a nadie. Se da de baja lógica y se libera el correlativo
+            old_code = procedure.code
+            timestamp = int(timezone.now().timestamp())
+            procedure.code = f"{old_code}-ANULADO-{timestamp}"
+            procedure.is_active = False
+            procedure.updated_by = request.user
+            procedure.save()
+
+            ProcedureTrace.objects.create(
+                procedure=procedure,
+                actor=request.user,
+                actor_name=request.user.signature_name,
+                actor_position=request.user.signature_position,
+                unit_name="Ventanilla Única / Recepción",
+                action=ProcedureTrace.TraceAction.ARCHIVED,
+                observation=f"Baja de trámite sin asignación previa. Se libera el número {old_code}. Motivo: {reason or 'Sin especificar'}"
+            )
+
+            return JsonResponse({
+                'success': True,
+                'message': f'Trámite dado de baja correctamente. El número {old_code} ha quedado libre para una nueva radicación.'
+            })
+        else:
+            # Caso B: Ya tuvo asignaciones. No se puede liberar el número, queda como anulado con motivo
+            if not reason:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'El trámite ya fue asignado previamente. Debe ingresar obligatoriamente el motivo de anulación.'
+                }, status=400)
+
+            procedure.status = Procedure.Status.ARCHIVED
+            procedure.closed_at = timezone.now()
+            procedure.updated_by = request.user
+            procedure.save()
+
+            # Marcar tareas como cerradas
+            procedure.tasks.update(status=ProcedureTask.TaskStatus.CLOSED)
+
+            ProcedureTrace.objects.create(
+                procedure=procedure,
+                actor=request.user,
+                actor_name=request.user.signature_name,
+                actor_position=request.user.signature_position,
+                unit_name="Ventanilla Única / Recepción",
+                action=ProcedureTrace.TraceAction.ARCHIVED,
+                observation=f"Trámite Anulado y Archivado institucionalmente. Motivo: {reason}"
+            )
+
+            return JsonResponse({
+                'success': True,
+                'message': f'Trámite {procedure.code} anulado y archivado formalmente con el motivo registrado.'
+            })
+
+
+@login_required
+@xframe_options_sameorigin
+def serve_procedure_pdf(request, pk):
+    """
+    Sirve el archivo PDF directamente con 'Content-Disposition: inline' y
+    'X-Frame-Options: SAMEORIGIN', permitiendo su visualización en modal
+    tanto en entorno local como en servidor.
+    """
+    procedure = get_object_or_404(Procedure, pk=pk)
+    entry_doc = procedure.documents.filter(is_entry_document=True).first()
+
+    if not entry_doc or not entry_doc.file_attachment:
+        raise Http404("El trámite no cuenta con documento PDF adjunto.")
+
+    try:
+        # Abrir el binario del archivo desde MEDIA_ROOT / Storage
+        file_path = entry_doc.file_attachment.path
+        if not os.path.exists(file_path):
+            raise Http404("El archivo físico no existe en el disco.")
+
+        with open(file_path, 'rb') as pdf_file:
+            response = HttpResponse(pdf_file.read(), content_type='application/pdf')
+            filename = os.path.basename(file_path)
+            response['Content-Disposition'] = f'inline; filename="{filename}"'
+            return response
+    except Exception:
+        # Fallback para storages remotos
+        try:
+            content = entry_doc.file_attachment.read()
+            response = HttpResponse(content, content_type='application/pdf')
+            filename = os.path.basename(entry_doc.file_attachment.name)
+            response['Content-Disposition'] = f'inline; filename="{filename}"'
+            return response
+        except Exception:
+            raise Http404("No fue posible leer el archivo PDF.")

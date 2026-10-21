@@ -866,3 +866,41 @@
     margin: 0.5rem auto 0 auto;
     font-size: 0.88rem;
 }
+
+/* Posicionamiento relativo para la tarjeta con badge */
+.stat-icon.position-relative {
+    position: relative !important;
+}
+
+/* Insignia roja con animación pulsante */
+.badge-notification-pulse {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background-color: #ef4444;
+    color: #ffffff;
+    font-size: 0.72rem;
+    font-weight: 800;
+    min-width: 22px;
+    height: 22px;
+    padding: 2px 6px;
+    border-radius: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #ffffff;
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+    animation: pulseBadge 2s infinite;
+}
+
+@keyframes pulseBadge {
+    0% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    }
+}

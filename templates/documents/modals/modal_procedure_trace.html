@@ -1,0 +1,77 @@
+{% load static %}
+<div class="modal-overlay hidden">
+    <div class="modal-container-medium modal-trace-custom">
+        <div class="modal-header-medium">
+            <div class="d-flex align-items-center gap-2">
+                <div class="header-icon-circle">
+                    <i class="fa-solid fa-route"></i>
+                </div>
+                <div>
+                    <h3 class="header-title">Hoja de Ruta del Trámite</h3>
+                    <small class="text-white-50">Trazabilidad oficial e inmutable del expediente</small>
+                </div>
+            </div>
+            <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div class="modal-body-content modal-body-custom py-3 px-4">
+            <!-- Resumen del Trámite -->
+            <div class="reception-suggested-banner mb-3">
+                <div>
+                    <span class="small text-muted font-weight-bold d-block">RADICADO:</span>
+                    <strong class="font-monospace text-primary fs-6">{{ procedure.code }}</strong>
+                </div>
+                <div class="text-end">
+                    <span class="small text-muted font-weight-bold d-block">ESTADO ACTUAL:</span>
+                    <span class="badge badge-amber">{{ procedure.get_status_display }}</span>
+                </div>
+            </div>
+
+            <div class="form-section-card mb-3 p-3">
+                <div class="small text-muted mb-1"><strong>Asunto:</strong> {{ procedure.subject }}</div>
+                <div class="small text-muted"><strong>Remitente
+                    Original:</strong> {{ procedure.external_sender|default:"Trámite Interno" }}</div>
+            </div>
+
+            <!-- Timeline Cronológico -->
+            <div class="trace-timeline-container">
+                {% for trace in traces %}
+                    <div class="trace-item">
+                        <div class="trace-marker">
+                            <i class="fa-solid fa-check"></i>
+                        </div>
+                        <div class="trace-content-box">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="badge badge-blue-mini">{{ trace.get_action_display }}</span>
+                                <span class="trace-timestamp">
+                                    <i class="fa-regular fa-clock me-1"></i> {{ trace.created_at|date:"d/m/Y H:i:s" }}
+                                </span>
+                            </div>
+                            <div class="trace-actor-line">
+                                <strong>{{ trace.actor_name }}</strong> &mdash; <span>{{ trace.actor_position }}</span>
+                                <div class="trace-unit-badge"><i
+                                        class="fa-solid fa-building me-1"></i> {{ trace.unit_name }}</div>
+                            </div>
+                            {% if trace.observation %}
+                                <div class="trace-observation-card mt-2">
+                                    {{ trace.observation|linebreaksbr }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="text-center py-4 text-muted">
+                        <i class="fa-solid fa-hourglass-start fa-2x mb-2"></i>
+                        <p class="small">No existen registros de trazabilidad para este expediente.</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="modal-footer-medium modal-footer-spaced py-2 px-4">
+            <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">Cerrar</button>
+        </div>
+    </div>
+</div>

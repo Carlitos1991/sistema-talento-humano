@@ -377,10 +377,10 @@ class ChangePasswordView(LoginRequiredMixin, View):
                 None,
             )
             institutional_email = (
-                getattr(institutional_data, 'institutional_email', None)
-                or user.email
-                or getattr(person, 'email', None)
-                or ''
+                    getattr(institutional_data, 'institutional_email', None)
+                    or user.email
+                    or getattr(person, 'email', None)
+                    or ''
             ).strip().lower()
             if not person or not document_number or not institutional_email:
                 return JsonResponse({
@@ -608,18 +608,6 @@ class CreateUserFromLoginView(TemplateView):
 class DashboardView(LoginRequiredMixin, TemplateView):
     template_name = 'core/dashboard.html'
 
-    def dispatch(self, request, *args, **kwargs):
-        """
-        if request.user.is_authenticated:
-            has_employee_dashboard = request.user.has_perm('auth.dashboard_empleado')
-            has_hr_dashboard = request.user.has_perm('auth.dashboard_talento_humano')
-            has_boss_dashboard = request.user.has_perm('auth.dashboard_jefe')
-
-            if has_employee_dashboard and not has_hr_dashboard and not has_boss_dashboard:
-                return redirect('employee:self_dashboard')
-        """
-        return super().dispatch(request, *args, **kwargs)
-
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         from employee.models import Employee
@@ -627,6 +615,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         from function_manual.models import JobProfile
         from django.db.models import Count, Q
         from datetime import date, timedelta
+        from documents.models import ProcedureTask, Document
 
         # -------------------------------------------------------------
         # Contexto Institucional (Logo y datos institucionales)
@@ -737,11 +726,14 @@ class DashboardView(LoginRequiredMixin, TemplateView):
             'values': [context['empleados_masculino'], context['empleados_femenino']]
         }
 
-        # Lógica de Jefatura
+        # -------------------------------------------------------------
+        # 2. LÓGICA DE JEFATURA (OFICINA VIRTUAL DE JEFE)
+        # -------------------------------------------------------------
         context['boss_unit'] = None
         context['boss_unit_detail_url'] = ''
         context['boss_total_personal'] = 0
         context['boss_pending_permits_count'] = 0
+        context['boss_pending_tramites_count'] = 0
         context['boss_pending_permits'] = []
         context['boss_can_manage_permits'] = self.request.user.has_perm('permitrequest.change_permitrequest')
 
@@ -813,12 +805,45 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                                                                              area_id__in=scoped_unit_ids).count()
                     context['boss_pending_permits_count'] = pending_permits_count
                     context['boss_pending_permits'] = unit_permits_qs.filter(status='REQUESTED')
+
+                    # Conteo de trámites y sumillas pendientes para la Jefatura
+                    context['boss_pending_tramites_count'] = ProcedureTask.objects.filter(
+                        unit=managed_unit,
+                        status__in=[ProcedureTask.TaskStatus.PENDING, ProcedureTask.TaskStatus.IN_PROCESS]
+                    ).count()
         except Exception:
             context['boss_unit'] = None
             context['boss_unit_detail_url'] = ''
             context['boss_total_personal'] = 0
             context['boss_pending_permits_count'] = 0
+            context['boss_pending_tramites_count'] = 0
             context['boss_pending_permits'] = []
+
+        # -------------------------------------------------------------
+        # 3. LÓGICA DE SERVIDOR (OFICINA VIRTUAL DE EMPLEADO)
+        # -------------------------------------------------------------
+        if self.request.user.is_authenticated:
+            # Trámites delegados directamente al usuario
+            context['employee_pending_tasks_count'] = ProcedureTask.objects.filter(
+                assigned_to=self.request.user,
+                status__in=[ProcedureTask.TaskStatus.PENDING, ProcedureTask.TaskStatus.IN_PROCESS]
+            ).count()
+
+            # Memos y documentos redactados por el usuario
+            context['employee_docs_count'] = Document.objects.filter(
+                created_by=self.request.user,
+                is_active=True
+            ).count()
+
+            # Permisos personales solicitados en el año actual
+            try:
+                from permitrequest.models import PermitRequest
+                context['employee_permits_count'] = PermitRequest.objects.filter(
+                    employee__person__user=self.request.user,
+                    created_at__year=timezone.now().year
+                ).count()
+            except Exception:
+                context['employee_permits_count'] = 0
 
         return context
 

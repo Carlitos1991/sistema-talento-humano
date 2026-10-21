@@ -109,13 +109,14 @@ TEMPLATES = [
                 'security.context_processors.help_messages_notifications',
                 'vacation.context_processors.schedule_discrepancy_notifications',
                 'sanctions.context_processors.pending_assignments',
+                'documents.context_processors.procedure_counters',
             ],
         },
     },
 ]
 
 WSGI_APPLICATION = 'talento_humano.wsgi.application'
-
+X_FRAME_OPTIONS = 'SAMEORIGIN'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 

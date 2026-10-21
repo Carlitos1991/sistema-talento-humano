@@ -1,0 +1,67 @@
+{% load static %}
+<div class="modal-overlay hidden">
+    <div class="modal-container-medium">
+        <form id="passToDespatchForm" method="POST"
+              action="{% url 'documents:process_pass_to_secretariat' procedure.id %}" onsubmit="submitAjaxForm(event);">
+            {% csrf_token %}
+
+            <div class="modal-header-medium">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="header-icon-circle">
+                        <i class="fa-solid fa-paper-plane"></i>
+                    </div>
+                    <div>
+                        <h3 class="header-title">Remitir a Despacho de Dirección</h3>
+                        <small class="text-white-50">{{ main_dispatch_unit.name }}</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="modal-body-content modal-body-custom py-3 px-4">
+                <div class="reception-suggested-banner mb-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="fa-solid fa-hashtag text-blue"></i>
+                        <span class="small text-muted font-weight-bold">TRÁMITE:</span>
+                        <span class="badge badge-blue font-monospace fw-bold">{{ procedure.code }}</span>
+                    </div>
+                    <span class="badge badge-gray">{{ procedure.category.name }}</span>
+                </div>
+
+                <div class="form-section-card p-3 mb-0">
+                    <div class="form-group mb-3">
+                        <label class="form-label">Destinatario en Despacho (Secretaría / Autoridad) <span
+                                class="text-red">*</span></label>
+                        <select name="assigned_employee_id" class="input-field select2" required style="width: 100%;">
+                            <option value="">-- Seleccione el destinatario en Despacho --</option>
+                            {% for emp in employees %}
+                                <option value="{{ emp.id }}" {% if emp.is_boss %}selected{% endif %}>
+                                    {{ emp.person.full_name }} {% if emp.is_boss %}(Jefe / Director Titular){% else %}
+                                    (Personal de Despacho){% endif %}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <small class="form-hint">Servidores adscritos a la unidad
+                            principal: {{ main_dispatch_unit.name }}.</small>
+                    </div>
+
+                    <div class="form-group mb-0">
+                        <label class="form-label" for="id_optional_message">Mensaje / Nota de Remisión
+                            (Opcional)</label>
+                        <textarea name="message" id="id_optional_message" class="form-control" rows="3"
+                                  placeholder="Observaciones de ingreso, anexos físicos adicionales o prioridad especial..."></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer-medium modal-footer-spaced py-2 px-4">
+                <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">Cancelar</button>
+                <button type="submit" class="btn-dark-blue-rectangle">
+                    <i class="fa-solid fa-paper-plane me-1"></i> Confirmar y Remitir
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

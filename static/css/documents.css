@@ -21,3 +21,490 @@
     height: auto !important;
     min-height: 40px;
 }
+
+/* Layout General de Oficina Virtual */
+.virtual-office-layout {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 1.5rem;
+    align-items: start;
+}
+
+@media (max-width: 992px) {
+    .virtual-office-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Tarjetas de Trámite Arrastrables */
+.procedure-cards-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 70vh;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.procedure-card {
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 14px;
+    cursor: grab;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+}
+
+.procedure-card:hover {
+    border-color: #3b82f6;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(15, 23, 42, 0.08);
+}
+
+.procedure-card.dragging {
+    opacity: 0.4;
+    cursor: grabbing;
+}
+
+.procedure-card-title {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0 0 6px;
+    line-height: 1.3;
+}
+
+/* Semáforos Indicadores */
+.semaphore-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.semaphore-a_tiempo {
+    background-color: #10b981;
+}
+
+.semaphore-por_vencer {
+    background-color: #f59e0b;
+}
+
+.semaphore-vencido {
+    background-color: #ef4444;
+}
+
+.semaphore-completado {
+    background-color: #3b82f6;
+}
+
+/* Zonas de Soltado (Drop Targets) */
+.drop-zones-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1rem;
+    margin-top: 10px;
+}
+
+.drop-zone-card {
+    background: #ffffff;
+    border: 2px dashed #cbd5e1;
+    border-radius: 14px;
+    padding: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    transition: all 0.25s ease;
+    cursor: pointer;
+}
+
+.drop-zone-card h4 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin: 0 0 4px;
+    color: #1e293b;
+}
+
+.drop-zone-card p {
+    font-size: 0.78rem;
+    color: #64748b;
+    margin: 0;
+}
+
+.drop-zone-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.drop-zone-descendant .drop-zone-icon {
+    background: #eff6ff;
+    color: #2563eb;
+}
+
+.drop-zone-ascendant {
+    border-color: #f59e0b;
+    background: #fffbeb;
+}
+
+.drop-zone-ascendant .drop-zone-icon {
+    background: #fde68a;
+    color: #b45309;
+}
+
+.drop-zone-card.drop-hover {
+    border-color: #10b981;
+    background-color: #f0fdf4;
+    transform: scale(1.02);
+}
+
+/* Modal de Recepción Compacto */
+.modal-reception-compact {
+    max-width: 680px !important;
+}
+
+/* Banner de Radicado Sugerido */
+.reception-suggested-banner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 8px 14px;
+}
+
+/* Uploader estilizado para PDF (Cero inputs grises) */
+.pdf-uploader-card {
+    position: relative;
+    border: 2px dashed #cbd5e1;
+    border-radius: 12px;
+    background-color: #f8fafc;
+    transition: all 0.25s ease-in-out;
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.pdf-uploader-card:hover {
+    border-color: #3b82f6;
+    background-color: #eff6ff;
+}
+
+.pdf-uploader-card.pdf-selected {
+    border-color: #10b981;
+    border-style: solid;
+    background-color: #f0fdf4;
+}
+
+.pdf-hidden-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+    z-index: 10;
+}
+
+.pdf-upload-inner {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    width: 100%;
+    margin: 0;
+    cursor: pointer;
+}
+
+.pdf-icon-wrapper {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    color: #3b82f6;
+    flex-shrink: 0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s ease;
+}
+
+.pdf-uploader-card:hover .pdf-icon-wrapper {
+    transform: scale(1.08);
+}
+
+.pdf-text-group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+}
+
+.pdf-title {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #1e293b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.pdf-subtitle {
+    font-size: 0.75rem;
+    color: #64748b;
+}
+
+.btn-browse-pill {
+    padding: 6px 14px;
+    background-color: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 50px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #475569;
+    pointer-events: none;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.pdf-uploader-card:hover .btn-browse-pill {
+    border-color: #3b82f6;
+    color: #1d4ed8;
+}
+
+.pdf-uploader-card.flex-grow-1 {
+    min-height: 110px;
+}
+
+.pdf-upload-inner.h-100 {
+    height: 100%;
+}
+
+/* Ajuste de simetría para el bloque de carga y campos apilados */
+.modal-reception-compact .pdf-uploader-card {
+    min-height: 125px;
+    height: 100%;
+}
+
+.modal-reception-compact .pdf-upload-inner {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+}
+
+/* Cuadrícula inferior del Modal de Recepción */
+.reception-bottom-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    align-items: stretch;
+}
+
+.reception-left-fields {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.reception-left-fields .form-group {
+    width: 100%;
+    margin-bottom: 0.5rem;
+}
+
+.reception-left-fields .form-group:last-child {
+    margin-bottom: 0;
+}
+
+.reception-right-pdf {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.reception-right-pdf .pdf-uploader-card {
+    flex: 1;
+    min-height: 130px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.reception-right-pdf .pdf-upload-inner {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    text-align: center;
+    padding: 10px 14px;
+}
+
+@media (max-width: 576px) {
+    .reception-bottom-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Línea de Tiempo de la Hoja de Ruta */
+.modal-trace-custom {
+    max-width: 720px !important;
+}
+
+.trace-timeline-container {
+    position: relative;
+    padding-left: 2rem;
+    margin: 1rem 0 0.5rem;
+}
+
+.trace-timeline-container::before {
+    content: '';
+    position: absolute;
+    left: 11px;
+    top: 6px;
+    bottom: 6px;
+    width: 2px;
+    background: #e2e8f0;
+}
+
+.trace-item {
+    position: relative;
+    margin-bottom: 1.25rem;
+}
+
+.trace-item:last-child {
+    margin-bottom: 0;
+}
+
+.trace-marker {
+    position: absolute;
+    left: -2rem;
+    top: 2px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #3b82f6;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    border: 3px solid #eff6ff;
+    z-index: 2;
+}
+
+.trace-content-box {
+    background: #ffffff;
+    border: 1px solid #e8edf4;
+    border-radius: 10px;
+    padding: 10px 14px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.trace-timestamp {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    font-family: ui-monospace, monospace;
+}
+
+.trace-actor-line {
+    font-size: 0.85rem;
+    color: #1e293b;
+}
+
+.trace-unit-badge {
+    font-size: 0.74rem;
+    color: #64748b;
+    margin-top: 2px;
+}
+
+.trace-observation-card {
+    background: #f8fafc;
+    border-left: 3px solid #3b82f6;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    color: #334155;
+}
+
+/* Insignia de código de radicado */
+.badge-code-primary {
+    background: #f1f5f9;
+    color: #1e293b;
+    border: 1px solid #cbd5e1;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 0.82rem;
+    letter-spacing: 0.3px;
+}
+
+/* Celda de Remitente */
+.sender-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.sender-name {
+    font-weight: 700;
+    color: #0f172a;
+    font-size: 0.86rem;
+    line-height: 1.25;
+}
+
+.sender-doc-sub {
+    font-size: 0.74rem;
+    color: #64748b;
+    font-weight: 500;
+}
+
+/* Texto del Asunto */
+.procedure-subject-text {
+    font-size: 0.85rem;
+    color: #334155;
+    line-height: 1.35;
+}
+
+/* Botón visor PDF tipo Píldora */
+.btn-pdf-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    background-color: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+    border-radius: 50px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-pdf-pill:hover {
+    background-color: #ef4444;
+    color: #ffffff;
+    border-color: #ef4444;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(239, 68, 68, 0.25);
+}
+
+.cell-date-compact {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #334155;
+}

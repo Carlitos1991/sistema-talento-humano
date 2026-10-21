@@ -23,7 +23,7 @@
             <div class="modal-body-content modal-body-custom">
                 <div class="form-section-card">
                     <!-- Campo Nombre -->
-                    <div class="form-group">
+                    <div class="form-group mb-3">
                         <label class="form-label" for="id_name">
                             Nombre del Tipo <span class="text-red">*</span>
                         </label>
@@ -33,23 +33,56 @@
                                value="{{ form.name.value|default:'' }}"
                                required
                                class="input-field"
-                               placeholder="Ej: Memorando, Oficio, Informe Técnico">
+                               placeholder="Ej: Oficio, Solicitud Ciudadana, Memorando">
                         <div class="invalid-feedback"></div>
                     </div>
 
-                    <!-- Switch de Estado Oficial -->
-                    <div class="form-group mt-3 d-flex flex-column align-items-center">
-                        <label class="form-label mb-2">Estado del Registro</label>
-                        <input type="checkbox"
-                               name="is_active"
-                               id="id_is_active"
-                               class="switch-input switch-green"
-                               {% if form.is_active.value or not form.instance.pk %}checked{% endif %}>
-                        <label for="id_is_active" class="switch-wrapper">
-                            <span class="switch-circle"></span>
-                            <span class="switch-text">{% if form.is_active.value or not form.instance.pk %}
-                                Activo{% else %}Inactivo{% endif %}</span>
+                    <!-- Campo Prefijo de Radicado -->
+                    <div class="form-group mb-3">
+                        <label class="form-label" for="id_code_prefix">
+                            Prefijo de Radicado (Opcional)
                         </label>
+                        <input type="text"
+                               name="code_prefix"
+                               id="id_code_prefix"
+                               value="{{ form.code_prefix.value|default:'' }}"
+                               class="input-field"
+                               placeholder="Ej: OFI, MEM, INF">
+                        <small class="form-hint">Prefijo que se añadirá a la numeración automática del
+                            documento.</small>
+                        <div class="invalid-feedback"></div>
+                    </div>
+
+                    <!-- Fila de Switches: Recepción Externa y Estado -->
+                    <div class="row g-2 mt-3 pt-3 border-top">
+                        <!-- Switch Recepción Externa -->
+                        <div class="col-md-6 form-group d-flex flex-column align-items-center text-center">
+                            <label class="form-label mb-2">Recepción Externa</label>
+                            <input type="checkbox"
+                                   name="is_external"
+                                   id="id_is_external"
+                                   class="switch-input switch-blue"
+                                   {% if form.is_external.value %}checked{% endif %}>
+                            <label for="id_is_external" class="switch-wrapper">
+                                <span class="switch-circle"></span>
+                                <span class="switch-text">{% if form.is_external.value %}Ventanilla{% else %}Externo{% endif %}</span>
+                            </label>
+                        </div>
+
+                        <!-- Switch Activo / Inactivo -->
+                        <div class="col-md-6 form-group d-flex flex-column align-items-center text-center">
+                            <label class="form-label mb-2">Estado</label>
+                            <input type="checkbox"
+                                   name="is_active"
+                                   id="id_is_active"
+                                   class="switch-input switch-green"
+                                   {% if form.is_active.value or not form.instance.pk %}checked{% endif %}>
+                            <label for="id_is_active" class="switch-wrapper">
+                                <span class="switch-circle"></span>
+                                <span class="switch-text">{% if form.is_active.value or not form.instance.pk %}
+                                    Activo{% else %}Inactivo{% endif %}</span>
+                            </label>
+                        </div>
                     </div>
                 </div>
             </div>

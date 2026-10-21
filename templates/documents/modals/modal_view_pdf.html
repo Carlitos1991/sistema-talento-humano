@@ -1,0 +1,36 @@
+{% load static %}
+<div class="modal-overlay hidden">
+    <div class="modal-container-large modal-pdf-viewer">
+        <div class="modal-header-medium">
+            <div class="d-flex align-items-center gap-2">
+                <div class="header-icon-circle">
+                    <i class="fa-solid fa-file-pdf"></i>
+                </div>
+                <div>
+                    <h3 class="header-title">Documento Digitalizado</h3>
+                    <small class="text-white-50">{{ procedure.code }} &mdash; {{ procedure.subject }}</small>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="modal-body-content p-0" style="height: 75vh; overflow: hidden; background: #525659;">
+            {% if doc and doc.file_attachment %}
+                <iframe src="{% url 'documents:serve_procedure_pdf' procedure.id %}#toolbar=1&navpanes=0"
+                        width="100%"
+                        height="100%"
+                        style="border: none; display: block;">
+                </iframe>
+            {% else %}
+                <div class="text-center py-5 text-white">
+                    <i class="fa-solid fa-file-circle-xmark fa-3x mb-3 text-white-50"></i>
+                    <p>No se encontró ningún archivo PDF digitalizado para este trámite.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
