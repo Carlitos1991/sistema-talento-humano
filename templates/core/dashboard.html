@@ -8,6 +8,16 @@
     <link rel="stylesheet" href="{% static 'css/documents.css' %}">
 {% endblock %}
 
+{% block extra_js %}
+    {% if perms.auth.dashboard_talento_humano and not show_boss_dashboard %}
+        {{ budget_chart_data|json_script:"budgetChartData" }}
+        {{ employee_chart_data|json_script:"employeeChartData" }}
+        {{ gender_chart_data|json_script:"genderChartData" }}
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+        <script src="{% static 'js/dashboard_charts.js' %}"></script>
+    {% endif %}
+{% endblock %}
+
 {% block content %}
 
     {% if perms.auth.dashboard_talento_humano and not show_boss_dashboard %}
