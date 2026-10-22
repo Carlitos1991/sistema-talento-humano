@@ -176,37 +176,50 @@
     </div>
 </div>
 
-<!-- Tabla Principal -->
-<table class="data-table">
-    <thead>
+{% for r in report_rows %}
+    {% if forloop.first or forloop.counter0|divisibleby:29 %}
+        {% if not forloop.first %}
+            </tbody></table>
+            <pdf:nextpage/>
+        {% endif %}
+        <table class="data-table">
+            <thead>
+            <tr>
+                <th style="width: 5%;">N°</th>
+                <th style="width: 14%;">CÉDULA</th>
+                <th style="width: 35%;">APELLIDOS Y NOMBRES</th>
+                <th style="width: 15%;">TIPO</th>
+                <th style="width: 23%;">MESES PROGRAMADOS</th>
+                <th style="width: 8%;">TOTAL</th>
+            </tr>
+            </thead>
+            <tbody>
+    {% endif %}
+
     <tr>
-        <th style="width: 5%;">N°</th>
-        <th style="width: 14%;">CÉDULA</th>
-        <th style="width: 35%;">APELLIDOS Y NOMBRES</th>
-        <th style="width: 15%;">TIPO</th>
-        <th style="width: 23%;">MESES PROGRAMADOS</th>
-        <th style="width: 8%;">TOTAL</th>
+        <td class="text-center" style="width: 5%;">{{ r.secuencial }}</td>
+        <td class="text-center" style="width: 14%;">{{ r.cedula }}</td>
+        <td class="text-left font-bold" style="width: 35%;">{{ r.apellidos_nombres }}</td>
+        <td class="text-center font-bold" style="width: 15%;">{{ r.tipo }}</td>
+        <td class="text-center" style="width: 23%;">{{ r.meses }}</td>
+        <td class="text-center font-bold" style="width: 8%;">{{ r.total_dias }}</td>
     </tr>
-    </thead>
-    <tbody>
-    {% for r in report_rows %}
-        <tr>
-            <td class="text-center" style="width: 5%;">{{ r.secuencial }}</td>
-            <td class="text-center" style="width: 14%;">{{ r.cedula }}</td>
-            <td class="text-left font-bold" style="width: 35%;">{{ r.apellidos_nombres }}</td>
-            <td class="text-center font-bold" style="width: 15%;">{{ r.tipo }}</td>
-            <td class="text-center" style="width: 23%;">{{ r.meses }}</td>
-            <td class="text-center font-bold" style="width: 8%;">{{ r.total_dias }}</td>
-        </tr>
-    {% empty %}
+
+    {% if forloop.last %}
+            </tbody>
+        </table>
+    {% endif %}
+{% empty %}
+    <table class="data-table">
+        <tbody>
         <tr>
             <td colspan="6" class="text-center" style="padding: 15px;">
                 No existen asignaciones registradas para esta dependencia.
             </td>
         </tr>
-    {% endfor %}
-    </tbody>
-</table>
+        </tbody>
+    </table>
+{% endfor %}
 <!-- Bloque de Firmas -->
 <div class="signatures-wrapper">
     <table class="sig-table">
