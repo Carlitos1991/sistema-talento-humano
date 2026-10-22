@@ -53,6 +53,7 @@
 {% endblock %}
 
 {% block extra_js %}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script>
         function approvePlanAjax(url, year) {
             Swal.fire({
@@ -180,6 +181,43 @@
                     document.getElementById('plannedUnitCount').textContent = option.dataset.planned;
                     document.getElementById('pendingUnitCount').textContent = option.dataset.pending;
                     summary.classList.remove('d-none');
+                    renderScheduleUnitChart(
+                        Number(option.dataset.planned),
+                        Number(option.dataset.pending)
+                    );
+                }
+
+                function renderScheduleUnitChart(planned, pending) {
+                    if (typeof Chart === 'undefined') {
+                        console.error('Chart.js no está disponible para mostrar el resumen.');
+                        return;
+                    }
+
+                    const canvas = document.getElementById('scheduleUnitChart');
+                    if (!canvas) return;
+                    if (canvas._scheduleChart) canvas._scheduleChart.destroy();
+
+                    canvas._scheduleChart = new Chart(canvas, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Planificados', 'Pendientes'],
+                            datasets: [{
+                                data: [planned, pending],
+                                backgroundColor: ['#16a34a', '#f59e0b'],
+                                borderColor: '#ffffff',
+                                borderWidth: 2
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom'
+                                }
+                            }
+                        }
+                    });
                 }
 
                 form.addEventListener('submit', function (event) {

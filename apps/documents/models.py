@@ -506,33 +506,13 @@ class ProcedureTrace(models.Model):
         FINAL_DISPATCH = 'FINAL_DISPATCH', 'Despacho Final Firmado y Notificado'
         ARCHIVED = 'ARCHIVED', 'Expediente Archivado'
 
-    procedure = models.ForeignKey(
-        Procedure,
-        on_delete=models.CASCADE,
-        related_name='traces',
-        verbose_name="Trámite"
-    )
-    task = models.ForeignKey(
-        ProcedureTask,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='traces',
-        verbose_name="Tarea Asociada"
-    )
-    actor = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.PROTECT,
-        verbose_name="Funcionario Actuante"
-    )
-    actor_name = models.CharField(
-        max_length=255,
-        verbose_name="Nombre del Funcionario"
-    )
-    actor_position = models.CharField(
-        max_length=255,
-        verbose_name="Cargo Oficial del Funcionario"
-    )
+    procedure = models.ForeignKey(Procedure, on_delete=models.CASCADE, related_name='traces')
+    task = models.ForeignKey('ProcedureTask', on_delete=models.SET_NULL, null=True, blank=True, related_name='traces')
+    document = models.ForeignKey('Document', on_delete=models.SET_NULL, null=True, blank=True, related_name='traces',
+                                 verbose_name="Documento Adjunto")
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT,verbose_name="Funcionario Actuante")
+    actor_name = models.CharField(max_length=200)
+    actor_position = models.CharField(max_length=200, blank=True, null=True)
     unit_name = models.CharField(
         max_length=255,
         verbose_name="Unidad Administrativa"

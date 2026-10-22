@@ -35,7 +35,7 @@
                     Original:</strong> {{ procedure.external_sender|default:"Trámite Interno" }}</div>
             </div>
 
-            <!-- Timeline Cronológico -->
+            <!-- Timeline Cronológico con Botón de PDF -->
             <div class="trace-timeline-container">
                 {% for trace in traces %}
                     <div class="trace-item">
@@ -50,15 +50,36 @@
                                 </span>
                             </div>
                             <div class="trace-actor-line">
-                                <strong>{{ trace.actor_name }}</strong> &mdash; <span>{{ trace.actor_position }}</span>
+                                <strong>{{ trace.actor_name }}</strong> &mdash;
+                                <span>{{ trace.actor_position|default:"Servidor Público" }}</span>
                                 <div class="trace-unit-badge"><i
                                         class="fa-solid fa-building me-1"></i> {{ trace.unit_name }}</div>
                             </div>
+
                             {% if trace.observation %}
                                 <div class="trace-observation-card mt-2">
                                     {{ trace.observation|linebreaksbr }}
                                 </div>
                             {% endif %}
+
+                            <!-- Documento PDF del hito -->
+                            {% with attached_doc=trace.document|default:procedure.documents.first %}
+                                {% if trace.document or forloop.first %}
+                                    {% if attached_doc and attached_doc.file_attachment %}
+                                        <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center">
+                                            <small class="text-muted">
+                                                <i class="fa-solid fa-paperclip me-1"></i> Documento escaneado / Anexo
+                                            </small>
+                                            <button type="button" class="btn-pdf-pill"
+                                                    onclick="openAjaxModal('{% url 'documents:procedure_view_pdf_modal' procedure.id %}')"
+                                                    title="Previsualizar PDF">
+                                                <i class="fa-solid fa-file-pdf"></i>
+                                                <span>Ver Documento</span>
+                                            </button>
+                                        </div>
+                                    {% endif %}
+                                {% endif %}
+                            {% endwith %}
                         </div>
                     </div>
                 {% empty %}

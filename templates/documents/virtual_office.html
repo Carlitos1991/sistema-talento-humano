@@ -16,9 +16,11 @@
             </div>
             <div>
                 <span class="badge badge-glass">
-                    <i class="fa-solid fa-landmark me-1"></i> Despacho: {{ main_unit.name|default:user_unit.name }}
+                    <i class="fa-solid fa-landmark me-1"></i>
+                    Despacho: {% if main_unit %}{{ main_unit.name }}{% elif user_unit %}{{ user_unit.name }}{% else %}
+                    Administración Central{% endif %}
                 </span>
-                {% if user_unit and user_unit != main_unit %}
+                {% if user_unit and main_unit and user_unit != main_unit %}
                     <span class="badge badge-glass ms-2">
                         <i class="fa-solid fa-sitemap me-1"></i> Área: {{ user_unit.name }}
                     </span>

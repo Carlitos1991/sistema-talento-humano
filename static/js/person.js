@@ -299,14 +299,7 @@ document.addEventListener('DOMContentLoaded', () => {
             data: {person_id: window.selectedRelocatePersonId, unit_id: finalUnitId},
             success: function (resp) {
                 if (resp.success) {
-                    Swal.fire({
-                        toast: true,
-                        position: 'top-end',
-                        icon: 'success',
-                        title: 'Reubicación exitosa',
-                        showConfirmButton: false,
-                        timer: 3500
-                    });
+                    showToast(resp.message || 'Empleado reubicado correctamente.', 'success');
                     closeModal('modal-relocate-employee');
                     setTimeout(() => location.reload(), 1800);
                 } else {

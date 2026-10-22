@@ -753,7 +753,7 @@ def virtual_office_view(request):
     employee = getattr(getattr(user, 'person', None), 'employee_profile', None)
     user_unit = employee.area if employee else None
 
-    # Obtener la cabecera principal de la dirección
+    # Obtener la cabecera principal de la dirección de forma segura
     main_unit = user_unit.get_scheduling_root_unit() if user_unit else None
     if not main_unit:
         main_unit = AdministrativeUnit.objects.filter(is_main_unit=True, is_active=True).first()
@@ -766,8 +766,6 @@ def virtual_office_view(request):
         units_to_check = [user_unit.id]
 
     # Trámites en despacho:
-    # 1. Trámites cuya unidad actual sea la cabecera o cualquier subdependencia adscrita
-    # 2. O tareas explícitamente asignadas al usuario o a su área
     if user.is_superuser or user.has_perm('auth.dashboard_talento_humano') or (main_unit and user_unit):
         pending_procedures = Procedure.objects.filter(
             Q(current_unit_id__in=units_to_check) |
@@ -776,12 +774,14 @@ def virtual_office_view(request):
             status__in=[Procedure.Status.IN_DESPATCH, Procedure.Status.IN_PROCESS],
             is_active=True
         ).distinct().select_related('category', 'created_by').order_by('-created_at')
-    else:
+    elif user_unit:
         pending_procedures = Procedure.objects.filter(
             tasks__assigned_to=user,
             tasks__status__in=[ProcedureTask.TaskStatus.PENDING, ProcedureTask.TaskStatus.IN_PROCESS],
             is_active=True
         ).distinct().select_related('category', 'created_by').order_by('-created_at')
+    else:
+        pending_procedures = Procedure.objects.none()
 
     # Zonas de soltado (Dependencias hijas directas de la dirección)
     child_units = []
@@ -974,7 +974,7 @@ def procedure_reception_create(request):
             procedure.save()
 
             scanned_file = form.cleaned_data['scanned_file']
-            Document.objects.create(
+            doc = Document.objects.create(
                 procedure=procedure,
                 filing_code=f"DOC-{radicado_code}",
                 category=procedure.category,
@@ -988,6 +988,7 @@ def procedure_reception_create(request):
 
             ProcedureTrace.objects.create(
                 procedure=procedure,
+                document=doc,
                 actor=request.user,
                 actor_name=request.user.signature_name,
                 actor_position=request.user.signature_position,
@@ -1106,6 +1107,7 @@ def procedure_cancel_or_delete(request, pk):
 
             ProcedureTrace.objects.create(
                 procedure=procedure,
+                document=doc,
                 actor=request.user,
                 actor_name=request.user.signature_name,
                 actor_position=request.user.signature_position,
