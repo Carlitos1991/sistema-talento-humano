@@ -1431,9 +1431,34 @@ class VacationScheduleUnitSelectModalView(LoginRequiredMixin, PermissionRequired
             is_active=True,
             is_main_unit=True
         ).order_by('name')
+        unit_options = []
+        for unit in main_units:
+            employees_qs = Employee.objects.filter(
+                is_active=True,
+                area_id__in=unit.get_descendant_ids()
+            ).exclude(
+                Q(employment_status__code__icontains='PROFESIONAL') |
+                Q(employment_status__name__icontains='PROFESIONAL') |
+                Q(employment_status__code__icontains='SERVICIOS') |
+                Q(employment_status__name__icontains='SERVICIOS') |
+                Q(employment_status__code__icontains='HONORARIOS') |
+                Q(employment_status__name__icontains='HONORARIOS')
+            )
+            planned_employee_ids = set(
+                VacationScheduleItem.objects.filter(
+                    plan=plan,
+                    employee__in=employees_qs
+                ).values_list('employee_id', flat=True).distinct()
+            )
+            total_employees = employees_qs.count()
+            unit_options.append({
+                'unit': unit,
+                'planned_count': len(planned_employee_ids),
+                'pending_count': total_employees - len(planned_employee_ids),
+            })
         return render(request, self.template_name, {
             'plan': plan,
-            'main_units': main_units,
+            'unit_options': unit_options,
         })
 
 

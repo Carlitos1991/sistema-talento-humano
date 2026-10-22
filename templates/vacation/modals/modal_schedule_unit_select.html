@@ -24,12 +24,29 @@
                     </label>
                     <select id="schedule_unit_select" class="input-field" style="width: 100%;" required>
                         <option value="">Seleccione una dependencia principal</option>
-                        {% for unit in main_units %}
-                            <option value="{{ unit.id }}">{{ unit.name }}</option>
+                        {% for option in unit_options %}
+                            <option value="{{ option.unit.id }}"
+                                    data-planned="{{ option.planned_count }}"
+                                    data-pending="{{ option.pending_count }}">
+                                {{ option.unit.name }}
+                            </option>
                         {% empty %}
                             <option value="">No hay dependencias principales disponibles</option>
                         {% endfor %}
                     </select>
+                </div>
+                <div id="scheduleUnitSummary" class="alert alert-light border mt-3 mb-0 d-none">
+                    <div class="small text-muted mb-2">Resumen de planificación:</div>
+                    <div class="d-flex flex-wrap gap-2">
+                        <span class="badge badge-green">
+                            <i class="fa-solid fa-circle-check me-1"></i>
+                            Planificados: <strong id="plannedUnitCount">0</strong>
+                        </span>
+                        <span class="badge badge-yellow">
+                            <i class="fa-solid fa-clock me-1"></i>
+                            Pendientes: <strong id="pendingUnitCount">0</strong>
+                        </span>
+                    </div>
                 </div>
             </div>
 

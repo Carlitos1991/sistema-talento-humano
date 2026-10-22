@@ -165,6 +165,21 @@
                         placeholder: 'Seleccione una dependencia principal',
                         allowClear: true
                     });
+                    $select.on('change', updateScheduleUnitSummary);
+                } else {
+                    select.addEventListener('change', updateScheduleUnitSummary);
+                }
+
+                function updateScheduleUnitSummary() {
+                    const option = select.options[select.selectedIndex];
+                    const summary = document.getElementById('scheduleUnitSummary');
+                    if (!option || !select.value || !option.dataset.planned) {
+                        summary.classList.add('d-none');
+                        return;
+                    }
+                    document.getElementById('plannedUnitCount').textContent = option.dataset.planned;
+                    document.getElementById('pendingUnitCount').textContent = option.dataset.pending;
+                    summary.classList.remove('d-none');
                 }
 
                 form.addEventListener('submit', function (event) {
