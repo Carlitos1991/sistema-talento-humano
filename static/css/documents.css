@@ -508,3 +508,124 @@
     font-weight: 600;
     color: #334155;
 }
+
+/* Cuadrícula de Espacios de Redacción */
+.redaction-spaces-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.25rem;
+    margin-bottom: 2rem;
+}
+
+.redaction-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 125px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+    transition: all 0.25s ease;
+    text-decoration: none !important;
+}
+
+.redaction-card:hover {
+    border-color: #3b82f6;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08);
+}
+
+.redaction-card.personal-card:hover {
+    border-color: #10b981;
+}
+
+.redaction-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.redaction-badge-tag {
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    color: #475569;
+    background: #f1f5f9;
+    padding: 3px 8px;
+    border-radius: 6px;
+}
+
+.redaction-badge-tag.personal-tag {
+    color: #065f46;
+    background: #d1fae5;
+}
+
+.redaction-card-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+}
+
+.redaction-card-icon.blue {
+    background: #eff6ff;
+    color: #2563eb;
+}
+
+.redaction-card-icon.green {
+    background: #ecfdf5;
+    color: #059669;
+}
+
+.redaction-title {
+    font-size: 0.95rem !important;
+    font-weight: 700 !important;
+    color: #1e293b !important;
+    line-height: 1.35;
+    margin: 0 0 4px 0;
+    text-decoration: none !important;
+}
+
+.redaction-subtext {
+    font-size: 0.78rem;
+    color: #64748b;
+    margin: 0;
+}
+
+/* Ancho mínimo de la tabla para que no se aprieten las celdas */
+.table-documents {
+    min-width: 1100px !important;
+    width: 100% !important;
+    table-layout: fixed !important;
+}
+
+/* Insignia de Tipo de Documento adaptable a dos líneas */
+.badge-type-multiline {
+    display: inline-block;
+    background-color: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1.25;
+    padding: 4px 8px;
+    border-radius: 6px;
+    white-space: normal !important;
+    word-break: break-word !important;
+    text-transform: uppercase;
+    text-align: left;
+    max-width: 100%;
+}
+
+/* Forzar que las celdas respeten los saltos de línea y no desborden */
+.table-documents td.cell-wrap {
+    white-space: normal !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+}

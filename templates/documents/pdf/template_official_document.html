@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        @page {
+            size: A4;
+            margin: 2.5cm 2cm 2.5cm 2cm;
+            @bottom-right {
+                content: "Pág. " counter(page) " de " counter(pages);
+                font-size: 8pt;
+                font-family: Helvetica, Arial, sans-serif;
+                color: #64748b;
+            }
+        }
+
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 10pt;
+            line-height: 1.5;
+            color: #1e293b;
+        }
+
+        .header-code {
+            font-size: 12pt;
+            font-weight: bold;
+            color: #0f172a;
+            margin-bottom: 15px;
+        }
+
+        .legal-signature-box {
+            margin-top: 40px;
+            border: 1.5px solid #0284c7;
+            padding: 10px;
+            background: #f0f9ff;
+            width: 280px;
+        }
+
+        .manual-signature-box {
+            margin-top: 60px;
+            border-top: 1px solid #334155;
+            width: 250px;
+            text-align: center;
+            padding-top: 6px;
+        }
+    </style>
+</head>
+<body>
+<div class="header-code">{{ document.filing_code }}</div>
+<div>{{ content_html|safe }}</div>
+
+{% if is_signed %}
+    <div class="legal-signature-box">
+        <strong>DOCUMENTO FIRMADO ELECTRÓNICAMENTE</strong><br>
+        <span>Firmante: {{ user.signature_name }}</span><br>
+        <span>Cargo: {{ user.signature_position }}</span><br>
+        <span>Entidad: GAD Municipal de Loja</span>
+    </div>
+{% else %}
+    <div class="manual-signature-box">
+        <strong>{{ user.signature_name }}</strong><br>
+        <span>{{ user.signature_position }}</span>
+    </div>
+{% endif %}
+</body>
+</html>

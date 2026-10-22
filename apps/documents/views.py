@@ -28,6 +28,267 @@ from .models import DocumentType
 from .models import Procedure, ProcedureTask, ProcedureTrace, Document
 from .models import ProcedureSumilla
 
+from io import BytesIO
+from django.template.loader import get_template
+from django.utils.html import strip_tags
+from xhtml2pdf import pisa
+from .utils import generate_document_filing_code
+
+
+# -------------------------------------------------------------------------
+# 1. MODAL RESPONDER AL TRÁMITE (Solo tipos internos y activos)
+# -------------------------------------------------------------------------
+@login_required
+def procedure_create_response_modal(request, pk):
+    """
+    Despliega el modal de respuesta a un trámite:
+    - Excluye tipos de documentos externos (solo muestra internos activos).
+    - Permite elegir el nivel (Institucional o Personal).
+    - Carga la plantilla inicial para el editor.
+    """
+    procedure = get_object_or_404(Procedure, pk=pk, is_active=True)
+    user = request.user
+    employee = getattr(getattr(user, 'person', None), 'employee_profile', None)
+    user_unit = employee.area if employee else None
+
+    # FILTRAR: Solo tipos de documento internos y activos (excluye oficios de ventanilla externa)
+    doc_types = DocumentType.objects.filter(is_active=True).exclude(
+        name__icontains='externo'
+    ).order_by('name')
+
+    # Unidades jerárquicas desde la del usuario hacia arriba
+    hierarchy_units = []
+    curr = user_unit
+    while curr:
+        hierarchy_units.insert(0, curr)
+        curr = curr.parent
+
+    # Tipo inicial por defecto (Memorando o similar)
+    selected_type = doc_types.first()
+    suggested_code = ""
+    if selected_type and user_unit:
+        suggested_code = generate_document_filing_code(user_unit, user, selected_type, is_personal=True)
+
+    now = timezone.now()
+    default_template = f"""
+    <div style="text-align: right; margin-bottom: 20px;">
+        <strong>Loja, {now.day} de {now.strftime('%B')} de {now.year}</strong>
+    </div>
+    <table style="width: 100%; margin-bottom: 25px; border-collapse: collapse;">
+        <tr>
+            <td style="width: 15%; padding: 4px 0;"><strong>PARA:</strong></td>
+            <td style="padding: 4px 0;">{procedure.external_sender or 'Destinatario'}</td>
+        </tr>
+        <tr>
+            <td style="padding: 4px 0;"><strong>DE:</strong></td>
+            <td style="padding: 4px 0;">{user.signature_name} &mdash; {user.signature_position}</td>
+        </tr>
+        <tr>
+            <td style="padding: 4px 0;"><strong>ASUNTO:</strong></td>
+            <td style="padding: 4px 0;">Respuesta a trámite {procedure.code}: {procedure.subject}</td>
+        </tr>
+    </table>
+    <hr style="border: 0; border-top: 1px solid #cbd5e1; margin-bottom: 20px;">
+    <p>De mi consideración:</p>
+    <p>En atención al trámite de la referencia, cumplo con informar a usted lo siguiente...</p>
+    """
+
+    return render(request, 'documents/modals/modal_create_response_doc.html', {
+        'procedure': procedure,
+        'doc_types': doc_types,
+        'hierarchy_units': hierarchy_units,
+        'user_unit': user_unit,
+        'suggested_code': suggested_code,
+        'default_template': default_template,
+    })
+
+
+# -------------------------------------------------------------------------
+# 2. PROCESAR GUARDADO DE LA RESPUESTA (Borrador o Firma Electrónica)
+# -------------------------------------------------------------------------
+@login_required
+@require_POST
+def save_response_document(request, pk):
+    """
+    Guarda el documento generado como respuesta:
+    - Genera el PDF a partir del HTML.
+    - Si se selecciona firma electrónica, valida el certificado .p12 configurado.
+    - Permite imprimir directamente para firma manual.
+    """
+    procedure = get_object_or_404(Procedure, pk=pk, is_active=True)
+    user = request.user
+
+    category_id = request.POST.get('category_id')
+    filing_code = request.POST.get('filing_code')
+    content_html = request.POST.get('content_html', '').strip()
+    sign_mode = request.POST.get('sign_mode', 'MANUAL')  # 'ELECTRONIC' o 'MANUAL'
+    cert_password = request.POST.get('cert_password', '').strip()
+
+    category = get_object_or_404(DocumentType, pk=category_id)
+
+    if not content_html:
+        return JsonResponse({'success': False, 'message': 'El cuerpo del documento no puede estar vacío.'}, status=400)
+
+    with transaction.atomic():
+        # Crear o actualizar el registro Document
+        doc = Document.objects.create(
+            procedure=procedure,
+            filing_code=filing_code,
+            category=category,
+            subject=f"Respuesta a {procedure.code}: {procedure.subject}",
+            sender_name=user.signature_name,
+            recipient_name=procedure.external_sender or "Despacho",
+            body_html=content_html,
+            is_entry_document=False,
+            is_final_response=True,
+            created_by=user
+        )
+
+        # Generar archivo PDF en memoria mediante xhtml2pdf
+        html_template = get_template('documents/pdf/template_official_document.html')
+        rendered_html = html_template.render({
+            'document': doc,
+            'content_html': content_html,
+            'user': user,
+            'procedure': procedure,
+            'is_signed': (sign_mode == 'ELECTRONIC')
+        })
+
+        pdf_io = BytesIO()
+        pisa_status = pisa.CreatePDF(rendered_html, dest=pdf_io)
+        if pisa_status.err:
+            return JsonResponse({'success': False, 'message': 'Error generando el PDF del documento.'}, status=500)
+
+        pdf_bytes = pdf_io.getvalue()
+
+        # Si se solicita firma digital
+        if sign_mode == 'ELECTRONIC':
+            sig_profile = getattr(user, 'signature_profile', None)
+            if not sig_profile or not sig_profile.certificate_file:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'No cuenta con un certificado .p12 activo en su perfil.'
+                }, status=400)
+
+            if not cert_password:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Debe ingresar la contraseña de su firma electrónica para legalizar.'
+                }, status=400)
+
+            # Validar credenciales del certificado
+            from cryptography.hazmat.primitives.serialization import pkcs12
+            try:
+                sig_profile.certificate_file.open('rb')
+                p12_data = sig_profile.certificate_file.read()
+                pkcs12.load_key_and_certificates(p12_data, cert_password.encode('utf-8'))
+            except Exception:
+                return JsonResponse({'success': False, 'message': 'Contraseña del certificado incorrecta.'}, status=400)
+
+            doc.doc_status = Document.DocumentStatus.SIGNED
+        else:
+            doc.doc_status = Document.DocumentStatus.APPROVED
+
+        # Almacenar PDF generado
+        from django.core.files.base import ContentFile
+        clean_code = filing_code.replace('/', '_').replace('-', '_')
+        doc.file_attachment.save(f"{clean_code}.pdf", ContentFile(pdf_bytes), save=True)
+
+        # Completar tareas pendientes del usuario en este trámite
+        ProcedureTask.objects.filter(
+            procedure=procedure,
+            assigned_to=user,
+            status__in=[ProcedureTask.TaskStatus.PENDING, ProcedureTask.TaskStatus.IN_PROCESS]
+        ).update(status=ProcedureTask.TaskStatus.COMPLETED)
+
+        # Asentar hito en Hoja de Ruta
+        mode_text = "con Firma Electrónica" if sign_mode == 'ELECTRONIC' else "para Firma Física / Manual"
+        ProcedureTrace.objects.create(
+            procedure=procedure,
+            document=doc,
+            actor=user,
+            actor_name=user.signature_name,
+            actor_position=user.signature_position,
+            unit_name="Oficina Virtual",
+            action=ProcedureTrace.TraceAction.DISPATCH,
+            observation=f"Respuesta generada bajo radicado {doc.filing_code} ({mode_text})."
+        )
+
+    return JsonResponse({
+        'success': True,
+        'document_id': doc.id,
+        'message': f'Documento {doc.filing_code} generado y vinculado exitosamente.'
+    })
+
+
+# -------------------------------------------------------------------------
+# 3. LEGALIZACIÓN / HOJA DE DISPOSICIONES DE SUMILLA
+# -------------------------------------------------------------------------
+@login_required
+def print_sumilla_dispositions(request, task_id):
+    """
+    Genera la Hoja Oficial de Sumilla y Disposiciones en PDF para firma manual
+    o registro físico de archivo de Contraloría.
+    """
+    task = get_object_or_404(ProcedureTask, pk=task_id)
+    sumilla = getattr(task, 'sumilla', None)
+
+    html_template = get_template('documents/pdf/template_sumilla_sheet.html')
+    rendered_html = html_template.render({
+        'task': task,
+        'sumilla': sumilla,
+        'procedure': task.procedure,
+        'today': timezone.now()
+    })
+
+    pdf_io = BytesIO()
+    pisa.CreatePDF(rendered_html, dest=pdf_io)
+    response = HttpResponse(pdf_io.getvalue(), content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="Sumilla_{task.procedure.code}.pdf"'
+    return response
+
+
+@login_required
+@require_POST
+def sign_sumilla_electronically(request, task_id):
+    """
+    Legaliza electrónicamente la sumilla usando el certificado .p12 del jefe/director.
+    """
+    task = get_object_or_404(ProcedureTask, pk=task_id)
+    sumilla = getattr(task, 'sumilla', None)
+    if not sumilla:
+        return JsonResponse({'success': False, 'message': 'Esta tarea no tiene sumilla asociada.'}, status=400)
+
+    password = request.POST.get('password', '').strip()
+    sig_profile = getattr(request.user, 'signature_profile', None)
+
+    if not sig_profile or not sig_profile.certificate_file:
+        return JsonResponse({'success': False, 'message': 'No cuenta con certificado .p12 configurado.'}, status=400)
+
+    from cryptography.hazmat.primitives.serialization import pkcs12
+    try:
+        sig_profile.certificate_file.open('rb')
+        p12_data = sig_profile.certificate_file.read()
+        pkcs12.load_key_and_certificates(p12_data, password.encode('utf-8'))
+    except Exception:
+        return JsonResponse({'success': False, 'message': 'Contraseña incorrecta o certificado inválido.'}, status=400)
+
+    sumilla.is_signed = True
+    sumilla.save()
+
+    ProcedureTrace.objects.create(
+        procedure=task.procedure,
+        task=task,
+        actor=request.user,
+        actor_name=request.user.signature_name,
+        actor_position=request.user.signature_position,
+        unit_name=task.unit.name if task.unit else "Dirección",
+        action=ProcedureTrace.TraceAction.SUMILLED,
+        observation="Sumilla legalizada digitalmente con firma electrónica oficial."
+    )
+
+    return JsonResponse({'success': True, 'message': 'Sumilla legalizada electrónicamente con éxito.'})
+
 
 class DocumentListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     model = Document
@@ -747,40 +1008,57 @@ def procedure_view_pdf_modal(request, pk):
 
 @login_required
 def virtual_office_view(request):
+    """
+    Escritorio virtual interactivo con zonas de soltado (Drag & Drop).
+    Permite visualizar trámites asignados al usuario o a su unidad principal.
+    """
     user = request.user
     employee = getattr(getattr(user, 'person', None), 'employee_profile', None)
     user_unit = employee.area if employee else None
 
+    # Unidad principal (ej: DIRECCIÓN DE TECNOLOGÍA)
     main_unit = user_unit.get_scheduling_root_unit() if user_unit else None
     if not main_unit:
         main_unit = AdministrativeUnit.objects.filter(is_main_unit=True, is_active=True).first()
 
-    # Jerarquía organizacional para las tarjetas de creación (Dirección, Jefatura, Propio)
+    # Recoger IDs de unidades de su rama
+    units_to_check = []
+    if main_unit:
+        units_to_check = main_unit.get_descendant_ids()
+    elif user_unit:
+        units_to_check = [user_unit.id]
+
+    # Consulta unificada de trámites pendientes en esta oficina/despacho:
+    # 1. Trámites cuya unidad actual sea la unidad principal o del usuario
+    # 2. O tareas dirigidas al usuario o a su unidad
+    pending_procedures = Procedure.objects.filter(
+        Q(current_unit=main_unit) |
+        Q(current_unit=user_unit) |
+        Q(current_unit_id__in=units_to_check) |
+        Q(tasks__unit=main_unit) |
+        Q(tasks__unit=user_unit) |
+        Q(tasks__assigned_to=user),
+        status__in=[Procedure.Status.IN_DESPATCH, Procedure.Status.IN_PROCESS],
+        is_active=True
+    ).distinct().select_related('category', 'created_by').order_by('-created_at')
+
+    # Unidades jerárquicas para las tarjetas de creación (solo niveles relevantes)
     unit_levels = []
     curr = user_unit
     while curr:
         unit_levels.insert(0, curr)
         curr = curr.parent
 
-    # BANDEJA ESTRICTA DE PENDIENTES
-    # Solo trámites donde exista una tarea ABIERTA (PENDING o IN_PROCESS) asignada al usuario
-    # o a su unidad si no tiene asignado nominal
-    pending_tasks = ProcedureTask.objects.filter(
-        Q(assigned_to=user) | Q(unit=user_unit, assigned_to__isnull=True),
-        status__in=[ProcedureTask.TaskStatus.PENDING, ProcedureTask.TaskStatus.IN_PROCESS],
-        procedure__is_active=True
-    ).select_related('procedure', 'unit', 'procedure__category').order_by('-created_at')
-
     # Subdependencias directas para sumillar hacia abajo
     child_units = []
     parent_unit = None
-    if user_unit:
-        child_units = AdministrativeUnit.objects.filter(parent=user_unit, is_active=True)
-        if user_unit.parent:
-            parent_unit = user_unit.parent
+    if main_unit:
+        child_units = AdministrativeUnit.objects.filter(parent=main_unit, is_active=True)
+        if main_unit.parent:
+            parent_unit = main_unit.parent.get_scheduling_root_unit()
 
     return render(request, 'documents/virtual_office.html', {
-        'pending_tasks': pending_tasks,
+        'pending_procedures': pending_procedures,
         'user_unit': user_unit,
         'main_unit': main_unit,
         'unit_levels': unit_levels,
@@ -840,12 +1118,12 @@ def process_delegate_task(request):
         now = timezone.now()
         task_limit = now + timedelta(days=days_limit)
 
-        # 1. Completar la tarea actual del usuario que está sumillando (sale de su bandeja)
+        # 1. Cerrar la tarea actual del usuario que está sumillando usando CLOSED
         ProcedureTask.objects.filter(
             procedure=procedure,
             assigned_to=request.user,
             status__in=[ProcedureTask.TaskStatus.PENDING, ProcedureTask.TaskStatus.IN_PROCESS]
-        ).update(status=ProcedureTask.TaskStatus.COMPLETED)
+        ).update(status=ProcedureTask.TaskStatus.CLOSED)
 
         # 2. Crear Tarea de Trámite para el destinatario
         task = ProcedureTask.objects.create(
@@ -932,67 +1210,6 @@ class ProcedureReceptionListView(LoginRequiredMixin, PermissionRequiredMixin, Li
 
 
 from .utils import generate_document_filing_code
-
-
-@login_required
-def procedure_create_response_modal(request, pk):
-    """
-    Modal para contestar un trámite. Permite elegir el nivel (Dirección, Jefatura o Propio),
-    asigna la codificación automática y monta la plantilla predefinida.
-    """
-    procedure = get_object_or_404(Procedure, pk=pk)
-    user = request.user
-    employee = getattr(getattr(user, 'person', None), 'employee_profile', None)
-    user_unit = employee.area if employee else None
-
-    # Tipos de documentos internos (excluye recepción externa)
-    doc_types = DocumentType.objects.filter(is_external=False, is_active=True).order_by('name')
-
-    # Unidades jerárquicas disponibles
-    hierarchy_units = []
-    curr = user_unit
-    while curr:
-        hierarchy_units.insert(0, curr)
-        curr = curr.parent
-
-    selected_type = doc_types.first()
-    # Código sugerido propio por defecto
-    suggested_code = generate_document_filing_code(user_unit, user, selected_type,
-                                                   is_personal=True) if selected_type and user_unit else ""
-
-    # Plantilla por defecto de Memorando
-    now = timezone.now()
-    default_template = f"""
-    <div style="text-align: right; margin-bottom: 20px;">
-        <strong>Loja, {now.day} de {now.strftime('%B')} de {now.year}</strong>
-    </div>
-    <table style="width: 100%; margin-bottom: 25px; border-collapse: collapse;">
-        <tr>
-            <td style="width: 15%; padding: 4px 0;"><strong>PARA:</strong></td>
-            <td style="padding: 4px 0;">{procedure.external_sender or 'Destinatario'}</td>
-        </tr>
-        <tr>
-            <td style="padding: 4px 0;"><strong>DE:</strong></td>
-            <td style="padding: 4px 0;">{user.signature_name} - {user.signature_position}</td>
-        </tr>
-        <tr>
-            <td style="padding: 4px 0;"><strong>ASUNTO:</strong></td>
-            <td style="padding: 4px 0;">En atención a: {procedure.subject}</td>
-        </tr>
-    </table>
-    <hr style="border: 0; border-top: 1px solid #ccc; margin-bottom: 20px;">
-    <p>De mi consideración:</p>
-    <p>En atención al trámite de la referencia, cumplo con informar a usted lo siguiente...</p>
-    """
-
-    return render(request, 'documents/modals/modal_create_response_doc.html', {
-        'procedure': procedure,
-        'doc_types': doc_types,
-        'hierarchy_units': hierarchy_units,
-        'user_unit': user_unit,
-        'suggested_code': suggested_code,
-        'default_template': default_template,
-    })
 
 
 @login_required

@@ -2,7 +2,8 @@
 <div class="modal-overlay hidden">
     <div class="modal-container-large modal-response-doc">
         <form id="createResponseDocForm" method="POST"
-              action="{% url 'documents:save_response_document' procedure.id %}" onsubmit="submitAjaxForm(event);">
+              action="{% url 'documents:save_response_document' procedure.id %}"
+              onsubmit="submitResponseDocForm(event);">
             {% csrf_token %}
             <div class="modal-header-medium">
                 <div class="d-flex align-items-center gap-2">
@@ -19,23 +20,23 @@
 
             <div class="modal-body-content modal-body-custom py-3 px-4">
                 <div class="row g-2 mb-3">
-                    <!-- Selector de Nivel Emisor -->
+                    <!-- Nivel de Emisión -->
                     <div class="col-md-4 form-group">
                         <label class="form-label">Nivel de Emisión <span class="text-red">*</span></label>
                         <select name="emission_level" id="emissionLevelSelect" class="input-field"
-                                onchange="updateFilingCodePreview()">
+                                onchange="refreshFilingCode();">
                             {% for u in hierarchy_units %}
                                 <option value="UNIT_{{ u.id }}">Oficial: {{ u.name }}</option>
                             {% endfor %}
-                            <option value="PERSONAL" selected>Personal: {{ user.signature_name }}</option>
+                            <option value="PERSONAL" selected>Personal: {{ request.user.signature_name }}</option>
                         </select>
                     </div>
 
-                    <!-- Tipo de Documento -->
+                    <!-- Tipo de Documento: Solo Internos -->
                     <div class="col-md-3 form-group">
                         <label class="form-label">Tipo de Documento <span class="text-red">*</span></label>
                         <select name="category_id" id="docCategorySelect" class="input-field"
-                                onchange="updateFilingCodePreview()">
+                                onchange="refreshFilingCode();">
                             {% for t in doc_types %}
                                 <option value="{{ t.id }}" data-prefix="{{ t.code_prefix }}">{{ t.name }}</option>
                             {% endfor %}
@@ -52,17 +53,44 @@
                 </div>
 
                 <!-- Editor Enriquecido -->
-                <div class="form-group mb-0">
+                <div class="form-group mb-3">
                     <label class="form-label mb-1">Cuerpo del Documento</label>
                     <textarea name="content_html" id="documentEditor">{{ default_template|safe }}</textarea>
+                </div>
+
+                <!-- Opciones de Legalización / Firma -->
+                <div class="form-section-card p-3 mb-0">
+                    <label class="form-label fw-bold mb-2"><i class="fa-solid fa-stamp me-1"></i> Modo de Despacho y
+                        Firma</label>
+                    <div class="d-flex align-items-center gap-4 mb-2">
+                        <label class="form-check-label d-flex align-items-center gap-2 cursor-pointer">
+                            <input type="radio" name="sign_mode" value="MANUAL" checked
+                                   onchange="toggleSignatureAuth(this.value)">
+                            <span>Firma Física (Imprimir y rubricar manualmente)</span>
+                        </label>
+                        <label class="form-check-label d-flex align-items-center gap-2 cursor-pointer">
+                            <input type="radio" name="sign_mode" value="ELECTRONIC"
+                                   onchange="toggleSignatureAuth(this.value)">
+                            <span>Legalizar con Firma Electrónica (.p12)</span>
+                        </label>
+                    </div>
+
+                    <div id="certAuthBox" class="mt-2 hidden">
+                        <div class="d-flex align-items-center gap-2">
+                            <input type="password" name="cert_password" id="id_cert_password" class="input-field"
+                                   style="max-width: 320px;" placeholder="Contraseña de su firma .p12">
+                            <small class="text-muted"><i class="fa-solid fa-shield-halved me-1"></i> Se valida en
+                                memoria</small>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <div class="modal-footer-medium modal-footer-spaced py-2 px-4">
                 <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">Cancelar</button>
                 <div class="d-flex gap-2">
-                    <button type="submit" name="action_save" value="DRAFT" class="btn-dark-blue-rectangle">
-                        <i class="fa-solid fa-save me-1"></i> Guardar Borrador
+                    <button type="submit" class="btn-dark-blue-rectangle">
+                        <i class="fa-solid fa-check me-1"></i> Guardar y Despachar Documento
                     </button>
                 </div>
             </div>
@@ -71,15 +99,13 @@
 </div>
 
 <script>
-    // Inicializar CKEditor en el modal
     if (typeof CKEDITOR !== 'undefined') {
         if (CKEDITOR.instances['documentEditor']) {
             CKEDITOR.instances['documentEditor'].destroy(true);
         }
         CKEDITOR.replace('documentEditor', {
-            height: 320,
+            height: 280,
             toolbar: [
-                {name: 'document', items: ['Source', '-', 'Print']},
                 {name: 'clipboard', items: ['Undo', 'Redo']},
                 {name: 'basicstyles', items: ['Bold', 'Italic', 'Underline', 'Strike']},
                 {
@@ -87,20 +113,61 @@
                     items: ['NumberedList', 'BulletedList', '-', 'JustifyLeft', 'JustifyCenter', 'JustifyRight', 'JustifyBlock']
                 },
                 {name: 'insert', items: ['Table', 'HorizontalRule']},
-                {name: 'styles', items: ['Format', 'Font', 'FontSize']}
+                {name: 'styles', items: ['Format', 'FontSize']}
             ]
         });
     }
 
-    function updateFilingCodePreview() {
+    function toggleSignatureAuth(mode) {
+        const box = document.getElementById('certAuthBox');
+        if (mode === 'ELECTRONIC') {
+            box.classList.remove('hidden');
+        } else {
+            box.classList.add('hidden');
+        }
+    }
+
+    function refreshFilingCode() {
         const level = document.getElementById('emissionLevelSelect').value;
         const catId = document.getElementById('docCategorySelect').value;
-        fetch(`/documents/api/preview-filing-code/?procedure_id={{ procedure.id }}&level=${level}&category_id=${catId}`)
+        fetch(`/documents/next-code/${catId}/?procedure_id={{ procedure.id }}&level=${level}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.code) {
+                    document.getElementById('filingCodeInput').value = data.code;
+                }
+            });
+    }
+
+    function submitResponseDocForm(e) {
+        e.preventDefault();
+        if (typeof CKEDITOR !== 'undefined' && CKEDITOR.instances['documentEditor']) {
+            CKEDITOR.instances['documentEditor'].updateElement();
+        }
+        const form = e.target;
+        const formData = new FormData(form);
+
+        fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        })
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
-                    document.getElementById('filingCodeInput').value = data.code;
+                    closeModal();
+                    showToast(data.message, 'success');
+                    // Si fue manual, abrir ventana de impresión del PDF
+                    if (formData.get('sign_mode') === 'MANUAL' && data.document_id) {
+                        window.open(`/documents/detail/${data.document_id}/print/`, '_blank');
+                    }
+                    setTimeout(() => location.reload(), 1200);
+                } else {
+                    Swal.fire({icon: 'warning', title: 'Atención', text: data.message});
                 }
+            })
+            .catch(() => {
+                Swal.fire({icon: 'error', title: 'Error', text: 'Error procesando la solicitud.'});
             });
     }
 </script>

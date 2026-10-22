@@ -42,4 +42,11 @@ urlpatterns = [
     # Visor de PDF en Modal Grande
     path('reception/view-pdf/<int:pk>/', views.procedure_view_pdf_modal, name='procedure_view_pdf_modal'),
     path('reception/pdf-stream/<int:pk>/', views.serve_procedure_pdf, name='serve_procedure_pdf'),
+    path('procedure/response/<int:pk>/', views.procedure_create_response_modal, name='procedure_create_response_modal'),
+    # Guardar respuesta generada (Firma digital o física)
+    path('procedure/response/save/<int:pk>/', views.save_response_document, name='save_response_document'),
+
+    # Legalización de Sumilla (PDF físico o Firma electrónica)
+    path('task/sumilla/print/<int:task_id>/', views.print_sumilla_dispositions, name='print_sumilla_dispositions'),
+    path('task/sumilla/sign/<int:task_id>/', views.sign_sumilla_electronically, name='sign_sumilla_electronically'),
 ]

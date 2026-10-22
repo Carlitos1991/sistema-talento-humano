@@ -526,6 +526,59 @@
             window.initBudgetFormCascades();
         });
     };
+
+    window.searchEmployee = async function () {
+        const input = document.getElementById('search-cedula');
+        const resultCard = document.getElementById('search-result-card');
+        const submitButton = document.getElementById('btn-submit-assign');
+        const name = document.getElementById('res-name');
+        const email = document.getElementById('res-email');
+        const photo = document.getElementById('res-photo');
+        const selectedId = document.getElementById('selected-employee-id');
+        const cedula = input?.value.trim() || '';
+
+        if (!/^\d{10}$/.test(cedula)) {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire('Atención', 'Ingrese una cédula válida de 10 dígitos.', 'warning');
+            }
+            return;
+        }
+
+        if (submitButton) submitButton.disabled = true;
+        if (selectedId) selectedId.value = '';
+        if (resultCard) resultCard.classList.remove('hidden');
+        if (name) name.textContent = 'Buscando persona...';
+        if (email) email.textContent = '';
+        if (photo) photo.innerHTML = '<i class="fas fa-spinner fa-spin text-muted"></i>';
+
+        try {
+            const response = await fetch(`/employee/api/search/?q=${encodeURIComponent(cedula)}`, {
+                headers: {'X-Requested-With': 'XMLHttpRequest'}
+            });
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                throw new Error(data.message || 'Persona no encontrada.');
+            }
+
+            if (name) name.textContent = data.full_name;
+            if (email) email.textContent = data.email;
+            if (photo) {
+                photo.innerHTML = data.photo_url
+                    ? `<img src="${data.photo_url}" alt="Foto" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`
+                    : '<i class="fas fa-user text-muted fa-lg"></i>';
+            }
+            if (selectedId) selectedId.value = data.id;
+            if (submitButton) submitButton.disabled = false;
+        } catch (error) {
+            if (name) name.textContent = 'No encontrado';
+            if (email) email.textContent = error.message;
+            if (photo) photo.innerHTML = '<i class="fas fa-user-slash text-muted fa-lg"></i>';
+            if (typeof Swal !== 'undefined') {
+                Swal.fire('Atención', error.message, 'warning');
+            }
+        }
+    };
 })();
 
 // Observador único sin re-ejecuciones múltiples
@@ -546,4 +599,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (modalRoot) {
         modalObserver.observe(modalRoot, {childList: true, subtree: true});
     }
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' && event.target?.id === 'search-cedula') {
+            event.preventDefault();
+            window.searchEmployee();
+        }
+    });
 });
