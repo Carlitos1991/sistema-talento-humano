@@ -50,6 +50,8 @@ urlpatterns = [
     # Cronograma Anual
     path('schedule/', views.VacationSchedulePlanListView.as_view(), name='schedule_plan_list'),
     path('schedule/create/', views.VacationSchedulePlanCreateModalView.as_view(), name='schedule_plan_create'),
+    path('schedule/<int:plan_id>/unit-select-modal/', views.VacationScheduleUnitSelectModalView.as_view(),
+         name='schedule_unit_select_modal'),
     path('schedule/<int:plan_id>/', views.VacationScheduleDetailView.as_view(), name='schedule_detail'),
     path('schedule/<int:plan_id>/add-item/', views.VacationScheduleItemCreateModalView.as_view(),
          name='schedule_item_create'),

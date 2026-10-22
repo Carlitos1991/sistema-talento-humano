@@ -143,5 +143,39 @@
                 });
             });
         };
+
+        window.openScheduleUnitSelectModal = function (planId) {
+            const url = `/vacation/schedule/${planId}/unit-select-modal/`;
+
+            if (typeof openAjaxModal !== 'function') {
+                console.error('openAjaxModal no está disponible en la página.');
+                return;
+            }
+
+            openAjaxModal(url, function () {
+                const form = document.getElementById('scheduleUnitSelectForm');
+                const select = document.getElementById('schedule_unit_select');
+
+                if (window.$ && $.fn.select2) {
+                    const $select = $(select);
+                    if ($select.data('select2')) $select.select2('destroy');
+                    $select.select2({
+                        width: '100%',
+                        dropdownParent: $('#scheduleUnitSelectModal'),
+                        placeholder: 'Seleccione una dependencia principal',
+                        allowClear: true
+                    });
+                }
+
+                form.addEventListener('submit', function (event) {
+                    event.preventDefault();
+                    if (!select.value) {
+                        select.focus();
+                        return;
+                    }
+                    window.location.href = `/vacation/schedule/${planId}/?unit_id=${encodeURIComponent(select.value)}`;
+                });
+            });
+        };
     </script>
 {% endblock %}

@@ -87,12 +87,21 @@
                         <!-- COLUMNA COMÚN: Acciones -->
                         <td class="actions text-center">
                             <div class="actions-wrapper">
-                                <!-- Matriz y Planificación (Siempre visible para todos los roles) -->
-                                <a href="{% url 'vacation:schedule_detail' plan.id %}"
-                                   class="btn-blue-circle"
-                                   title="Planificar Vacaciones">
-                                    <i class="fa-solid fa-calendar-days"></i>
-                                </a>
+                                <!-- Matriz y Planificación -->
+                                {% if request.user.is_staff or perms.vacation.change_vacationscheduleplan %}
+                                    <button type="button"
+                                            class="btn-blue-circle"
+                                            title="Seleccionar dependencia para planificar vacaciones"
+                                            onclick="openScheduleUnitSelectModal('{{ plan.id }}')">
+                                        <i class="fa-solid fa-calendar-days"></i>
+                                    </button>
+                                {% else %}
+                                    <a href="{% url 'vacation:schedule_detail' plan.id %}"
+                                       class="btn-blue-circle"
+                                       title="Planificar Vacaciones">
+                                        <i class="fa-solid fa-calendar-days"></i>
+                                    </a>
+                                {% endif %}
 
                                 <!-- Acciones avanzadas solo para Talento Humano -->
                                 {% if perms.vacation.change_vacationscheduleplan %}

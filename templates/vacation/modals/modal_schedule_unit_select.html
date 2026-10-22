@@ -1,0 +1,44 @@
+<div class="modal-overlay hidden" id="scheduleUnitSelectModal">
+    <div class="modal-container-medium animate-scale-in">
+        <div class="modal-header">
+            <div class="header-content-group">
+                <div class="header-icon-circle">
+                    <i class="fa-solid fa-sitemap"></i>
+                </div>
+                <h3 class="header-title">Seleccionar Dependencia</h3>
+            </div>
+            <button type="button" class="btn-close-circle" onclick="closeModal()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <form id="scheduleUnitSelectForm">
+            <div class="modal-body-custom">
+                <p class="text-muted small mb-3">
+                    Seleccione la dependencia principal que desea planificar en el cronograma
+                    <strong>{{ plan.year }}</strong>.
+                </p>
+                <div class="form-group">
+                    <label class="form-label font-bold text-dark" for="schedule_unit_select">
+                        Dependencia principal <span class="text-danger">*</span>
+                    </label>
+                    <select id="schedule_unit_select" class="input-field" style="width: 100%;" required>
+                        <option value="">Seleccione una dependencia principal</option>
+                        {% for unit in main_units %}
+                            <option value="{{ unit.id }}">{{ unit.name }}</option>
+                        {% empty %}
+                            <option value="">No hay dependencias principales disponibles</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-white-rectangle" onclick="closeModal()">Cancelar</button>
+                <button type="submit" class="btn-blue-rectangle">
+                    <i class="fa-solid fa-arrow-right me-1"></i> Entrar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

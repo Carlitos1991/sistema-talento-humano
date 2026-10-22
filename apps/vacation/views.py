@@ -30,6 +30,7 @@ from core.models import SystemConfiguration
 from permitrequest.models import PermitType
 from person.models import Person
 from personnel_actions.models import PersonnelAction, ActionType
+from institution.models import AdministrativeUnit
 from .forms import *
 from .models import *
 from .services import (
@@ -1414,6 +1415,26 @@ class VacationSchedulePlanCreateModalView(LoginRequiredMixin, CreateView, Permis
             errors = {k: v[0] for k, v in form.errors.items()}
             return JsonResponse({'status': 'error', 'success': False, 'errors': errors}, status=400)
         return super().form_invalid(form)
+
+
+class VacationScheduleUnitSelectModalView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """Permite a usuarios con permisos de edición elegir la unidad a planificar."""
+    permission_required = 'vacation.change_vacationscheduleplan'
+    template_name = 'vacation/modals/modal_schedule_unit_select.html'
+
+    def has_permission(self):
+        return self.request.user.is_staff or super().has_permission()
+
+    def get(self, request, plan_id):
+        plan = get_object_or_404(VacationSchedulePlan, pk=plan_id)
+        main_units = AdministrativeUnit.objects.filter(
+            is_active=True,
+            is_main_unit=True
+        ).order_by('name')
+        return render(request, self.template_name, {
+            'plan': plan,
+            'main_units': main_units,
+        })
 
 
 class VacationSchedulePlanUpdateModalView(LoginRequiredMixin, UpdateView, PermissionRequiredMixin):
