@@ -1,49 +1,66 @@
+from .models import Document, DocumentType, Procedure
 from django import forms
-from .models import Document, DocumentType, UserSignatureProfile, Procedure
-from .services.signature_service import SignatureService
+from cryptography.hazmat.primitives.serialization import pkcs12
 from core.models import User
-from .models import ProcedureTask, ProcedureSumilla
+from .models import Document, DocumentType, Procedure
+from .models import UserSignatureProfile
 
 
 class UserSignatureUploadForm(forms.ModelForm):
-    """
-    Formulario para vincular o actualizar el archivo .p12 del servidor.
-    Exige la contraseña temporal para certificar la integridad del archivo.
-    """
-    certificate_password = forms.CharField(
-        widget=forms.PasswordInput(attrs={
-            'class': 'input-field',
-            'placeholder': 'Contraseña del certificado digital',
-            'required': 'required'
-        }),
-        label="Contraseña del Certificado"
+    signature_file = forms.FileField(
+        required=True,
+        widget=forms.FileInput(attrs={'class': 'input-field', 'accept': '.p12,.pfx'}),
+        label="Archivo de Firma (.p12 / .pfx)"
+    )
+    signature_password = forms.CharField(
+        required=True,
+        widget=forms.PasswordInput(attrs={'class': 'input-field', 'placeholder': 'Contraseña del certificado'}),
+        label="Contraseña"
     )
 
     class Meta:
         model = UserSignatureProfile
         fields = ['certificate_file']
-        widgets = {
-            'certificate_file': forms.FileInput(attrs={
-                'class': 'input-field',
-                'accept': '.p12,.pfx',
-                'required': 'required'
-            })
-        }
 
     def clean(self):
         cleaned_data = super().clean()
-        cert_file = cleaned_data.get('certificate_file')
-        password = cleaned_data.get('certificate_password')
+        sig_file = cleaned_data.get('signature_file')
+        password = cleaned_data.get('signature_password')
 
-        if cert_file and password:
+        if sig_file and password:
             try:
-                cert_bytes = cert_file.read()
-                cert_info = SignatureService.inspect_and_validate_p12(cert_bytes, password)
-                # Reposicionar el puntero del archivo para que Django pueda guardarlo en disco
-                cert_file.seek(0)
-                cleaned_data['cert_info'] = cert_info
-            except ValueError as e:
-                raise forms.ValidationError(str(e))
+                p12_data = sig_file.read()
+                # Rebobinar el puntero para que Django luego lo pueda guardar en disco
+                sig_file.seek(0)
+
+                # Carga e inspección exclusiva en memoria
+                private_key, certificate, additional_certificates = pkcs12.load_key_and_certificates(
+                    p12_data,
+                    password.encode('utf-8')
+                )
+
+                if certificate is None:
+                    raise forms.ValidationError("El archivo no contiene un certificado X.509 válido.")
+
+                # Extraer atributos
+                subject = certificate.subject.rfc4514_string()
+                issuer = certificate.issuer.rfc4514_string()
+                serial_number = str(certificate.serial_number)
+                valid_from = certificate.not_valid_before_utc
+                valid_to = certificate.not_valid_after_utc
+
+                cleaned_data['cert_info'] = {
+                    'subject_dn': subject,
+                    'issuer': issuer,
+                    'serial_number': serial_number,
+                    'valid_from': valid_from,
+                    'valid_to': valid_to,
+                }
+
+            except ValueError:
+                raise forms.ValidationError("Contraseña incorrecta o archivo de certificado dañado.")
+            except Exception as e:
+                raise forms.ValidationError(f"Error procesando la firma electrónica: {str(e)}")
 
         return cleaned_data
 

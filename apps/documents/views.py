@@ -604,8 +604,11 @@ def upload_signature_certificate(request):
 
     if form.is_valid():
         cert_info = form.cleaned_data.get('cert_info', {})
+        sig_file = form.cleaned_data.get('signature_file')
+
         sig_profile = form.save(commit=False)
         sig_profile.user = request.user
+        sig_profile.certificate_file = sig_file
         sig_profile.issuer = cert_info.get('issuer')
         sig_profile.subject_dn = cert_info.get('subject_dn')
         sig_profile.serial_number = cert_info.get('serial_number')
@@ -615,7 +618,7 @@ def upload_signature_certificate(request):
 
         return JsonResponse({
             'success': True,
-            'message': f'Firma electrónica de "{cert_info.get("common_name")}" vinculada con éxito. Caduca el {cert_info.get("valid_to").strftime("%d/%m/%Y")}.'
+            'message': f'Firma electrónica vinculada exitosamente. Válida hasta {cert_info.get("valid_to").strftime("%d/%m/%Y")}.'
         })
 
     errors = {k: v[0] for k, v in form.errors.items()}
@@ -744,58 +747,43 @@ def procedure_view_pdf_modal(request, pk):
 
 @login_required
 def virtual_office_view(request):
-    """
-    Escritorio virtual interactivo con zonas de soltado (Drag & Drop).
-    Permite visualizar trámites pendientes tanto para jefes titulares como
-    para secretarías y personal adscrito a la unidad principal.
-    """
     user = request.user
     employee = getattr(getattr(user, 'person', None), 'employee_profile', None)
     user_unit = employee.area if employee else None
 
-    # Obtener la cabecera principal de la dirección de forma segura
     main_unit = user_unit.get_scheduling_root_unit() if user_unit else None
     if not main_unit:
         main_unit = AdministrativeUnit.objects.filter(is_main_unit=True, is_active=True).first()
 
-    # Reunir todos los IDs de la rama (cabecera + subcoordinaciones)
-    units_to_check = []
-    if main_unit:
-        units_to_check = main_unit.get_descendant_ids()
-    elif user_unit:
-        units_to_check = [user_unit.id]
+    # Jerarquía organizacional para las tarjetas de creación (Dirección, Jefatura, Propio)
+    unit_levels = []
+    curr = user_unit
+    while curr:
+        unit_levels.insert(0, curr)
+        curr = curr.parent
 
-    # Trámites en despacho:
-    if user.is_superuser or user.has_perm('auth.dashboard_talento_humano') or (main_unit and user_unit):
-        pending_procedures = Procedure.objects.filter(
-            Q(current_unit_id__in=units_to_check) |
-            Q(tasks__unit_id__in=units_to_check) |
-            Q(tasks__assigned_to=user),
-            status__in=[Procedure.Status.IN_DESPATCH, Procedure.Status.IN_PROCESS],
-            is_active=True
-        ).distinct().select_related('category', 'created_by').order_by('-created_at')
-    elif user_unit:
-        pending_procedures = Procedure.objects.filter(
-            tasks__assigned_to=user,
-            tasks__status__in=[ProcedureTask.TaskStatus.PENDING, ProcedureTask.TaskStatus.IN_PROCESS],
-            is_active=True
-        ).distinct().select_related('category', 'created_by').order_by('-created_at')
-    else:
-        pending_procedures = Procedure.objects.none()
+    # BANDEJA ESTRICTA DE PENDIENTES
+    # Solo trámites donde exista una tarea ABIERTA (PENDING o IN_PROCESS) asignada al usuario
+    # o a su unidad si no tiene asignado nominal
+    pending_tasks = ProcedureTask.objects.filter(
+        Q(assigned_to=user) | Q(unit=user_unit, assigned_to__isnull=True),
+        status__in=[ProcedureTask.TaskStatus.PENDING, ProcedureTask.TaskStatus.IN_PROCESS],
+        procedure__is_active=True
+    ).select_related('procedure', 'unit', 'procedure__category').order_by('-created_at')
 
-    # Zonas de soltado (Dependencias hijas directas de la dirección)
+    # Subdependencias directas para sumillar hacia abajo
     child_units = []
     parent_unit = None
-
-    if main_unit:
-        child_units = AdministrativeUnit.objects.filter(parent=main_unit, is_active=True)
-        if main_unit.parent:
-            parent_unit = main_unit.parent.get_scheduling_root_unit()
+    if user_unit:
+        child_units = AdministrativeUnit.objects.filter(parent=user_unit, is_active=True)
+        if user_unit.parent:
+            parent_unit = user_unit.parent
 
     return render(request, 'documents/virtual_office.html', {
-        'pending_procedures': pending_procedures,
+        'pending_tasks': pending_tasks,
         'user_unit': user_unit,
         'main_unit': main_unit,
+        'unit_levels': unit_levels,
         'child_units': child_units,
         'parent_unit': parent_unit,
     })
@@ -826,6 +814,7 @@ def modal_delegate_task(request):
 def process_delegate_task(request):
     """
     Procesa la delegación, crea la tarea concurrente, registra la sumilla y guarda la traza inmutable.
+    Al delegar, cierra la tarea actual del usuario para sacarla de su bandeja.
     """
     procedure_id = request.POST.get('procedure_id')
     unit_id = request.POST.get('unit_id')
@@ -851,7 +840,14 @@ def process_delegate_task(request):
         now = timezone.now()
         task_limit = now + timedelta(days=days_limit)
 
-        # 1. Crear Tarea de Trámite
+        # 1. Completar la tarea actual del usuario que está sumillando (sale de su bandeja)
+        ProcedureTask.objects.filter(
+            procedure=procedure,
+            assigned_to=request.user,
+            status__in=[ProcedureTask.TaskStatus.PENDING, ProcedureTask.TaskStatus.IN_PROCESS]
+        ).update(status=ProcedureTask.TaskStatus.COMPLETED)
+
+        # 2. Crear Tarea de Trámite para el destinatario
         task = ProcedureTask.objects.create(
             procedure=procedure,
             unit=target_unit,
@@ -863,7 +859,7 @@ def process_delegate_task(request):
             created_by=request.user
         )
 
-        # 2. Registrar la Sumilla vinculada
+        # 3. Registrar la Sumilla vinculada
         ProcedureSumilla.objects.create(
             task=task,
             author=request.user,
@@ -873,14 +869,14 @@ def process_delegate_task(request):
             created_by=request.user
         )
 
-        # 3. Actualizar estado y unidad actual del trámite
+        # 4. Actualizar estado y unidad actual del trámite
         procedure.current_unit = target_unit
         procedure.status = Procedure.Status.IN_PROCESS
         if not procedure.limit_date or procedure.limit_date < task_limit:
             procedure.limit_date = task_limit
         procedure.save()
 
-        # 4. Asentar en la Hoja de Ruta Inmutable (Contraloría)
+        # 5. Asentar en la Hoja de Ruta Inmutable (Contraloría)
         ProcedureTrace.objects.create(
             procedure=procedure,
             task=task,
@@ -933,6 +929,70 @@ class ProcedureReceptionListView(LoginRequiredMixin, PermissionRequiredMixin, Li
             )
             return HttpResponse(html)
         return super().render_to_response(context, **response_kwargs)
+
+
+from .utils import generate_document_filing_code
+
+
+@login_required
+def procedure_create_response_modal(request, pk):
+    """
+    Modal para contestar un trámite. Permite elegir el nivel (Dirección, Jefatura o Propio),
+    asigna la codificación automática y monta la plantilla predefinida.
+    """
+    procedure = get_object_or_404(Procedure, pk=pk)
+    user = request.user
+    employee = getattr(getattr(user, 'person', None), 'employee_profile', None)
+    user_unit = employee.area if employee else None
+
+    # Tipos de documentos internos (excluye recepción externa)
+    doc_types = DocumentType.objects.filter(is_external=False, is_active=True).order_by('name')
+
+    # Unidades jerárquicas disponibles
+    hierarchy_units = []
+    curr = user_unit
+    while curr:
+        hierarchy_units.insert(0, curr)
+        curr = curr.parent
+
+    selected_type = doc_types.first()
+    # Código sugerido propio por defecto
+    suggested_code = generate_document_filing_code(user_unit, user, selected_type,
+                                                   is_personal=True) if selected_type and user_unit else ""
+
+    # Plantilla por defecto de Memorando
+    now = timezone.now()
+    default_template = f"""
+    <div style="text-align: right; margin-bottom: 20px;">
+        <strong>Loja, {now.day} de {now.strftime('%B')} de {now.year}</strong>
+    </div>
+    <table style="width: 100%; margin-bottom: 25px; border-collapse: collapse;">
+        <tr>
+            <td style="width: 15%; padding: 4px 0;"><strong>PARA:</strong></td>
+            <td style="padding: 4px 0;">{procedure.external_sender or 'Destinatario'}</td>
+        </tr>
+        <tr>
+            <td style="padding: 4px 0;"><strong>DE:</strong></td>
+            <td style="padding: 4px 0;">{user.signature_name} - {user.signature_position}</td>
+        </tr>
+        <tr>
+            <td style="padding: 4px 0;"><strong>ASUNTO:</strong></td>
+            <td style="padding: 4px 0;">En atención a: {procedure.subject}</td>
+        </tr>
+    </table>
+    <hr style="border: 0; border-top: 1px solid #ccc; margin-bottom: 20px;">
+    <p>De mi consideración:</p>
+    <p>En atención al trámite de la referencia, cumplo con informar a usted lo siguiente...</p>
+    """
+
+    return render(request, 'documents/modals/modal_create_response_doc.html', {
+        'procedure': procedure,
+        'doc_types': doc_types,
+        'hierarchy_units': hierarchy_units,
+        'user_unit': user_unit,
+        'suggested_code': suggested_code,
+        'default_template': default_template,
+    })
 
 
 @login_required

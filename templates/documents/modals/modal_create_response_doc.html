@@ -1,0 +1,106 @@
+{% load static %}
+<div class="modal-overlay hidden">
+    <div class="modal-container-large modal-response-doc">
+        <form id="createResponseDocForm" method="POST"
+              action="{% url 'documents:save_response_document' procedure.id %}" onsubmit="submitAjaxForm(event);">
+            {% csrf_token %}
+            <div class="modal-header-medium">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="header-icon-circle"><i class="fa-solid fa-file-pen"></i></div>
+                    <div>
+                        <h3 class="header-title">Responder Trámite: {{ procedure.code }}</h3>
+                        <small class="text-white-50">{{ procedure.subject }}</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="modal-body-content modal-body-custom py-3 px-4">
+                <div class="row g-2 mb-3">
+                    <!-- Selector de Nivel Emisor -->
+                    <div class="col-md-4 form-group">
+                        <label class="form-label">Nivel de Emisión <span class="text-red">*</span></label>
+                        <select name="emission_level" id="emissionLevelSelect" class="input-field"
+                                onchange="updateFilingCodePreview()">
+                            {% for u in hierarchy_units %}
+                                <option value="UNIT_{{ u.id }}">Oficial: {{ u.name }}</option>
+                            {% endfor %}
+                            <option value="PERSONAL" selected>Personal: {{ user.signature_name }}</option>
+                        </select>
+                    </div>
+
+                    <!-- Tipo de Documento -->
+                    <div class="col-md-3 form-group">
+                        <label class="form-label">Tipo de Documento <span class="text-red">*</span></label>
+                        <select name="category_id" id="docCategorySelect" class="input-field"
+                                onchange="updateFilingCodePreview()">
+                            {% for t in doc_types %}
+                                <option value="{{ t.id }}" data-prefix="{{ t.code_prefix }}">{{ t.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Código Resultante -->
+                    <div class="col-md-5 form-group">
+                        <label class="form-label">Número de Radicado Resultante</label>
+                        <input type="text" name="filing_code" id="filingCodeInput"
+                               class="input-field font-monospace fw-bold text-primary" value="{{ suggested_code }}"
+                               readonly>
+                    </div>
+                </div>
+
+                <!-- Editor Enriquecido -->
+                <div class="form-group mb-0">
+                    <label class="form-label mb-1">Cuerpo del Documento</label>
+                    <textarea name="content_html" id="documentEditor">{{ default_template|safe }}</textarea>
+                </div>
+            </div>
+
+            <div class="modal-footer-medium modal-footer-spaced py-2 px-4">
+                <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">Cancelar</button>
+                <div class="d-flex gap-2">
+                    <button type="submit" name="action_save" value="DRAFT" class="btn-dark-blue-rectangle">
+                        <i class="fa-solid fa-save me-1"></i> Guardar Borrador
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Inicializar CKEditor en el modal
+    if (typeof CKEDITOR !== 'undefined') {
+        if (CKEDITOR.instances['documentEditor']) {
+            CKEDITOR.instances['documentEditor'].destroy(true);
+        }
+        CKEDITOR.replace('documentEditor', {
+            height: 320,
+            toolbar: [
+                {name: 'document', items: ['Source', '-', 'Print']},
+                {name: 'clipboard', items: ['Undo', 'Redo']},
+                {name: 'basicstyles', items: ['Bold', 'Italic', 'Underline', 'Strike']},
+                {
+                    name: 'paragraph',
+                    items: ['NumberedList', 'BulletedList', '-', 'JustifyLeft', 'JustifyCenter', 'JustifyRight', 'JustifyBlock']
+                },
+                {name: 'insert', items: ['Table', 'HorizontalRule']},
+                {name: 'styles', items: ['Format', 'Font', 'FontSize']}
+            ]
+        });
+    }
+
+    function updateFilingCodePreview() {
+        const level = document.getElementById('emissionLevelSelect').value;
+        const catId = document.getElementById('docCategorySelect').value;
+        fetch(`/documents/api/preview-filing-code/?procedure_id={{ procedure.id }}&level=${level}&category_id=${catId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('filingCodeInput').value = data.code;
+                }
+            });
+    }
+</script>
