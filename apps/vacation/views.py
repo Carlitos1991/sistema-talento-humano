@@ -1643,8 +1643,8 @@ class VacationScheduleDropSaveView(LoginRequiredMixin, PermissionRequiredMixin, 
             return JsonResponse({'status': 'error', 'success': False, 'message': 'Datos numéricos inválidos.'},
                                 status=400)
 
-        if days_quantity < 1:
-            return JsonResponse({'status': 'error', 'success': False, 'message': 'Debe asignar al menos 1 día.'},
+        if days_quantity < 7:
+            return JsonResponse({'status': 'error', 'success': False, 'message': 'Debe asignar al menos 7 días.'},
                                 status=400)
 
         # Validación con la misma función de services.py
