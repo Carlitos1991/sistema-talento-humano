@@ -47,10 +47,10 @@
                            id="id_days_quantity"
                            class="form-control"
                            value="{{ default_days }}"
-                           min="1"
+                           min="7"
                            max="{{ max_assignable }}"
                            required>
-                    <span class="form-hint">Puede asignar hasta {{ max_assignable }} días restantes para completar el período anual.</span>
+                    <span class="form-hint">Debe asignar al menos 7 días y puede asignar hasta {{ max_assignable }} días restantes para completar el período anual.</span>
                 </div>
 
                 <div class="form-group">
