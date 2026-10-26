@@ -2,6 +2,7 @@ import os
 import re
 from datetime import datetime
 from datetime import timedelta
+from io import BytesIO
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
@@ -11,12 +12,14 @@ from django.http import Http404
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.shortcuts import render
+from django.template.loader import get_template
 from django.template.loader import render_to_string
 from django.utils import timezone
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.views.decorators.http import require_POST
 from django.views.generic import ListView, CreateView
 from django.views.generic import UpdateView
+from xhtml2pdf import pisa
 
 from institution.models import AdministrativeUnit
 from .forms import DelegateTaskForm
@@ -27,12 +30,6 @@ from .forms import UserSignatureUploadForm, UserProfileSettingsForm
 from .models import DocumentType
 from .models import Procedure, ProcedureTask, ProcedureTrace, Document
 from .models import ProcedureSumilla
-
-from io import BytesIO
-from django.template.loader import get_template
-from django.utils.html import strip_tags
-from xhtml2pdf import pisa
-from .utils import generate_document_filing_code
 
 
 # -------------------------------------------------------------------------

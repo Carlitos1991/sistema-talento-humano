@@ -142,13 +142,8 @@
             </button>
             <button type="button"
                     class="page-btn page-prev {% if not latest_notifications_page_obj.has_previous %}disabled{% endif %}"
-                    title="Anterior" data-page="
-
-
-
-
-
-                    {% if latest_notifications_page_obj.has_previous %}{{ latest_notifications_page_obj.previous_page_number }}{% else %}1{% endif %}"
+                    title="Anterior"
+                    data-page="{% if latest_notifications_page_obj.has_previous %}{{ latest_notifications_page_obj.previous_page_number }}{% else %}1{% endif %}"
                     {% if not latest_notifications_page_obj.has_previous %}disabled{% endif %}>
                 <i class="fas fa-angle-left"></i>
             </button>
@@ -160,13 +155,8 @@
             </div>
             <button type="button"
                     class="page-btn page-next {% if not latest_notifications_page_obj.has_next %}disabled{% endif %}"
-                    title="Siguiente" data-page="
-
-
-
-
-
-                    {% if latest_notifications_page_obj.has_next %}{{ latest_notifications_page_obj.next_page_number }}{% else %}{{ latest_notifications_page_obj.paginator.num_pages }}{% endif %}"
+                    title="Siguiente"
+                    data-page="{% if latest_notifications_page_obj.has_next %}{{ latest_notifications_page_obj.next_page_number }}{% else %}{{ latest_notifications_page_obj.paginator.num_pages }}{% endif %}"
                     {% if not latest_notifications_page_obj.has_next %}disabled{% endif %}>
                 <i class="fas fa-angle-right"></i>
             </button>

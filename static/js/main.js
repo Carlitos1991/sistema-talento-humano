@@ -1087,6 +1087,9 @@ document.addEventListener('click', (e) => {
 document.addEventListener('click', (e) => {
     const btn = e.target.closest('.page-btn');
     if (!btn) return;
+    // Los módulos con paginación propia manejan la petición y el contenedor
+    // que debe actualizarse.
+    if (btn.closest('#latest-notifications-wrapper')) return;
 
     const table = document.querySelector('.managed-table');
     if (!table || table.dataset.externalPagination !== 'true') return;
