@@ -62,20 +62,18 @@
                 if (statsRow) statsRow.innerHTML = statsToInject;
             }
 
-            setTimeout(() => {
-                const newTable = document.querySelector('.managed-table');
-                if (newTable) {
-                    new TableManager(newTable);
-                    if (window._currentTableSort) {
-                        const sortedTh = newTable.querySelectorAll('thead th')[window._currentTableSort.col];
-                        if (sortedTh) {
-                            sortedTh.classList.add(window._currentTableSort.asc ? 'sorted-asc' : 'sorted-desc');
-                            const arrow = sortedTh.querySelector('.sort-arrow');
-                            if (arrow) arrow.innerText = window._currentTableSort.asc ? '↑' : '↓';
-                        }
+            const newTable = document.querySelector('.managed-table');
+            if (newTable) {
+                new TableManager(newTable);
+                if (window._currentTableSort) {
+                    const sortedTh = newTable.querySelectorAll('thead th')[window._currentTableSort.col];
+                    if (sortedTh) {
+                        sortedTh.classList.add(window._currentTableSort.asc ? 'sorted-asc' : 'sorted-desc');
+                        const arrow = sortedTh.querySelector('.sort-arrow');
+                        if (arrow) arrow.innerText = window._currentTableSort.asc ? '↑' : '↓';
                     }
                 }
-            }, 50);
+            }
 
         } catch (e) {
             console.error('Error AJAX:', e);

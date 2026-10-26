@@ -159,7 +159,8 @@
 
             <!-- Indicador de página -->
             <div class="page-input-wrapper">
-                <input type="number" class="page-input" value="{{ page_obj.number }}" readonly style="cursor: default;">
+                <input type="number" class="page-input" value="{{ page_obj.number }}"
+                       min="1" max="{{ paginator.num_pages }}" aria-label="Página actual">
                 <span class="total-pages-badge">de {{ paginator.num_pages }}</span>
             </div>
 

@@ -1099,14 +1099,7 @@ document.addEventListener('click', (e) => {
     if (!page) return;
 
     const pageNumber = parseInt(page, 10) || 1;
-    const pageHandlers = [
-        ['documentFiltersForm', window.applyDocumentFilters],
-        ['personFiltersForm', window.applyPersonFilters],
-        ['budget-filter-form', window.applyBudgetFilters],
-    ];
-    const pageHandler = pageHandlers.find(([formId, handler]) =>
-        document.getElementById(formId) && typeof handler === 'function'
-    )?.[1];
+    const pageHandler = getExternalPaginationHandler();
 
     if (pageHandler) {
         pageHandler(pageNumber);
@@ -1183,6 +1176,41 @@ document.addEventListener('click', (e) => {
             }
         });
 }, true);
+
+function getExternalPaginationHandler() {
+    const pageHandlers = [
+        ['documentFiltersForm', window.applyDocumentFilters],
+        ['personFiltersForm', window.applyPersonFilters],
+        ['budget-filter-form', window.applyBudgetFilters],
+    ];
+    return pageHandlers.find(([formId, handler]) =>
+        document.getElementById(formId) && typeof handler === 'function'
+    )?.[1] || null;
+}
+
+document.addEventListener('change', (e) => {
+    const input = e.target.closest('.pagination-container .page-input');
+    const handler = input && getExternalPaginationHandler();
+    if (!handler) return;
+
+    e.preventDefault();
+    const page = Math.max(1, parseInt(input.value, 10) || 1);
+    const maxPage = parseInt(input.max, 10);
+    handler(maxPage ? Math.min(page, maxPage) : page);
+});
+
+document.addEventListener('keydown', (e) => {
+    const input = e.target.closest('.pagination-container .page-input');
+    if (!input || e.key !== 'Enter') return;
+
+    const handler = getExternalPaginationHandler();
+    if (!handler) return;
+
+    e.preventDefault();
+    const page = Math.max(1, parseInt(input.value, 10) || 1);
+    const maxPage = parseInt(input.max, 10);
+    handler(maxPage ? Math.min(page, maxPage) : page);
+});
 
 window.TableManager = TableManager;
 
