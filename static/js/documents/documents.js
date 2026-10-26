@@ -166,21 +166,6 @@
         });
     });
 
-    // Paginador delegado: escucha los clics en los botones .page-btn de la tabla
-    document.addEventListener('click', (e) => {
-        const btn = e.target.closest('#tableContainer .page-btn');
-        if (!btn) return;
-
-        if (btn.disabled || btn.classList.contains('disabled')) return;
-        e.preventDefault();
-        e.stopPropagation();
-
-        const page = btn.dataset.page;
-        if (page) {
-            window.applyDocumentFilters(parseInt(page) || 1);
-        }
-    });
-
     window.openCreateDocumentModal = function () {
         const currentType = document.getElementById('filter_document_type')?.value;
         if (!currentType) {

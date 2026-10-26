@@ -1,66 +1,135 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-    <meta charset="utf-8">
+    <meta charset="UTF-8">
+    <title>{{ document.filing_code }}</title>
     <style>
+        /* Regla @page estrictamente compatible con xhtml2pdf */
         @page {
-            size: A4;
-            margin: 2.5cm 2cm 2.5cm 2cm;
-            @bottom-right {
-                content: "Pág. " counter(page) " de " counter(pages);
-                font-size: 8pt;
-                font-family: Helvetica, Arial, sans-serif;
-                color: #64748b;
-            }
+            size: a4 portrait;
+            margin-top: 2.5cm;
+            margin-bottom: 2.5cm;
+            margin-left: 3cm;
+            margin-right: 2.5cm;
+
+            @frame header_frame {
+            -pdf-frame-content: header_content;
+            left: 3cm;
+            right: 2.5cm;
+            top: 1cm;
+            height: 1.5cm;
+        }
+
+            @frame footer_frame {
+            -pdf-frame-content: footer_content;
+            left: 3cm;
+            right: 2.5cm;
+            bottom: 1cm;
+            height: 1.2cm;
+        }
         }
 
         body {
             font-family: Helvetica, Arial, sans-serif;
             font-size: 10pt;
-            line-height: 1.5;
+            line-height: 1.4;
             color: #1e293b;
         }
 
-        .header-code {
-            font-size: 12pt;
-            font-weight: bold;
-            color: #0f172a;
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        td, th {
+            vertical-align: top;
+            padding: 4px;
+        }
+
+        .header-table {
             margin-bottom: 15px;
+            border-bottom: 1px solid #cbd5e1;
         }
 
-        .legal-signature-box {
-            margin-top: 40px;
-            border: 1.5px solid #0284c7;
-            padding: 10px;
-            background: #f0f9ff;
-            width: 280px;
+        .header-table td {
+            font-size: 9pt;
         }
 
-        .manual-signature-box {
-            margin-top: 60px;
-            border-top: 1px solid #334155;
-            width: 250px;
+        .document-title {
             text-align: center;
-            padding-top: 6px;
+            font-weight: bold;
+            font-size: 13pt;
+            margin-bottom: 12px;
+            color: #0f172a;
+        }
+
+        .document-body {
+            margin-top: 15px;
+            text-align: justify;
+        }
+
+        .signature-box {
+            margin-top: 40px;
+            page-break-inside: avoid;
+        }
+
+        .signature-line {
+            width: 250px;
+            border-top: 1px solid #000000;
+            margin-bottom: 5px;
         }
     </style>
 </head>
 <body>
-<div class="header-code">{{ document.filing_code }}</div>
-<div>{{ content_html|safe }}</div>
+<!-- Encabezado superior -->
+<div id="header_content">
+    <table style="width: 100%;">
+        <tr>
+            <td style="font-weight: bold; font-size: 10pt; color: #1e3a8a;">
+                MUNICIPIO DE LOJA
+            </td>
+            <td style="text-align: right; font-size: 8pt; color: #64748b;">
+                {{ document.filing_code }}
+            </td>
+        </tr>
+    </table>
+</div>
 
-{% if is_signed %}
-    <div class="legal-signature-box">
-        <strong>DOCUMENTO FIRMADO ELECTRÓNICAMENTE</strong><br>
-        <span>Firmante: {{ user.signature_name }}</span><br>
-        <span>Cargo: {{ user.signature_position }}</span><br>
-        <span>Entidad: GAD Municipal de Loja</span>
-    </div>
-{% else %}
-    <div class="manual-signature-box">
-        <strong>{{ user.signature_name }}</strong><br>
-        <span>{{ user.signature_position }}</span>
-    </div>
-{% endif %}
+<!-- Pie de página -->
+<div id="footer_content">
+    <table style="width: 100%; border-top: 1px solid #e2e8f0;">
+        <tr>
+            <td style="font-size: 7.5pt; color: #64748b;">
+                Sistema Integrado de Gestión - Módulo de Gestión Documental
+            </td>
+            <td style="text-align: right; font-size: 7.5pt; color: #64748b;">
+                Página
+                <pdf:pagenumber> de
+                    <pdf:pagecount>
+            </td>
+        </tr>
+    </table>
+</div>
+
+<!-- Contenido Principal -->
+<div class="document-title">
+    {{ document.category.name|upper }} Nro. {{ document.filing_code }}
+</div>
+
+<div class="document-body">
+    {{ content_html|safe }}
+</div>
+
+<!-- Bloque de Firma -->
+<div class="signature-box">
+    <div class="signature-line"></div>
+    <strong>{{ document.sender_name }}</strong><br>
+    <span>{{ user.signature_position|default:"Servidor Público" }}</span>
+    {% if is_signed %}
+        <br><span style="color: #059669; font-size: 8pt; font-weight: bold;">
+                [Documento legalizado con Firma Electrónica Oficial]
+            </span>
+    {% endif %}
+</div>
 </body>
 </html>

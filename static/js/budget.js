@@ -82,6 +82,8 @@
             });
     }
 
+    window.applyBudgetFilters = applyBudgetFilters;
+
     function toggleAdvancedSearch() {
         const container = document.getElementById('advanced-search-container');
         const icon = document.getElementById('icon-toggle-advanced');

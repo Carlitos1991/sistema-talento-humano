@@ -34,14 +34,14 @@
                         </div>
                     </td>
 
-                    <!-- Tipo de Documento: Multilínea controlada -->
+                    <!-- Tipo de Documento -->
                     <td class="cell-wrap">
                         <span class="badge-type-multiline">
                             {{ item.category.name }}
                         </span>
                     </td>
 
-                    <!-- Remitente y Número de Oficio -->
+                    <!-- Remitente y Número de Documento Externo -->
                     <td class="cell-wrap">
                         <div class="sender-cell">
                             <span class="sender-name">{{ item.external_sender }}</span>
@@ -66,7 +66,7 @@
                         <small class="d-block text-muted font-monospace">{{ item.created_at|date:"H:i" }}</small>
                     </td>
 
-                    <!-- Botón PDF: Llama al modal HTML 'procedure_view_pdf_modal' -->
+                    <!-- Visor de PDF Digitalizado -->
                     <td class="text-center">
                         {% with entry_doc=item.documents.first %}
                             {% if entry_doc and entry_doc.file_attachment %}
@@ -82,7 +82,7 @@
                         {% endwith %}
                     </td>
 
-                    <!-- Estado -->
+                    <!-- Estado del Trámite -->
                     <td class="text-center">
                         {% if item.status == 'DRAFT' %}
                             <span class="badge badge-gray"><i class="fa-solid fa-pen-ruler me-1"></i>Registrado</span>
@@ -102,14 +102,14 @@
                     <!-- Acciones -->
                     <td class="actions text-center">
                         <div class="actions-wrapper">
-                            <!-- Ver Hoja de Ruta -->
+                            <!-- Ver Hoja de Ruta (Siempre visible) -->
                             <button type="button" class="btn-blue-circle"
                                     onclick="openAjaxModal('{% url 'documents:procedure_trace_modal' item.id %}')"
                                     title="Ver Ruta del Trámite">
                                 <i class="fa-solid fa-route"></i>
                             </button>
 
-                            <!-- Acciones de Ventanilla en Borrador -->
+                            <!-- Acciones exclusivas cuando el trámite está en Borrador -->
                             {% if item.status == 'DRAFT' %}
                                 <button type="button" class="btn-green-circle"
                                         onclick="openAjaxModal('{% url 'documents:pass_to_secretariat_modal' item.id %}')"

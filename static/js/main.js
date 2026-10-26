@@ -1088,9 +1088,6 @@ document.addEventListener('click', (e) => {
     const btn = e.target.closest('.page-btn');
     if (!btn) return;
 
-    if (document.getElementById('filtersForm')
-        || document.getElementById('budget-filter-form')) return;
-
     const table = document.querySelector('.managed-table');
     if (!table || table.dataset.externalPagination !== 'true') return;
     if (btn.hasAttribute('disabled') || btn.classList.contains('disabled')) return;
@@ -1100,6 +1097,21 @@ document.addEventListener('click', (e) => {
 
     const page = btn.dataset.page;
     if (!page) return;
+
+    const pageNumber = parseInt(page, 10) || 1;
+    const pageHandlers = [
+        ['documentFiltersForm', window.applyDocumentFilters],
+        ['personFiltersForm', window.applyPersonFilters],
+        ['budget-filter-form', window.applyBudgetFilters],
+    ];
+    const pageHandler = pageHandlers.find(([formId, handler]) =>
+        document.getElementById(formId) && typeof handler === 'function'
+    )?.[1];
+
+    if (pageHandler) {
+        pageHandler(pageNumber);
+        return;
+    }
 
     const oldTableContainer = table.closest('.table-container');
     const oldPagination = btn.closest('.pagination-container');
@@ -1111,7 +1123,7 @@ document.addEventListener('click', (e) => {
 
     const listUrl = table.getAttribute('data-list-url') || window.location.pathname;
     const params = new URLSearchParams(window.location.search);
-    params.set('page', page);
+    params.set('page', pageNumber);
 
     if (window._currentTableSort) {
         const ths = table.querySelectorAll('thead th');

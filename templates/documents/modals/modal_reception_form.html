@@ -2,10 +2,10 @@
 <div class="modal-overlay hidden">
     <div class="modal-container-medium modal-reception-compact">
         <form id="receptionForm" method="POST" action="{% url 'documents:procedure_reception_create' %}"
-              enctype="multipart/form-data" onsubmit="submitAjaxForm(event);">
+              enctype="multipart/form-data" onsubmit="submitReceptionAjaxForm(event);">
             {% csrf_token %}
 
-            <!-- Header Limpio y Compacto -->
+            <!-- Encabezado del Modal -->
             <div class="modal-header-medium">
                 <div class="d-flex align-items-center gap-2">
                     <div class="header-icon-circle">
@@ -21,16 +21,16 @@
                 </button>
             </div>
 
-            <!-- Cuerpo Compacto con Cuadrícula Optimizada -->
+            <!-- Contenido del Formulario -->
             <div class="modal-body-content modal-body-custom py-3 px-4">
-                <!-- Píldora de Radicado Sugerido -->
+                <!-- Banner de Radicado Sugerido -->
                 <div class="reception-suggested-banner mb-3">
                     <div class="d-flex align-items-center gap-2">
                         <i class="fa-solid fa-hashtag text-blue"></i>
                         <span class="small text-muted font-weight-bold">NRO. RADICADO:</span>
                         <span class="badge badge-blue font-monospace fw-bold">{{ suggested_code }}</span>
                     </div>
-                    <span class="badge badge-amber"><i class="fa-solid fa-clock me-1"></i> Pasa a Despacho</span>
+                    <span class="badge badge-amber"><i class="fa-solid fa-clock me-1"></i> Borrador Inicial</span>
                 </div>
 
                 <div class="form-section-card p-3 mb-0">
@@ -59,19 +59,19 @@
                         </div>
                     </div>
 
-                    <!-- Fila 3: Asunto del Trámite (Ancho completo) -->
+                    <!-- Fila 3: Asunto -->
                     <div class="form-group form-group-compact mt-2">
                         <label class="form-label" for="id_subject">Asunto del Trámite <span
                                 class="text-red">*</span></label>
                         {{ form.subject }}
                     </div>
 
-                    <!-- Fila 4: Grid 2 Columnas (Izquierda: Correo arriba, Prioridad abajo | Derecha: PDF abarcando ambas) -->
+                    <!-- Fila 4: Correo, Prioridad y Dropzone PDF -->
                     <div class="reception-bottom-grid mt-2">
-                        <!-- Columna Izquierda: Correo en Fila 1, Prioridad en Fila 2 -->
                         <div class="reception-left-fields">
                             <div class="form-group form-group-compact mb-2">
-                                <label class="form-label" for="id_external_email">Correo para Notificación</label>
+                                <label class="form-label" for="id_external_email">Correo Electrónico para
+                                    Notificación</label>
                                 {{ form.external_email }}
                             </div>
                             <div class="form-group form-group-compact mb-0">
@@ -80,7 +80,7 @@
                             </div>
                         </div>
 
-                        <!-- Columna Derecha: Dropzone del PDF ocupando toda la altura -->
+                        <!-- Dropzone de archivo PDF -->
                         <div class="form-group form-group-compact mb-0 reception-right-pdf">
                             <label class="form-label mb-1">Documento Escaneado (PDF) <span
                                     class="text-red">*</span></label>
@@ -108,7 +108,7 @@
                 </div>
             </div>
 
-            <!-- Footer Compacto -->
+            <!-- Pie del Modal -->
             <div class="modal-footer-medium modal-footer-spaced py-2 px-4">
                 <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">Cancelar</button>
                 <button type="submit" class="btn-dark-blue-rectangle">
@@ -118,30 +118,3 @@
         </form>
     </div>
 </div>
-
-<script>
-    function handlePdfSelection(input) {
-        const titleEl = document.getElementById('pdfFileTitle');
-        const subtitleEl = document.getElementById('pdfFileSubtitle');
-        const iconWrapper = document.getElementById('pdfIconWrapper');
-        const card = document.getElementById('pdfUploadZone');
-
-        if (input.files && input.files[0]) {
-            const file = input.files[0];
-            const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
-
-            titleEl.textContent = file.name;
-            titleEl.classList.add('text-primary', 'fw-bold');
-            subtitleEl.textContent = `Archivo listo para subir (${sizeMb} MB)`;
-
-            iconWrapper.innerHTML = '<i class="fa-solid fa-file-circle-check text-green"></i>';
-            card.classList.add('pdf-selected');
-        } else {
-            titleEl.textContent = 'Arrastre o seleccione el PDF';
-            titleEl.classList.remove('text-primary', 'fw-bold');
-            subtitleEl.textContent = 'Solo formato PDF (máx. 15 MB)';
-            iconWrapper.innerHTML = '<i class="fa-solid fa-file-arrow-up"></i>';
-            card.classList.remove('pdf-selected');
-        }
-    }
-</script>

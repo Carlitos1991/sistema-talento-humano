@@ -5,9 +5,10 @@
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/documents.css' %}">
 {% endblock %}
+
 {% block content %}
     <div class="container-fluid">
-        <!-- Header Oficial -->
+        <!-- Encabezado Oficial -->
         <div class="header-card">
             <div>
                 <h1>Recepción y Ventanilla Única</h1>
@@ -19,13 +20,13 @@
             </button>
         </div>
 
-        <!-- Contenido y Tabla -->
+        <!-- Contenedor y Tabla -->
         <div class="content-table" id="table-app">
             <div class="table-controls toolbar-row">
                 <div class="toolbar-left rubric-export-controls"></div>
                 <div class="toolbar-right">
                     <input type="text" id="table-search" class="table-search-input table-search-input--large"
-                           placeholder="Buscar por numero, remitente o asunto...">
+                           placeholder="Buscar por número, remitente o asunto...">
                 </div>
             </div>
 
@@ -35,134 +36,10 @@
         </div>
     </div>
 
+    <!-- Contenedor para inyección de modales AJAX -->
     <div id="modal-root"></div>
 {% endblock %}
+
 {% block extra_js %}
-    <script>
-        // 1. Pasar trámite a Secretaría
-        function passProcedureToSecretariat(procedureId, code) {
-            Swal.fire({
-                title: `¿Remitir trámite ${code} a Secretaría?`,
-                text: "El expediente pasará a la bandeja de despacho del Director para su sumillado.",
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: 'Sí, remitir a Secretaría',
-                cancelButtonText: 'Cancelar',
-                customClass: {
-                    confirmButton: 'swal2-confirm btn-swal-success',
-                    cancelButton: 'swal2-cancel btn-swal-cancel'
-                }
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    fetch(`/documents/reception/pass/${procedureId}/`, {
-                        method: 'POST',
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest',
-                            'X-CSRFToken': getCSRF()
-                        }
-                    })
-                        .then(res => res.json())
-                        .then(data => {
-                            if (data.success) {
-                                showToast(data.message, 'success');
-                                refreshCurrentTable();
-                            } else {
-                                Swal.fire({icon: 'warning', title: 'Atención', text: data.message});
-                            }
-                        })
-                        .catch(() => {
-                            Swal.fire({icon: 'error', title: 'Error', text: 'Error de comunicación con el servidor.'});
-                        });
-                }
-            });
-        }
-
-        // 2. Anular o Dar de Baja (libera número si no tiene asignación)
-        function cancelOrDeleteProcedure(procedureId, code, hasAssignments) {
-            if (!hasAssignments) {
-                // Caso sin asignaciones previas
-                Swal.fire({
-                    title: `¿Dar de baja el trámite ${code}?`,
-                    text: "El trámite no ha sido derivado a ninguna dependencia. Al dar de baja, el número quedará libre para registrar otro documento.",
-                    icon: 'warning',
-                    input: 'text',
-                    inputPlaceholder: 'Motivo de la baja (opcional)...',
-                    showCancelButton: true,
-                    confirmButtonText: 'Sí, dar de baja y liberar',
-                    cancelButtonText: 'Cancelar',
-                    customClass: {
-                        confirmButton: 'swal2-confirm btn-swal-danger',
-                        cancelButton: 'swal2-cancel btn-swal-cancel'
-                    }
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        const formData = new FormData();
-                        formData.append('reason', result.value || '');
-
-                        fetch(`/documents/reception/cancel/${procedureId}/`, {
-                            method: 'POST',
-                            headers: {
-                                'X-Requested-With': 'XMLHttpRequest',
-                                'X-CSRFToken': getCSRF()
-                            },
-                            body: formData
-                        })
-                            .then(res => res.json())
-                            .then(data => {
-                                if (data.success) {
-                                    showToast(data.message, 'success');
-                                    refreshCurrentTable();
-                                } else {
-                                    Swal.fire({icon: 'error', title: 'Error', text: data.message});
-                                }
-                            });
-                    }
-                });
-            } else {
-                // Caso con asignaciones previas
-                Swal.fire({
-                    title: `Anular formalmente el trámite ${code}`,
-                    text: "Este trámite ya cuenta con delegaciones a otras dependencias. Quedará archivado como anulado y el número NO se liberará.",
-                    icon: 'warning',
-                    input: 'textarea',
-                    inputPlaceholder: 'Ingrese obligatoriamente el justificativo de anulación...',
-                    inputValidator: (value) => {
-                        if (!value || !value.trim()) {
-                            return 'Debe ingresar obligatoriamente un motivo para anular el trámite.';
-                        }
-                    },
-                    showCancelButton: true,
-                    confirmButtonText: 'Anular Trámite',
-                    cancelButtonText: 'Cancelar',
-                    customClass: {
-                        confirmButton: 'swal2-confirm btn-swal-danger',
-                        cancelButton: 'swal2-cancel btn-swal-cancel'
-                    }
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        const formData = new FormData();
-                        formData.append('reason', result.value.trim());
-
-                        fetch(`/documents/reception/cancel/${procedureId}/`, {
-                            method: 'POST',
-                            headers: {
-                                'X-Requested-With': 'XMLHttpRequest',
-                                'X-CSRFToken': getCSRF()
-                            },
-                            body: formData
-                        })
-                            .then(res => res.json())
-                            .then(data => {
-                                if (data.success) {
-                                    showToast(data.message, 'success');
-                                    refreshCurrentTable();
-                                } else {
-                                    Swal.fire({icon: 'error', title: 'Error', text: data.message});
-                                }
-                            });
-                    }
-                });
-            }
-        }
-    </script>
+    <script src="{% static 'js/documents/reception.js' %}"></script>
 {% endblock %}

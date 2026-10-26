@@ -1,11 +1,13 @@
 {% load static %}
 <div class="modal-overlay hidden">
-    <div class="modal-container-large modal-response-doc">
+    <div class="modal-response-layout">
         <form id="createResponseDocForm" method="POST"
               action="{% url 'documents:save_response_document' procedure.id %}"
-              onsubmit="submitResponseDocForm(event);">
+              data-procedure-id="{{ procedure.id }}">
             {% csrf_token %}
-            <div class="modal-header-medium">
+
+            <!-- 1. Encabezado Oficial Completo de lado a lado -->
+            <div class="modal-header-medium response-header-bar">
                 <div class="d-flex align-items-center gap-2">
                     <div class="header-icon-circle"><i class="fa-solid fa-file-pen"></i></div>
                     <div>
@@ -18,156 +20,104 @@
                 </button>
             </div>
 
-            <div class="modal-body-content modal-body-custom py-3 px-4">
-                <div class="row g-2 mb-3">
-                    <!-- Nivel de Emisión -->
-                    <div class="col-md-4 form-group">
-                        <label class="form-label">Nivel de Emisión <span class="text-red">*</span></label>
-                        <select name="emission_level" id="emissionLevelSelect" class="input-field"
-                                onchange="refreshFilingCode();">
-                            {% for u in hierarchy_units %}
-                                <option value="UNIT_{{ u.id }}">Oficial: {{ u.name }}</option>
-                            {% endfor %}
-                            <option value="PERSONAL" selected>Personal: {{ request.user.signature_name }}</option>
-                        </select>
-                    </div>
+            <!-- 2. Cuerpo en Dos Paneles Claros (Sidebar Lateral 300px + Área de Edición) -->
+            <div class="response-body-grid">
 
-                    <!-- Tipo de Documento: Solo Internos -->
-                    <div class="col-md-3 form-group">
-                        <label class="form-label">Tipo de Documento <span class="text-red">*</span></label>
-                        <select name="category_id" id="docCategorySelect" class="input-field"
-                                onchange="refreshFilingCode();">
-                            {% for t in doc_types %}
-                                <option value="{{ t.id }}" data-prefix="{{ t.code_prefix }}">{{ t.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
+                <!-- PANEL IZQUIERDO: Configuración, Firma y Botones -->
+                <aside class="response-sidebar-panel">
+                    <div class="response-sidebar-content">
 
-                    <!-- Código Resultante -->
-                    <div class="col-md-5 form-group">
-                        <label class="form-label">Número de Radicado Resultante</label>
-                        <input type="text" name="filing_code" id="filingCodeInput"
-                               class="input-field font-monospace fw-bold text-primary" value="{{ suggested_code }}"
-                               readonly>
-                    </div>
-                </div>
-
-                <!-- Editor Enriquecido -->
-                <div class="form-group mb-3">
-                    <label class="form-label mb-1">Cuerpo del Documento</label>
-                    <textarea name="content_html" id="documentEditor">{{ default_template|safe }}</textarea>
-                </div>
-
-                <!-- Opciones de Legalización / Firma -->
-                <div class="form-section-card p-3 mb-0">
-                    <label class="form-label fw-bold mb-2"><i class="fa-solid fa-stamp me-1"></i> Modo de Despacho y
-                        Firma</label>
-                    <div class="d-flex align-items-center gap-4 mb-2">
-                        <label class="form-check-label d-flex align-items-center gap-2 cursor-pointer">
-                            <input type="radio" name="sign_mode" value="MANUAL" checked
-                                   onchange="toggleSignatureAuth(this.value)">
-                            <span>Firma Física (Imprimir y rubricar manualmente)</span>
-                        </label>
-                        <label class="form-check-label d-flex align-items-center gap-2 cursor-pointer">
-                            <input type="radio" name="sign_mode" value="ELECTRONIC"
-                                   onchange="toggleSignatureAuth(this.value)">
-                            <span>Legalizar con Firma Electrónica (.p12)</span>
-                        </label>
-                    </div>
-
-                    <div id="certAuthBox" class="mt-2 hidden">
-                        <div class="d-flex align-items-center gap-2">
-                            <input type="password" name="cert_password" id="id_cert_password" class="input-field"
-                                   style="max-width: 320px;" placeholder="Contraseña de su firma .p12">
-                            <small class="text-muted"><i class="fa-solid fa-shield-halved me-1"></i> Se valida en
-                                memoria</small>
+                        <!-- Nivel de Emisión -->
+                        <div class="form-group mb-3">
+                            <label class="form-label" for="emissionLevelSelect">
+                                Nivel de Emisión <span class="text-red">*</span>
+                            </label>
+                            <select name="emission_level" id="emissionLevelSelect" class="input-field">
+                                {% for u in hierarchy_units %}
+                                    <option value="UNIT_{{ u.id }}">Oficial: {{ u.name }}</option>
+                                {% endfor %}
+                                <option value="PERSONAL" selected>
+                                    Personal: {{ user_full_name|default:request.user.get_full_name }}
+                                </option>
+                            </select>
                         </div>
-                    </div>
-                </div>
-            </div>
 
-            <div class="modal-footer-medium modal-footer-spaced py-2 px-4">
-                <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">Cancelar</button>
-                <div class="d-flex gap-2">
-                    <button type="submit" class="btn-dark-blue-rectangle">
-                        <i class="fa-solid fa-check me-1"></i> Guardar y Despachar Documento
-                    </button>
-                </div>
+                        <!-- Tipo de Documento -->
+                        <div class="form-group mb-3">
+                            <label class="form-label" for="docCategorySelect">
+                                Tipo de Documento <span class="text-red">*</span>
+                            </label>
+                            <select name="category_id" id="docCategorySelect" class="input-field">
+                                {% for t in doc_types %}
+                                    <option value="{{ t.id }}" data-prefix="{{ t.code_prefix }}">{{ t.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Número de Radicado Resultante -->
+                        <div class="form-group mb-3">
+                            <label class="form-label" for="filingCodeInput">
+                                Radicado Resultante
+                            </label>
+                            <input type="text" name="filing_code" id="filingCodeInput"
+                                   class="input-field font-monospace fw-bold text-primary"
+                                   value="{{ suggested_code }}" readonly>
+                        </div>
+
+                        <!-- Modo de Firma y Despacho -->
+                        <div class="form-section-card p-3 mb-3">
+                            <label class="form-label fw-bold small mb-2">
+                                <i class="fa-solid fa-stamp me-1"></i> Modo de Despacho
+                            </label>
+
+                            <div class="d-flex flex-column gap-2">
+                                <label class="form-check-label d-flex align-items-center gap-2 cursor-pointer small">
+                                    <input type="radio" name="sign_mode" value="MANUAL" checked id="signModeManual">
+                                    <span>Firma Física (Imprimir)</span>
+                                </label>
+                                <label class="form-check-label d-flex align-items-center gap-2 cursor-pointer small">
+                                    <input type="radio" name="sign_mode" value="ELECTRONIC" id="signModeElectronic">
+                                    <span>Firma Electrónica (.p12)</span>
+                                </label>
+                            </div>
+
+                            <div id="certAuthBox" class="mt-2 hidden">
+                                <input type="password" name="cert_password" id="id_cert_password"
+                                       class="input-field small"
+                                       placeholder="Contraseña del .p12">
+                                <small class="text-muted d-block mt-1" style="font-size: 0.72rem;">
+                                    <i class="fa-solid fa-shield-halved me-1"></i> Se valida en memoria
+                                </small>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Botones de Acción al fondo del panel izquierdo -->
+                    <div class="response-sidebar-actions">
+                        <button type="submit" class="btn-dark-blue-rectangle w-100 justify-content-center"
+                                id="btnSubmitResponseDoc">
+                            <i class="fa-solid fa-paper-plane me-1"></i> Guardar y Despachar
+                        </button>
+                        <button type="button" class="btn-dark-blue-rectangle-outline w-100 justify-content-center"
+                                onclick="closeModal()">
+                            Cancelar
+                        </button>
+                    </div>
+                </aside>
+
+                <!-- PANEL DERECHO: Editor Visual Completo -->
+                <main class="response-main-panel">
+                    <label class="form-label mb-2 fw-bold" for="documentEditor">
+                        <i class="fa-solid fa-align-left me-1"></i> Redacción del Documento <span
+                            class="text-red">*</span>
+                    </label>
+                    <div class="response-ckeditor-container">
+                        <textarea name="content_html" id="documentEditor">{{ default_template|safe }}</textarea>
+                    </div>
+                </main>
+
             </div>
         </form>
     </div>
 </div>
-
-<script>
-    if (typeof CKEDITOR !== 'undefined') {
-        if (CKEDITOR.instances['documentEditor']) {
-            CKEDITOR.instances['documentEditor'].destroy(true);
-        }
-        CKEDITOR.replace('documentEditor', {
-            height: 280,
-            toolbar: [
-                {name: 'clipboard', items: ['Undo', 'Redo']},
-                {name: 'basicstyles', items: ['Bold', 'Italic', 'Underline', 'Strike']},
-                {
-                    name: 'paragraph',
-                    items: ['NumberedList', 'BulletedList', '-', 'JustifyLeft', 'JustifyCenter', 'JustifyRight', 'JustifyBlock']
-                },
-                {name: 'insert', items: ['Table', 'HorizontalRule']},
-                {name: 'styles', items: ['Format', 'FontSize']}
-            ]
-        });
-    }
-
-    function toggleSignatureAuth(mode) {
-        const box = document.getElementById('certAuthBox');
-        if (mode === 'ELECTRONIC') {
-            box.classList.remove('hidden');
-        } else {
-            box.classList.add('hidden');
-        }
-    }
-
-    function refreshFilingCode() {
-        const level = document.getElementById('emissionLevelSelect').value;
-        const catId = document.getElementById('docCategorySelect').value;
-        fetch(`/documents/next-code/${catId}/?procedure_id={{ procedure.id }}&level=${level}`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.code) {
-                    document.getElementById('filingCodeInput').value = data.code;
-                }
-            });
-    }
-
-    function submitResponseDocForm(e) {
-        e.preventDefault();
-        if (typeof CKEDITOR !== 'undefined' && CKEDITOR.instances['documentEditor']) {
-            CKEDITOR.instances['documentEditor'].updateElement();
-        }
-        const form = e.target;
-        const formData = new FormData(form);
-
-        fetch(form.action, {
-            method: 'POST',
-            body: formData,
-            headers: {'X-Requested-With': 'XMLHttpRequest'}
-        })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    closeModal();
-                    showToast(data.message, 'success');
-                    // Si fue manual, abrir ventana de impresión del PDF
-                    if (formData.get('sign_mode') === 'MANUAL' && data.document_id) {
-                        window.open(`/documents/detail/${data.document_id}/print/`, '_blank');
-                    }
-                    setTimeout(() => location.reload(), 1200);
-                } else {
-                    Swal.fire({icon: 'warning', title: 'Atención', text: data.message});
-                }
-            })
-            .catch(() => {
-                Swal.fire({icon: 'error', title: 'Error', text: 'Error procesando la solicitud.'});
-            });
-    }
-</script>

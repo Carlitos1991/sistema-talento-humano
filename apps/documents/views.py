@@ -38,6 +38,8 @@ from .utils import generate_document_filing_code
 # -------------------------------------------------------------------------
 # 1. MODAL RESPONDER AL TRÁMITE (Solo tipos internos y activos)
 # -------------------------------------------------------------------------
+# views.py
+
 @login_required
 def procedure_create_response_modal(request, pk):
     """
@@ -48,13 +50,27 @@ def procedure_create_response_modal(request, pk):
     """
     procedure = get_object_or_404(Procedure, pk=pk, is_active=True)
     user = request.user
-    employee = getattr(getattr(user, 'person', None), 'employee_profile', None)
+
+    # Perfil institucional y área de trabajo
+    person = getattr(user, 'person', None)
+    employee = getattr(person, 'employee_profile', None) if person else None
     user_unit = employee.area if employee else None
 
-    # FILTRAR: Solo tipos de documento internos y activos (excluye oficios de ventanilla externa)
+    # Nombre y cargo seguros
+    user_full_name = person.full_name if person and hasattr(person, 'full_name') else (
+            user.get_full_name() or user.username)
+    user_position = getattr(employee, 'job_position', None) or getattr(employee, 'position', None) or "Servidor Público"
+
+    # FILTRAR: Solo tipos de documento internos y activos
     doc_types = DocumentType.objects.filter(is_active=True).exclude(
-        name__icontains='externo'
+        is_external=True
     ).order_by('name')
+
+    # Si no había campo is_external en filtro, fallback por nombre
+    if not doc_types.exists():
+        doc_types = DocumentType.objects.filter(is_active=True).exclude(
+            name__icontains='externo'
+        ).order_by('name')
 
     # Unidades jerárquicas desde la del usuario hacia arriba
     hierarchy_units = []
@@ -63,7 +79,7 @@ def procedure_create_response_modal(request, pk):
         hierarchy_units.insert(0, curr)
         curr = curr.parent
 
-    # Tipo inicial por defecto (Memorando o similar)
+    # Tipo inicial por defecto (Memorando o primer interno)
     selected_type = doc_types.first()
     suggested_code = ""
     if selected_type and user_unit:
@@ -77,11 +93,11 @@ def procedure_create_response_modal(request, pk):
     <table style="width: 100%; margin-bottom: 25px; border-collapse: collapse;">
         <tr>
             <td style="width: 15%; padding: 4px 0;"><strong>PARA:</strong></td>
-            <td style="padding: 4px 0;">{procedure.external_sender or 'Destinatario'}</td>
+            <td style="padding: 4px 0;">{procedure.external_sender or 'Despacho'}</td>
         </tr>
         <tr>
             <td style="padding: 4px 0;"><strong>DE:</strong></td>
-            <td style="padding: 4px 0;">{user.signature_name} &mdash; {user.signature_position}</td>
+            <td style="padding: 4px 0;">{user_full_name} &mdash; {user_position}</td>
         </tr>
         <tr>
             <td style="padding: 4px 0;"><strong>ASUNTO:</strong></td>
@@ -98,6 +114,8 @@ def procedure_create_response_modal(request, pk):
         'doc_types': doc_types,
         'hierarchy_units': hierarchy_units,
         'user_unit': user_unit,
+        'user_full_name': user_full_name,
+        'user_position': user_position,
         'suggested_code': suggested_code,
         'default_template': default_template,
     })
@@ -118,6 +136,14 @@ def save_response_document(request, pk):
     procedure = get_object_or_404(Procedure, pk=pk, is_active=True)
     user = request.user
 
+    # Obtención segura de perfil y datos del actuante sin AttributeErrors
+    person = getattr(user, 'person', None)
+    employee = getattr(person, 'employee_profile', None) if person else None
+    actor_name = person.full_name if person and hasattr(person, 'full_name') else (
+            user.get_full_name() or user.username
+    )
+    actor_pos = getattr(employee, 'job_position', None) or getattr(employee, 'position', None) or "Servidor Público"
+
     category_id = request.POST.get('category_id')
     filing_code = request.POST.get('filing_code')
     content_html = request.POST.get('content_html', '').strip()
@@ -130,13 +156,13 @@ def save_response_document(request, pk):
         return JsonResponse({'success': False, 'message': 'El cuerpo del documento no puede estar vacío.'}, status=400)
 
     with transaction.atomic():
-        # Crear o actualizar el registro Document
+        # 1. Crear registro oficial del documento
         doc = Document.objects.create(
             procedure=procedure,
             filing_code=filing_code,
             category=category,
             subject=f"Respuesta a {procedure.code}: {procedure.subject}",
-            sender_name=user.signature_name,
+            sender_name=actor_name,
             recipient_name=procedure.external_sender or "Despacho",
             body_html=content_html,
             is_entry_document=False,
@@ -144,7 +170,7 @@ def save_response_document(request, pk):
             created_by=user
         )
 
-        # Generar archivo PDF en memoria mediante xhtml2pdf
+        # 2. Generar archivo PDF en memoria mediante xhtml2pdf
         html_template = get_template('documents/pdf/template_official_document.html')
         rendered_html = html_template.render({
             'document': doc,
@@ -155,13 +181,19 @@ def save_response_document(request, pk):
         })
 
         pdf_io = BytesIO()
-        pisa_status = pisa.CreatePDF(rendered_html, dest=pdf_io)
+        pisa_status = pisa.CreatePDF(
+            src=rendered_html,
+            dest=pdf_io,
+            encoding='utf-8'
+        )
+        if pisa_status.err:
+            return JsonResponse({'success': False, 'message': 'Error generando el PDF del documento.'}, status=500)
         if pisa_status.err:
             return JsonResponse({'success': False, 'message': 'Error generando el PDF del documento.'}, status=500)
 
         pdf_bytes = pdf_io.getvalue()
 
-        # Si se solicita firma digital
+        # 3. Validación y legalización digital (.p12 en memoria)
         if sign_mode == 'ELECTRONIC':
             sig_profile = getattr(user, 'signature_profile', None)
             if not sig_profile or not sig_profile.certificate_file:
@@ -189,28 +221,31 @@ def save_response_document(request, pk):
         else:
             doc.doc_status = Document.DocumentStatus.APPROVED
 
-        # Almacenar PDF generado
+        # 4. Almacenar el archivo PDF generado en disco/storage
         from django.core.files.base import ContentFile
         clean_code = filing_code.replace('/', '_').replace('-', '_')
         doc.file_attachment.save(f"{clean_code}.pdf", ContentFile(pdf_bytes), save=True)
 
-        # Completar tareas pendientes del usuario en este trámite
+        # 5. Cerrar las tareas pendientes del usuario para este trámite
         ProcedureTask.objects.filter(
             procedure=procedure,
             assigned_to=user,
             status__in=[ProcedureTask.TaskStatus.PENDING, ProcedureTask.TaskStatus.IN_PROCESS]
-        ).update(status=ProcedureTask.TaskStatus.COMPLETED)
+        ).update(status=ProcedureTask.TaskStatus.CLOSED)
 
-        # Asentar hito en Hoja de Ruta
+        # 6. Registrar hito en la Hoja de Ruta Inmutable (Contraloría)
         mode_text = "con Firma Electrónica" if sign_mode == 'ELECTRONIC' else "para Firma Física / Manual"
+        action_val = ProcedureTrace.TraceAction.DISPATCH if hasattr(ProcedureTrace.TraceAction,
+                                                                    'DISPATCH') else ProcedureTrace.TraceAction.REPORT_ATTACHED
+
         ProcedureTrace.objects.create(
             procedure=procedure,
             document=doc,
             actor=user,
-            actor_name=user.signature_name,
-            actor_position=user.signature_position,
+            actor_name=actor_name,
+            actor_position=actor_pos,
             unit_name="Oficina Virtual",
-            action=ProcedureTrace.TraceAction.DISPATCH,
+            action=action_val,
             observation=f"Respuesta generada bajo radicado {doc.filing_code} ({mode_text})."
         )
 
@@ -811,26 +846,45 @@ def create_multiple_documents(request):
 
 
 def next_filing_code(request, category_id):
-    # Devuelve el siguiente código formateado basado en el total de registros del tipo
+    """
+    Devuelve el siguiente código formateado:
+    - Si viene level y procedure_id, usa la lógica jerárquica oficial o personal.
+    - Si no, usa la lógica base de Ventanilla/DTH.
+    """
     try:
         cid = int(category_id)
-    except (TypeError, ValueError):
+        doc_type = DocumentType.objects.get(pk=cid)
+    except (TypeError, ValueError, DocumentType.DoesNotExist):
         return JsonResponse({'success': False, 'message': 'Categoría inválida'}, status=400)
 
+    level = request.GET.get('level', 'PERSONAL')
+    procedure_id = request.GET.get('procedure_id')
+
+    if procedure_id and level:
+        user = request.user
+        employee = getattr(getattr(user, 'person', None), 'employee_profile', None)
+        user_unit = employee.area if employee else None
+
+        if level.startswith('UNIT_'):
+            try:
+                target_unit_id = int(level.replace('UNIT_', ''))
+                selected_unit = AdministrativeUnit.objects.get(pk=target_unit_id)
+            except Exception:
+                selected_unit = user_unit
+            code = generate_document_filing_code(selected_unit, user, doc_type, is_personal=False)
+        else:
+            code = generate_document_filing_code(user_unit, user, doc_type, is_personal=True)
+
+        return JsonResponse({'success': True, 'code': code})
+
+    # Lógica fallback existente
     year = timezone.now().year
     prefix = f'ML-DTH-{year}-'
-    try:
-        dtype = DocumentType.objects.get(pk=cid)
-        initials = ''.join([w[0].upper() for w in re.findall(r"[A-Za-zÀ-ÿ]+", dtype.name)])
-    except DocumentType.DoesNotExist:
-        initials = ''
-
-    # Contar documentos de este tipo en el año actual y activos
-    # El siguiente número será el total + 1 (secuencia por año)
+    initials = ''.join([w[0].upper() for w in re.findall(r"[A-Za-zÀ-ÿ]+", doc_type.name)])
     total_count = Document.objects.filter(category_id=cid, registration_date__year=year, is_active=True).count()
     next_num = total_count + 1
-
     next_code = f"{prefix}{next_num:03d}{('-' + initials) if initials else ''}"
+
     return JsonResponse({'success': True, 'code': next_code, 'next_number': next_num})
 
 
@@ -1028,9 +1082,6 @@ def virtual_office_view(request):
     elif user_unit:
         units_to_check = [user_unit.id]
 
-    # Consulta unificada de trámites pendientes en esta oficina/despacho:
-    # 1. Trámites cuya unidad actual sea la unidad principal o del usuario
-    # 2. O tareas dirigidas al usuario o a su unidad
     pending_procedures = Procedure.objects.filter(
         Q(current_unit=main_unit) |
         Q(current_unit=user_unit) |
@@ -1040,7 +1091,31 @@ def virtual_office_view(request):
         Q(tasks__assigned_to=user),
         status__in=[Procedure.Status.IN_DESPATCH, Procedure.Status.IN_PROCESS],
         is_active=True
-    ).distinct().select_related('category', 'created_by').order_by('-created_at')
+    ).distinct().select_related('category', 'created_by').prefetch_related(
+        'tasks', 'tasks__sumilla'
+    ).order_by('-created_at')
+
+    # Vincular la tarea activa del usuario o de su unidad a cada trámite
+    for proc in pending_procedures:
+        # Priorizar tarea asignada al usuario
+        user_task = next(
+            (t for t in proc.tasks.all() if t.assigned_to_id == user.id and t.status in [
+                ProcedureTask.TaskStatus.PENDING, ProcedureTask.TaskStatus.IN_PROCESS
+            ]), None
+        )
+        # Si no hay tarea personal, buscar la tarea activa de la unidad
+        if not user_task and (main_unit or user_unit):
+            unit_ids = [u for u in [main_unit.id if main_unit else None, user_unit.id if user_unit else None] if u]
+            user_task = next(
+                (t for t in proc.tasks.all() if t.unit_id in unit_ids and t.status in [
+                    ProcedureTask.TaskStatus.PENDING, ProcedureTask.TaskStatus.IN_PROCESS
+                ]), None
+            )
+        # Fallback a la última tarea registrada
+        if not user_task:
+            user_task = proc.tasks.order_by('-created_at').first()
+
+        proc.active_task = user_task
 
     # Unidades jerárquicas para las tarjetas de creación (solo niveles relevantes)
     unit_levels = []
@@ -1464,3 +1539,33 @@ def serve_procedure_pdf(request, pk):
             return response
         except Exception:
             raise Http404("No fue posible leer el archivo PDF.")
+
+
+@login_required
+@xframe_options_sameorigin
+def print_document_pdf(request, pk):
+    """
+    Sirve el PDF generado del documento (Memorando, Oficio, Circular, etc.)
+    en modo 'inline' para su visualización e impresión física directa.
+    """
+    doc = get_object_or_404(Document, pk=pk, is_active=True)
+
+    if not doc.file_attachment:
+        raise Http404("El documento no cuenta con archivo PDF adjunto.")
+
+    try:
+        file_path = doc.file_attachment.path
+        if not os.path.exists(file_path):
+            raise Http404("El archivo físico no se encuentra en el servidor.")
+
+        with open(file_path, 'rb') as pdf_file:
+            response = HttpResponse(pdf_file.read(), content_type='application/pdf')
+            clean_filename = os.path.basename(file_path)
+            response['Content-Disposition'] = f'inline; filename="{clean_filename}"'
+            return response
+    except NotImplementedError:
+        # Fallback para storages remotos que no implementan path directo
+        response = HttpResponse(doc.file_attachment.read(), content_type='application/pdf')
+        clean_filename = os.path.basename(doc.file_attachment.name)
+        response['Content-Disposition'] = f'inline; filename="{clean_filename}"'
+        return response

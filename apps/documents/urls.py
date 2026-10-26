@@ -19,6 +19,7 @@ urlpatterns = [
     path('create-multiple/', views.create_multiple_documents, name='document_create_multiple'),
     path('next-code/<int:category_id>/', views.next_filing_code, name='next_filing_code'),
     path('detail/<int:pk>/', views.document_detail, name='document_detail'),
+    path('detail/<int:pk>/print/', views.print_document_pdf, name='print_document_pdf'),
     path('update/<int:pk>/', views.DocumentUpdateView.as_view(), name='document_update'),
     path('upload-file/<int:pk>/', views.upload_document_file, name='document_upload_file'),
     path('delete-file/<int:pk>/', views.delete_document_file, name='document_delete_file'),

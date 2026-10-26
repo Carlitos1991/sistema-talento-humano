@@ -629,3 +629,116 @@
     word-break: break-word !important;
     overflow-wrap: break-word !important;
 }
+
+/* ==========================================================================
+   MODAL DE REDACCIÓN DE RESPUESTAS (ESTILO EJECUTIVO EN 2 COLUMNAS)
+   ========================================================================== */
+
+/* Contenedor Flotante Centrado */
+.modal-response-layout {
+    background: #ffffff;
+    border-radius: 14px;
+    width: 90vw;
+    max-width: 1300px;
+    height: 88vh;
+    max-height: 88vh;
+    box-shadow: 0 20px 45px rgba(15, 23, 42, 0.25);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+    z-index: 1050;
+    margin: auto;
+}
+
+.modal-response-layout form {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+}
+
+/* Cabecera */
+.response-header-bar {
+    flex-shrink: 0;
+    border-radius: 14px 14px 0 0;
+}
+
+/* Grid de dos paneles */
+.response-body-grid {
+    display: grid;
+    grid-template-columns: 310px 1fr;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    background: #f8fafc;
+}
+
+/* Panel Izquierdo */
+.response-sidebar-panel {
+    background: #ffffff;
+    border-right: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 1.25rem 1.2rem;
+    overflow-y: auto;
+}
+
+.response-sidebar-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.response-sidebar-actions {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Panel Derecho (Lienzo del Editor) */
+.response-main-panel {
+    display: flex;
+    flex-direction: column;
+    padding: 1.25rem;
+    background: #f8fafc;
+    overflow: hidden;
+}
+
+.response-ckeditor-container {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Adaptación del alto del CKEditor al contenedor */
+.response-ckeditor-container .cke {
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 10px !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+}
+
+.response-ckeditor-container .cke_inner {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    background: #ffffff !important;
+}
+
+.response-ckeditor-container .cke_contents {
+    flex: 1 !important;
+    height: auto !important;
+    min-height: 250px !important;
+}
+
+/* Ocultar avisos flotantes de seguridad/versión de CKEditor */
+.cke_notifications_area {
+    display: none !important;
+}

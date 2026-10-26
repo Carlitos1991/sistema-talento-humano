@@ -8,7 +8,7 @@
 
 {% block content %}
     <div class="container-fluid">
-        <!-- Header Principal -->
+        <!-- Encabezado Principal -->
         <div class="header-card">
             <div>
                 <h1>Oficina Virtual de Despacho</h1>
@@ -37,7 +37,6 @@
                         <h4 class="section-title m-0">
                             <i class="fa-solid fa-inbox"></i> Trámites en mi Bandeja
                         </h4>
-                        <!-- Se usa pending_procedures.count para coincidir con la lista -->
                         <span class="badge badge-blue">{{ pending_procedures.count }} pendientes</span>
                     </div>
 
@@ -55,6 +54,29 @@
                                 <div class="small text-muted mb-2">
                                     <strong>Remitente:</strong> {{ proc.external_sender|default:proc.created_by.signature_name }}
                                 </div>
+
+                                {% if proc.active_task and proc.active_task.sumilla %}
+                                    <div class="sumilla-preview-card mb-2 p-2 bg-light rounded border">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <small class="fw-bold text-dark">
+                                                <i class="fa-solid fa-stamp text-blue me-1"></i> Disposición:
+                                            </small>
+                                            {% if proc.active_task.sumilla.is_signed %}
+                                                <span class="badge badge-green-mini" title="Legalizada digitalmente">
+                                                    <i class="fa-solid fa-certificate me-1"></i> Firmada
+                                                </span>
+                                            {% else %}
+                                                <span class="badge badge-amber-mini" title="Pendiente de firma digital">
+                                                    <i class="fa-solid fa-clock me-1"></i> Por Legalizar
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="small text-muted fst-italic">
+                                            "{{ proc.active_task.sumilla.instruction }}"
+                                        </div>
+                                    </div>
+                                {% endif %}
+
                                 <div class="d-flex justify-content-between align-items-center">
                                     <span class="badge badge-blue-mini">{{ proc.category.name }}</span>
                                     <small class="text-muted">
@@ -62,18 +84,44 @@
                                     </small>
                                 </div>
 
-                                <!-- Botón Responder a este trámite -->
-                                <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center">
-                                    <!-- Imprimir Hoja de Sumilla / Disposiciones para firma física -->
-                                    <a href="{% url 'documents:print_sumilla_dispositions' proc.id %}" target="_blank"
-                                       class="btn-icon text-muted" title="Imprimir Hoja de Disposiciones / Sumilla">
-                                        <i class="fa-solid fa-print"></i>
-                                    </a>
+                                <!-- Botones de Acción de la Tarjeta -->
+                                <div class="mt-2 pt-2 border-top d-flex justify-content-between align-items-center"
+                                     draggable="false">
+                                    <div class="d-flex align-items-center gap-1">
+                                        <!-- Ver Hoja de Ruta -->
+                                        <button type="button" class="btn-icon text-muted"
+                                                onclick="openAjaxModal('{% url 'documents:procedure_trace_modal' proc.id %}')"
+                                                title="Ver Hoja de Ruta">
+                                            <i class="fa-solid fa-route"></i>
+                                        </button>
 
-                                    <!-- Responder al trámite -->
-                                    <button type="button" class="btn-browse-pill"
-                                            onclick="openAjaxModal('{% url 'documents:procedure_create_response_modal' proc.id %}')">
-                                        <i class="fa-solid fa-reply me-1"></i> Responder
+                                        {% if proc.active_task %}
+                                            <!-- Imprimir Hoja de Sumilla / Disposiciones para firma física -->
+                                            <a href="{% url 'documents:print_sumilla_dispositions' proc.active_task.id %}"
+                                               target="_blank"
+                                               class="btn-icon text-muted"
+                                               title="Imprimir Hoja de Disposiciones / Sumilla Física">
+                                                <i class="fa-solid fa-print"></i>
+                                            </a>
+
+                                            <!-- Legalizar Sumilla con Firma Electrónica -->
+                                            {% if proc.active_task.sumilla and not proc.active_task.sumilla.is_signed %}
+                                                <button type="button" class="btn-icon text-blue"
+                                                        onclick="signSumillaElectronically({{ proc.active_task.id }}, '{{ proc.code|escapejs }}')"
+                                                        title="Legalizar Sumilla con Firma Electrónica (.p12)">
+                                                    <i class="fa-solid fa-signature"></i>
+                                                </button>
+                                            {% endif %}
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Responder al trámite: con el mismo estilo btn-icon con hover azul -->
+                                    <button type="button"
+                                            class="btn-icon text-primary btn-action-respond"
+                                            draggable="false"
+                                            onclick="openAjaxModal('{% url 'documents:procedure_create_response_modal' proc.id %}', initCKEditorModal)"
+                                            title="Redactar Respuesta al Trámite">
+                                        <i class="fa-solid fa-reply"></i>
                                     </button>
                                 </div>
                             </div>
@@ -164,6 +212,7 @@
         </div>
     </div>
 
+    <!-- Contenedor obligatorio para modales AJAX de main.js -->
     <div id="modal-root"></div>
 {% endblock %}
 
