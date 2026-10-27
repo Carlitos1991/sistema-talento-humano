@@ -204,7 +204,8 @@
                                     <img src="{{ emp.person.photo.url }}" class="nomina-photo" alt="Foto">
                                 {% else %}
                                     <div class="nomina-photo nomina-photo-initials">
-                                        {{ emp.person.first_name|first }}{{ emp.person.last_name|first }}
+                                        <i class="fa-solid fa-user" aria-hidden="true"></i>
+                                        <span>{{ emp.person.first_name|first }}{{ emp.person.last_name|first }}</span>
                                     </div>
                                 {% endif %}
                                 <span class="nomina-name">{{ emp.person.first_name }} {{ emp.person.last_name }}</span>

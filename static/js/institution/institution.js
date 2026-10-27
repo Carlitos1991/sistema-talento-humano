@@ -8,6 +8,39 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.nomina-card .nomina-photo').forEach(photo => {
+        if (!(photo instanceof HTMLImageElement)) return;
+
+        const fitNominaPhoto = () => {
+            if (!photo.naturalWidth || !photo.naturalHeight) return;
+
+            const maxHeight = 68;
+            const maxWidth = 58;
+            const minWidth = 44;
+            let height = maxHeight;
+            let width = Math.round(height * photo.naturalWidth / photo.naturalHeight);
+
+            if (width > maxWidth) {
+                width = maxWidth;
+                height = Math.round(width * photo.naturalHeight / photo.naturalWidth);
+            }
+
+            if (width < minWidth) {
+                width = minWidth;
+                height = Math.round(width * photo.naturalHeight / photo.naturalWidth);
+            }
+
+            photo.style.width = `${width}px`;
+            photo.style.height = `${height}px`;
+        };
+
+        photo.addEventListener('load', fitNominaPhoto);
+        if (photo.complete) fitNominaPhoto();
+        photo.addEventListener('click', () => {
+            photo.classList.toggle('is-zoomed');
+        });
+    });
+
     const returnPositionKey = 'institution-return-position';
     const savedPosition = sessionStorage.getItem(returnPositionKey);
     if (savedPosition) {
