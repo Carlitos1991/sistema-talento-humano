@@ -333,8 +333,38 @@ function initDetailPhotoUpload() {
     const btnSave = document.getElementById('btnSaveDetailPhoto');
     const imgPreview = document.getElementById('detailAvatarImg');
     const placeholder = document.getElementById('detailAvatarPlaceholder');
+    const photoWrapper = document.getElementById('detailPhotoPreviewWrapper');
 
     if (!photoInput || !photoForm) return;
+
+    const fitPhotoFrame = (image) => {
+        if (!photoWrapper || !image.naturalWidth || !image.naturalHeight) return;
+
+        const aspectRatio = image.naturalWidth / image.naturalHeight;
+        const maxFrameWidth = 108;
+        const maxFrameHeight = 116;
+        const minFrameWidth = 78;
+        let frameWidth = maxFrameWidth;
+        let frameHeight = Math.round(frameWidth / aspectRatio);
+
+        if (frameHeight > maxFrameHeight) {
+            frameHeight = maxFrameHeight;
+            frameWidth = Math.round(frameHeight * aspectRatio);
+        }
+
+        if (frameWidth < minFrameWidth) {
+            frameWidth = minFrameWidth;
+            frameHeight = Math.round(frameWidth / aspectRatio);
+        }
+
+        photoWrapper.style.width = `${frameWidth}px`;
+        photoWrapper.style.height = `${frameHeight}px`;
+    };
+
+    if (imgPreview) {
+        imgPreview.addEventListener('load', () => fitPhotoFrame(imgPreview));
+        if (imgPreview.complete) fitPhotoFrame(imgPreview);
+    }
 
     photoInput.addEventListener('change', (e) => {
         const file = e.target.files && e.target.files[0];
@@ -343,6 +373,7 @@ function initDetailPhotoUpload() {
             reader.onload = (event) => {
                 if (imgPreview) {
                     imgPreview.src = event.target.result;
+                    imgPreview.addEventListener('load', () => fitPhotoFrame(imgPreview), {once: true});
                     imgPreview.classList.remove('hidden');
                 }
                 if (placeholder) {
