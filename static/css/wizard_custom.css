@@ -235,10 +235,10 @@
 
 /* Marco Único de la Foto (Sin doble margen interno) */
 .profile-avatar-wrapper {
-    width: 104px;
+    width: 96px;
     height: 112px;
     border-radius: 18px;
-    border: 2px solid #05387e;
+    border: 3px solid #05387e;
     background: #f8fafc;
     padding: 0;
     margin: 0;
