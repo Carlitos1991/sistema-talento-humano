@@ -122,9 +122,7 @@
         <div class="info-data-row">
             <label>NOMBRE:</label>
             <span class="value-text bold text-uppercase">
-                {{ person.emergency_contact_name|default:"Sin datos" }}
-                        {% if person.emergency_contact_relationship %}/
-                            {{ person.emergency_contact_relationship.name }}{% else %}/ESPOSA(O)/CONYUGE{% endif %}
+                {{ person.emergency_contact_name|default:"Sin datos" }}/{{ person.emergency_contact_relationship|default:"Sin datos" }}
             </span>
         </div>
         <div class="info-data-row">

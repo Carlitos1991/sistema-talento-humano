@@ -1022,7 +1022,7 @@
     width: 52px;
     height: 68px;
     border-radius: 8px;
-    border: 2px solid #111827;
+    border: 2px solid rgb(0 0 0);
     box-sizing: border-box;
     object-fit: cover;
     object-position: center;
@@ -1032,7 +1032,7 @@
     z-index: 1;
     cursor: zoom-in;
     transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
-                box-shadow 0.3s ease;
+    box-shadow 0.3s ease;
     transition-delay: 0s;
 }
 
