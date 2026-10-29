@@ -22,6 +22,20 @@
         </div>
         <div class="header-actions-group">
             {% if plan.status != 'APPROVED' %}
+                <!-- Botón de Notificaciones / Respuestas de TH -->
+                <button type="button"
+                        class="btn-white-rectangle notification-wrapper"
+                        onclick="openDiscrepancyNotificationsModal()"
+                        title="Ver respuestas de Talento Humano sobre novedades reportadas">
+                    <i class="fa-solid fa-bell text-primary"></i>
+                    <span>Respuestas TH</span>
+                    <span id="discrepancyBadgeCounter"
+                          class="badge-notification {% if unread_discrepancies_count == 0 %}hidden{% endif %}">
+                        {{ unread_discrepancies_count|default:"0" }}
+                    </span>
+                </button>
+
+                <!-- Botón Solicitar Personal Existente -->
                 <button type="button" class="btn-blue-rectangle" onclick="openRequestEmployeeModal()">
                     <i class="fa-solid fa-user-plus"></i> Solicitar Personal
                 </button>
@@ -130,8 +144,22 @@
                             <button type="button"
                                     class="btn-trash-month"
                                     title="Vaciar toda la planificación de {{ m.name }}"
-                                    onclick="event.stopPropagation(); event.preventDefault(); clearMonthScheduleAjax('
-                                            {% url 'vacation:schedule_clear_month' plan.id m.number %}{% if base_unit %}?unit_id={{ base_unit.id }}{% endif %}', '{{ m.name }}', {{ m.items|length }});">
+                                    data-url="
+
+
+
+
+
+
+
+
+
+
+
+                                            {% url 'vacation:schedule_clear_month' plan.id m.number %}{% if base_unit %}?unit_id={{ base_unit.id }}{% endif %}"
+                                    data-month-name="{{ m.name }}"
+                                    data-total-records="{{ m.items|length }}"
+                                    onclick="handleClearMonthClick(event, this)">
                                 <i class="fa-regular fa-trash-can" style="pointer-events: none;"></i>
                             </button>
                         {% endif %}
@@ -194,12 +222,42 @@
             <a href="
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                     {% url 'vacation:schedule_export_excel' plan.id %}{% if base_unit %}?unit_id={{ base_unit.id }}{% endif %}"
                class="btn-success"
                title="Descargar reporte en formato Excel">
                 <i class="fa-solid fa-file-excel me-1"></i> Exportar Excel
             </a>
             <a href="
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
                     {% url 'vacation:schedule_export_pdf' plan.id %}{% if base_unit %}?unit_id={{ base_unit.id }}{% endif %}"
@@ -305,6 +363,65 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- MODAL: RESPUESTAS DE TALENTO HUMANO A LA UNIDAD -->
+    <div id="modalDiscrepancyNotifications" class="modal-overlay hidden">
+        <div class="modal-container-medium" style="max-width: 760px; width: 95%; max-height: 85vh;">
+            <div class="modal-header-medium">
+                <h3 class="header-title">
+                    <i class="fa-solid fa-clipboard-check me-2"></i>
+                    <span>Respuestas de Talento Humano</span>
+                </h3>
+                <button type="button" class="btn-close-circle"
+                        onclick="closeModalCustom('modalDiscrepancyNotifications')" title="Cerrar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="modal-body-custom" style="padding: 1.25rem;">
+                <p class="text-muted small mb-3">
+                    Historial de novedades notificadas a Talento Humano y sus respectivas resoluciones.
+                </p>
+
+                <!-- Contenedor con ancho forzado al 100% -->
+                <div style="width: 100%; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: #ffffff;">
+                    <table style="width: 100% !important; min-width: 0 !important; max-width: 100% !important; table-layout: fixed !important; border-collapse: collapse;">
+                        <thead>
+                        <tr style="background: linear-gradient(135deg, #203c7d 0%, #1b3269 100%); color: #ffffff; height: 36px;">
+                            <th style="width: 24%; padding: 6px 10px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; text-align: left; vertical-align: middle;">
+                                TIPO
+                            </th>
+                            <th style="width: 44%; padding: 6px 10px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; text-align: left; vertical-align: middle;">
+                                SERVIDOR / TRABAJADOR
+                            </th>
+                            <th style="width: 20%; padding: 6px 10px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; text-align: center; vertical-align: middle;">
+                                ESTADO
+                            </th>
+                            <th style="width: 12%; padding: 6px 8px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; text-align: center; vertical-align: middle; background: linear-gradient(180deg, #046f9f 0%, #034d75 100%);">
+                                VER
+                            </th>
+                        </tr>
+                        </thead>
+                        <tbody id="discrepancyNotificationsTbody">
+                        <tr>
+                            <td colspan="4"
+                                style="text-align: center; padding: 20px; color: #64748b; font-size: 0.85rem;">
+                                <i class="fa-solid fa-spinner fa-spin me-1"></i> Cargando registros...
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="modal-footer-medium" style="padding: 0.85rem 1.5rem; justify-content: center;">
+                <button type="button" class="btn-dark-blue-rectangle-outline"
+                        onclick="closeModalCustom('modalDiscrepancyNotifications')">
+                    Cerrar
+                </button>
+            </div>
         </div>
     </div>
 {% endblock %}
@@ -681,5 +798,153 @@
                 }
             });
         }
+
+        let currentNotificationsData = [];
+
+        // 1. Abrir Modal y Consultar las Notificaciones
+        function openDiscrepancyNotificationsModal() {
+            const modal = document.getElementById('modalDiscrepancyNotifications');
+            const tbody = document.getElementById('discrepancyNotificationsTbody');
+            const unitId = '{{ base_unit.id|default:"" }}';
+
+            if (modal) modal.classList.remove('hidden');
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-muted"><i class="fa-solid fa-spinner fa-spin me-2"></i>Cargando...</td></tr>';
+
+            fetch(`/vacation/schedule/{{ plan.id }}/unit-notifications-ajax/?unit_id=${unitId}`, {
+                headers: {'X-Requested-With': 'XMLHttpRequest'}
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.success || !data.notifications || data.notifications.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-muted">No existen novedades tramitadas por Talento Humano para esta unidad.</td></tr>';
+                        return;
+                    }
+
+                    currentNotificationsData = data.notifications;
+                    renderNotificationsTable(data.notifications);
+                })
+                .catch(() => {
+                    tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-danger">Error de comunicación con el servidor.</td></tr>';
+                });
+        }
+
+        // 2. Renderizar Filas de la Tabla
+        function renderNotificationsTable(items) {
+            const tbody = document.getElementById('discrepancyNotificationsTbody');
+            let html = '';
+
+            items.forEach(item => {
+                const isUnread = !item.is_viewed;
+                const statusBadge = item.status === 'RESOLVED'
+                    ? '<span class="badge badge-sm badge-green">APROBADO</span>'
+                    : '<span class="badge badge-sm badge-red">DESESTIMADO</span>';
+
+                const typeBadge = item.type_display === 'No pertenece'
+                    ? '<span class="badge badge-sm badge-yellow">No pertenece</span>'
+                    : '<span class="badge badge-sm badge-blue">Falta en unidad</span>';
+
+                html += `
+            <tr id="notif-row-${item.id}"
+                style="height: 44px; border-bottom: 1px solid #f1f5f9; background-color: ${isUnread ? '#ecfdf5' : '#ffffff'};">
+                <td style="padding: 6px 10px; vertical-align: middle; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    ${typeBadge}
+                </td>
+                <td style="padding: 6px 10px; vertical-align: middle; overflow: hidden;">
+                    <strong style="color: #1e293b; display: block; font-size: 0.82rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${item.employee_name}">
+                        ${item.employee_name}
+                    </strong>
+                    <span style="font-size: 0.74rem; color: #64748b;">CI: ${item.employee_doc}</span>
+                </td>
+                <td style="padding: 6px 10px; text-align: center; vertical-align: middle; white-space: nowrap;">
+                    ${statusBadge}
+                </td>
+                <td style="padding: 4px 8px; text-align: center; vertical-align: middle;">
+                    <button type="button"
+                            class="btn-blue-circle"
+                            style="width: 28px; height: 28px; min-width: 28px; font-size: 0.8rem; margin: 0 auto; display: inline-flex; align-items: center; justify-content: center;"
+                            title="Ver respuesta de TH"
+                            onclick="showThDetailSweetAlert(${item.id})">
+                        <i class="fa-solid fa-eye"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+            });
+
+            tbody.innerHTML = html;
+        }
+
+        // 3. Mostrar SweetAlert con la respuesta y descontar contador
+        function showThDetailSweetAlert(notificationId) {
+            const item = currentNotificationsData.find(x => x.id === notificationId);
+            if (!item) return;
+
+            const isResolved = item.status === 'RESOLVED';
+            const iconType = isResolved ? 'success' : 'info';
+            const alertTitle = isResolved ? 'Solicitud Aprobada / Reubicada' : 'Solicitud Desestimada';
+
+            Swal.fire({
+                icon: iconType,
+                title: alertTitle,
+                html: `
+            <div style="text-align: left; font-size: 0.9rem; padding: 4px 10px;">
+                <p class="mb-1"><strong>Funcionario:</strong> ${item.employee_name}</p>
+                <p class="mb-2"><strong>Tipo:</strong> ${item.type_display}</p>
+                <hr style="margin: 8px 0; border-top: 1px solid #e2e8f0;">
+                <p class="mb-1 text-muted small"><strong>Observación / Respuesta de Talento Humano:</strong></p>
+                <div style="background: #f8fafc; border-left: 4px solid ${isResolved ? '#10b981' : '#f59e0b'}; padding: 10px; border-radius: 4px; white-space: pre-wrap; color: #1e293b;">
+                    ${item.response_text}
+                </div>
+            </div>
+        `,
+                confirmButtonText: 'Entendido',
+                customClass: {
+                    confirmButton: 'swal2-confirm btn-dark-blue-rectangle'
+                }
+            }).then(() => {
+                // Si no estaba leída, llamar al backend para marcar como vista
+                if (!item.is_viewed) {
+                    fetch(`/vacation/schedule/discrepancy/${item.id}/mark-viewed/`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': getCsrfToken(),
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                        .then(res => res.json())
+                        .then(resData => {
+                            if (resData.success) {
+                                item.is_viewed = true;
+
+                                // Quitar estilo resaltado de la fila
+                                const row = document.getElementById(`notif-row-${item.id}`);
+                                if (row) row.classList.remove('unread-row-indicator');
+
+                                // Disminuir contador en el badge rojo
+                                const badge = document.getElementById('discrepancyBadgeCounter');
+                                if (badge) {
+                                    let currentCount = parseInt(badge.textContent.trim()) || 0;
+                                    currentCount = Math.max(0, currentCount - 1);
+                                    badge.textContent = currentCount;
+                                    if (currentCount === 0) {
+                                        badge.classList.add('hidden');
+                                    }
+                                }
+                            }
+                        })
+                        .catch(err => console.error("Error al marcar como leída:", err));
+                }
+            });
+        }
+
+        function handleClearMonthClick(event, button) {
+            event.stopPropagation();
+            event.preventDefault();
+            const url = button.dataset.url;
+            const monthName = button.dataset.monthName;
+            const totalRecords = parseInt(button.dataset.totalRecords, 10) || 0;
+            clearMonthScheduleAjax(url, monthName, totalRecords);
+        }
     </script>
+
 {% endblock %}

@@ -95,4 +95,8 @@ urlpatterns = [
          name='schedule_discrepancy_resolve'),
     path('units/sub-units/<int:parent_id>/', views.SubUnitsAjaxView.as_view(), name='sub_units_ajax'),
     path('units/sub-units/', views.SubUnitsAjaxView.as_view(), name='sub_units_ajax_root'),
+    path('schedule/<int:plan_id>/unit-notifications-ajax/', views.ScheduleDiscrepancyUnitModalView.as_view(),
+         name='schedule_unit_notifications_ajax'),
+    path('schedule/discrepancy/<int:discrepancy_id>/mark-viewed/', views.MarkScheduleDiscrepancyViewedView.as_view(),
+         name='schedule_discrepancy_mark_viewed'),
 ]

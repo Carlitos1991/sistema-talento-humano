@@ -10,6 +10,7 @@ from django.utils.translation import gettext_lazy as _
 from employee.models import Employee
 from permitrequest.models import PermitRequest
 from institution.models import AdministrativeUnit
+
 # Constantes para lógica de cálculo
 WORK_DAY_HOURS = 8
 FACTOR_DAY = Decimal('1.0')
@@ -311,6 +312,10 @@ class ScheduleDiscrepancyRequest(models.Model):
         max_length=15,
         choices=Status.choices,
         default=Status.PENDING
+    )
+    is_viewed_by_unit = models.BooleanField(
+        default=False,
+        verbose_name="Visto por la dependencia solicitante"
     )
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,

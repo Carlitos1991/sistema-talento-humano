@@ -1518,6 +1518,15 @@ class VacationScheduleDetailView(LoginRequiredMixin, TemplateView, PermissionReq
             user=user,
             requested_unit_id=self.request.GET.get('unit_id')
         )
+        unread_notifications_count = ScheduleDiscrepancyRequest.objects.filter(
+            plan=plan,
+            unit=base_unit,
+            status__in=[
+                ScheduleDiscrepancyRequest.Status.RESOLVED,
+                ScheduleDiscrepancyRequest.Status.REJECTED
+            ],
+            is_viewed_by_unit=False
+        ).count()
 
         # 2. Filtrar todos los empleados que pertenecen a la unidad principal o sus hijas
         employees_qs = Employee.objects.filter(
@@ -1615,7 +1624,61 @@ class VacationScheduleDetailView(LoginRequiredMixin, TemplateView, PermissionReq
         context['base_unit'] = base_unit
         context['employee_cards'] = employee_cards
         context['months_cards'] = months_cards
+        context['unread_discrepancies_count'] = unread_notifications_count
         return context
+
+
+class ScheduleDiscrepancyUnitModalView(LoginRequiredMixin, View):
+    """Retorna las solicitudes respondidas por TH para la unidad actual."""
+
+    def get(self, request, plan_id):
+        plan = get_object_or_404(VacationSchedulePlan, pk=plan_id)
+        base_unit, _ = resolve_scheduling_hierarchy(
+            user=request.user,
+            requested_unit_id=request.GET.get('unit_id')
+        )
+
+        # Traer solicitudes procesadas (Aprobadas/Resueltas o Desestimadas/Rechazadas)
+        notifications = ScheduleDiscrepancyRequest.objects.filter(
+            plan=plan,
+            unit=base_unit,
+            status__in=[
+                ScheduleDiscrepancyRequest.Status.RESOLVED,
+                ScheduleDiscrepancyRequest.Status.REJECTED
+            ]
+        ).select_related('employee__person').order_by('-updated_at')
+
+        items_data = []
+        for n in notifications:
+            # Etiqueta de tipo
+            if n.request_type == ScheduleDiscrepancyRequest.RequestType.WRONG_UNIT:
+                tipo_display = "No pertenece"
+            else:
+                tipo_display = "Falta en unidad"
+
+            items_data.append({
+                'id': n.id,
+                'type_display': tipo_display,
+                'employee_name': f"{n.employee.person.last_name} {n.employee.person.first_name}",
+                'employee_doc': n.employee.person.document_number,
+                'status': n.status,
+                'status_display': "Reubicado / Resuelto" if n.status == ScheduleDiscrepancyRequest.Status.RESOLVED else "Desestimado",
+                'is_viewed': n.is_viewed_by_unit,
+                'response_text': n.observation or 'Sin observaciones registradas por Talento Humano.'
+            })
+
+        return JsonResponse({'success': True, 'notifications': items_data})
+
+
+class MarkScheduleDiscrepancyViewedView(LoginRequiredMixin, View):
+    """Marca la respuesta como leída por la dependencia."""
+
+    def post(self, request, discrepancy_id):
+        item = get_object_or_404(ScheduleDiscrepancyRequest, pk=discrepancy_id)
+        if not item.is_viewed_by_unit:
+            item.is_viewed_by_unit = True
+            item.save(update_fields=['is_viewed_by_unit'])
+        return JsonResponse({'success': True})
 
 
 class VacationScheduleDropModalView(LoginRequiredMixin, PermissionRequiredMixin, View):
