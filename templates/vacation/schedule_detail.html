@@ -145,6 +145,7 @@
                              draggable="{% if plan.status != 'APPROVED' %}true{% else %}false{% endif %}"
                              data-item-id="{{ it.id }}"
                              data-current-month="{{ m.number }}"
+                             data-search-text="{{ it.employee.person.document_number }} {{ it.employee.person.first_name }} {{ it.employee.person.last_name }}"
                              title="Arrastra a otro mes para reubicar. ({{ it.employee.person.full_name }} - {{ it.days_quantity }} días)">
                             <div class="assigned-card-top">
                                 <div class="assigned-user-info">
@@ -192,12 +193,14 @@
         <div class="schedule-export-buttons-group">
             <a href="
 
+
                     {% url 'vacation:schedule_export_excel' plan.id %}{% if base_unit %}?unit_id={{ base_unit.id }}{% endif %}"
                class="btn-success"
                title="Descargar reporte en formato Excel">
                 <i class="fa-solid fa-file-excel me-1"></i> Exportar Excel
             </a>
             <a href="
+
 
                     {% url 'vacation:schedule_export_pdf' plan.id %}{% if base_unit %}?unit_id={{ base_unit.id }}{% endif %}"
                class="btn-danger"
@@ -493,26 +496,52 @@
         document.addEventListener('DOMContentLoaded', () => {
             // Buscador del banquillo
             const benchSearch = document.getElementById('benchSearchInput');
-            const cards = Array.from(document.querySelectorAll('.employee-drag-card'));
+            const benchCards = Array.from(document.querySelectorAll('.employee-drag-card'));
+            const assignedCards = Array.from(document.querySelectorAll('.assigned-schedule-card-compact'));
             const counterEl = document.getElementById('benchCounter');
 
             if (benchSearch) {
                 benchSearch.addEventListener('input', (e) => {
                     const query = e.target.value.toLowerCase().trim();
-                    let visibleCount = 0;
 
-                    cards.forEach(card => {
+                    // 1. Filtrar tarjetas en el banquillo superior
+                    let visibleBenchCount = 0;
+                    benchCards.forEach(card => {
                         const text = (card.dataset.searchText || '').toLowerCase();
                         if (!query || text.includes(query)) {
                             card.style.display = 'flex';
-                            visibleCount++;
+                            visibleBenchCount++;
                         } else {
                             card.style.display = 'none';
                         }
                     });
 
+                    // 2. Filtrar tarjetas asignadas en las columnas de los meses
+                    let totalAssignedMatches = 0;
+                    assignedCards.forEach(card => {
+                        const text = (card.dataset.searchText || '').toLowerCase();
+                        if (!query || text.includes(query)) {
+                            card.style.display = 'block';
+                            // Efecto de realce si hay texto buscado
+                            if (query) {
+                                card.style.boxShadow = '0 0 0 2px #3b82f6';
+                                totalAssignedMatches++;
+                            } else {
+                                card.style.boxShadow = '';
+                            }
+                        } else {
+                            card.style.display = 'none';
+                            card.style.boxShadow = '';
+                        }
+                    });
+
+                    // 3. Actualizar el contador dinámico en la barra superior
                     if (counterEl) {
-                        counterEl.textContent = `Mostrando ${visibleCount} servidores y trabajadores`;
+                        if (!query) {
+                            counterEl.textContent = `Mostrando ${visibleBenchCount} servidores y trabajadores`;
+                        } else {
+                            counterEl.innerHTML = `Resultados: <strong>${visibleBenchCount}</strong> pendientes | <strong>${totalAssignedMatches}</strong> asignados`;
+                        }
                     }
                 });
             }
