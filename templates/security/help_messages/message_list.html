@@ -13,39 +13,6 @@
             <i class="fa-solid fa-plus me-1"></i> Nuevo Mensaje
         </button>
     </div>
-
-    <!-- Fila de Estadísticas Corporativas -->
-    <div class="stats-row">
-        <div class="stat-card color-one">
-            <div class="stat-left">
-                <h3>Total</h3>
-                <div class="number">{{ messages_total|default:'0' }}</div>
-            </div>
-            <i class="fa-solid fa-envelope stat-icon"></i>
-        </div>
-        <div class="stat-card color-two opacity-low">
-            <div class="stat-left">
-                <h3>Pendientes</h3>
-                <div class="number">{{ messages_unread|default:'0' }}</div>
-            </div>
-            <i class="fa-solid fa-triangle-exclamation stat-icon"></i>
-        </div>
-        <div class="stat-card color-three opacity-low">
-            <div class="stat-left">
-                <h3>Leídos</h3>
-                <div class="number">{{ messages_read|default:'0' }}</div>
-            </div>
-            <i class="fa-solid fa-eye stat-icon"></i>
-        </div>
-        <div class="stat-card color-four opacity-low">
-            <div class="stat-left">
-                <h3>Atendidos</h3>
-                <div class="number">{{ messages_attended|default:'0' }}</div>
-            </div>
-            <i class="fa-solid fa-circle-check stat-icon"></i>
-        </div>
-    </div>
-
     <!-- Contenedor Principal de Tabla -->
     <div class="content-table">
         <div class="table-controls toolbar-row">
