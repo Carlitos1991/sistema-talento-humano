@@ -555,32 +555,32 @@
                 </a>
             </div>
 
-            <!-- 2. Permisos del Servidor -->
-            <div class="stat-card">
-                <div class="stat-content">
-                    <div class="stat-label">MIS PERMISOS (AÑO ACTIVO)</div>
-                    <div class="stat-number">{{ employee_permits_count|default:0 }}</div>
-                    <div class="stat-hint">Solicitudes emitidas</div>
-                </div>
-                <div class="stat-icon orange">
-                    <i class="fa-solid fa-calendar-check"></i>
-                </div>
-            </div>
+{#            <!-- 2. Permisos del Servidor -->#}
+{#            <div class="stat-card">#}
+{#                <div class="stat-content">#}
+{#                    <div class="stat-label">MIS PERMISOS (AÑO ACTIVO)</div>#}
+{#                    <div class="stat-number">{{ employee_permits_count|default:0 }}</div>#}
+{#                    <div class="stat-hint">Solicitudes emitidas</div>#}
+{#                </div>#}
+{#                <div class="stat-icon orange">#}
+{#                    <i class="fa-solid fa-calendar-check"></i>#}
+{#                </div>#}
+{#            </div>#}
 
             <!-- 3. Redactar Documento -->
-            <div class="stat-card stat-card-link-wrapper">
-                <a href="{% url 'documents:document_list' %}" class="stat-card-link"
-                   title="Redactar memorando o consultar documentos">
-                    <div class="stat-content">
-                        <div class="stat-label">MIS MEMORANDOS</div>
-                        <div class="stat-number">{{ employee_docs_count|default:0 }}</div>
-                        <div class="stat-hint">Redactados en el sistema</div>
-                    </div>
-                    <div class="stat-icon green">
-                        <i class="fa-solid fa-file-lines"></i>
-                    </div>
-                </a>
-            </div>
+{#            <div class="stat-card stat-card-link-wrapper">#}
+{#                <a href="{% url 'documents:document_list' %}" class="stat-card-link"#}
+{#                   title="Redactar memorando o consultar documentos">#}
+{#                    <div class="stat-content">#}
+{#                        <div class="stat-label">MIS MEMORANDOS</div>#}
+{#                        <div class="stat-number">{{ employee_docs_count|default:0 }}</div>#}
+{#                        <div class="stat-hint">Redactados en el sistema</div>#}
+{#                    </div>#}
+{#                    <div class="stat-icon green">#}
+{#                        <i class="fa-solid fa-file-lines"></i>#}
+{#                    </div>#}
+{#                </a>#}
+{#            </div>#}
 
             <!-- 4. Acceso Rápido al Perfil Completo -->
             {% if request.user.person %}
