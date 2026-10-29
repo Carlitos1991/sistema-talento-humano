@@ -4,166 +4,199 @@
 {% block title %}Mi Perfil | SIGETH{% endblock %}
 
 {% block content %}
-    <div class="page-header">
-        <h2>Mi Perfil</h2>
-        <p class="text-muted">Actualiza tu información personal.</p>
+    <div class="header-card">
+        <div class="header-card-body">
+            <h1>Mi Perfil</h1>
+            <p>Gestiona tu información personal, fotografía institucional y credenciales de firma electrónica.</p>
+        </div>
     </div>
 
-    <form method="post" enctype="multipart/form-data" class="profile-grid">
-        {% csrf_token %}
-
-        <div class="card profile-card-main">
-            <div class="profile-avatar-wrapper">
-
-                {% if user.person.photo %}
-                    <img src="{{ user.person.photo.url }}" alt="Foto de Perfil" id="avatarPreview">
-                    <div id="avatarPlaceholder" class="avatar-placeholder hidden">
-                        {% if user.person.first_name %}
-                            {{ user.person.first_name|make_list|first|upper }}
+    <div class="row g-3">
+        <!-- COLUMNA IZQUIERDA: Tarjeta Resumen y Avatar -->
+        <div class="col-md-4">
+            <div class="form-section-card text-center" style="position: sticky; top: 80px;">
+                <!-- Contenedor con tamaño fijo exacto para la foto -->
+                <div style="position: relative; width: 150px; height: 150px; margin: 0 auto 1.25rem;">
+                    <div style="width: 100%; height: 100%; border-radius: 50%; overflow: hidden; border: 4px solid #e2e8f0; background: #f8fafc; box-shadow: 0 4px 10px rgba(0,0,0,0.08);">
+                        {% if user.person.photo %}
+                            <img src="{{ user.person.photo.url }}"
+                                 alt="Foto de Perfil"
+                                 id="avatarPreview"
+                                 style="width: 100%; height: 100%; object-fit: cover; display: block;">
+                            <div id="avatarPlaceholder" class="avatar-placeholder hidden">
+                                {{ user.person.first_name|default:user.username|make_list|first|upper }}
+                            </div>
                         {% else %}
-                            {{ user.username|make_list|first|upper }}
+                            <img src=""
+                                 alt="Preview"
+                                 id="avatarPreview"
+                                 class="hidden"
+                                 style="width: 100%; height: 100%; object-fit: cover;">
+                            <div class="avatar-placeholder" id="avatarPlaceholder"
+                                 style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 3rem; font-weight: 800; color: #ffffff; background: var(--primary-color);">
+                                {{ user.person.first_name|default:user.username|make_list|first|upper }}
+                            </div>
                         {% endif %}
                     </div>
-                {% else %}
-                    <img src="" alt="Preview" id="avatarPreview" class="hidden"
-                         style="width:100%; height:100%; object-fit:cover; border-radius:50%;">
-                    <div class="avatar-placeholder" id="avatarPlaceholder">
-                        {% if user.person.first_name %}
-                            {{ user.person.first_name|make_list|first|upper }}
-                        {% else %}
-                            {{ user.username|make_list|first|upper }}
-                        {% endif %}
+
+                    <!-- Botón Flotante para cambiar foto -->
+                    <label for="id_photo"
+                           class="btn-upload-trigger"
+                           title="Subir nueva foto"
+                           style="position: absolute; bottom: 5px; right: 5px; width: 38px; height: 38px; border-radius: 50%; background: #203c7d; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">
+                        <i class="fa-solid fa-camera" style="font-size: 0.95rem;"></i>
+                    </label>
+                </div>
+
+                <h3 style="font-size: 1.15rem; font-weight: 800; color: #0f172a; margin-bottom: 0.25rem; text-transform: uppercase;">
+                    {% if user.person %}
+                        {{ user.person.first_name }} {{ user.person.last_name }}
+                    {% else %}
+                        {{ user.get_full_name|default:user.username }}
+                    {% endif %}
+                </h3>
+
+                <span class="badge {% if user.is_superuser %}badge-blue{% else %}badge-gray{% endif %} mb-3">
+                    {% if user.is_superuser %}Administrador del Sistema{% else %}Servidor Público{% endif %}
+                </span>
+
+                <div style="border-top: 1px solid #eef2f5; padding-top: 1rem; margin-top: 0.5rem; display: flex; justify-content: space-around;">
+                    <div>
+                        <span class="label-muted" style="font-size: 0.7rem;">USUARIO</span>
+                        <strong style="color: #334155; font-size: 0.85rem;">{{ user.username }}</strong>
                     </div>
-                {% endif %}
-
-                <!-- Botón Cámara -->
-                <label for="id_photo" class="btn-icon-edit" title="Cambiar Foto" style="cursor: pointer;">
-                    <i class="fa-solid fa-camera"></i>
-                </label>
-            </div>
-
-            <!-- Input Real Oculto -->
-            <div class="hidden">
-                {% if form.photo %} {{ form.photo }} {% endif %}
-            </div>
-
-            <h3 class="profile-name">
-                {% if user.person %}
-                    {{ user.person.first_name }} {{ user.person.last_name }}
-                {% else %}
-                    {{ user.get_full_name|default:user.username }}
-                {% endif %}
-            </h3>
-            <p class="profile-role">
-                {% if user.is_superuser %}Administrador{% else %}Colaborador{% endif %}
-            </p>
-
-            <div class="profile-stats">
-                <div class="stat-item">
-                    <strong>{{ user.date_joined|date:"d M Y" }}</strong>
-                    <span>Miembro desde</span>
+                    <div>
+                        <span class="label-muted" style="font-size: 0.7rem;">MIEMBRO DESDE</span>
+                        <strong style="color: #334155; font-size: 0.85rem;">{{ user.date_joined|date:"d/m/Y" }}</strong>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- COLUMNA DERECHA: Datos -->
-        <div class="card profile-details">
-            <div class="card-header">
-                <h4>Información Personal</h4>
-            </div>
+        <!-- COLUMNA DERECHA: Formularios Independientes -->
+        <div class="col-md-8">
+            <!-- 1. FORMULARIO DE DATOS PERSONALES -->
+            <form method="post" enctype="multipart/form-data" class="form-section-card mb-4" id="profileDataForm">
+                {% csrf_token %}
 
-            <div class="details-form-grid">
-                <!-- Nombres -->
-                <div class="form-group">
-                    <label class="form-label">Nombres</label>
-                    {{ form.first_name }}
+                <!-- Input File oculto activado por el botón cámara -->
+                <div style="display: none;">
+                    {% if form.photo %} {{ form.photo }} {% endif %}
                 </div>
 
-                <!-- Apellidos -->
-                <div class="form-group">
-                    <label class="form-label">Apellidos</label>
-                    {{ form.last_name }}
+                <div class="section-title">
+                    <i class="fa-solid fa-user-pen"></i> Información Personal
                 </div>
 
-                <!-- Cédula / DNI -->
-                <div class="form-group">
-                    <label class="form-label">Cédula / DNI</label>
-                    {{ form.document_number }}
-                    {% if form.document_number.errors %}
-                        <small style="color:red;">{{ form.document_number.errors.0 }}</small>
+                <div class="row g-3">
+                    <div class="col-md-6 form-group">
+                        <label class="form-label">Nombres <span class="text-red">*</span></label>
+                        {{ form.first_name }}
+                        {% if form.first_name.errors %}
+                            <div class="text-error small">{{ form.first_name.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-md-6 form-group">
+                        <label class="form-label">Apellidos <span class="text-red">*</span></label>
+                        {{ form.last_name }}
+                        {% if form.last_name.errors %}
+                            <div class="text-error small">{{ form.last_name.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-md-6 form-group">
+                        <label class="form-label">Cédula / Documento <span class="text-red">*</span></label>
+                        {{ form.document_number }}
+                        {% if form.document_number.errors %}
+                            <div class="text-error small">{{ form.document_number.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-md-6 form-group">
+                        <label class="form-label">Correo Electrónico <span class="text-red">*</span></label>
+                        {{ form.email }}
+                        {% if form.email.errors %}
+                            <div class="text-error small">{{ form.email.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="text-right mt-3">
+                    <button type="submit" class="btn-dark-blue-rectangle">
+                        <i class="fa-solid fa-floppy-disk me-1"></i> Guardar Cambios
+                    </button>
+                </div>
+            </form>
+
+            <!-- 2. FORMULARIO INDEPENDIENTE DE FIRMA ELECTRÓNICA -->
+            <div class="form-section-card">
+                <div class="d-flex justify-content-between align-items-center pb-2 mb-3"
+                     style="border-bottom: 1px solid #eef2f5;">
+                    <div class="section-title mb-0" style="border-bottom: none; padding-bottom: 0;">
+                        <i class="fa-solid fa-key text-primary"></i> Firma Electrónica (.p12 / .pfx)
+                    </div>
+                    {% if user.signature_profile and user.signature_profile.certificate_file %}
+                        <span class="badge badge-green">
+                            <i class="fa-solid fa-shield-check me-1"></i> Certificado Activo
+                        </span>
+                    {% else %}
+                        <span class="badge badge-amber">Sin Certificado Configurado</span>
                     {% endif %}
                 </div>
 
-                <!-- Email -->
-                <div class="form-group">
-                    <label class="form-label">Correo Electrónico</label>
-                    {{ form.email }}
-                </div>
-            </div>
-
-            <div class="card-footer text-right">
-                <button type="submit" class="btn-blue-rectangle" style="width: auto; padding: 0.8rem 2rem;">
-                    <i class="fa-solid fa-save margin-r-10"></i> Guardar Cambios
-                </button>
-            </div>
-        </div>
-        <!-- Tarjeta de Firma Electrónica -->
-        <div class="card profile-details mt-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h4><i class="fa-solid fa-key me-2 text-primary"></i>Firma Electrónica (.p12 / .pfx)</h4>
-                {% if user.signature_profile and user.signature_profile.certificate_file %}
-                    <span class="badge badge-green">
-                        <i class="fa-solid fa-shield-check me-1"></i> Certificado Activo
-                    </span>
-                {% else %}
-                    <span class="badge badge-amber">Sin Certificado Configurado</span>
-                {% endif %}
-            </div>
-
-            <div class="card-body p-4">
-                <form id="signatureProfileForm" method="POST"
-                      action="{% url 'documents:upload_signature_certificate' %}" enctype="multipart/form-data"
-                      onsubmit="submitAjaxForm(event);">
+                <form id="signatureProfileForm"
+                      method="POST"
+                      action="{% url 'documents:upload_signature_certificate' %}"
+                      enctype="multipart/form-data"
+                      onsubmit="submitAjaxForm(event, () => location.reload());">
                     {% csrf_token %}
 
                     {% if user.signature_profile and user.signature_profile.certificate_file %}
                         <div class="alert alert-info mb-3">
-                            <div class="small">
-                                <strong>Titular:</strong> {{ user.signature_profile.subject_dn|default:user.signature_name }}
+                            <i class="fa-solid fa-certificate fa-lg me-2"></i>
+                            <div>
+                                <div>
+                                    <strong>Titular:</strong> {{ user.signature_profile.subject_dn|default:user.signature_name }}
+                                </div>
+                                <div>
+                                    <strong>Emisor:</strong> {{ user.signature_profile.issuer|default:"Autoridad de Certificación" }}
+                                </div>
+                                <div>
+                                    <strong>Válido
+                                        hasta:</strong> {{ user.signature_profile.valid_to|date:"d/m/Y H:i" }}
+                                </div>
                             </div>
-                            <div class="small">
-                                <strong>Emisor:</strong> {{ user.signature_profile.issuer|default:"Autoridad de Certificación" }}
-                            </div>
-                            <div class="small"><strong>Válido
-                                hasta:</strong> {{ user.signature_profile.valid_to|date:"d/m/Y" }}</div>
                         </div>
                     {% endif %}
 
                     <div class="row g-3">
                         <div class="col-md-6 form-group">
-                            <label class="form-label">Archivo de Firma (.p12 / .pfx)</label>
-                            <input type="file" name="signature_file" class="input-field" accept=".p12,.pfx" required>
-                            <small class="form-hint">Seleccione su archivo digital emitido por BCE, Security Data,
-                                Consejo de la Judicatura, etc.</small>
+                            <label class="form-label">Archivo de Firma (.p12 / .pfx) <span
+                                    class="text-red">*</span></label>
+                            <!-- name debe ser signature_file para coincidir con UserSignatureUploadForm -->
+                            <input type="file" name="signature_file" id="id_signature_file" class="form-control"
+                                   accept=".p12,.pfx" required>
+                            <span class="form-hint">Formatos PKCS#12 (.p12 o .pfx).</span>
                         </div>
                         <div class="col-md-6 form-group">
-                            <label class="form-label">Contraseña del Certificado</label>
-                            <input type="password" name="signature_password" class="input-field"
-                                   placeholder="Contraseña de su firma" required>
-                            <small class="form-hint">Se valida en memoria para verificar la vigencia del
-                                certificado.</small>
+                            <label class="form-label">Contraseña del Certificado <span class="text-red">*</span></label>
+                            <input type="password" name="signature_password" id="id_signature_password"
+                                   class="form-control" placeholder="Contraseña de la firma" required>
+                            <span class="form-hint">Se utiliza en memoria para verificar y registrar la vigencia de su certificado.</span>
                         </div>
                     </div>
 
                     <div class="text-right mt-3">
-                        <button type="submit" class="btn-blue-rectangle" style="width: auto; padding: 0.6rem 1.8rem;">
-                            <i class="fa-solid fa-upload me-1"></i> Guardar y Validar Certificado
+                        <button type="submit" class="btn-dark-blue-rectangle"
+                                style="background: linear-gradient(135deg, #0f766e 0%, #046f9f 100%);">
+                            <i class="fa-solid fa-upload me-1"></i> Validar y Guardar Certificado
                         </button>
                     </div>
                 </form>
             </div>
         </div>
-    </form>
+    </div>
 {% endblock %}
 
 {% block extra_js %}
@@ -172,7 +205,7 @@
             const fileInput = document.getElementById('id_photo');
 
             if (fileInput) {
-                fileInput.addEventListener('change', function (e) {
+                fileInput.addEventListener('change', function () {
                     if (this.files && this.files[0]) {
                         const reader = new FileReader();
 
@@ -183,7 +216,6 @@
                             if (preview) {
                                 preview.src = e.target.result;
                                 preview.classList.remove('hidden');
-                                // Aseguramos que se vea
                                 preview.style.display = 'block';
                             }
 
@@ -191,7 +223,7 @@
                                 placeholder.classList.add('hidden');
                                 placeholder.style.display = 'none';
                             }
-                        }
+                        };
                         reader.readAsDataURL(this.files[0]);
                     }
                 });

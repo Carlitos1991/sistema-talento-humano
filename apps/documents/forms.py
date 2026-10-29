@@ -20,7 +20,7 @@ class UserSignatureUploadForm(forms.ModelForm):
 
     class Meta:
         model = UserSignatureProfile
-        fields = ['certificate_file']
+        fields = []
 
     def clean(self):
         cleaned_data = super().clean()

@@ -1581,20 +1581,39 @@ class VacationScheduleDetailView(LoginRequiredMixin, TemplateView, PermissionReq
         # 5. Banquillo con cálculo proporcional y banderas
         employee_cards = []
         for emp in employees_qs:
-            allowed_days, ceiling, is_proportional, display_val = calculate_available_days_for_month(
-                emp, plan.year, 1
-            )
-            total_planned = sum(it.days_quantity for it in scheduled_items if it.employee_id == emp.id)
-            max_assignable_plan = ceiling if is_proportional else allowed_days
-            display_max = f"{display_val}+" if is_proportional else f"{allowed_days}"
+            # 1. Obtener los días ya planificados en este cronograma
+            emp_items = [it for it in scheduled_items if it.employee_id == emp.id]
+            total_planned = sum(it.days_quantity for it in emp_items)
 
-            if total_planned < max_assignable_plan:
-                remaining = max_assignable_plan - total_planned
+            # 2. Obtener el máximo mes en el que tiene asignación (o mes 12 para saber su acumulado al cierre)
+            max_assigned_month = max([it.start_date.month for it in emp_items], default=1)
+            eval_month = max(1, max_assigned_month)
+
+            allowed_days, ceiling, is_proportional, display_val = calculate_available_days_for_month(
+                emp, plan.year, eval_month
+            )
+
+            # Calcular el acumulado a diciembre para conocer el límite anual
+            annual_allowed, annual_ceiling, annual_is_prop, _ = calculate_available_days_for_month(
+                emp, plan.year, 12
+            )
+
+            max_assignable_plan = annual_allowed if annual_is_prop else annual_ceiling
+            effective_cap = max(max_assignable_plan, total_planned)
+
+            # Calcular saldo remanente
+            remaining = effective_cap - total_planned
+
+            # Solo se incluye en el banquillo si le queda AL MENOS 1 día completo por asignar
+            if remaining >= 1:
+                display_max = f"{display_val}+" if (
+                        is_proportional and total_planned < effective_cap) else f"{effective_cap}"
+
                 employee_cards.append({
                     'employee': emp,
                     'total_planned_days': total_planned,
                     'remaining_days': remaining,
-                    'max_days': max_assignable_plan,
+                    'max_days': effective_cap,
                     'display_max': display_max,
                     'is_proportional': is_proportional,
                     'is_reported_wrong': emp.id in reported_emp_ids,
@@ -1604,22 +1623,22 @@ class VacationScheduleDetailView(LoginRequiredMixin, TemplateView, PermissionReq
         # 5.1 Agregar las tarjetas "fantasma" solicitadas
         for disc in requested_discrepancies:
             emp = disc.employee
-            # Si no está ya en la lista
             if not any(c['employee'].id == emp.id for c in employee_cards):
                 allowed_days, ceiling, is_proportional, display_val = calculate_available_days_for_month(
                     emp, plan.year, 1
                 )
-                employee_cards.append({
-                    'employee': emp,
-                    'total_planned_days': 0,
-                    'remaining_days': allowed_days,
-                    'max_days': allowed_days,
-                    'display_max': display_val,
-                    'is_proportional': is_proportional,
-                    'is_reported_wrong': False,
-                    'is_requested_ghost': True,
-                })
-
+                # Solo mostrar si tiene al menos 1 día disponible
+                if allowed_days >= 1:
+                    employee_cards.append({
+                        'employee': emp,
+                        'total_planned_days': 0,
+                        'remaining_days': allowed_days,
+                        'max_days': allowed_days,
+                        'display_max': display_val,
+                        'is_proportional': is_proportional,
+                        'is_reported_wrong': False,
+                        'is_requested_ghost': True,
+                    })
         context['plan'] = plan
         context['base_unit'] = base_unit
         context['employee_cards'] = employee_cards
