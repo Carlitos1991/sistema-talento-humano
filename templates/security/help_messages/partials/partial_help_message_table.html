@@ -1,172 +1,200 @@
 {% load static %}
 <div class="table-container">
-    <table>
-        <thead>
-        <tr>
-            <th><i class="fa-solid fa-list-ol"></i></th>
-            <th>Tipo</th>
-            <th>Asunto de Conversación</th>
-            <th>Último Mensaje</th>
-            <th>Usuario</th>
-            <th>Última Actividad</th>
-            <th>Estado</th>
-            <th>Acciones</th>
-        </tr>
-        </thead>
-        <tbody>
-        {% for message in help_messages %}
-            <tr id="message-row-{{ message.id }}" data-status="{{ message.status }}" data-user-turn="{% if message.is_user_turn %}1{% else %}0{% endif %}" class="{% if message.user_has_unread %}conversation-unread{% endif %}">
-                <td>{{ forloop.counter }}</td>
-                <td>
-                    {% if message.direction == 'sent' %}
-                        <span class="status-badge badge-neutral">Enviado</span>
-                    {% else %}
-                        <span class="status-badge active">Recibido</span>
-                    {% endif %}
-                </td>
-                <td>
-                    <strong>{{ message.subject }}</strong>
-                </td>
-                <td>
-                    <span class="text-truncate"
-                          style="max-width: 360px; display: inline-block;">{{ message.last_message.detail }}</span>
-                </td>
-                <td>
-                    {{ message.counterpart_name }}
-                </td>
-                <td>{{ message.last_message.created_at|date:"d/m/Y H:i" }}</td>
-                <td>
-                    {% if message.status == 'sent' %}
-                        <span class="status-badge inactive">En Proceso</span>
-                    {% elif message.status == 'read' %}
-                        <span class="status-badge badge-neutral">En Revisión</span>
-                    {% elif message.status == 'finalized' %}
-                        <span class="status-badge active">Finalizado</span>
-                    {% else %}
-                        <span class="status-badge active">Atendido</span>
-                    {% endif %}
-                </td>
-                <td>
-                    <div class="actions-wrapper">
-                        <button type="button"
-                                class="btn-icon btn-list-action"
-                                title="Ver conversación"
-                                data-conversation-id="{{ message.id }}"
-                                data-subject="{{ message.subject|escapejs }}"
-                                data-sender="{{ message.sender_name|escapejs }}"
-                                data-recipient="{{ message.recipient_name|escapejs }}"
-                                data-status-label="{{ message.status_label|escapejs }}"
-                                data-created-at="{{ message.created_at|date:'d/m/Y H:i' }}"
-                                data-mark-read-url="{% url 'security:help_message_mark_read' message.id %}"
-                                data-show-attended-actions="{% if message.can_initiator_attended_actions %}1{% else %}0{% endif %}"
-                                data-finalize-url="{% url 'security:help_message_finalize' message.id %}"
-                                data-correction-url="{% url 'security:help_message_correction' message.id %}"
-                                data-correction-target="{{ message.last_message.sender_name|escapejs }}"
-                                onclick="helpMessagesActions.openDetail(this)">
-                            <i class="fa-solid fa-eye"></i>
-                        </button>
-                        {% if message.can_reply %}
-                            <button type="button"
-                                    class="btn-icon btn-create-action js-read-gated"
-                                    title="Responder en conversación"
-                                    data-message-id="{{ message.id }}"
-                                    data-subject="{{ message.subject|escapejs }}"
-                                    data-sender="{{ message.counterpart_name|escapejs }}"
-                                    data-reply-url="{% url 'security:help_message_reply' message.id %}"
-                                    data-conversation-id="{{ message.id }}"
-                                    {% if not message.actions_unlocked %}style="display:none;"{% endif %}
-                                    onclick="helpMessagesActions.openReply(this)">
-                                <i class="fa-solid fa-reply"></i>
-                            </button>
-                        {% endif %}
-                        {% if message.can_sumilla %}
-                            <button type="button"
-                                    class="btn-icon  btn-create-action js-read-gated"
-                                    title="Sumillar"
-                                    data-message-id="{{ message.id }}"
-                                    data-subject="{{ message.subject|escapejs }}"
-                                    data-sumilla-url="{% url 'security:help_message_sumilla' message.id %}"
-                                    data-conversation-id="{{ message.id }}"
-                                    {% if not message.actions_unlocked %}style="display:none;"{% endif %}
-                                    onclick="helpMessagesActions.openSumilla(this)">
-                                <i class="fa-solid fa-person-walking-arrow-right"></i>
-                            </button>
-                        {% endif %}
-                        {% if message.status != 'attended' and message.status != 'finalized' %}
-                            <button type="button"
-                                    class="btn-icon btn-create-action js-read-gated"
-                                    data-conversation-id="{{ message.id }}"
-                                    data-subject="{{ message.subject|escapejs }}"
-                                    data-close-url="{% url 'security:help_message_mark_attended' message.id %}"
-                                    title="Finalizar trámite"
-                                    {% if not message.actions_unlocked %}style="display:none;"{% endif %}
-                                    onclick="helpMessagesActions.openClose(this)">
-                                <i class="fa-solid fa-circle-check"></i>
-                            </button>
-                        {% endif %}
-                    </div>
-                    <div id="conversation-thread-{{ message.id }}" class="hidden">
-                        <div class="conversation-thread">
-                            {% for thread_message in message.thread_messages %}
-                                <div class="conversation-item {% if thread_message.sender_user_id == request.user.id %}is-own{% endif %}">
-                                    <div class="conversation-meta">
-                                        <strong>{{ thread_message.sender_name }}
-                                            a {{ thread_message.recipient_name }}</strong>
-                                        <span>
-                                            {{ thread_message.created_at|date:"d/m/Y H:i" }}
-                                            {% if thread_message.recipient_user_id == request.user.id and thread_message.status == 'sent' %}
-                                                <span class="msg-read-badge pending-own js-unread-indicator">Pendiente</span>
-                                            {% elif thread_message.recipient_user_id != request.user.id and thread_message.status == 'sent' %}
-                                                <span class="msg-read-badge pending-other">Pendiente (tercero)</span>
-                                            {% elif thread_message.read_at %}
-                                                <span class="msg-read-badge read">Leído</span>
+    <div class="table-scroll-top">
+        <table class="managed-table exportable-table"
+               data-title="Reporte de Mensajes y Consultas"
+               data-filename="Reporte_Mensajes"
+               data-page-size="10">
+            <thead>
+            <tr>
+                <th class="width-7 text-center"><i class="fa-solid fa-list-ol"></i></th>
+                <th class="width-10 text-center">Tipo</th>
+                <th class="width-25">Asunto de Conversación</th>
+                <th class="width-25">Último Mensaje</th>
+                <th class="width-15">Usuario</th>
+                <th class="width-13 text-center">Última Actividad</th>
+                <th class="width-10 text-center no-sort">Estado</th>
+                <th class="width-15 text-center no-sort"><i class="fas fa-cogs me-1"></i> Acciones</th>
+            </tr>
+            </thead>
+            <tbody id="table-body">
+            {% if help_messages %}
+                {% for message in help_messages %}
+                    <tr id="message-row-{{ message.id }}"
+                        data-status="{{ message.status }}"
+                        data-user-turn="{% if message.is_user_turn %}1{% else %}0{% endif %}"
+                        class="{% if message.user_has_unread %}conversation-unread{% endif %}">
+                        <td class="text-center">{{ forloop.counter }}</td>
+                        <td class="text-center">
+                            {% if message.direction == 'sent' %}
+                                <span class="badge badge-blue">Enviado</span>
+                            {% else %}
+                                <span class="badge badge-green">Recibido</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <strong>{{ message.subject }}</strong>
+                        </td>
+                        <td>
+                            <span class="text-truncate" style="max-width: 320px; display: inline-block;">
+                                {{ message.last_message.detail }}
+                            </span>
+                        </td>
+                        <td>
+                            {{ message.counterpart_name }}
+                        </td>
+                        <td class="text-center small text-muted">
+                            {{ message.last_message.created_at|date:"d/m/Y H:i" }}
+                        </td>
+                        <td class="text-center">
+                            {% if message.status == 'sent' %}
+                                <span class="badge badge-red">En Proceso</span>
+                            {% elif message.status == 'read' %}
+                                <span class="badge badge-yellow">En Revisión</span>
+                            {% elif message.status == 'finalized' %}
+                                <span class="badge badge-green">Finalizado</span>
+                            {% else %}
+                                <span class="badge badge-green">Atendido</span>
+                            {% endif %}
+                        </td>
+                        <td class="actions text-center">
+                            <div class="actions-wrapper">
+                                <!-- Ver conversación -->
+                                <button type="button"
+                                        class="btn-blue-circle"
+                                        title="Ver conversación"
+                                        data-conversation-id="{{ message.id }}"
+                                        data-subject="{{ message.subject|escapejs }}"
+                                        data-sender="{{ message.sender_name|escapejs }}"
+                                        data-recipient="{{ message.recipient_name|escapejs }}"
+                                        data-status-label="{{ message.status_label|escapejs }}"
+                                        data-created-at="{{ message.created_at|date:'d/m/Y H:i' }}"
+                                        data-mark-read-url="{% url 'security:help_message_mark_read' message.id %}"
+                                        data-show-attended-actions="{% if message.can_initiator_attended_actions %}1{% else %}0{% endif %}"
+                                        data-finalize-url="{% url 'security:help_message_finalize' message.id %}"
+                                        data-correction-url="{% url 'security:help_message_correction' message.id %}"
+                                        data-correction-target="{{ message.last_message.sender_name|escapejs }}"
+                                        onclick="helpMessagesActions.openDetail(this)">
+                                    <i class="fa-solid fa-eye"></i>
+                                </button>
+
+                                {% if message.can_reply %}
+                                    <!-- Responder Mensaje -->
+                                    <button type="button"
+                                            class="btn-yellow-circle js-read-gated"
+                                            title="Responder"
+                                            data-message-id="{{ message.id }}"
+                                            data-subject="{{ message.subject|escapejs }}"
+                                            data-sender="{{ message.counterpart_name|escapejs }}"
+                                            data-reply-url="{% url 'security:help_message_reply' message.id %}"
+                                            {% if not message.actions_unlocked %}style="display:none;"{% endif %}
+                                            onclick="helpMessagesActions.openReply(this)">
+                                        <i class="fa-solid fa-reply"></i>
+                                    </button>
+                                {% endif %}
+
+                                {% if message.can_sumilla %}
+                                    <!-- Sumillar / Derivar -->
+                                    <button type="button"
+                                            class="btn-thirteenth js-read-gated"
+                                            title="Sumillar / Derivar"
+                                            data-message-id="{{ message.id }}"
+                                            data-subject="{{ message.subject|escapejs }}"
+                                            data-sumilla-url="{% url 'security:help_message_sumilla' message.id %}"
+                                            {% if not message.actions_unlocked %}style="display:none;"{% endif %}
+                                            onclick="helpMessagesActions.openSumilla(this)">
+                                        <i class="fa-solid fa-share-from-square"></i>
+                                    </button>
+                                {% endif %}
+
+                                {% if message.status != 'attended' and message.status != 'finalized' %}
+                                    <!-- Finalizar / Atendido -->
+                                    <button type="button"
+                                            class="btn-green-circle js-read-gated"
+                                            title="Finalizar Trámite"
+                                            data-conversation-id="{{ message.id }}"
+                                            data-subject="{{ message.subject|escapejs }}"
+                                            data-close-url="{% url 'security:help_message_mark_attended' message.id %}"
+                                            {% if not message.actions_unlocked %}style="display:none;"{% endif %}
+                                            onclick="helpMessagesActions.openClose(this)">
+                                        <i class="fa-solid fa-circle-check"></i>
+                                    </button>
+                                {% endif %}
+                            </div>
+
+                            <!-- Contenedor del hilo histórico oculto -->
+                            <div id="conversation-thread-{{ message.id }}" class="hidden">
+                                <div class="conversation-thread">
+                                    {% for thread_message in message.thread_messages %}
+                                        <div class="conversation-item {% if thread_message.sender_user_id == request.user.id %}is-own{% endif %}">
+                                            <div class="conversation-meta">
+                                                <strong>{{ thread_message.sender_name }}
+                                                    a {{ thread_message.recipient_name }}</strong>
+                                                <span>
+                                                    {{ thread_message.created_at|date:"d/m/Y H:i" }}
+                                                    {% if thread_message.recipient_user_id == request.user.id and thread_message.status == 'sent' %}
+                                                        <span class="badge badge-yellow js-unread-indicator">Pendiente</span>
+                                                    {% elif thread_message.recipient_user_id != request.user.id and thread_message.status == 'sent' %}
+                                                        <span class="badge badge-blue">Pendiente (tercero)</span>
+                                                    {% elif thread_message.read_at %}
+                                                        <span class="badge badge-green">Leído</span>
+                                                    {% endif %}
+                                                </span>
+                                            </div>
+
+                                            {% if 'sumilla:' in thread_message.subject|lower %}
+                                                <div class="small text-warning mb-1 font-bold">
+                                                    <i class="fa-solid fa-share me-1"></i> Sumilla
+                                                </div>
+                                            {% elif 'cierre de trámite:' in thread_message.subject|lower or 'cierre de tramite:' in thread_message.subject|lower %}
+                                                <div class="small text-green mb-1 font-bold">
+                                                    <i class="fa-solid fa-flag-checkered me-1"></i> Mensaje final de
+                                                    cierre
+                                                </div>
                                             {% endif %}
-                                        </span>
+
+                                            <div class="conversation-body {% if thread_message.recipient_user_id == request.user.id and thread_message.status == 'sent' %}conversation-body-unread js-unread-indicator{% endif %}">
+                                                {{ thread_message.detail }}
+                                            </div>
+
+                                            {% if thread_message.attachment %}
+                                                <div class="mt-2">
+                                                    <a href="{{ thread_message.attachment.url }}" target="_blank"
+                                                       rel="noopener" class="btn-link">
+                                                        {% if '.pdf' in thread_message.attachment.name|lower %}
+                                                            <i class="fa-solid fa-file-pdf text-red me-1"></i>
+                                                        {% else %}
+                                                            <i class="fa-solid fa-paperclip text-muted me-1"></i>
+                                                        {% endif %}
+                                                        Ver anexo
+                                                    </a>
+                                                </div>
+                                            {% endif %}
+
+                                            {% if thread_message.read_at %}
+                                                <div class="mt-1 small text-muted">
+                                                    {{ thread_message.recipient_name }} lo
+                                                    leyó: {{ thread_message.read_at|date:"d/m/Y H:i" }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    {% endfor %}
+
+                                    <div class="conversation-item border-dashed bg-light">
+                                        <div class="conversation-meta mb-0">
+                                            <strong>Tiempo transcurrido:</strong>
+                                            <span>{{ message.elapsed_label }}</span>
+                                        </div>
                                     </div>
-                                    {% if 'sumilla:' in thread_message.subject|lower %}
-                                        <div style="font-size:.78rem; color:#9a3412; margin-bottom:4px;">Sumilla</div>
-                                    {% elif 'cierre de trámite:' in thread_message.subject|lower or 'cierre de tramite:' in thread_message.subject|lower %}
-                                        <div style="font-size:.78rem; color:#0f766e; margin-bottom:4px;">
-                                            <i class="fa-solid fa-flag-checkered"></i> Mensaje final de cierre
-                                        </div>
-                                    {% endif %}
-                                    <div class="conversation-body {% if thread_message.recipient_user_id == request.user.id and thread_message.status == 'sent' %}conversation-body-unread js-unread-indicator{% endif %}">{{ thread_message.detail }}</div>
-                                    {% if thread_message.attachment %}
-                                        <div style="margin-top: 6px;">
-                                            <a href="{{ thread_message.attachment.url }}" target="_blank" rel="noopener"
-                                               title="Ver anexo en nueva ventana">
-                                                {% if '.pdf' in thread_message.attachment.name|lower %}
-                                                    <i class="fa-solid fa-file-pdf" style="color:#dc2626;"></i>
-                                                {% else %}
-                                                    <i class="fa-solid fa-paperclip"></i>
-                                                {% endif %}
-                                                Ver anexo
-                                            </a>
-                                        </div>
-                                    {% endif %}
-                                    {% if thread_message.read_at %}
-                                        <div style="margin-top:6px; font-size:.78rem; color:#475569;">
-                                            {{ thread_message.recipient_name }} lo
-                                            leyó: {{ thread_message.read_at|date:"d/m/Y H:i" }}
-                                        </div>
-                                    {% endif %}
-                                </div>
-                            {% endfor %}
-                            <div class="conversation-item" style="border-style:dashed; background:#f8fafc;">
-                                <div class="conversation-meta" style="margin-bottom:0;">
-                                    <strong>Tiempo transcurrido</strong>
-                                    <span>{{ message.elapsed_label }}</span>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                </td>
-            </tr>
-        {% empty %}
-            <tr>
-                <td colspan="8" class="text-center py-4">No hay mensajes para mostrar.</td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+                        </td>
+                    </tr>
+                {% endfor %}
+            {% else %}
+                <!-- El TableManager gestiona el estado vacío si no hay filas -->
+            {% endif %}
+            </tbody>
+        </table>
+    </div>
 </div>

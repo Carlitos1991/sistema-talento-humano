@@ -1,49 +1,65 @@
 {% load static %}
-<div id="helpMessageCreateModal" class="modal-overlay help-message-modal hidden">
+<div id="helpMessageCreateModal" class="modal-overlay hidden">
     <div class="modal-container-medium">
-        <form method="post" action="{% url 'security:help_message_create' %}" enctype="multipart/form-data">
+        <form method="post" action="{% url 'security:help_message_create' %}" enctype="multipart/form-data"
+              id="helpMessageCreateForm"
+              onsubmit="submitAjaxForm(event, () => { closeModal('helpMessageCreateModal'); refreshCurrentTable(); })">
             {% csrf_token %}
             <div class="modal-header-medium">
                 <h3 class="header-title">
                     <i class="fa-solid fa-paper-plane me-2"></i>
                     <span>Nuevo Mensaje</span>
                 </h3>
-                <button type="button" class="btn-close-circle js-close-modal" title="Cerrar" aria-label="Cerrar">
+                <button type="button" class="btn-close-circle" onclick="closeModal('helpMessageCreateModal')"
+                        title="Cerrar" aria-label="Cerrar">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
 
             <div class="modal-body-content modal-body-custom">
+                {% if create_form.non_field_errors %}
+                    <div class="alert alert-danger mb-3">
+                        {% for error in create_form.non_field_errors %}
+                            <span>{{ error }}</span><br>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
                 <div class="form-section-card">
-                    <div class="form-group">
+                    <div class="form-group mb-3">
                         <label class="form-label" for="{{ create_form.recipient_person.id_for_label }}">
-                            Dirigido a <span class="text-danger">*</span>
+                            Dirigido a <span class="text-red">*</span>
                         </label>
                         {{ create_form.recipient_person }}
                         {% if create_form.recipient_person.errors %}
                             <div class="text-error small mt-1">{{ create_form.recipient_person.errors.0 }}</div>
                         {% endif %}
                     </div>
-                    <div class="form-group">
+
+                    <div class="form-group mb-3">
                         <label class="form-label" for="{{ create_form.subject.id_for_label }}">
-                            Asunto <span class="text-danger">*</span>
+                            Asunto <span class="text-red">*</span>
                         </label>
                         {{ create_form.subject }}
                         {% if create_form.subject.errors %}
                             <div class="text-error small mt-1">{{ create_form.subject.errors.0 }}</div>
                         {% endif %}
                     </div>
-                    <div class="form-group">
+
+                    <div class="form-group mb-3">
                         <label class="form-label" for="{{ create_form.detail.id_for_label }}">
-                            Detalle <span class="text-danger">*</span>
+                            Detalle / Consulta <span class="text-red">*</span>
                         </label>
                         {{ create_form.detail }}
                         {% if create_form.detail.errors %}
                             <div class="text-error small mt-1">{{ create_form.detail.errors.0 }}</div>
                         {% endif %}
                     </div>
+
                     <div class="form-group">
-                        <label class="form-label" for="{{ create_form.attachment.id_for_label }}">Anexo</label>
+                        <label class="form-label" for="{{ create_form.attachment.id_for_label }}">
+                            Anexo (Opcional)
+                        </label>
                         {{ create_form.attachment }}
                         {% if create_form.attachment.errors %}
                             <div class="text-error small mt-1">{{ create_form.attachment.errors.0 }}</div>
@@ -53,11 +69,12 @@
             </div>
 
             <div class="modal-footer-medium modal-footer-spaced">
-                <button type="button" class="btn-dark-blue-rectangle-outline js-close-modal">
+                <button type="button" class="btn-dark-blue-rectangle-outline"
+                        onclick="closeModal('helpMessageCreateModal')">
                     Cancelar
                 </button>
                 <button type="submit" class="btn-dark-blue-rectangle">
-                    <i class="fas fa-paper-plane"></i> Enviar Mensaje
+                    <i class="fas fa-paper-plane me-1"></i> Enviar Mensaje
                 </button>
             </div>
         </form>

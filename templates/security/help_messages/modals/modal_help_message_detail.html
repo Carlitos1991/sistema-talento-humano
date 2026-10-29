@@ -1,45 +1,72 @@
 {% load static %}
-<div id="helpMessageDetailModal" class="modal-overlay help-message-modal hidden">
-    <div class="modal-container-medium shadow-card">
-        <button type="button" class="btn-close-modal js-close-modal" title="Cerrar">
-            <i class="fas fa-times"></i>
-        </button>
-
-        <div class="modal-header-refined">
-            <div class="header-content-group">
-                <div class="header-icon-circle" style="background:#14b8a6;">
-                    <i class="fa-solid fa-envelope-open-text"></i>
-                </div>
-                <h2 class="header-title-main">Detalle de Conversación</h2>
-            </div>
-        </div>
-
-        <div class="modal-body-scrolled">
-            <div class="section-card-standard">
-                <p><strong>Asunto:</strong> <span id="detailMessageSubject"></span></p>
-                <p><strong>Iniciado por:</strong> <span id="detailMessageSender"></span></p>
-                <p><strong>Dirigido inicialmente a:</strong> <span id="detailMessageRecipient"></span></p>
-                <p><strong>Fecha de inicio:</strong> <span id="detailMessageCreatedAt"></span></p>
-                <p><strong>Estado:</strong> <span id="detailMessageStatus"></span></p>
-            </div>
-            <div class="section-card-standard">
-                <label class="form-label font-weight-700">Historial de conversación</label>
-                <div id="detailConversationTimeline"></div>
-            </div>
-        </div>
-
-        <div class="modal-footer-fixed" style="gap:8px; justify-content:center; flex-wrap:wrap;">
-            <form id="detailFinalizeForm" method="post" action="#" style="display:none; width:100%; margin:0;">
-                {% csrf_token %}
-                <button type="submit" id="detailFinalizeBtn" class="btn-save" style="background:#0f766e; border-color:#0f766e; width:100%;">
-                    <i class="fa-solid fa-circle-check"></i> Finalizar
-                </button>
-            </form>
-            <button type="button" id="detailCorrectionBtn" class="btn-save" style="display:none; background:#7c3aed; border-color:#7c3aed; width:100%;">
-                <i class="fa-solid fa-reply"></i> Responder/Solicitar Corrección
+<div id="helpMessageDetailModal" class="modal-overlay hidden">
+    <div class="modal-container-medium">
+        <div class="modal-header-medium">
+            <h3 class="header-title">
+                <i class="fa-solid fa-envelope-open-text me-2"></i>
+                <span>Detalle de Conversación</span>
+            </h3>
+            <button type="button" class="btn-close-circle" onclick="closeModal('helpMessageDetailModal')"
+                    title="Cerrar">
+                <i class="fas fa-times"></i>
             </button>
-            <button type="button" class="btn-cancel js-close-modal" style="width:100%;">
-                <i class="fas fa-times-circle"></i> Cerrar
+        </div>
+
+        <div class="modal-body-content modal-body-custom">
+            <!-- Datos Informativos -->
+            <div class="form-section-card mb-3">
+                <div class="row g-2">
+                    <div class="col-12">
+                        <span class="text-muted small d-block">Asunto</span>
+                        <strong class="text-dark" id="detailMessageSubject">-</strong>
+                    </div>
+                    <div class="col-md-6 mt-2">
+                        <span class="text-muted small d-block">Iniciado por</span>
+                        <span id="detailMessageSender" class="font-bold">-</span>
+                    </div>
+                    <div class="col-md-6 mt-2">
+                        <span class="text-muted small d-block">Dirigido inicialmente a</span>
+                        <span id="detailMessageRecipient" class="font-bold">-</span>
+                    </div>
+                    <div class="col-md-6 mt-2">
+                        <span class="text-muted small d-block">Fecha de inicio</span>
+                        <span id="detailMessageCreatedAt">-</span>
+                    </div>
+                    <div class="col-md-6 mt-2">
+                        <span class="text-muted small d-block">Estado</span>
+                        <span id="detailMessageStatus">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Historial de Hilos -->
+            <div class="form-section-card">
+                <label class="form-label font-bold text-dark mb-2">
+                    <i class="fa-solid fa-clock-rotate-left me-1 text-primary"></i> Historial de Intercambios
+                </label>
+                <div id="detailConversationTimeline" class="conversation-thread-wrapper"></div>
+            </div>
+        </div>
+
+        <div class="modal-footer-medium modal-footer-spaced">
+            <div class="d-flex align-items-center gap-2">
+                <form id="detailFinalizeForm" method="post" action="#" style="display:none; margin:0;">
+                    {% csrf_token %}
+                    <button type="submit" id="detailFinalizeBtn" class="btn-dark-blue-rectangle"
+                            style="background:#0f766e; border-color:#0f766e;">
+                        <i class="fa-solid fa-circle-check me-1"></i> Finalizar
+                    </button>
+                </form>
+
+                <button type="button" id="detailCorrectionBtn" class="btn-dark-blue-rectangle"
+                        style="display:none; background:#7c3aed; border-color:#7c3aed;">
+                    <i class="fa-solid fa-reply me-1"></i> Responder / Corrección
+                </button>
+            </div>
+
+            <button type="button" class="btn-dark-blue-rectangle-outline"
+                    onclick="closeModal('helpMessageDetailModal')">
+                Cerrar
             </button>
         </div>
     </div>

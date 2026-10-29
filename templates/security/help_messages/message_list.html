@@ -1,19 +1,20 @@
 {% extends 'base.html' %}
 {% load static %}
-{% block title %}Ayuda | SIGETH{% endblock %}
+{% block title %}Ayuda y Mensajería | SIGETH{% endblock %}
 
 {% block content %}
-    <div class="help-messages-page">
+    <!-- Encabezado Estándar SIGETH -->
     <div class="header-card">
         <div>
             <h1>Ayuda y Mensajería</h1>
             <p>Consulta, responde y envía mensajes a cualquier usuario del sistema.</p>
         </div>
-        <button type="button" class="btn-white-rectangle" onclick="helpMessagesActions.openCreate()">
-            <i class="fa-solid fa-plus"></i> Nuevo Mensaje
+        <button type="button" class="btn-white-rectangle" onclick="openModal('helpMessageCreateModal')">
+            <i class="fa-solid fa-plus me-1"></i> Nuevo Mensaje
         </button>
     </div>
 
+    <!-- Fila de Estadísticas Corporativas -->
     <div class="stats-row">
         <div class="stat-card color-one">
             <div class="stat-left">
@@ -45,314 +46,54 @@
         </div>
     </div>
 
+    <!-- Contenedor Principal de Tabla -->
     <div class="content-table">
-        <div class="table-controls message-toolbar">
-            <div class="message-tabs" role="tablist" aria-label="Filtro de conversaciones">
+        <div class="table-controls toolbar-row">
+            <!-- Pestañas de Filtrado de Mensajes -->
+            <div class="message-tabs-toolbar"
+                 style="display: flex; align-items: center; justify-content: center; gap: 8px;">
                 <a href="?tab=received{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"
-                   class="message-tab {% if active_tab == 'received' %}is-active{% endif %}">
-                    Recibidos ({{ messages_received|default:'0' }})
+                   class="tab-filter-pill {% if active_tab == 'received' or not active_tab %}is-active{% endif %}"
+                   style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 9999px; font-size: 0.82rem; font-weight: 600; text-decoration: none; transition: all 0.2s ease; {% if active_tab == 'received' or not active_tab %}background: #203C7D; color: #ffffff; border: 1px solid #203C7D; box-shadow: 0 2px 4px rgba(32, 60, 125, 0.2);{% else %}background: #f8fafc; color: #475569; border: 1px solid #cbd5e1;{% endif %}">
+                    <i class="fa-solid fa-inbox" style="font-size: 0.85rem;"></i>
+                    <span>Recibidos</span>
+                    <span style="font-size: 0.75rem; padding: 2px 6px; border-radius: 9999px; {% if active_tab == 'received' or not active_tab %}background: rgba(255,255,255,0.25); color: #fff;{% else %}background: #e2e8f0; color: #334155;{% endif %}">
+            {{ messages_received|default:'0' }}
+        </span>
                 </a>
+
                 <a href="?tab=sent{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"
-                   class="message-tab {% if active_tab == 'sent' %}is-active{% endif %}">
-                    Enviados ({{ messages_sent|default:'0' }})
+                   class="tab-filter-pill {% if active_tab == 'sent' %}is-active{% endif %}"
+                   style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 9999px; font-size: 0.82rem; font-weight: 600; text-decoration: none; transition: all 0.2s ease; {% if active_tab == 'sent' %}background: #203C7D; color: #ffffff; border: 1px solid #203C7D; box-shadow: 0 2px 4px rgba(32, 60, 125, 0.2);{% else %}background: #f8fafc; color: #475569; border: 1px solid #cbd5e1;{% endif %}">
+                    <i class="fa-solid fa-paper-plane" style="font-size: 0.85rem;"></i>
+                    <span>Enviados</span>
+                    <span style="font-size: 0.75rem; padding: 2px 6px; border-radius: 9999px; {% if active_tab == 'sent' %}background: rgba(255,255,255,0.25); color: #fff;{% else %}background: #e2e8f0; color: #334155;{% endif %}">
+            {{ messages_sent|default:'0' }}
+        </span>
                 </a>
+
                 <a href="?tab=attended{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}"
-                   class="message-tab {% if active_tab == 'attended' %}is-active{% endif %}">
-                    Atendidos
+                   class="tab-filter-pill {% if active_tab == 'attended' %}is-active{% endif %}"
+                   style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 9999px; font-size: 0.82rem; font-weight: 600; text-decoration: none; transition: all 0.2s ease; {% if active_tab == 'attended' %}background: #0f766e; color: #ffffff; border: 1px solid #0f766e; box-shadow: 0 2px 4px rgba(15, 118, 110, 0.2);{% else %}background: #f8fafc; color: #475569; border: 1px solid #cbd5e1;{% endif %}">
+                    <i class="fa-solid fa-circle-check" style="font-size: 0.85rem;"></i>
+                    <span>Atendidos</span>
                 </a>
             </div>
-            <form method="get" class="toolbar-right message-search-form">
-                <input type="hidden" name="tab" value="{{ active_tab|default:'received' }}">
-                <input type="text" name="q" class="table-search-input table-search-input--large"
-                       placeholder="Buscar por asunto, detalle o usuario"
+
+            <!-- Buscador en tiempo real compatible con TableManager -->
+            <div class="toolbar-right">
+                <input type="text"
+                       id="table-search"
+                       class="table-search-input table-search-input--large"
+                       placeholder="Buscar por asunto, detalle o usuario..."
                        value="{{ request.GET.q }}">
-            </form>
+            </div>
         </div>
 
         <div id="table-content-wrapper">
             {% include 'security/help_messages/partials/partial_help_message_table.html' %}
         </div>
-
-        {% if is_paginated %}
-            <div class="pagination-container">
-                <span class="pagination-info">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
-                <ul class="pagination-list">
-                    {% if page_obj.has_previous %}
-                        <li><a class="page-btn" href="?page=
-                                {{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}&tab={{ active_tab|default:'received' }}"><i
-                                class="fas fa-chevron-left"></i></a></li>
-                    {% endif %}
-                    {% if page_obj.has_next %}
-                        <li><a class="page-btn" href="?page=
-                                {{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}&tab={{ active_tab|default:'received' }}"><i
-                                class="fas fa-chevron-right"></i></a></li>
-                    {% endif %}
-                </ul>
-            </div>
-        {% endif %}
     </div>
-    </div>
-{% endblock %}
-
-{% block extra_css %}
-    <style>
-        .help-messages-page {
-            --message-primary: #0f3f8f;
-            --message-primary-dark: #0b2f6b;
-            --message-border: #dce5f1;
-            --message-muted: #64748b;
-        }
-
-        .help-messages-page .header-card {
-            background: linear-gradient(135deg, #0f3f8f 0%, #1769aa 100%);
-            color: #fff;
-            border: 0;
-            box-shadow: 0 14px 30px rgba(15, 63, 143, .16);
-        }
-
-        .help-messages-page .header-card p {
-            color: rgba(255, 255, 255, .82);
-        }
-
-        .help-messages-page .content-table {
-            border: 1px solid var(--message-border);
-            box-shadow: 0 12px 28px rgba(15, 23, 42, .06);
-        }
-
-        .help-messages-page .message-toolbar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: nowrap;
-            gap: 1rem;
-            padding: 1rem 1.25rem;
-            background: #f8fafc;
-            border-bottom: 1px solid var(--message-border);
-        }
-
-        .help-messages-page .message-tabs {
-            flex: 1 1 auto;
-            min-width: 0;
-        }
-
-        .help-messages-page .message-search-form {
-            flex: 0 1 420px;
-            width: 420px;
-            max-width: 42%;
-            margin-left: auto;
-        }
-
-        .help-messages-page .message-search-form .table-search-input {
-            width: 100%;
-            min-height: 42px;
-            border-radius: 10px;
-        }
-
-        .help-messages-page .message-search-form .table-search-input:focus {
-            border-color: #315fc4;
-            box-shadow: 0 0 0 3px rgba(49, 95, 196, .12);
-            outline: none;
-        }
-
-        .help-messages-page .search-box {
-            margin-left: auto;
-        }
-
-        .help-messages-page .search-box .input-field {
-            min-height: 40px;
-            border-radius: 10px;
-        }
-
-        .help-message-modal .modal-container-medium {
-            border: 1px solid #dbe5f0;
-            border-radius: 18px;
-            box-shadow: 0 24px 70px rgba(15, 23, 42, .25);
-        }
-
-        .help-message-modal .modal-header-refined {
-            padding: 1.15rem 1.5rem;
-            background: linear-gradient(135deg, #f8fbff 0%, #eef5ff 100%);
-            border-bottom: 1px solid var(--message-border);
-        }
-
-        .help-message-modal .modal-body-scrolled {
-            padding: 1.25rem 1.5rem 1.5rem !important;
-            background: #f8fafc;
-        }
-
-        .help-message-modal .section-card-standard {
-            padding: 1.15rem;
-            border-color: var(--message-border);
-            border-radius: 14px;
-            box-shadow: 0 4px 12px rgba(15, 23, 42, .03);
-        }
-
-        .help-message-modal .form-group {
-            margin-bottom: 1rem;
-        }
-
-        .help-message-modal .form-group:last-child {
-            margin-bottom: 0;
-        }
-
-        .help-message-modal .input-field,
-        .help-message-modal .select2-container .select2-selection--single {
-            min-height: 42px;
-            border-radius: 9px;
-            border-color: #cbd5e1;
-        }
-
-        .help-message-modal textarea.input-field {
-            min-height: 120px;
-            resize: vertical;
-        }
-
-        .help-message-modal .select2-container {
-            width: 100% !important;
-        }
-
-        .help-message-modal .select2-container--open {
-            z-index: 100000;
-        }
-
-        .help-message-modal .modal-footer-fixed {
-            padding: 1rem 1.5rem;
-            border-top: 1px solid var(--message-border);
-            background: #fff;
-        }
-
-        @media (max-width: 768px) {
-            .help-messages-page .message-toolbar {
-                align-items: stretch;
-                flex-direction: column;
-                flex-wrap: wrap;
-            }
-
-            .help-messages-page .message-search-form {
-                width: 100%;
-                max-width: none !important;
-                min-width: 0 !important;
-            }
-
-            .help-message-modal .modal-header-refined,
-            .help-message-modal .modal-body-scrolled,
-            .help-message-modal .modal-footer-fixed {
-                padding-left: 1rem !important;
-                padding-right: 1rem !important;
-            }
-        }
-
-        .message-tabs {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        .message-tab {
-            border: 1px solid #d6deeb;
-            background: #f7fafc;
-            color: #234;
-            border-radius: 999px;
-            padding: 8px 14px;
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 0.85rem;
-        }
-
-        .message-tab.is-active {
-            border-color: #0f3f8f;
-            background: #0f3f8f;
-            color: #fff;
-        }
-
-        .conversation-thread {
-            display: grid;
-            gap: 10px;
-            margin-top: 8px;
-        }
-
-        .conversation-item {
-            border: 1px solid #dde5f2;
-            border-radius: 12px;
-            padding: 10px 12px;
-            background: #fff;
-        }
-
-        .conversation-item.is-own {
-            border-color: #c5dbff;
-            background: #eef5ff;
-        }
-
-        .conversation-unread {
-            background: #fffdf0;
-        }
-
-        .conversation-unread td {
-            border-bottom-color: #f6e6a8;
-        }
-
-        .conversation-body-unread {
-            background: #fffbeb;
-            border-left: 3px solid #f59e0b;
-            border-radius: 6px;
-            padding: 8px 10px;
-        }
-
-        .msg-read-badge {
-            display: inline-flex;
-            align-items: center;
-            margin-left: 8px;
-            padding: 2px 8px;
-            border-radius: 999px;
-            font-size: .72rem;
-            font-weight: 700;
-            line-height: 1.2;
-        }
-
-        .msg-read-badge.pending {
-            background: #fff7ed;
-            color: #9a3412;
-            border: 1px solid #fed7aa;
-        }
-
-        .msg-read-badge.pending-own {
-            background: #fff7ed;
-            color: #9a3412;
-            border: 1px solid #fdba74;
-        }
-
-        .msg-read-badge.pending-other {
-            background: #eff6ff;
-            color: #1d4ed8;
-            border: 1px solid #bfdbfe;
-        }
-
-        .msg-read-badge.read {
-            background: #ecfeff;
-            color: #155e75;
-            border: 1px solid #a5f3fc;
-        }
-
-        .is-locked {
-            opacity: .55;
-            cursor: not-allowed;
-        }
-
-        .conversation-meta {
-            display: flex;
-            justify-content: space-between;
-            gap: 10px;
-            margin-bottom: 6px;
-            font-size: 0.82rem;
-            color: #50607a;
-        }
-
-        .conversation-body {
-            white-space: pre-wrap;
-            color: #213047;
-        }
-    </style>
 {% endblock %}
 
 {% block modals %}
