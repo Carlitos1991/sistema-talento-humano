@@ -63,12 +63,12 @@ class NotificationHistoryAjaxView(LoginRequiredMixin, PermissionRequiredMixin, V
     def get(self, request):
         employee_id = request.GET.get('employee_id')
         if not employee_id:
-            return JsonResponse({'success': False, 'message': 'Employee ID required'}, status=400)
+            return JsonResponse({'success': False, 'message': 'Se requiere el ID del empleado'}, status=400)
 
         try:
             employee = get_object_or_404(Employee.objects.select_related('person'), pk=employee_id)
         except Employee.DoesNotExist:
-            return JsonResponse({'success': False, 'message': 'Employee not found'}, status=404)
+            return JsonResponse({'success': False, 'message': 'Empleado no encontrado'}, status=404)
 
         # Obtener todas las notificaciones del empleado
         notifications = SanctionNotification.objects.filter(
@@ -2745,12 +2745,12 @@ class SanctionHistoryAjaxView(LoginRequiredMixin, PermissionRequiredMixin, View)
     def get(self, request):
         employee_id = request.GET.get('employee_id')
         if not employee_id:
-            return JsonResponse({'success': False, 'message': 'Employee ID required'}, status=400)
+            return JsonResponse({'success': False, 'message': 'Se requiere el ID del empleado'}, status=400)
 
         try:
             employee = get_object_or_404(Employee.objects.select_related('person'), pk=employee_id)
         except Employee.DoesNotExist:
-            return JsonResponse({'success': False, 'message': 'Employee not found'}, status=404)
+            return JsonResponse({'success': False, 'message': 'Empleado no encontrado'}, status=404)
 
         # Obtener todas las sanciones del empleado
         sanctions = Sanction.objects.filter(
@@ -2785,12 +2785,12 @@ class ActionsHistoryAjaxView(LoginRequiredMixin, PermissionRequiredMixin, View):
     def get(self, request):
         employee_id = request.GET.get('employee_id')
         if not employee_id:
-            return JsonResponse({'success': False, 'message': 'Employee ID required'}, status=400)
+            return JsonResponse({'success': False, 'message': 'Se requiere el ID del empleado'}, status=400)
 
         try:
             employee = get_object_or_404(Employee.objects.select_related('person'), pk=employee_id)
         except Employee.DoesNotExist:
-            return JsonResponse({'success': False, 'message': 'Employee not found'}, status=404)
+            return JsonResponse({'success': False, 'message': 'Empleado no encontrado'}, status=404)
 
         # Obtener el tipo de acción "SANCIONES"
         try:

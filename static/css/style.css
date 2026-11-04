@@ -303,13 +303,13 @@ body.swal2-height-auto {
 }
 
 #app-content {
-    padding: 1.25rem 1.5rem 4.5rem;
-    flex: 1 1 auto;
+        flex: 1 1 auto;
     width: 100%;
-    max-width: 1440px;
-    margin: 0 auto;
+    max-width: min(100%, 1400px);
+        margin: 0 auto;
     box-sizing: border-box;
     overflow: visible !important;
+    padding: 1.5rem 1.5rem 3.5rem 1.5rem;
 }
 
 /* Footer de la página */
@@ -512,8 +512,11 @@ body.swal2-height-auto {
 }
 
 .user-avatar {
-    width: 40px;
-    height: 40px;
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    object-fit: cover;
+    margin-right: 0.5rem;
     border-radius: 50%;
     background-color: var(--primary-color);
     color: #fff;
@@ -2511,11 +2514,12 @@ input.is-valid:focus, select.is-valid:focus, textarea.is-valid:focus, .input-fie
 table {
     width: 100%;
     border-collapse: collapse;
-    min-width: 1100px;
+    min-width: 100%;
 }
 
 /* Contenedor tabla */
 .table-container {
+    overflow-x: auto;
     width: 100%;
     min-height: 550px;
     max-height: 550px;
@@ -3486,21 +3490,13 @@ th.sorted-desc .sort-arrow {
    12. ESTADÍSTICAS
    ===================================================================== */
 .stats-row {
+            gap: 1rem;
+    margin-bottom: 0.5rem;
     display: flex;
     flex-wrap: nowrap;
-    overflow-x: auto;
-    scroll-behavior: smooth;
-    padding-bottom: 0.5rem;
-    gap: 1rem;
-    margin-bottom: 0.5rem;
 }
 
 .stat-card {
-    flex: 0 0 calc(20% - 0.8rem);
-    min-width: 220px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
     padding: 1.1rem 1.4rem;
     border-radius: 14px;
     background-color: white;
@@ -3512,6 +3508,15 @@ th.sorted-desc .sort-arrow {
     overflow: hidden;
     min-height: 100px;
     max-height: 130px;
+    flex-direction: column;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    text-align: center;
+    flex: 1 1 0;
+    min-width: 0;
 }
 
 .stat-card:hover {
@@ -3642,6 +3647,7 @@ th.sorted-desc .sort-arrow {
 .modal-container-large .table-container,
 .modal-container-medium .table-container,
 #bitacora-list-app .table-container {
+    overflow-x: auto;
     min-height: 200px !important;
     max-height: min(42vh, 380px) !important; /* Altura calculada según el tamaño de pantalla */
     height: auto !important;
@@ -3669,6 +3675,9 @@ th.sorted-desc .sort-arrow {
     box-shadow: var(--shadow-card);
     animation: scaleIn 0.2s ease-out;
     padding: 0;
+    width: 95%;
+    max-width: min(95vw, 1000px);
+    max-height: 86vh;
 }
 
 .modal-container-small {
@@ -3686,10 +3695,11 @@ th.sorted-desc .sort-arrow {
 }
 
 .modal-container-large {
-    width: 95% !important;
-    max-width: 1050px !important;
     max-height: 90vh;
     min-height: 200px;
+    width: 95%;
+    max-width: min(95vw, 1000px);
+    max-height: 86vh;
 }
 
 
@@ -3817,9 +3827,11 @@ th.sorted-desc .sort-arrow {
     justify-content: center;
     align-items: center;
     gap: 12px;
+    margin-bottom: 1.25rem;
 }
 
 .modal-body-scrolled .table-container {
+    overflow-x: auto;
     margin-bottom: 0;
 }
 
@@ -4029,12 +4041,13 @@ th.sorted-desc .sort-arrow {
 
 /* Modal CV lista - contenedor grande */
 .modal-cv-list-large {
-    width: 1100px !important;
-    max-width: 95% !important;
     max-height: 85vh !important;
     display: flex;
     flex-direction: column;
     border-radius: 16px;
+    width: 95%;
+    max-width: min(95vw, 1000px);
+    max-height: 86vh;
 }
 
 .modal-cv-list-body {
@@ -4176,8 +4189,12 @@ th.sorted-desc .sort-arrow {
 }
 
 #modalCVListOverlay .modal-container-xl {
-    max-width: 850px !important;
     height: 75vh !important;
+    max-width: min(95vw, 1000px);
+    max-height: 86vh;
+    width: 95%;
+    max-width: min(95vw, 1000px);
+    max-height: 86vh;
 }
 
 
@@ -5068,7 +5085,8 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
 /* Layout detalle */
 .container-custom {
     padding: 20px;
-    max-width: 1600px;
+    max-width: 100%;
+    padding: 0 1rem;
     margin: 0 auto;
 }
 
@@ -6179,6 +6197,19 @@ body.employee-dashboard-page .grid-general > :last-child:nth-child(odd) {
 /* =====================================================================
    20. RESPONSIVE
    ===================================================================== */
+html {
+    font-size: 16px;
+}
+
+@media (max-width: 1440px) {
+    html {
+        font-size: 13.5px;
+    }
+    :root {
+        --sidebar-width: 210px;
+    }
+}
+
 @media (max-width: 1200px) {
     .detail-layout {
         grid-template-columns: 1fr;
@@ -6829,8 +6860,6 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
 .modal-container-xl {
     background: #ffffff;
     border-radius: 14px;
-    width: 95%;
-    max-width: 1050px;
     max-height: 88vh;
     display: flex;
     flex-direction: column;
@@ -6838,6 +6867,9 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
     overflow: hidden;
     position: relative;
     z-index: 10000;
+    width: 95%;
+    max-width: min(95vw, 1000px);
+    max-height: 86vh;
 }
 
 .modal-container-xl .modal-body-custom {
@@ -7149,4 +7181,26 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
     display: inline-block;
     vertical-align: middle;
     margin-left: 4px;
+}
+/* Ajustes visuales extra Dashboard */
+.top-departments-list .list-group-item {
+    gap: 0.85rem;
+}
+.top-departments-list .personnel-count {
+    padding: 0.25rem 0.75rem;
+    background-color: #f1f5f9;
+    border-radius: 9999px;
+    font-weight: bold;
+}
+.dashboard-charts-grid {
+    margin-bottom: 2.5rem;
+}
+.dashboard-chart-container canvas,
+.chart-container canvas {
+    max-height: 100%;
+}
+
+/* Separacion tablas y filtros */
+.table-controls, .filter-bar, .search-container {
+    margin-bottom: 1.25rem;
 }
