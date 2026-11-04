@@ -303,14 +303,13 @@ body.swal2-height-auto {
 }
 
 #app-content {
-    padding: 1.25rem 1.5rem 4.5rem;
-    flex: 1 1 auto;
+        flex: 1 1 auto;
     width: 100%;
     max-width: min(100%, 1400px);
-    padding: 0 1rem;
-    margin: 0 auto;
+        margin: 0 auto;
     box-sizing: border-box;
     overflow: visible !important;
+    padding: 1.5rem 1.5rem 3.5rem 1.5rem;
 }
 
 /* Footer de la página */
@@ -3491,10 +3490,10 @@ th.sorted-desc .sort-arrow {
    12. ESTADÍSTICAS
    ===================================================================== */
 .stats-row {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 1rem;
+            gap: 1rem;
     margin-bottom: 0.5rem;
+    display: flex;
+    flex-wrap: nowrap;
 }
 
 .stat-card {
@@ -3516,6 +3515,8 @@ th.sorted-desc .sort-arrow {
     justify-content: center;
     flex-direction: column;
     text-align: center;
+    flex: 1 1 0;
+    min-width: 0;
 }
 
 .stat-card:hover {
@@ -3826,6 +3827,7 @@ th.sorted-desc .sort-arrow {
     justify-content: center;
     align-items: center;
     gap: 12px;
+    margin-bottom: 1.25rem;
 }
 
 .modal-body-scrolled .table-container {
@@ -7196,4 +7198,9 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
 .dashboard-chart-container canvas,
 .chart-container canvas {
     max-height: 100%;
+}
+
+/* Separacion tablas y filtros */
+.table-controls, .filter-bar, .search-container {
+    margin-bottom: 1.25rem;
 }
