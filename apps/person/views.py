@@ -7,6 +7,7 @@ from django.db.models import Q
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.template.loader import render_to_string
+from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.http import require_POST
@@ -18,6 +19,7 @@ from budget.models import BudgetLine
 from core.models import CatalogItem, Location
 from employee.models import Employee, InstitutionalData
 from institution.models import AdministrativeUnit
+from contract.models import ManagementPeriod
 from .forms import PersonForm
 from .models import Person, PersonAuditLog
 from .utils import log_person_audit, PERSON_AUDIT_SECTIONS
@@ -39,6 +41,9 @@ class EmployeeReportView(LoginRequiredMixin, PermissionRequiredMixin, TemplateVi
                 ('area', 'Dependencia'),
                 ('cargo', 'Cargo'),
                 ('remuneration', 'Remuneración'),
+                ('institutional_email', 'Correo Institucional'),
+                ('labor_regime', 'Régimen Laboral'),
+                ('employee_type', 'Tipo de Empleado'),
             ],
             'personal': [
                 ('blood_type', 'Tipo de Sangre'),
@@ -111,6 +116,25 @@ class EmployeeReportExportView(LoginRequiredMixin, PermissionRequiredMixin, View
                     except Exception:
                         return str(getattr(bl, 'remuneration', ''))
                 return ''
+            if key == 'institutional_email':
+                institutional_data = getattr(emp, 'institutional_data', None)
+                return institutional_data.institutional_email or '' if institutional_data else ''
+            if key == 'employee_type':
+                return emp.employment_status.name if emp.employment_status else ''
+            if key == 'labor_regime':
+                today = timezone.now().date()
+                active_period = ManagementPeriod.objects.filter(
+                    employee=emp,
+                    status__code='ACTIVO',
+                    start_date__lte=today,
+                ).filter(
+                    Q(end_date__isnull=True) | Q(end_date__gte=today)
+                ).select_related('contract_type__labor_regime').order_by('-start_date').first()
+                return (
+                    active_period.contract_type.labor_regime.name
+                    if active_period and active_period.contract_type and active_period.contract_type.labor_regime
+                    else ''
+                )
             if key == 'emergency_contact_name':
                 return emp.person.emergency_contact_name or ''
             if key == 'emergency_contact_phone':
@@ -133,7 +157,9 @@ class EmployeeReportExportView(LoginRequiredMixin, PermissionRequiredMixin, View
         ws.title = 'Reporte Empleados'
 
         # Columnas: siempre N°, Apellidos, Nombres, Documento
-        institutional_keys = ['area', 'cargo', 'remuneration']
+        institutional_keys = [
+            'area', 'cargo', 'remuneration', 'institutional_email', 'labor_regime', 'employee_type'
+        ]
         personal_keys = ['blood_type', 'marital_status', 'gender', 'birth_date', 'email', 'address_reference',
                          'phone_number', 'emergency_contact_name', 'emergency_contact_phone']
 
@@ -145,6 +171,9 @@ class EmployeeReportExportView(LoginRequiredMixin, PermissionRequiredMixin, View
             'area': 'Dependencia',
             'cargo': 'Cargo',
             'remuneration': 'Remuneración',
+            'institutional_email': 'Correo Institucional',
+            'labor_regime': 'Régimen Laboral',
+            'employee_type': 'Tipo de Empleado',
             'blood_type': 'Tipo de Sangre',
             'marital_status': 'Estado Civil',
             'gender': 'Género',
