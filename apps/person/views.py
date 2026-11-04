@@ -72,7 +72,7 @@ class EmployeeReportExportView(LoginRequiredMixin, PermissionRequiredMixin, View
 
     def get(self, request, *args, **kwargs):
         from openpyxl import Workbook
-        from openpyxl.styles import Font, Alignment, PatternFill
+        from openpyxl.styles import Border, Font, Alignment, PatternFill, Side
         from openpyxl.utils import get_column_letter
 
         unit_id = request.GET.get('unit_id') or request.GET.get('pk')
@@ -125,11 +125,14 @@ class EmployeeReportExportView(LoginRequiredMixin, PermissionRequiredMixin, View
                 today = timezone.now().date()
                 active_period = ManagementPeriod.objects.filter(
                     employee=emp,
-                    status__code='ACTIVO',
                     start_date__lte=today,
                 ).filter(
                     Q(end_date__isnull=True) | Q(end_date__gte=today)
                 ).select_related('contract_type__labor_regime').order_by('-start_date').first()
+                if not active_period:
+                    active_period = ManagementPeriod.objects.filter(
+                        employee=emp
+                    ).select_related('contract_type__labor_regime').order_by('-start_date').first()
                 return (
                     active_period.contract_type.labor_regime.name
                     if active_period and active_period.contract_type and active_period.contract_type.labor_regime
@@ -155,6 +158,12 @@ class EmployeeReportExportView(LoginRequiredMixin, PermissionRequiredMixin, View
         wb = Workbook()
         ws = wb.active
         ws.title = 'Reporte Empleados'
+        ws.sheet_view.showGridLines = False
+        ws.freeze_panes = 'A2'
+        ws.page_setup.orientation = 'landscape'
+        ws.page_setup.fitToWidth = 1
+        ws.page_setup.fitToHeight = 0
+        ws.sheet_properties.pageSetUpPr.fitToPage = True
 
         # Columnas: siempre N°, Apellidos, Nombres, Documento
         institutional_keys = [
@@ -199,10 +208,21 @@ class EmployeeReportExportView(LoginRequiredMixin, PermissionRequiredMixin, View
 
         # Contador de filas y índice global
         row_idx = 1
+        thin_side = Side(border_style='thin', color='B7C9D6')
+        cell_border = Border(left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
+        title_fill = PatternFill(start_color='1F4E78', end_color='1F4E78', fill_type='solid')
+        group_fill = PatternFill(start_color='D9EAF7', end_color='D9EAF7', fill_type='solid')
+        header_fill = PatternFill(start_color='5B9BD5', end_color='5B9BD5', fill_type='solid')
 
         # Añadimos encabezado general
         title_cell = ws.cell(row=row_idx, column=1, value=f"REPORTE: {report_scope_name}")
-        title_cell.font = Font(bold=True, size=14)
+        title_cell.font = Font(bold=True, size=14, color='FFFFFF')
+        title_cell.fill = title_fill
+        title_cell.alignment = Alignment(horizontal='left', vertical='center')
+        for column in range(1, len(headers) + 1):
+            ws.cell(row=row_idx, column=column).fill = title_fill
+        ws.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=len(headers))
+        ws.row_dimensions[row_idx].height = 28
         row_idx += 1
 
         # Escribir datos por unidad (cabecera por unidad con color y luego empleados)
@@ -215,6 +235,10 @@ class EmployeeReportExportView(LoginRequiredMixin, PermissionRequiredMixin, View
             fill = depth_fills[min(depth, len(depth_fills) - 1)]
             for c in range(1, col_count + 1):
                 ws.cell(row=row_idx, column=c).fill = fill
+                ws.cell(row=row_idx, column=c).font = Font(bold=True, color='FFFFFF')
+                ws.cell(row=row_idx, column=c).alignment = Alignment(vertical='center')
+                ws.cell(row=row_idx, column=c).border = cell_border
+            ws.row_dimensions[row_idx].height = 22
             row_idx += 1
 
             # Obtener empleados de la unidad (solo activos)
@@ -246,6 +270,8 @@ class EmployeeReportExportView(LoginRequiredMixin, PermissionRequiredMixin, View
                         cell = ws.cell(row=row_idx, column=col, value='Datos Institucionales')
                         cell.alignment = Alignment(horizontal='center')
                         cell.font = Font(bold=True)
+                        cell.fill = group_fill
+                        cell.border = cell_border
                     col += inst_len
                     if pers_len:
                         ws.merge_cells(start_row=row_idx, start_column=col, end_row=row_idx,
@@ -253,17 +279,19 @@ class EmployeeReportExportView(LoginRequiredMixin, PermissionRequiredMixin, View
                         cell = ws.cell(row=row_idx, column=col, value='Datos Personales')
                         cell.alignment = Alignment(horizontal='center')
                         cell.font = Font(bold=True)
+                        cell.fill = group_fill
+                        cell.border = cell_border
+                    ws.row_dimensions[row_idx].height = 22
                     row_idx += 1
 
                 # Header row with column titles
                 for col, h in enumerate(headers, start=1):
                     cell = ws.cell(row=row_idx, column=col, value=h)
-                    cell.font = Font(bold=True)
-                    cell.alignment = Alignment(horizontal='center')
-                    # add border
-                    from openpyxl.styles import Border, Side
-                    side = Side(border_style='thin', color='000000')
-                    cell.border = Border(left=side, right=side, top=side, bottom=side)
+                    cell.font = Font(bold=True, color='FFFFFF')
+                    cell.fill = header_fill
+                    cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+                    cell.border = cell_border
+                ws.row_dimensions[row_idx].height = 34
                 row_idx += 1
 
                 for emp in employees:
@@ -274,16 +302,28 @@ class EmployeeReportExportView(LoginRequiredMixin, PermissionRequiredMixin, View
                         values.append(get_val(emp, key))
                     for col, val in enumerate(values, start=1):
                         cell = ws.cell(row=row_idx, column=col, value=val)
-                        # add thin border to every cell
-                        from openpyxl.styles import Border, Side
-                        side = Side(border_style='thin', color='000000')
-                        cell.border = Border(left=side, right=side, top=side, bottom=side)
+                        cell.border = cell_border
+                        cell.alignment = Alignment(vertical='top', wrap_text=True)
+                    ws.row_dimensions[row_idx].height = 30
                     row_idx += 1
                     counter += 1
 
-        # Ajustar anchos
-        for i in range(1, len(headers) + 1):
-            ws.column_dimensions[get_column_letter(i)].width = 18 if i > 1 else 6
+        # Ajustar anchos y alturas para evitar texto cortado en el reporte.
+        for column_cells in ws.columns:
+            column_index = column_cells[0].column
+            max_length = max(
+                (max((len(line) for line in str(cell.value or '').splitlines()), default=0)
+                 for cell in column_cells),
+                default=0,
+            )
+            minimum_width = 8 if column_index == 1 else 14
+            maximum_width = 32 if column_index not in (2, 3) else 24
+            ws.column_dimensions[get_column_letter(column_index)].width = min(
+                maximum_width, max(minimum_width, max_length + 2)
+            )
+
+        ws.print_title_rows = '1:1'
+        ws.auto_filter.ref = f'A1:{get_column_letter(len(headers))}{ws.max_row}'
 
         # Preparar respuesta
         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
