@@ -1,3 +1,11 @@
+
+window.App = window.App || {};
+window.App.Security = window.App.Security || {};
+window.App.Toast = window.App.Toast || {};
+window.App.Modal = window.App.Modal || {};
+window.App.Ajax = window.App.Ajax || {};
+window.App.Telework = window.App.Telework || {};
+window.App.UI = window.App.UI || {};
 /**
  * SIGETH - GESTOR CENTRALIZADO (MODALES, AJAX, FILTROS Y TABLAS)
  * Archivo motor del sistema.
@@ -7,7 +15,7 @@
    1. SEGURIDAD & CSRF (DJANGO)
    ========================================================================== */
 
-const getCSRF = () => {
+window.App.Security.getCSRF = () => {
     const el = document.querySelector('[name=csrfmiddlewaretoken]');
     if (el) return el.value;
     const cookies = document.cookie.split(';');
@@ -24,7 +32,7 @@ const getCSRF = () => {
    ========================================================================== */
 
 // 2.1 Toast Flotante Universal (Píldora superior derecha con franja lateral)
-window.showToast = function (message, type = 'success') {
+window.App.Toast.showToast = function (message, type = 'success') {
     const oldToast = document.querySelector('.custom-toast-pill');
     if (oldToast) oldToast.remove();
 
@@ -119,7 +127,7 @@ if (typeof Swal !== 'undefined') {
    3. RECARGA DINÁMICA UNIVERSAL DE TABLAS PARCIALES AJAX
    ========================================================================== */
 
-window.refreshCurrentTable = function (extraParams = {}, callback = null) {
+window.App.Ajax.refreshCurrentTable = function (extraParams = {}, callback = null) {
     const wrapper = document.getElementById('table-content-wrapper')
         || document.querySelector('.table-container')?.parentElement;
 
@@ -188,8 +196,8 @@ window.refreshCurrentTable = function (extraParams = {}, callback = null) {
 
                 if (!isExternal) {
                     // TABLA CLIENT-SIDE (Ej. Rubros):
-                    if (typeof window.applyRubricFilters === 'function') {
-                        window.applyRubricFilters();
+                    if (typeof window.App.UI.applyRubricFilters === 'function') {
+                        window.App.UI.applyRubricFilters();
                     } else if (activeQuery) {
                         mgr.filterState.search = activeQuery.toLowerCase();
                         mgr.applyGlobalFilters();
@@ -218,7 +226,7 @@ window.refreshCurrentTable = function (extraParams = {}, callback = null) {
 let currentScrollY = 0;
 
 // 4.1 Modales estáticos (renderizados en HTML)
-window.openModal = function (id) {
+window.App.Modal.openModal = function (id) {
     currentScrollY = window.scrollY;
     document.documentElement.classList.add('no-scroll');
     document.body.classList.add('no-scroll');
@@ -235,7 +243,7 @@ window.openModal = function (id) {
 };
 
 // 4.2 Modales dinámicos vía AJAX
-window.openAjaxModal = function (url, callback = null) {
+window.App.Modal.openAjaxModal = function (url, callback = null) {
     currentScrollY = window.scrollY;
     document.documentElement.classList.add('no-scroll');
     document.body.classList.add('no-scroll');
@@ -314,7 +322,7 @@ window.openAjaxModal = function (url, callback = null) {
 };
 
 // 4.3 Cierre de modales universal
-window.closeModal = function (id = null) {
+window.App.Modal.closeModal = function (id = null) {
     if (id) {
         const modal = document.getElementById(id);
         if (modal) {
@@ -339,7 +347,7 @@ window.closeModal = function (id = null) {
     window.scrollTo(0, currentScrollY);
 };
 
-window.closeAjaxModal = window.closeModal;
+window.App.Modal.closeAjaxModal = window.App.Modal.closeModal;
 
 
 /* ==========================================================================
@@ -347,7 +355,7 @@ window.closeAjaxModal = window.closeModal;
    ========================================================================== */
 
 // 5.1 Envío de Formularios (Creación y Edición)
-window.submitAjaxForm = function (event, successCallback = null) {
+window.App.Ajax.submitAjaxForm = function (event, successCallback = null) {
     event.preventDefault();
     const form = event.target;
     const formData = new FormData(form);
@@ -364,7 +372,7 @@ window.submitAjaxForm = function (event, successCallback = null) {
         body: formData,
         headers: {
             'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRFToken': typeof getCSRF === 'function' ? getCSRF() : ''
+            'X-CSRFToken': typeof getCSRF === 'function' ? window.App.Security.getCSRF() : ''
         }
     })
         .then(async response => {
@@ -479,7 +487,7 @@ window.submitAjaxForm = function (event, successCallback = null) {
 };
 
 // 5.2 Alternar Estado Activo / Inactivo Universal (Toggle)
-window.toggleStatusAjax = function (url, itemName, currentStatus, callback = null) {
+window.App.Ajax.toggleStatusAjax = function (url, itemName, currentStatus, callback = null) {
     const actionText = currentStatus ? 'desactivar' : 'activar';
     const confirmBtnClass = currentStatus ? 'btn-swal-danger' : 'btn-swal-success';
 
@@ -499,7 +507,7 @@ window.toggleStatusAjax = function (url, itemName, currentStatus, callback = nul
                 method: 'POST',
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRFToken': typeof getCSRF === 'function' ? getCSRF() : ''
+                    'X-CSRFToken': typeof getCSRF === 'function' ? window.App.Security.getCSRF() : ''
                 }
             })
                 .then(res => res.json())
@@ -540,7 +548,7 @@ window.toggleStatusAjax = function (url, itemName, currentStatus, callback = nul
 };
 
 // 5.3 Eliminación Universal
-window.deleteRecordAjax = function (url, itemName, callback = null) {
+window.App.Ajax.deleteRecordAjax = function (url, itemName, callback = null) {
     Swal.fire({
         title: `¿Eliminar ${itemName}?`,
         text: "Esta acción no se puede deshacer.",
@@ -558,7 +566,7 @@ window.deleteRecordAjax = function (url, itemName, callback = null) {
                 method: 'POST',
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRFToken': getCSRF()
+                    'X-CSRFToken': window.App.Security.getCSRF()
                 }
             })
                 .then(res => res.json())
@@ -1223,7 +1231,7 @@ window.TableManager = TableManager;
    ========================================================================== */
 
 // 7.1 Previsualización de fotos en modales
-window.handleModalPhotoPreview = function (input) {
+window.App.UI.handleModalPhotoPreview = function (input) {
     if (input.files && input.files[0]) {
         const reader = new FileReader();
         reader.onload = function (e) {
@@ -1242,7 +1250,7 @@ window.handleModalPhotoPreview = function (input) {
 };
 
 // 7.2 Toggles y acordeones de visualización
-window.syncToggleView = function (checkbox, targetContentId) {
+window.App.UI.syncToggleView = function (checkbox, targetContentId) {
     const target = document.getElementById(targetContentId);
     const header = checkbox.closest('.toggle-header');
     const labelText = checkbox.parentElement.querySelector('.switch-text');
@@ -1258,7 +1266,7 @@ window.syncToggleView = function (checkbox, targetContentId) {
     }
 };
 
-window.toggleAccordionSection = function (targetContentId) {
+window.App.UI.toggleAccordionSection = function (targetContentId) {
     const target = document.getElementById(targetContentId);
     if (!target) return;
     const header = target.previousElementSibling;
@@ -1271,7 +1279,7 @@ window.toggleAccordionSection = function (targetContentId) {
 };
 
 // 7.3 Cascadas dinámicas de ubicación geográfica (DPA)
-window.handleLocationCascade = function (selectElement, targetSelectId) {
+window.App.UI.handleLocationCascade = function (selectElement, targetSelectId) {
     const parentId = selectElement.value;
     const targetSelect = $(`#${targetSelectId}`);
 
@@ -1309,7 +1317,7 @@ window.handleLocationCascade = function (selectElement, targetSelectId) {
 };
 
 // 7.4 Actualizador global de estadísticas de Hoja de Vida
-window.refreshCvStats = function (personId) {
+window.App.UI.refreshCvStats = function (personId) {
     if (!personId) return;
     fetch(`/employee/api/cv/stats/${personId}/`, {
         headers: {'X-Requested-With': 'XMLHttpRequest'}
@@ -1346,7 +1354,7 @@ document.addEventListener('change', function (e) {
 /* ==========================================================================
    7.6 SUBIDA DE HOJA DE VIDA (PDF)
    ========================================================================== */
-window.uploadCvPdf = function (input, personId) {
+window.App.UI.uploadCvPdf = function (input, personId) {
     if (!input.files || !input.files[0]) return;
 
     const file = input.files[0];
@@ -1380,7 +1388,7 @@ window.uploadCvPdf = function (input, personId) {
         method: 'POST',
         headers: {
             'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRFToken': typeof getCSRF === 'function' ? getCSRF() : ''
+            'X-CSRFToken': typeof getCSRF === 'function' ? window.App.Security.getCSRF() : ''
         },
         body: formData
     })
@@ -1415,7 +1423,7 @@ window.uploadCvPdf = function (input, personId) {
    8. MÓDULO DE TELETRABAJO
    ========================================================================== */
 
-window.loadTeleworkData = function (personId) {
+window.App.Telework.loadTeleworkData = function (personId) {
     if (!personId) {
         const pane = document.querySelector('.tab-pane-telework');
         if (pane) personId = pane.getAttribute('data-person-id');
@@ -1562,7 +1570,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 });
 
-window.markTeleworkAttendance = function (punchType, personId) {
+window.App.Telework.markTeleworkAttendance = function (punchType, personId) {
     const doSubmit = (lat = 0, lng = 0) => {
         const formData = new FormData();
         formData.append('punch_type', punchType);
@@ -1628,7 +1636,7 @@ document.addEventListener('change', function (e) {
 /* =================================================================================
    10. FILTRADO Y GESTIÓN EN CLIENTE DE MAPEO DE RUBROS
    ================================================================================= */
-window.applyRubricFilters = function () {
+window.App.UI.applyRubricFilters = function () {
     const searchInput = document.getElementById('searchRubric');
     const typeSelect = document.getElementById('filterRubricType');
     const statusSelect = document.getElementById('filterRubricStatus');
@@ -1677,12 +1685,12 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    if (searchInput) searchInput.addEventListener('input', window.applyRubricFilters);
+    if (searchInput) searchInput.addEventListener('input', window.App.UI.applyRubricFilters);
     if (window.$) {
-        $('#filterRubricType, #filterRubricStatus').on('change.select2 change', window.applyRubricFilters);
+        $('#filterRubricType, #filterRubricStatus').on('change.select2 change', window.App.UI.applyRubricFilters);
     }
 
-    if (btnApply) btnApply.addEventListener('click', window.applyRubricFilters);
+    if (btnApply) btnApply.addEventListener('click', window.App.UI.applyRubricFilters);
 
     if (btnClear) {
         btnClear.addEventListener('click', function () {
@@ -1694,7 +1702,21 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (typeSelect) typeSelect.value = '';
                 if (statusSelect) statusSelect.value = '';
             }
-            window.applyRubricFilters();
+            window.App.UI.applyRubricFilters();
         });
     }
 });
+
+// Retrocompatibility wrappers
+window.openModal = (...args) => window.App.Modal.openModal(...args);
+window.openAjaxModal = (...args) => window.App.Modal.openAjaxModal(...args);
+window.closeModal = (...args) => window.App.Modal.closeModal(...args);
+window.closeAjaxModal = (...args) => window.App.Modal.closeAjaxModal(...args);
+window.showToast = (...args) => window.App.Toast.showToast(...args);
+window.refreshCurrentTable = (...args) => window.App.Ajax.refreshCurrentTable(...args);
+window.submitAjaxForm = (...args) => window.App.Ajax.submitAjaxForm(...args);
+window.toggleStatusAjax = (...args) => window.App.Ajax.toggleStatusAjax(...args);
+window.deleteRecordAjax = (...args) => window.App.Ajax.deleteRecordAjax(...args);
+window.loadTeleworkData = (...args) => window.App.Telework.loadTeleworkData(...args);
+window.markTeleworkAttendance = (...args) => window.App.Telework.markTeleworkAttendance(...args);
+window.getCSRF = window.App.Security.getCSRF;
