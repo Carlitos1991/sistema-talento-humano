@@ -311,12 +311,15 @@ class EmployeeReportExportView(LoginRequiredMixin, PermissionRequiredMixin, View
         # Ajustar anchos y alturas para evitar texto cortado en el reporte.
         for column_cells in ws.columns:
             column_index = column_cells[0].column
+            if column_index == 1:
+                ws.column_dimensions[get_column_letter(column_index)].width = 8
+                continue
             max_length = max(
                 (max((len(line) for line in str(cell.value or '').splitlines()), default=0)
                  for cell in column_cells),
                 default=0,
             )
-            minimum_width = 8 if column_index == 1 else 14
+            minimum_width = 14
             maximum_width = 32 if column_index not in (2, 3) else 24
             ws.column_dimensions[get_column_letter(column_index)].width = min(
                 maximum_width, max(minimum_width, max_length + 2)
