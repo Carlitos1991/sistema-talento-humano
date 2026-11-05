@@ -8,6 +8,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.contrib.auth.views import LoginView
+from django.conf import settings
 from django.contrib.sessions.models import Session
 from django.core.exceptions import ObjectDoesNotExist
 from django.core import signing
@@ -54,11 +55,13 @@ def _send_local_password_reset_email(user, email, request):
     message = EmailMultiAlternatives(
         subject='Recuperación de contraseña - SIGETH',
         body=strip_tags(html_content),
-        from_email=None,
+        from_email=settings.DEFAULT_FROM_EMAIL,
         to=[email],
     )
     message.attach_alternative(html_content, 'text/html')
-    message.send(fail_silently=False)
+    sent_count = message.send(fail_silently=False)
+    if sent_count != 1:
+        raise RuntimeError('El servidor SMTP no confirmó el envío del correo de recuperación.')
 
 
 def _safe_related(instance, attr_name, default=None):
@@ -332,9 +335,37 @@ class LocalPasswordResetView(View):
                 'error': ' '.join(exc.messages),
             }, status=400)
 
-        user.set_password(password)
-        user.save(update_fields=['password'])
-        return render(request, self.template_name, {'completed': True})
+        try:
+            from .keycloak_service import (
+                find_keycloak_user_by_document,
+                find_keycloak_user_by_email,
+                find_keycloak_user_by_username,
+                set_keycloak_password,
+            )
+
+            person = _safe_related(user, 'person', None)
+            keycloak_user = None
+            if person and person.document_number:
+                keycloak_user = find_keycloak_user_by_document(person.document_number)
+            if not keycloak_user and user.email:
+                keycloak_user = find_keycloak_user_by_email(user.email)
+            if not keycloak_user:
+                keycloak_user = find_keycloak_user_by_username(user.username)
+
+            if keycloak_user:
+                set_keycloak_password(keycloak_user['id'], password, temporary=False)
+
+            user.set_password(password)
+            user.save(update_fields=['password'])
+            return render(request, self.template_name, {'completed': True})
+        except Exception:
+            logger.exception(
+                "[AUTH][RESET] No se pudo sincronizar la nueva contraseña con la cuenta de autenticación."
+            )
+            return render(request, self.template_name, {
+                'token': token,
+                'error': 'No se pudo actualizar la contraseña. Intente nuevamente más tarde.',
+            }, status=503)
 
 
 # Servicio o helper que verifica si existe en Keycloak
