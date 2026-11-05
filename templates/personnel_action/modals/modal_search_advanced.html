@@ -1,0 +1,52 @@
+<!-- Modal de Búsqueda Avanzada (Estático en HTML, controlado por Vue v-if) -->
+<div v-if="isSearchModalOpen" class="modal-backdrop" @click.self="closeSearchModal">
+    <div class="modal-box">
+
+        <!-- Header -->
+        <div class="modal-header-custom">
+            <h3 class="modal-title-custom">
+                <i class="fas fa-filter"></i> Filtros de Búsqueda
+            </h3>
+            <button class="btn-close-custom" @click="closeSearchModal">&times;</button>
+        </div>
+
+        <!-- Body con Grid -->
+        <div class="modal-body-custom">
+            <div class="search-grid">
+
+                <!-- Fila 1: Búsqueda Texto (Ancho completo) -->
+                <div class="search-full-width">
+                    <label class="label-custom">Término de Búsqueda</label>
+                    <input type="text"
+                           v-model="filters.q"
+                           class="input-custom"
+                           placeholder="Nombre del empleado, número de acción, cédula...">
+                </div>
+
+                <!-- Fila 2: Rango de Fechas -->
+                <div>
+                    <label class="label-custom">Fecha Desde</label>
+                    <input type="date"
+                           v-model="filters.date_start"
+                           class="input-custom">
+                </div>
+
+                <div>
+                    <label class="label-custom">Fecha Hasta</label>
+                    <input type="date"
+                           v-model="filters.date_end"
+                           class="input-custom">
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer con Botones -->
+        <div class="modal-footer-custom">
+            <button class="btn-cancel" @click="closeSearchModal">Cancelar</button>
+            <button class="btn-create" @click="applyBackendSearch">
+                <i class="fas fa-search"></i> Aplicar Filtros
+            </button>
+        </div>
+
+    </div>
+</div>

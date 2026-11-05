@@ -1,0 +1,82 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini Login Offline | SIGETH</title>
+    <link rel="icon" type="image/png" href="{% static 'img/favicon.png' %}">
+    <link rel="stylesheet" href="{% static 'css/biometric_offline_attendance.css' %}">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+<main class="offline-shell" id="offline-app-auth"
+      data-auth-only="true"
+      data-redirect-url="{{ offline_redirect_url }}"
+      data-employee-name="{{ offline_employee_name|escape }}"
+      data-employee-document="{{ offline_employee_document|escape }}"
+      data-can-sync="{% if offline_can_sync %}true{% else %}false{% endif %}">
+    <section class="hero-card hero-card-compact">
+        <div class="hero-copy">
+            <span class="eyebrow">Acceso Offline</span>
+            <h1>Mini login local</h1>
+            <p>
+                Ingresa con PIN local o huella y te redirigiremos directamente a la bitácora de asistencia.
+            </p>
+            <div class="employee-chip">
+                <strong>Empleado:</strong>
+                <span>{{ offline_employee_name }}</span>
+                {% if offline_employee_document %}
+                    <span class="separator">·</span>
+                    <span>{{ offline_employee_document }}</span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="hero-status">
+            <div class="status-pill" id="connection-pill">Verificando conexión</div>
+            <div class="status-note" id="status-note">Autenticación local lista.</div>
+            <div class="queue-box">
+                <span class="queue-label">Destino</span>
+                <strong style="font-size: 1.3rem;">Bitácora</strong>
+            </div>
+        </div>
+    </section>
+
+    <section class="panel security-panel">
+        <header class="panel-header">
+            <h2>Acceso local</h2>
+        </header>
+        <div class="pin-grid">
+            <div class="pin-card" id="pin-setup-box">
+                <h3>Configurar PIN</h3>
+                <p>Si es tu primer acceso en este teléfono, crea un PIN local de 4 a 8 dígitos.</p>
+                <div class="pin-inputs">
+                    <input type="password" id="pin-new" class="pin-field" inputmode="numeric" maxlength="8" placeholder="Nuevo PIN (4-8 dígitos)">
+                    <input type="password" id="pin-confirm" class="pin-field" inputmode="numeric" maxlength="8" placeholder="Confirmar PIN">
+                </div>
+                <div class="pin-actions">
+                    <button type="button" class="link-button" id="pin-set-btn">Guardar PIN</button>
+                    <button type="button" class="link-button link-button-ghost" id="biometric-setup-btn">Vincular huella</button>
+                </div>
+            </div>
+
+            <div class="pin-card" id="pin-unlock-box">
+                <h3>Desbloquear</h3>
+                <p>Usa tu PIN local o huella para ingresar a la bitácora.</p>
+                <div class="pin-inputs">
+                    <input type="password" id="pin-input" class="pin-field" inputmode="numeric" maxlength="8" placeholder="PIN local">
+                </div>
+                <div class="pin-actions">
+                    <button type="button" class="link-button" id="pin-unlock-btn">Entrar</button>
+                    <button type="button" class="link-button link-button-ghost" id="biometric-unlock-btn">Usar huella</button>
+                    <button type="button" class="link-button link-button-danger" id="pin-reset-btn">Cerrar sesión local</button>
+                </div>
+            </div>
+        </div>
+        <div class="pin-message" id="pin-message">Debes desbloquear con PIN para continuar.</div>
+    </section>
+</main>
+
+<script src="{% static 'js/biometric/offline_attendance.js' %}"></script>
+</body>
+</html>

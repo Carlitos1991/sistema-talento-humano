@@ -545,10 +545,6 @@ class RubricToggleView(LoginRequiredMixin, View):
         })
 
 
-class PayrollGenerateForm(forms.Form):
-    period_id = forms.IntegerField()
-
-
 class GeneratePayrollUIView(View):
     """Interfaz simple para seleccionar empleados elegibles y generar rol con prorrateo."""
     template_name = 'payroll/generate_ui.html'
