@@ -194,6 +194,31 @@ class ScheduleHistoryAPIView(LoginRequiredMixin, View):
         return HttpResponse(html)
 
 
+class ScheduleDetailAPIView(View):
+    """Retorna los datos de un horario en JSON para cargar el formulario de edición"""
+
+    def get(self, request, pk):
+        schedule = get_object_or_404(Schedule, pk=pk)
+        data = {
+            'id': schedule.id,
+            'name': schedule.name,
+            'late_tolerance_minutes': schedule.late_tolerance_minutes,
+            'daily_hours': float(schedule.daily_hours),
+            'morning_start': schedule.morning_start.strftime('%H:%M'),
+            'morning_end': schedule.morning_end.strftime('%H:%M'),
+            'morning_crosses_midnight': schedule.morning_crosses_midnight,
+            # Manejo de nulos para la segunda jornada
+            'afternoon_start': schedule.afternoon_start.strftime('%H:%M') if schedule.afternoon_start else '',
+            'afternoon_end': schedule.afternoon_end.strftime('%H:%M') if schedule.afternoon_end else '',
+            'afternoon_crosses_midnight': schedule.afternoon_crosses_midnight,
+            # Días
+            'monday': schedule.monday, 'tuesday': schedule.tuesday, 'wednesday': schedule.wednesday,
+            'thursday': schedule.thursday, 'friday': schedule.friday, 'saturday': schedule.saturday,
+            'sunday': schedule.sunday,
+        }
+        return JsonResponse({'success': True, 'schedule': data})
+
+
 class ScheduleActivateView(LoginRequiredMixin, View):
     def post(self, request, pk):
         instance = get_object_or_404(Schedule, pk=pk)
@@ -210,6 +235,60 @@ class ScheduleDeactivateView(LoginRequiredMixin, View):
         instance.updated_by = request.user
         instance.save()
         return JsonResponse({'success': True, 'message': 'Horario dado de baja correctamente.'})
+
+
+class ScheduleTablePartialView(LoginRequiredMixin, View):
+    """Vista para recargar la tabla mediante filtros AJAX"""
+
+    def get(self, request):
+        from django.core.paginator import Paginator
+
+        name = request.GET.get('name', '')
+        is_active = request.GET.get('is_active', '')
+        page_number = request.GET.get('page', 1)
+
+        # 1. Queryset filtrado para la tabla
+        queryset = Schedule.objects.all().order_by('-created_at')
+
+        if name:
+            queryset = queryset.filter(name__icontains=name)
+
+        if is_active == 'true':
+            queryset = queryset.filter(is_active=True)
+        elif is_active == 'false':
+            queryset = queryset.filter(is_active=False)
+
+        # 2. Paginación
+        paginator = Paginator(queryset, 10)
+        page_obj = paginator.get_page(page_number)
+
+        # 3. Cálculo de estadísticas (SIEMPRE sobre el total de la base)
+        all_schedules = Schedule.objects.all()
+        stats_data = {
+            'total': all_schedules.count(),
+            'active': all_schedules.filter(is_active=True).count(),
+            'inactive': all_schedules.filter(is_active=False).count(),
+        }
+
+        # 4. Renderizado del fragmento HTML
+        html = render_to_string('schedule/partials/partial_schedule_table.html', {
+            'schedules': page_obj.object_list
+        }, request=request)
+
+        # 5. Respuesta JSON con HTML, Stats y datos de paginación
+        return JsonResponse({
+            'table_html': html,
+            'stats': stats_data,
+            'pagination': {
+                'current_page': page_obj.number,
+                'total_pages': paginator.num_pages,
+                'has_previous': page_obj.has_previous(),
+                'has_next': page_obj.has_next(),
+                'total_count': paginator.count,
+                'start_index': page_obj.start_index(),
+                'end_index': page_obj.end_index()
+            }
+        })
 
 
 class ObservationListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):

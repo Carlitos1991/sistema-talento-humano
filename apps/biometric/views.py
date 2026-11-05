@@ -1015,6 +1015,15 @@ def upload_biometric_file_ajax(request, pk):
 # -------------------------------------------------------------
 
 @method_decorator(csrf_exempt, name='dispatch')
+class ADMSReceiverView(View):
+    def get(self, request):
+        return HttpResponse("OK\nC:99:ATTLOG", content_type="text/plain")
+
+    def post(self, request):
+        from .adms_views import adms_receive_attendance
+        return adms_receive_attendance(request)
+
+
 class EmployeeReportListView(LoginRequiredMixin, ListView):
     model = InstitutionalData
     template_name = 'biometric/employee_report_list.html'

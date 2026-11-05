@@ -338,6 +338,15 @@ class LocalPasswordResetView(View):
 
 
 # Servicio o helper que verifica si existe en Keycloak
+def check_user_in_keycloak(username):
+    try:
+        from core.keycloak_service import KeycloakAdminService  # o tu servicio existente
+        kc = KeycloakAdminService()
+        return kc.get_user_by_username(username) is not None
+    except Exception:
+        return False
+
+
 class ChangePasswordView(LoginRequiredMixin, View):
     def post(self, request):
         user = request.user
@@ -870,6 +879,14 @@ class ProfileView(LoginRequiredMixin, UpdateView):
 # =====================================================================
 # 4. GESTIÓN DE CATÁLOGOS (CATALOGS & CATALOG ITEMS)
 # =====================================================================
+def get_catalog_stats_dict():
+    return {
+        'total': Catalog.objects.count(),
+        'active': Catalog.objects.filter(is_active=True).count(),
+        'inactive': Catalog.objects.filter(is_active=False).count(),
+    }
+
+
 class CatalogListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     model = Catalog
     template_name = 'core/catalogs/catalog_list.html'

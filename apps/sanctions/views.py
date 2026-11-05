@@ -2488,6 +2488,38 @@ class SanctionNotificationToggleResponseView(LoginRequiredMixin, View):
         })
 
 
+class AssignNotificationView(LoginRequiredMixin, View):
+    def post(self, request, notification_id):
+        new_user_id = request.POST.get('user_id')
+        obs = request.POST.get('observation')
+
+        with transaction.atomic():
+            notification = get_object_or_404(SanctionNotification, pk=notification_id)
+            new_user = get_object_or_404(User, pk=new_user_id)
+
+            # 1. Cerramos la asignación actual
+            current_assignment = SanctionAssignment.objects.filter(
+                notification=notification, is_current=True
+            ).first()
+
+            if current_assignment:
+                current_assignment.complete_assignment()
+
+            # 2. Creamos la nueva asignación
+            SanctionAssignment.objects.create(
+                notification=notification,
+                assigned_to=new_user,
+                assigned_by=request.user,
+                observation=obs
+            )
+
+            # 3. Opcional: Cambiar el estado de la notificación
+            notification.status = 'EN_PROCESO'
+            notification.save()
+
+        return JsonResponse({'success': True, 'message': f'Trámite asignado a {new_user.get_full_name()}'})
+
+
 class AssignNotificationAjaxView(LoginRequiredMixin, View):
     def get(self, request):
         ids_str = request.GET.get('ids', '')
@@ -2612,6 +2644,36 @@ class UserSearchAjaxView(LoginRequiredMixin, View):
             })
 
         return JsonResponse({"results": results})
+
+
+class ReturnNotificationView(LoginRequiredMixin, View):
+    """Devuelve el trámite al asignador original y cambia estado a GENERADO"""
+
+    def post(self, request, pk):
+        with transaction.atomic():
+            notification = get_object_or_404(SanctionNotification, pk=pk)
+            current_assign = notification.current_assignment
+
+            if not current_assign:
+                return JsonResponse({'success': False, 'message': 'No hay una asignación activa.'}, status=400)
+
+            # 1. Finalizar asignación actual
+            current_assign.complete_assignment()
+
+            # 2. Crear nueva asignación de vuelta al que lo envió
+            SanctionAssignment.objects.create(
+                notification=notification,
+                assigned_to=current_assign.assigned_by,  # Se devuelve al originador
+                assigned_by=request.user,
+                observation=f"Trámite devuelto por: {request.user.get_full_name()}",
+                is_current=True
+            )
+
+            # 3. Cambiar estado a GENERADO (vuelve a la bandeja general)
+            notification.status = 'GENERADO'
+            notification.save()
+
+        return JsonResponse({'success': True, 'message': 'Trámite devuelto correctamente.'})
 
 
 class ArchiveNotificationView(LoginRequiredMixin, View):
