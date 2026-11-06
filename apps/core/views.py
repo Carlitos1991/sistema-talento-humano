@@ -1152,12 +1152,7 @@ class CatalogItemToggleStatusView(LoginRequiredMixin, PermissionRequiredMixin, V
 # 5. UBICACIONES GEOGRÁFICAS (LOCATIONS)
 # =====================================================================
 def get_location_stats_dict():
-    return {
-        'country': Location.objects.filter(level=1, is_active=True).count(),
-        'province': Location.objects.filter(level=2, is_active=True).count(),
-        'city': Location.objects.filter(level=3, is_active=True).count(),
-        'parish': Location.objects.filter(level=4, is_active=True).count(),
-    }
+    return {}
 
 
 class LocationListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
