@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     'payroll',
     'accounting',
     'permitrequest',
+    'apps.licenses.apps.LicensesConfig',
     'vacation',
     'sanctions',
     'documents',
