@@ -42,21 +42,54 @@ window.applyPersonFilters = async function (page = 1) {
         const res = await fetch(`${listUrl}?${params.toString()}`, {
             headers: {'X-Requested-With': 'XMLHttpRequest'}
         });
+        if (res.status === 401 || res.redirected) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Sesión Invalidad',
+                text: 'Se ha iniciado sesión en otro dispositivo o su sesión expiró.',
+                confirmButtonText: 'Volver a ingresar',
+                allowOutsideClick: false
+            }).then(() => {
+                window.location.reload();
+            });
+            return;
+        }
 
         const contentType = res.headers.get("content-type");
         let htmlToInject = "";
         let statsToInject = "";
 
-        if (contentType && contentType.includes("application/json")) {
+        if (contentType.includes("application/json")) {
             const data = await res.json();
+
+            if (data.session_expired) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Sesión Expirada',
+                    text: data.message || 'Por favor vuelva a ingresar.',
+                    confirmButtonText: 'Ir al Login'
+                }).then(() => {
+                    window.location.href = data.login_url || '/accounts/login/';
+                });
+                return;
+            }
+
             htmlToInject = data.html || '';
             statsToInject = data.stats_html || '';
         } else {
             htmlToInject = await res.text();
+            if (htmlToInject.includes('name="username"') || htmlToInject.includes('id="login-form"')) {
+                window.location.reload();
+                return;
+            }
         }
-
         if (tableContainer && htmlToInject) {
             tableContainer.innerHTML = htmlToInject;
+        }
+
+        if (statsToInject) {
+            const statsRow = document.getElementById('statsRow');
+            if (statsRow) statsRow.innerHTML = statsToInject;
         }
 
         if (statsToInject) {
@@ -317,15 +350,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Previsualización de foto (usa la función universal de main.js)
     document.getElementById('id_photo')?.addEventListener('change', function () {
-        if (typeof handleModalPhotoPreview === 'function') {
-            handleModalPhotoPreview(this);
+        if (typeof window.App.UI?.handleModalPhotoPreview === 'function') {
+            window.App.UI.handleModalPhotoPreview(this);
         }
     });
 
     // Combos dependientes DPA (País -> Provincia -> Cantón -> Parroquia)
     $('#id_country').on('change', function () {
         if ($(this).val()) {
-            handleLocationCascade(this, 'id_province');
+            window.App.UI.handleLocationCascade(this, 'id_province');
         }
         $('#id_canton').empty().append('<option value="">-- Seleccione --</option>').trigger('change');
         $('#id_parish').empty().append('<option value="">-- Seleccione --</option>').trigger('change');
@@ -333,14 +366,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     $('#id_province').on('change', function () {
         if ($(this).val()) {
-            handleLocationCascade(this, 'id_canton');
+            window.App.UI.handleLocationCascade(this, 'id_canton');
         }
         $('#id_parish').empty().append('<option value="">-- Seleccione --</option>').trigger('change');
     });
 
     $('#id_canton').on('change', function () {
         if ($(this).val()) {
-            handleLocationCascade(this, 'id_parish');
+            window.App.UI.handleLocationCascade(this, 'id_parish');
         }
     });
 });
