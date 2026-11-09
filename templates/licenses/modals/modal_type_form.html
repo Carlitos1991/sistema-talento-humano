@@ -1,0 +1,128 @@
+{% load static %}
+<div class="modal-overlay" id="licenseTypeModalOverlay">
+    <div class="modal-container-medium">
+
+        <div class="modal-header-medium">
+            <div class="header-content-group">
+                <div class="header-icon-circle">
+                    <i class="fas fa-sliders"></i>
+                </div>
+                <h3 class="header-title">
+                    {% if is_edit or form.instance.pk %}Editar Tipo de Licencia{% else %}Nuevo Tipo de
+                        Licencia{% endif %}
+                </h3>
+            </div>
+            <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <form id="licenseTypeForm" action="{{ action_url }}" method="post" autocomplete="off" novalidate
+              onsubmit="submitAjaxForm(event)">
+            {% csrf_token %}
+            {{ form.code }}
+
+            <div class="modal-body-custom">
+                <!-- 1. IDENTIFICACIÓN -->
+                <div class="form-section-card">
+                    <div class="section-title">
+                        <i class="fas fa-info-circle text-primary"></i> Identificación del Tipo de Licencia
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="{{ form.name.id_for_label }}">
+                            Nombre del Tipo de Licencia <span class="text-danger">*</span>
+                        </label>
+                        {{ form.name }}
+                        <div class="invalid-feedback" id="error-name"></div>
+                    </div>
+
+                    <div class="form-group mt-2">
+                        <label class="form-label" for="{{ form.description.id_for_label }}">
+                            Descripción / Base Legal
+                        </label>
+                        {{ form.description }}
+                    </div>
+                </div>
+
+                <!-- 2. ANEXOS / REQUISITOS PRECONFIGURADOS -->
+                <div class="form-section-card mt-3">
+                    <div class="section-header-flex">
+                        <div class="section-title mb-0">
+                            <i class="fas fa-paperclip text-primary"></i> Anexos y Requisitos Requeridos (Checklist
+                            Recepción)
+                        </div>
+                        <button type="button" class="btn-submodal-add" onclick="openRequirementModal()"
+                                title="Agregar nuevo anexo al catálogo">
+                            <i class="fas fa-plus me-1"></i> NUEVO REQUISITO
+                        </button>
+                    </div>
+
+                    <div class="form-group mt-3">
+                        <label class="form-label" for="{{ form.requirements_list.id_for_label }}">
+                            Seleccione los requisitos obligatorios que se pedirán en Ventanilla / Recepción
+                        </label>
+                        {{ form.requirements_list }}
+                    </div>
+                </div>
+
+                <!-- 3. FIRMAS PRECONFIGURADAS -->
+                <div class="form-section-card mt-3">
+                    <div class="section-title">
+                        <i class="fas fa-signature text-primary"></i> Firmas Preconfiguradas (Borrador de Acción de
+                        Personal)
+                    </div>
+
+                    <div class="grid-2-cols">
+                        <div class="form-group">
+                            <label class="form-label" for="{{ form.default_authority_1.id_for_label }}">
+                                Autoridad Nominadora (1)
+                            </label>
+                            {{ form.default_authority_1 }}
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="{{ form.default_authority_2.id_for_label }}">
+                                Director de Talento Humano (2)
+                            </label>
+                            {{ form.default_authority_2 }}
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="{{ form.default_reviewer.id_for_label }}">
+                                Revisado Por
+                            </label>
+                            {{ form.default_reviewer }}
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="{{ form.default_register.id_for_label }}">
+                                Registrado Por
+                            </label>
+                            {{ form.default_register }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. ESTADO DE OPERACIÓN -->
+                <div class="form-section-card mt-3">
+                    <div class="form-group mb-0 d-flex align-items-center">
+                        {{ form.is_active }}
+                        <label class="switch-wrapper mb-0" for="{{ form.is_active.id_for_label }}">
+                            <div class="switch-circle"></div>
+                            <span class="switch-text">Tipo de Licencia Activo para Operación</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer-fixed">
+                <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">Cancelar</button>
+                <button type="submit" class="btn-dark-blue-rectangle">
+                    <i class="fas fa-save me-1"></i>
+                    {% if is_edit or form.instance.pk %}Actualizar Tipo{% else %}Guardar Tipo{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

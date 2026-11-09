@@ -1,0 +1,118 @@
+<div class="modal-overlay hidden" id="licenseModal">
+    <div class="modal-container-medium">
+        <form action="{% url 'licenses:create' %}" method="POST" id="licenseCreateForm"
+              onsubmit="submitAjaxForm(event)">
+            {% csrf_token %}
+
+            <div class="modal-header-medium">
+                <h3 class="header-title">
+                    <i class="fa-solid fa-file-medical me-2"></i>
+                    <span>{% if form.instance.pk %}Editar Licencia Médica{% else %}Nueva Licencia
+                        Médica{% endif %}</span>
+                </h3>
+                <button type="button" class="btn-close-circle" onclick="closeModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="modal-body-content modal-body-custom">
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger mb-3">
+                        {% for error in form.non_field_errors %}
+                            <span>{{ error }}</span><br>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                <!-- DATOS DEL SERVIDOR Y TIPO -->
+                <div class="form-section-card mb-3">
+                    <div class="row g-3">
+                        <div class="col-md-6 form-group">
+                            <label class="form-label">Servidor Municipal <span class="text-red">*</span></label>
+                            {{ form.employee }}
+                            {% if form.employee.errors %}
+                                <div class="text-error">{{ form.employee.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="col-md-6 form-group">
+                            <label class="form-label">Tipo de Licencia <span class="text-red">*</span></label>
+                            {{ form.license_type }}
+                            {% if form.license_type.errors %}
+                                <div class="text-error">{{ form.license_type.errors.0 }}</div>{% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mt-1">
+                        <div class="col-md-4 form-group">
+                            <label class="form-label">N° Certificado Médico</label>
+                            {{ form.medical_certificate_number }}
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label class="form-label">Fecha Inicio <span class="text-red">*</span></label>
+                            {{ form.start_date }}
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label class="form-label">Fecha Fin <span class="text-red">*</span></label>
+                            {{ form.end_date }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SWITCHES DE OPCIONES ESPECIALES (SUSTITUTO / JORNADA) -->
+                <div class="form-section-card py-3 px-3 mb-3">
+                    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: stretch;">
+
+                        <!-- SWITCH SUSTITUTO -->
+                        <div class="d-flex flex-column justify-content-between align-items-center p-2 rounded border bg-light"
+                             style="min-height: 90px; text-align: center;">
+                            <label for="id_has_substitute"
+                                   class="form-label font-bold text-dark mb-2 cursor-pointer d-flex align-items-center justify-content-center gap-1">
+                                <i class="fa-solid fa-user-friends text-blue"></i> ¿Requiere Sustituto?
+                            </label>
+                            <div class="d-flex align-items-center justify-content-center w-100">
+                                {{ form.has_substitute }}
+                                <label class="switch-wrapper" for="id_has_substitute"
+                                       style="min-width: 110px; padding: 4px 10px;">
+                                    <div class="switch-circle"></div>
+                                    <span class="switch-text">Sustituto</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- SWITCH JORNADA REDUCIDA -->
+                        <div class="d-flex flex-column justify-content-between align-items-center p-2 rounded border bg-light"
+                             style="min-height: 90px; text-align: center;">
+                            <label for="id_has_reduced_hours"
+                                   class="form-label font-bold text-dark mb-2 cursor-pointer d-flex align-items-center justify-content-center gap-1">
+                                <i class="fa-solid fa-clock text-warning"></i> ¿Jornada Reducida?
+                            </label>
+                            <div class="d-flex align-items-center justify-content-center w-100">
+                                {{ form.has_reduced_hours }}
+                                <label class="switch-wrapper" for="id_has_reduced_hours"
+                                       style="min-width: 110px; padding: 4px 10px;">
+                                    <div class="switch-circle"></div>
+                                    <span class="switch-text">Reducida</span>
+                                </label>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- DIAGNÓSTICO -->
+                <div class="form-section-card">
+                    <div class="form-group">
+                        <label class="form-label">Diagnóstico / Observaciones</label>
+                        {{ form.diagnosis }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer-medium modal-footer-spaced">
+                <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">Cancelar</button>
+                <button type="submit" class="btn-dark-blue-rectangle">
+                    <i class="fas fa-save me-1"></i> Guardar Licencia
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

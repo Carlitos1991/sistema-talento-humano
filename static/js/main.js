@@ -1,4 +1,3 @@
-
 window.App = window.App || {};
 window.App.Security = window.App.Security || {};
 window.App.Toast = window.App.Toast || {};
@@ -175,12 +174,43 @@ window.App.Ajax.refreshCurrentTable = function (extraParams = {}, callback = nul
         headers: {'X-Requested-With': 'XMLHttpRequest'}
     })
         .then(async response => {
+            if (response.status === 401 || response.redirected) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Sesión Invalida',
+                    text: 'Su sesión ha expirado o se ha iniciado sesión en otro dispositivo.',
+                    confirmButtonText: 'Ir al Inicio de Sesión',
+                    allowOutsideClick: false
+                }).then(() => {
+                    window.location.reload();
+                });
+                return {html: '', fullData: null};
+            }
             const contentType = response.headers.get("content-type");
             if (contentType && contentType.includes("application/json")) {
                 const data = await response.json();
                 return {html: data.html || '', fullData: data};
             }
+            if (contentType.includes("application/json")) {
+                const data = await response.json();
+                if (data.session_expired) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Sesión Invalida',
+                        text: data.message || 'Su sesión ha caducado.',
+                        confirmButtonText: 'Ir al Inicio de Sesión'
+                    }).then(() => {
+                        window.location.href = data.login_url || '/accounts/login/';
+                    });
+                    return {html: '', fullData: null};
+                }
+                return {html: data.html || '', fullData: data};
+            }
             const text = await response.text();
+            if (text.includes('name="username"') || text.includes('id="login-form"') || text.includes('Sistema de Gestión de Talento Humano')) {
+                window.location.reload();
+                return {html: '', fullData: null};
+            }
             return {html: text, fullData: null};
         })
         .then(({html, fullData}) => {
@@ -803,9 +833,17 @@ class TableManager {
 
             fetch(`${listUrl}?${params.toString()}`, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
                 .then(async (response) => {
+                    if (response.status === 401 || response.redirected) {
+                        window.location.reload();
+                        return '';
+                    }
                     const contentType = response.headers.get("content-type");
-                    if (contentType && contentType.includes("application/json")) {
+                    if (contentType.includes("application/json")) {
                         const data = await response.json();
+                        if (data.session_expired) {
+                            window.location.href = data.login_url || '/accounts/login/';
+                            return '';
+                        }
                         return data.html || '';
                     }
                     return await response.text();

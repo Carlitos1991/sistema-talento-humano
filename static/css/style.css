@@ -7204,3 +7204,8 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
 .table-controls, .filter-bar, .search-container {
     margin-bottom: 1.25rem;
 }
+
+/* Modales de Licencias Médicas */
+.license-modal-dialog {
+    max-width: 750px;
+}

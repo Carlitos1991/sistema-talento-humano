@@ -1,0 +1,30 @@
+{% load static %}
+<div class="modal-overlay" id="requirementSubmodal">
+    <div class="modal-container-small">
+        <form action="{% url 'licenses:requirement_save_ajax' %}" method="POST" id="requirementForm"
+              onsubmit="submitRequirementFormAjax(event)">
+            {% csrf_token %}
+            <div class="modal-header-medium">
+                <h3 class="header-title"><i class="fas fa-folder-plus me-2"></i> Nuevo Requisito / Anexo</h3>
+                <button type="button" class="btn-close-circle" onclick="closeSubmodal()"><i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body-custom p-3">
+                <div class="form-group mb-3">
+                    <label class="form-label">Nombre del Anexo / Requisito <span class="text-danger">*</span></label>
+                    {{ form.name }}
+                </div>
+                <div class="form-check form-switch mb-2">
+                    {{ form.is_mandatory }}
+                    <label class="form-check-label ms-2" for="{{ form.is_mandatory.id_for_label }}">Es documento
+                        obligatorio</label>
+                </div>
+            </div>
+            <div class="modal-footer-fixed">
+                <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeSubmodal()">Cancelar
+                </button>
+                <button type="submit" class="btn-dark-blue-rectangle"><i class="fas fa-save me-1"></i> Guardar</button>
+            </div>
+        </form>
+    </div>
+</div>

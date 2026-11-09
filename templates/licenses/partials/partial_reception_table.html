@@ -1,0 +1,103 @@
+{% load static %}
+<div class="table-container">
+    <div class="table-scroll-top">
+        <table class="managed-table exportable-table" data-title="Reporte Recepción de Licencias"
+               data-filename="Reporte_Recepcion_Licencias" data-list-url="{% url 'licenses:reception_list' %}">
+            <thead>
+            <tr>
+                <th class="reception-select-col text-center no-sort">
+                    <input type="checkbox" class="reception-select-all" aria-label="Seleccionar recepciones aprobadas">
+                </th>
+                <th class="width-7 text-center">#</th>
+                <th class="width-25">Servidor / Funcionario</th>
+                <th class="width-15">Tipo Solicitado</th>
+                <th class="width-15">Fecha Recepción</th>
+                <th class="width-20">Checklist de Anexos Verificados</th>
+                <th class="width-10 text-center">Estado</th>
+                <th class="width-10 text-center no-sort actions"><i class="fas fa-cogs"></i> Acciones</th>
+            </tr>
+            </thead>
+            <tbody id="table-body">
+            {% if receptions %}
+                {% for item in receptions %}
+                    <tr id="row-{{ item.id }}">
+                        <td class="reception-select-col text-center">
+                            {% if item.status == 'APPROVED' %}
+                                <input type="checkbox" class="reception-select" value="{{ item.id }}"
+                                       aria-label="Seleccionar recepción #REC-{{ item.id }}">
+                            {% endif %}
+                        </td>
+                        <td class="text-center"><span class="badge badge-blue">#REC-{{ item.id }}</span></td>
+                        <td>
+                            <strong>{{ item.employee.person.last_name }} {{ item.employee.person.first_name }}</strong>
+                            <small class="d-block text-muted">C.I.: {{ item.employee.person.document_number }}</small>
+                        </td>
+                        <td><span class="badge badge-blue-solid">{{ item.license_type.name }}</span></td>
+                        <td><small>{{ item.reception_date|date:"d/m/Y H:i" }}</small></td>
+                        <td>
+                            <div class="d-flex flex-column gap-1">
+                                {% for chk in item.checked_items.all %}
+                                    <small>
+                                        {% if chk.is_checked %}
+                                            <i class="fas fa-check-circle text-green me-1"></i>
+                                        {% else %}
+                                            <i class="fas fa-times-circle text-red me-1"></i>
+                                        {% endif %}
+                                        {{ chk.requirement.name }}
+                                    </small>
+                                {% empty %}
+                                    <small class="text-muted">Sin anexos requeridos</small>
+                                {% endfor %}
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            {% if item.status == 'REGISTERED' %}
+                                <span class="badge badge-yellow"><i class="fas fa-clock me-1"></i>Registrado</span>
+                            {% elif item.status == 'APPROVED' %}
+                                <span class="badge badge-green"><i class="fas fa-check-circle me-1"></i>Aprobado</span>
+                            {% elif item.status == 'DELIVERED' %}
+                                <span class="badge badge-blue-solid"><i
+                                        class="fas fa-paper-plane me-1"></i>Entregado</span>
+                            {% else %}
+                                <span class="badge badge-red"><i class="fas fa-ban me-1"></i>Dado de Baja</span>
+                            {% endif %}
+                        </td>
+                        <td class="actions text-center">
+                            <div class="actions-wrapper justify-content-center">
+                                {% if item.status == 'REGISTERED' %}
+                                    <!-- Botón VALIDAR para estado REGISTRADO -->
+                                    <button class="btn-yellow-circle"
+                                            onclick="openValidateReceptionModal({{ item.id }})"
+                                            title="Validar Anexos Pendientes">
+                                        <i class="fas fa-tasks"></i>
+                                    </button>
+                                {% elif item.status == 'DELIVERED' %}
+                                    <button class="btn-blue-circle" onclick="openReceptionDetailModal({{ item.id }})"
+                                            title="Ver detalle de recepción">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                {% endif %}
+
+                                {% if item.status != 'CANCELLED' and item.status != 'DELIVERED' %}
+                                    <button class="btn-red-circle"
+                                            onclick="changeReceptionStatus({{ item.id }}, 'CANCELLED')"
+                                            title="Dar de Baja">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="8" class="text-center py-4 text-muted">
+                        <i class="fas fa-folder-open fa-2x mb-2 d-block"></i> No se encontraron recepciones de
+                        licencias.
+                    </td>
+                </tr>
+            {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>

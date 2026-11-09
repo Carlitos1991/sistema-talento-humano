@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Licencias Médicas y Sustitutos | SIGETH{% endblock %}
+
+{% block content %}
+    <!-- HEADER INSTITUCIONAL NATIVO -->
+    <div class="header-card">
+        <div>
+            <h1>Licencias Médicas y Sustitutos</h1>
+            <p>Registro, control de sustitutos de cuidado, reducción de jornada y legalización de licencias médicas.</p>
+        </div>
+        {% if perms.licenses.add_medicallicense or user.is_staff %}
+            <div>
+                <button type="button" class="btn-dark-blue-rectangle"
+                        onclick="openAjaxModal('{% url 'licenses:create' %}')">
+                    <i class="fas fa-plus-circle me-1"></i> Nueva Licencia Médica
+                </button>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- TABLA PRINCIPAL Y CONTROLES -->
+    <div class="content-table">
+        <div class="table-controls toolbar-row">
+            <div class="toolbar-center">
+                <!-- Filtro Tipo de Licencia -->
+                <select id="filter_license_type" class="table-search-input" style="max-width: 200px;">
+                    <option value="">Todos los tipos</option>
+                    {% for ltype in license_types %}
+                        <option value="{{ ltype.id }}"
+                                {% if selected_type == ltype.id|stringformat:"s" %}selected{% endif %}>
+                            {{ ltype.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+
+                <!-- Filtro Estado Legalizado -->
+                <select id="filter_is_legalized" class="table-search-input" style="max-width: 180px;">
+                    <option value="">Todos los estados</option>
+                    <option value="true" {% if selected_legalized == 'true' %}selected{% endif %}>Legalizadas</option>
+                    <option value="false" {% if selected_legalized == 'false' %}selected{% endif %}>Pendientes</option>
+                </select>
+
+                <button type="button" class="btn-dark-blue-rectangle-outline" id="btnResetFilters"
+                        title="Limpiar Filtros">
+                    <i class="fas fa-broom"></i> Limpiar
+                </button>
+            </div>
+            <div class="toolbar-right">
+                <input type="text" id="table-search" class="table-search-input table-search-input--large"
+                       placeholder="Buscar por servidor, cédula o diagnóstico..." value="{{ search_query }}">
+            </div>
+        </div>
+
+        <!-- CONTENEDOR PARCIAL RECARGABLE AJAX -->
+        <div id="table-content-wrapper">
+            {% include 'licenses/partials/partial_license_table.html' %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/license/license.js' %}"></script>
+{% endblock %}

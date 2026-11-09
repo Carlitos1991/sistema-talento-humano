@@ -338,6 +338,53 @@
                         </ul>
                     </li>
                 {% endif %}
+                <!-- MÓDULO DE LICENCIAS Y SUSTITUTOS -->
+                {% if perms.licenses.view_medicallicense or perms.licenses.view_licensereception or perms.licenses.view_medicallicensetype %}
+                    <li class="has-submenu">
+                        <a href="#" class="{% if 'licenses' in request.resolver_match.app_name %}active{% endif %}">
+                            <i class="fa-solid fa-notes-medical"></i>
+                            <span class="menu-text">Licencias Médicas</span>
+                            <i class="fa-solid fa-chevron-right chevron-icon"></i>
+                        </a>
+                        <ul class="submenu">
+
+                            <!-- 1. Recepción de Documentos -->
+                            {% if perms.licenses.view_licensereception or perms.licenses.add_licensereception %}
+                                <li>
+                                    <a href="{% url 'licenses:reception_list' %}"
+                                       class="{% if request.resolver_match.url_name == 'reception_list' %}active-child{% endif %}">
+                                        <i class="fa-solid fa-inbox"></i>
+                                        <span class="menu-text">Recepción</span>
+                                    </a>
+                                </li>
+                            {% endif %}
+
+                            <!-- 2. Gestión de Licencias (Listado General) -->
+                            {% if perms.licenses.view_medicallicense %}
+                                <li>
+                                    <a href="{% url 'licenses:list' %}"
+                                       class="{% if request.resolver_match.url_name == 'list' %}active-child{% endif %}">
+                                        <i class="fa-solid fa-list-check"></i>
+                                        <span class="menu-text">Gestión de Licencias</span>
+                                    </a>
+                                </li>
+                            {% endif %}
+
+                            <!-- 3. Tipos de Licencias (Configuración de Firmas y Anexos) -->
+                            {% if perms.licenses.view_medicallicensetype %}
+                                <li>
+                                    <a href="{% url 'licenses:type_list' %}"
+                                       class="{% if request.resolver_match.url_name == 'type_list' %}active-child{% endif %}">
+                                        <i class="fa-solid fa-sliders"></i>
+                                        <span class="menu-text">Tipos de Licencia</span>
+                                    </a>
+                                </li>
+                            {% endif %}
+
+                        </ul>
+                    </li>
+                {% endif %}
+
                 <!-- MÓDULO DE PERMISOS -->
                 {% if perms.permitrequest.view_permitrequest or perms.permitrequest.view_permittype or perms.permitrequest.change_permitrequest or perms.permitrequest.add_permitrequest %}
                     <li class="has-submenu">

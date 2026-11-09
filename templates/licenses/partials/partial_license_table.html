@@ -1,0 +1,114 @@
+{% load static %}
+<div class="table-container">
+    <div class="table-scroll-top">
+        <table class="managed-table exportable-table" data-title="Reporte Licencias Médicas"
+               data-filename="Reporte_Licencias_Medicas" data-page-size="10">
+            <thead>
+            <tr>
+                <th class="width-7">#</th>
+                <th class="width-20">Servidor / Funcionario</th>
+                <th class="width-15">Tipo de Licencia</th>
+                <th class="width-15">Periodo</th>
+                <th class="width-10 text-center">Duración</th>
+                <th class="width-15">Sustituto / Horario</th>
+                <th class="width-10 text-center no-sort">Estado</th>
+                <th class="width-10 text-center no-sort"><i class="fas fa-cogs"></i> Acciones</th>
+            </tr>
+            </thead>
+            <tbody id="table-body">
+            {% if licenses %}
+                {% for lic in licenses %}
+                    <tr id="row-{{ lic.id }}">
+                        <td>
+                            <span class="badge badge-blue">#{{ lic.id }}</span>
+                        </td>
+                        <td>
+                            <div class="boss-mini-profile">
+                                <div class="avatar-placeholder-sm">
+                                    {{ lic.employee.person.first_name|first }}{{ lic.employee.person.last_name|first }}
+                                </div>
+                                <div class="boss-info">
+                                    <span class="boss-name-highlight">{{ lic.employee.person.first_name }} {{ lic.employee.person.last_name }}</span>
+                                    <small class="text-muted d-block">{{ lic.employee.person.document_number|default:"" }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge badge-blue-solid">
+                                {{ lic.license_type.name|default:"Médica General" }}
+                            </span>
+                        </td>
+                        <td>
+                            <small class="d-block"><strong>Desde:</strong> {{ lic.start_date|date:"d/m/Y" }}</small>
+                            <small class="d-block"><strong>Hasta:</strong> {{ lic.end_date|date:"d/m/Y" }}</small>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge badge-dark-sm">{{ lic.total_days|default:"--" }} días</span>
+                        </td>
+                        <td>
+                            {% if lic.substitute_assignment %}
+                                <small class="d-block text-primary font-bold">
+                                    <i class="fas fa-user-friends me-1"></i>
+                                    {{ lic.substitute_assignment.substitute_employee.person.first_name }} {{ lic.substitute_assignment.substitute_employee.person.last_name }}
+                                </small>
+                            {% else %}
+                                <span class="text-muted small">Sin sustituto</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if lic.is_legalized or lic.status == 'VALIDATED' or lic.status == 'ACTION_ISSUED' %}
+                                <span class="badge badge-green"><i
+                                        class="fas fa-check-circle me-1"></i>Legalizada</span>
+                            {% else %}
+                                <span class="badge badge-yellow"><i class="fas fa-clock me-1"></i>Pendiente</span>
+                            {% endif %}
+                        </td>
+                        <td class="actions text-center">
+                            <div class="actions-wrapper">
+                                {% if lic.status == 'SUBMITTED' or lic.status == 'DRAFT' %}
+                                    <button type="button" class="btn-thirteenth"
+                                            onclick="openAjaxModal('{% url 'licenses:legalize_modal' lic.id %}')"
+                                            title="Convalidar y generar Acción de Personal">
+                                        <i class="fas fa-file-signature"></i>
+                                    </button>
+                                    {% if lic.reception %}
+                                        <button type="button" class="btn-warning-circle"
+                                                onclick="returnReception('{% url 'licenses:return_reception' lic.id %}')"
+                                                title="Devolver a recepción: no llegó físicamente">
+                                            <i class="fas fa-rotate-left"></i>
+                                        </button>
+                                    {% endif %}
+                                {% endif %}
+                                {% if lic.status == 'VALIDATED' or lic.status == 'ACTION_ISSUED' %}
+                                    <button type="button" class="btn-thirteenth"
+                                            onclick="openAjaxModal('{% url 'licenses:action_modal' lic.id %}')"
+                                            title="Generar o editar Acción de Personal">
+                                        <i class="fas fa-file-signature"></i>
+                                    </button>
+                                    <button type="button" class="btn-warning-circle"
+                                            onclick="returnReception('{% url 'licenses:return_reception' lic.id %}')"
+                                            title="Devolver a recepción">
+                                        <i class="fas fa-rotate-left"></i>
+                                    </button>
+                                {% endif %}
+                                <button type="button" class="btn-blue-circle"
+                                        onclick="openAjaxModal('{% url 'licenses:legalize_modal' lic.id %}')"
+                                        title="Ver Detalle">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="8" class="text-center py-4 text-muted">
+                        <i class="fas fa-folder-open fa-2x mb-2 d-block"></i>
+                        No se encontraron registros de licencias médicas.
+                    </td>
+                </tr>
+            {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -343,6 +343,18 @@ class PersonListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     paginate_by = 10
     permission_required = 'person.view_person'
 
+    def dispatch(self, request, *args, **kwargs):
+        # Si es una petición AJAX y el usuario NO está autenticado
+        if not request.user.is_authenticated and request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': False,
+                'session_expired': True,
+                'login_url': '/accounts/login/?next=' + request.path,
+                'message': 'Su sesión ha expirado. Por favor, vuelva a iniciar sesión.'
+            }, status=401)
+
+        return super().dispatch(request, *args, **kwargs)
+
     def get_unit_tree_ids(self, unit_id):
         """Retorna la unidad seleccionada y todas sus subdependencias activas."""
         try:

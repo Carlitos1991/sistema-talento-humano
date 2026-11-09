@@ -40,6 +40,7 @@ from .models import (
 # UTILIDADES Y HELPERS DE CONSULTA
 # ==============================================================================
 
+
 def get_unit_stats():
     """Retorna un resumen numérico del estado global de las unidades administrativas."""
     return {

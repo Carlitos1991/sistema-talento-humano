@@ -1,5 +1,7 @@
 from django.apps import AppConfig
+
+
 class LicensesConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'apps.licenses'
-    verbose_name = 'Licencias Médicas'
+    name = 'licenses'
+    verbose_name = 'Licencias Médicas y Sustitutos'

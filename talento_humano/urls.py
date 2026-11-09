@@ -32,6 +32,7 @@ urlpatterns = [
     path('documents/', include('documents.urls')),
     path('employee_archive/', include('employee_archive.urls')),
     path('sanctions/', include('sanctions.urls')),
+    path('licencias/', include('licenses.urls')),
     path('iclock/registry', adms_views.iclock_registry),
     path('iclock/pushoptions', adms_views.iclock_registry),
     path('iclock/cdata', adms_views.adms_receive_attendance),

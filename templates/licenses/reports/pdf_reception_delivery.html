@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Reporte de Recepciones Entregadas</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            color: #333;
+            margin: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #1a365d;
+            padding-bottom: 10px;
+        }
+
+        .header h2 {
+            margin: 0;
+            color: #1a365d;
+            text-transform: uppercase;
+        }
+
+        .header p {
+            margin: 2px 0;
+            font-size: 11px;
+            color: #666;
+        }
+
+        .info-table {
+            width: 100%;
+            margin-bottom: 20px;
+            border-collapse: collapse;
+        }
+
+        .info-table td {
+            padding: 6px;
+            border: 1px solid #ddd;
+        }
+
+        .info-table td.label {
+            font-weight: bold;
+            background-color: #f7fafc;
+            width: 25%;
+        }
+
+        .items-table {
+            width: 100%;
+            margin-bottom: 30px;
+            border-collapse: collapse;
+        }
+
+        .items-table th, .items-table td {
+            padding: 8px;
+            border: 1px solid #cbd5e1;
+            text-align: left;
+        }
+
+        .items-table th {
+            background-color: #1a365d;
+            color: white;
+            font-size: 11px;
+        }
+
+        .signatures {
+            margin-top: 60px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .signatures td {
+            width: 50%;
+            vertical-align: bottom;
+        }
+
+        .line {
+            border-top: 1px solid #333;
+            width: 80%;
+            margin: 0 auto 5px auto;
+        }
+    </style>
+</head>
+<body>
+<div class="header">
+    <h2>Municipio de Loja - Dirección de Tecnología / Talento Humano</h2>
+    <p>REPORTE DE RECEPCIONES ENTREGADAS DE LICENCIAS MÉDICAS</p>
+    <p>Fecha de Emisión: {{ current_date|date:"d/m/Y H:i" }}</p>
+    <p>Generado por: {{ user.get_full_name|default:user.username }}</p>
+    <p>Remitido hacia: {% if delivered_to %}{{ delivered_to.get_full_name|default:delivered_to.username }}{% else %}No especificado{% endif %}</p>
+</div>
+
+<table class="items-table">
+    <thead>
+    <tr>
+        <th style="width: 8%;">N°</th>
+        <th style="width: 18%;">Cédula</th>
+        <th style="width: 24%;">Apellidos y Nombres</th>
+        <th style="width: 25%;">Tipo de Licencia</th>
+        <th style="width: 25%;">Fecha Recepción</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for reception in receptions %}
+        <tr>
+    <td>{{ forloop.counter }}</td>
+    <td>{{ reception.employee.person.document_number }}</td>
+    <td>{{ reception.employee.person.last_name }} {{ reception.employee.person.first_name }}</td>
+    <td>{{ reception.license_type.name }}</td>
+    <td>{{ reception.reception_date|date:"d/m/Y H:i" }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+<table class="signatures">
+    <tr>
+        <td>
+            <div class="line"></div>
+            <strong>ENTREGUÉ CONFORME</strong><br>
+            <span>Ventanilla / Recepción TH</span><br>
+            <small>{{ user.get_full_name|default:user.username }}</small>
+        </td>
+        <td>
+            <div class="line"></div>
+            <strong>RECIBÍ CONFORME</strong><br>
+            <span>Servidor / Destinatario</span><br>
+            <small>{% if delivered_to %}{{ delivered_to.get_full_name|default:delivered_to.username }}{% else %}No especificado{% endif %}</small>
+        </td>
+    </tr>
+</table>
+</body>
+</html>

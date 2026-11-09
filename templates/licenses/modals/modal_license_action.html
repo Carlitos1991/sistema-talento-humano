@@ -1,0 +1,111 @@
+<div class="modal-overlay" id="licenseActionModal">
+    <div class="modal-container-medium">
+        <form method="post" action="{% url 'licenses:action_save' license.id %}" onsubmit="submitAjaxForm(event)">
+            {% csrf_token %}
+            <div class="modal-header-medium">
+                <h3 class="header-title"><i class="fas fa-file-signature me-2"></i>Acción de Personal</h3>
+                <button type="button" class="btn-close-circle" onclick="closeModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body-custom">
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                {% endif %}
+                <div class="form-section-card">
+                    <h5 class="section-title"><i class="fa-regular fa-id-badge"></i> INFORMACIÓN DEL EMPLEADO</h5>
+                    <div class="employee-card-badge">
+                        <strong>{{ license.employee.person.full_name }}</strong>
+                        <small>CI: {{ license.employee.person.document_number|default:"--" }}</small>
+                    </div>
+                </div>
+                <div class="form-section-card mt-3">
+                    <h5 class="section-title"><i class="fa-solid fa-file-alt"></i> DATOS DE LA ACCIÓN</h5>
+                    <div class="grid-2-cols">
+                        <div class="form-group">
+                            <label class="form-label">Empleado</label>
+                            {{ form.employee }}
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Tipo de acción *</label>
+                            {{ form.action_type }}
+                        </div>
+                    </div>
+                    <input type="hidden" name="number" value="{{ form.number.value|default:'' }}">
+                    <div class="grid-2-cols">
+                        <div class="form-group">
+                            <label class="form-label">Fecha de emisión *</label>
+                            {{ form.date_issue }}
+                            {{ form.date_issue.errors }}
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Fecha de vigencia *</label>
+                            {{ form.date_effective }}
+                            {{ form.date_effective.errors }}
+                        </div>
+                    </div>
+                    <div class="grid-2-cols mt-3">
+                        <div class="form-group">
+                            <label class="form-label">Fecha desde *</label>
+                            {{ form.date_from }}
+                            {{ form.date_from.errors }}
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Fecha hasta *</label>
+                            {{ form.date_to }}
+                            {{ form.date_to.errors }}
+                        </div>
+                    </div>
+                </div>
+                <div class="form-section-card mt-3">
+                    <h5 class="section-title"><i class="fa-solid fa-comment-dots"></i> MOTIVACIÓN Y EXPLICACIÓN</h5>
+                    <div class="form-group">
+                        <label class="form-label">Motivación</label>
+                        {{ form.motivation }}
+                    </div>
+                    <div class="form-group mt-3">
+                        <label class="form-label">Explicación</label>
+                        {{ form.explanation }}
+                    </div>
+                </div>
+                <div class="form-section-card mt-3">
+                    <details>
+                        <summary class="section-title mb-0">
+                            <i class="fa-solid fa-clock"></i> JUSTIFICAR CAMBIO DE HORARIO
+                        </summary>
+                        <div class="mt-3">
+                            <div class="form-group">
+                                <label class="form-label">Modalidad</label>
+                                {{ form.schedule_mode }}
+                            </div>
+                            <div class="grid-2-cols mt-3">
+                                <div class="form-group">
+                                    <label class="form-label">Hora desde</label>
+                                    {{ form.custom_entry_time }}
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Hora hasta</label>
+                                    {{ form.custom_exit_time }}
+                                </div>
+                            </div>
+                            <small class="text-muted">
+                                Puede justificar una jornada completa o solo la franja horaria afectada.
+                            </small>
+                        </div>
+                    </details>
+                </div>
+                <div class="form-section-card mt-3">
+                    <h5 class="section-title"><i class="fa-solid fa-signature"></i> FIRMAS</h5>
+                    <div class="grid-2-cols">
+                        <div class="form-group"><label class="form-label">Autoridad 1</label>{{ form.authority_1 }}</div>
+                        <div class="form-group"><label class="form-label">Autoridad 2</label>{{ form.authority_2 }}</div>
+                        <div class="form-group"><label class="form-label">Revisado por</label>{{ form.reviewer }}</div>
+                        <div class="form-group"><label class="form-label">Registrado por</label>{{ form.register }}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer-fixed">
+                <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">Cancelar</button>
+                <button type="submit" class="btn-dark-blue-rectangle"><i class="fas fa-save me-1"></i>Guardar</button>
+            </div>
+        </form>
+    </div>
+</div>

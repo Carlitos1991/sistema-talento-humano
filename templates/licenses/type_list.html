@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Tipos de Licencias Médicas | SIGETH{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/license.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="header-card">
+        <div>
+            <h1><i class="fa-solid fa-sliders me-2"></i> Tipos de Licencias Médicas</h1>
+            <p>Definición de tipos de licencias, borradores de Acción de Personal y catálogo de anexos.</p>
+        </div>
+        <button type="button" class="btn-white-rectangle" onclick="openAjaxModal('{% url 'licenses:type_create' %}')">
+            <i class="fas fa-plus me-1"></i> NUEVO TIPO DE LICENCIA
+        </button>
+    </div>
+
+    <div class="content-table">
+        <div class="table-controls toolbar-row">
+            <div class="toolbar-center">
+                <input class="switch-input switch-red" type="checkbox" id="toggleInactiveTypes">
+                <label class="switch-wrapper" for="toggleInactiveTypes">
+                    <div class="switch-circle"></div>
+                    <span class="switch-text">Mostrar Tipos Inactivos</span>
+                </label>
+            </div>
+            <div class="toolbar-right">
+                <input type="text" id="table-search" class="table-search-input table-search-input--large"
+                       placeholder="Buscar por código o nombre..." value="{{ search_query|default:'' }}">
+            </div>
+        </div>
+
+        <div id="table-content-wrapper">
+            {% include 'licenses/partials/partial_type_table.html' %}
+        </div>
+    </div>
+
+    <!-- Contenedores para Modales AJAX -->
+    <div id="modal-root"></div>
+    <div id="submodal-root"></div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/license/license.js' %}"></script>
+{% endblock %}
