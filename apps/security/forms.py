@@ -23,13 +23,7 @@ class RoleForm(BaseFormMixin, forms.ModelForm):
         labels = {'name': 'Nombre del Rol'}
 
     def get_grouped_permissions(self, user=None):
-        """
-        Organiza los permisos por 'Aplicación' o 'Módulo' para pintar la tabla.
-        Retorna un diccionario: { 'Nombre Módulo': [ {modelo: 'Persona', perms: {view, add, change, delete}} ] }
-        """
         current_user = user or self.current_user
-        # 1. Definimos qué apps queremos gestionar (para no traer basura de Django interno)
-        # Ajusta esto a los nombres reales de tus apps en settings
         target_apps = {
             'person': 'Gestión de Personal',
             'employee': 'Gestión de Empleados',
@@ -37,8 +31,8 @@ class RoleForm(BaseFormMixin, forms.ModelForm):
             'employee_archive': 'Archivo Digital',
             'institution': 'Estructura Organizacional',
             'function_manual': 'Manual de Funciones',
-            'core': 'Sistema y Usuarios',  # Aquí están User, Catalog, Location
-            'auth': 'Seguridad (Roles)',  # Aquí está el modelo Group
+            'core': 'Sistema y Usuarios',
+            'auth': 'Seguridad (Roles)',
             'biometric': 'Biometría',
             'budget': 'Presupuesto',
             'contract': 'Contratos',
@@ -62,24 +56,20 @@ class RoleForm(BaseFormMixin, forms.ModelForm):
             return current_user.has_perm(f'{permission.content_type.app_label}.{permission.codename}')
 
         for app_label, verbose_name in target_apps.items():
-            # Obtener ContentTypes de esa app
             content_types = ContentType.objects.filter(app_label=app_label)
-
             module_models = []
 
             for ct in content_types:
-                # Validar que el modelo existe (puede haber ContentTypes huérfanos)
                 model_class = ct.model_class()
                 if model_class is None:
                     continue
-                
-                # Obtener permisos para este modelo
+
                 perms = Permission.objects.filter(content_type=ct)
                 if not perms.exists():
                     continue
 
                 visible_perms = {
-                    'view': perms.filter(codename__startswith='view_').first(),
+                    'view': perms.filter(codename__startswith='view_').exclude(codename='view_virtualoffice').first(),
                     'add': perms.filter(codename__startswith='add_').first(),
                     'change': perms.filter(codename__startswith='change_').first(),
                     'delete': perms.filter(codename__startswith='delete_').first(),
@@ -89,12 +79,28 @@ class RoleForm(BaseFormMixin, forms.ModelForm):
                 if not visible_perms:
                     continue
 
-                # Estructura para la fila de la tabla
                 model_data = {
                     'name': model_class._meta.verbose_name_plural.title(),
                     'perms': visible_perms
                 }
                 module_models.append(model_data)
+
+            # --- INYECCIÓN MANUAL DENTRO DE LA APP 'documents' ---
+            if app_label == 'documents':
+                perm_virtual = Permission.objects.filter(codename='view_virtualoffice').first()
+                perm_reception = Permission.objects.filter(codename='can_access_procedure_reception').first()
+
+                if perm_virtual and can_manage_permission(perm_virtual):
+                    module_models.append({
+                        'name': 'Oficina Virtual',
+                        'perms': {'view': perm_virtual}
+                    })
+
+                if perm_reception and can_manage_permission(perm_reception):
+                    module_models.append({
+                        'name': 'Recepción / Ventanilla',
+                        'perms': {'view': perm_reception}
+                    })
 
             if module_models:
                 grouped_data[verbose_name] = module_models
@@ -109,7 +115,7 @@ class CredentialCreationForm(BaseFormMixin, forms.Form):
             'class': 'input-field lowercase-input',
             'placeholder': 'ej: juan.perez',
             'autocomplete': 'off',
-            'style': 'display: block; width: 100%;'  # FORZAR ESTILO EN LÍNEA POR SI ACASO
+            'style': 'display: block; width: 100%;'
         }),
         error_messages={'required': 'El nombre de usuario es obligatorio.'}
     )
@@ -320,7 +326,8 @@ class HelpMessageForm(BaseFormMixin, forms.Form):
     )
     detail = forms.CharField(
         label='Detalle',
-        widget=forms.Textarea(attrs={'class': 'input-field', 'rows': 5, 'placeholder': 'Describe tu solicitud o mensaje.'}),
+        widget=forms.Textarea(
+            attrs={'class': 'input-field', 'rows': 5, 'placeholder': 'Describe tu solicitud o mensaje.'}),
         error_messages={'required': 'El detalle es obligatorio.'}
     )
     attachment = forms.FileField(
@@ -330,13 +337,20 @@ class HelpMessageForm(BaseFormMixin, forms.Form):
     )
 
     def __init__(self, *args, **kwargs):
+        current_user = kwargs.pop('current_user', None)
         super().__init__(*args, **kwargs)
-        self.fields['recipient_person'].queryset = Person.objects.filter(
+
+        # Obtenemos las personas asociadas a usuarios activos
+        qs = Person.objects.filter(
             user__isnull=False,
-            user__is_active=True,
-            is_active=True
+            user__is_active=True
         ).select_related('user').order_by('last_name', 'first_name')
 
+        # Excluimos al usuario actual para que no se autosenvíe mensajes
+        if current_user:
+            qs = qs.exclude(user=current_user)
+
+        self.fields['recipient_person'].queryset = qs
 
 class HelpMessageReplyForm(BaseFormMixin, forms.Form):
     detail = forms.CharField(
@@ -360,7 +374,8 @@ class HelpMessageSumillaForm(BaseFormMixin, forms.Form):
     )
     detail = forms.CharField(
         label='Sumilla',
-        widget=forms.Textarea(attrs={'class': 'input-field', 'rows': 5, 'placeholder': 'Redacta la sumilla para el nuevo usuario...'}),
+        widget=forms.Textarea(
+            attrs={'class': 'input-field', 'rows': 5, 'placeholder': 'Redacta la sumilla para el nuevo usuario...'}),
         error_messages={'required': 'La sumilla es obligatoria.'}
     )
     attachment = forms.FileField(
@@ -373,9 +388,7 @@ class HelpMessageSumillaForm(BaseFormMixin, forms.Form):
         current_user = kwargs.pop('current_user', None)
         super().__init__(*args, **kwargs)
         queryset = Person.objects.filter(
-            user__isnull=False,
-            user__is_active=True,
-            is_active=True
+            user__is_active=True
         ).select_related('user').order_by('last_name', 'first_name')
         if current_user:
             queryset = queryset.exclude(user=current_user)
@@ -385,7 +398,8 @@ class HelpMessageSumillaForm(BaseFormMixin, forms.Form):
 class HelpMessageCloseForm(BaseFormMixin, forms.Form):
     detail = forms.CharField(
         label='Mensaje de cierre',
-        widget=forms.Textarea(attrs={'class': 'input-field', 'rows': 5, 'placeholder': 'Escribe el mensaje final de cierre del trámite...'}),
+        widget=forms.Textarea(attrs={'class': 'input-field', 'rows': 5,
+                                     'placeholder': 'Escribe el mensaje final de cierre del trámite...'}),
         error_messages={'required': 'El mensaje final es obligatorio para cerrar el trámite.'}
     )
     attachment = forms.FileField(

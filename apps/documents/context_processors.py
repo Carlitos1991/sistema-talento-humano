@@ -25,7 +25,7 @@ def procedure_counters(request):
             Q(tasks__unit_id__in=units_to_check) |
             Q(tasks__assigned_to=user),
             status__in=[Procedure.Status.IN_DESPATCH, Procedure.Status.IN_PROCESS],
-        is_active = True
+            is_active=True
         ).distinct().count()
     else:
         pending_count = ProcedureTask.objects.filter(

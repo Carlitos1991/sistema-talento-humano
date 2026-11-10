@@ -3,7 +3,7 @@ import re
 from datetime import datetime
 from datetime import timedelta
 from io import BytesIO
-
+from django.contrib.auth.decorators import permission_required
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.db import transaction
@@ -232,8 +232,7 @@ def save_response_document(request, pk):
 
         # 6. Registrar hito en la Hoja de Ruta Inmutable (Contraloría)
         mode_text = "con Firma Electrónica" if sign_mode == 'ELECTRONIC' else "para Firma Física / Manual"
-        action_val = ProcedureTrace.TraceAction.DISPATCH if hasattr(ProcedureTrace.TraceAction,
-                                                                    'DISPATCH') else ProcedureTrace.TraceAction.REPORT_ATTACHED
+        action_val = ProcedureTrace.TraceAction.FINAL_DISPATCH if sign_mode == 'ELECTRONIC' else ProcedureTrace.TraceAction.REPORT_ATTACHED
 
         ProcedureTrace.objects.create(
             procedure=procedure,
@@ -1058,6 +1057,7 @@ def procedure_view_pdf_modal(request, pk):
 
 
 @login_required
+@permission_required('documents.view_virtualoffice', raise_exception=True)
 def virtual_office_view(request):
     """
     Escritorio virtual interactivo con zonas de soltado (Drag & Drop).
@@ -1285,6 +1285,7 @@ from .utils import generate_document_filing_code
 
 
 @login_required
+@permission_required('documents.can_access_procedure_reception', raise_exception=True)
 def procedure_reception_create(request):
     """
     Modal AJAX para registrar el documento físico escaneado.
@@ -1453,10 +1454,10 @@ def procedure_cancel_or_delete(request, pk):
             procedure.is_active = False
             procedure.updated_by = request.user
             procedure.save()
-
+            entry_doc = procedure.documents.filter(is_entry_document=True).first()
             ProcedureTrace.objects.create(
                 procedure=procedure,
-                document=doc,
+                document=entry_doc,
                 actor=request.user,
                 actor_name=request.user.signature_name,
                 actor_position=request.user.signature_position,

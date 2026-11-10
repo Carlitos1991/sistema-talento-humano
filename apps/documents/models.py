@@ -473,6 +473,10 @@ class Document(BaseModel):
         verbose_name = "Documento"
         verbose_name_plural = "Documentos"
         ordering = ['-registration_date']
+        permissions = [
+            ('view_virtualoffice', 'Puede acceder a la Oficina Virtual de Despacho'),
+            ('can_access_procedure_reception', 'Puede acceder a Recepción y Ventanilla de Trámites'),
+        ]
 
     def __str__(self):
         return f"{self.filing_code} - {self.subject}"

@@ -29,7 +29,8 @@ class UserListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     template_name = 'security/users/user_list.html'
     context_object_name = 'persons'
     paginate_by = 10
-    permission_required = 'person.view_person'
+    permission_required = 'core.view_user'
+    raise_exception = True
 
     def get_queryset(self):
         active_employment_statuses = ['EMPLEADO', 'TRABAJADOR', 'CONTRATADO', 'PROFESIONAL']
@@ -705,10 +706,12 @@ class HelpMessageListView(LoginRequiredMixin, ListView):
         own_messages = HelpMessage.objects.filter(
             Q(recipient_user=self.request.user) | Q(sender_user=self.request.user)
         )
-        context['create_form'] = HelpMessageForm()
+        # CORREGIDO: Pasar current_user al instanciar HelpMessageForm
+        context['create_form'] = HelpMessageForm(current_user=self.request.user)
         context['reply_form'] = HelpMessageReplyForm()
         context['sumilla_form'] = HelpMessageSumillaForm(current_user=self.request.user)
         context['close_form'] = HelpMessageCloseForm()
+
         context['active_tab'] = self.request.GET.get('tab', 'received')
         context['messages_total'] = own_messages.count()
         context['messages_sent'] = own_messages.filter(sender_user=self.request.user,
@@ -743,9 +746,25 @@ class HelpMessageCreateView(LoginRequiredMixin, View):
                 created_by=request.user,
                 updated_by=request.user,
             )
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'status': 'success',
+                    'message': 'Mensaje enviado correctamente.',
+                })
             django_messages.success(request, 'Mensaje enviado correctamente.')
             return redirect('security:help_message_list')
 
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': False,
+                'status': 'error',
+                'message': 'No se pudo enviar el mensaje. Revisa los campos indicados.',
+                'errors': {
+                    field: [str(error) for error in errors]
+                    for field, errors in form.errors.items()
+                },
+            }, status=400)
         django_messages.error(request, 'No se pudo enviar el mensaje. Revisa los campos requeridos.')
         return redirect('security:help_message_list')
 
@@ -830,9 +849,25 @@ class HelpMessageReplyView(LoginRequiredMixin, View):
             original.status = HelpMessage.Status.SENT
             original.updated_by = request.user
             original.save(update_fields=['status', 'updated_by', 'updated_at'])
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'status': 'success',
+                    'message': 'Respuesta enviada correctamente.',
+                })
             django_messages.success(request, 'Respuesta enviada correctamente.')
             return redirect('security:help_message_list')
 
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({
+                'success': False,
+                'status': 'error',
+                'message': 'No se pudo enviar la respuesta. Revisa los campos indicados.',
+                'errors': {
+                    field: [str(error) for error in errors]
+                    for field, errors in form.errors.items()
+                },
+            }, status=400)
         django_messages.error(request, 'No se pudo enviar la respuesta. Revisa los campos requeridos.')
         return redirect('security:help_message_list')
 

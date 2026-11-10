@@ -116,7 +116,7 @@
                 </li>
             {% endif %}
             <!-- MÓDULO GESTIÓN DOCUMENTAL Y TRÁMITES -->
-            {% if perms.documents.view_document or perms.documents.view_documenttype or perms.documents.add_document %}
+            {% if perms.documents.can_access_procedure_reception or perms.documents.view_virtualoffice or perms.documents.view_document or perms.documents.view_documenttype %}
                 <li class="has-submenu">
                     <a href="#" class="{% if request.resolver_match.app_name == 'documents' %}active{% endif %}">
                         <i class="fa-solid fa-folder-tree"></i>
@@ -124,8 +124,9 @@
                         <i class="fa-solid fa-chevron-right chevron-icon"></i>
                     </a>
                     <ul class="submenu">
-                        <!-- 1. Recepción y Ventanilla (Ingreso de Trámites Externos) -->
-                        {% if perms.documents.add_document %}
+
+                        <!-- Recepción / Ventanilla -->
+                        {% if perms.documents.can_access_procedure_reception %}
                             <li>
                                 <a href="{% url 'documents:procedure_reception_list' %}"
                                    class="{% if request.resolver_match.url_name == 'procedure_reception_list' %}active-child{% endif %}">
@@ -135,24 +136,26 @@
                             </li>
                         {% endif %}
 
-                        <!-- 2. Oficina Virtual de Despacho con Contador Rojo -->
-                        <li>
-                            <a href="{% url 'documents:virtual_office' %}"
-                               class="{% if request.resolver_match.url_name == 'virtual_office' %}active-child{% endif %} d-flex justify-content-between align-items-center">
-                                <div class="d-flex align-items-center">
-                                    <i class="fa-solid fa-desktop me-2"></i>
-                                    <span class="menu-text">Oficina Virtual</span>
-                                </div>
-                                {% if sidebar_pending_tramites_count and sidebar_pending_tramites_count > 0 %}
-                                    <span class="sidebar-badge" style="background-color: #ef4444; color: white;"
-                                          title="{{ sidebar_pending_tramites_count }} trámites pendientes por despachar">
-                                        {{ sidebar_pending_tramites_count }}
-                                    </span>
-                                {% endif %}
-                            </a>
-                        </li>
+                        <!-- Oficina Virtual -->
+                        {% if perms.documents.view_virtualoffice %}
+                            <li>
+                                <a href="{% url 'documents:virtual_office' %}"
+                                   class="{% if request.resolver_match.url_name == 'virtual_office' %}active-child{% endif %} d-flex justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fa-solid fa-desktop me-2"></i>
+                                        <span class="menu-text">Oficina Virtual</span>
+                                    </div>
+                                    {% if sidebar_pending_tramites_count and sidebar_pending_tramites_count > 0 %}
+                                        <span class="sidebar-badge" style="background-color: #ef4444; color: white;"
+                                              title="{{ sidebar_pending_tramites_count }} trámites pendientes por despachar">
+                                {{ sidebar_pending_tramites_count }}
+                            </span>
+                                    {% endif %}
+                                </a>
+                            </li>
+                        {% endif %}
 
-                        <!-- 3. Documentos Propios (Memos, Oficios e Informes) -->
+                        <!-- Documentos -->
                         {% if perms.documents.view_document %}
                             <li>
                                 <a href="{% url 'documents:document_list' %}"
@@ -163,7 +166,7 @@
                             </li>
                         {% endif %}
 
-                        <!-- 4. Tipos de Documento (Configuración) -->
+                        <!-- Tipos de Documento -->
                         {% if perms.documents.view_documenttype %}
                             <li>
                                 <a href="{% url 'documents:doc_type_list' %}"
@@ -173,10 +176,10 @@
                                 </a>
                             </li>
                         {% endif %}
+
                     </ul>
                 </li>
             {% endif %}
-
             <!-- MÓDULO ARCHIVO DIGITAL -->
             {% if perms.employee_archive.view_employeearchivedocument or perms.employee_archive.view_employeedocumenttype or perms.employee_archive.view_employeearchiveloan %}
                 <li class="has-submenu">
@@ -233,7 +236,7 @@
                 </li>
             {% endif %}
 
-            {% if perms.budget.view_budgetline or perms.budget.view_program or perms.budget.view_groups_budget or perms.function_manual.view_jobprofile or perms.function_manual.can_admin or perms.function_manual.view_manualcatalog or perms.function_manual.view_occupationalmatrix or perms.function_manual.view_valuationnode or perms.function_manual.view_competency or perms.permitrequest.view_permitrequest or perms.permitrequest.change_permitrequest or perms.permitrequest.add_permitrequest or perms.permitrequest.view_permittype or perms.vacation.view_vacationrequest or perms.vacation.view_vacationperiod or perms.vacation.view_vacationscheduleplan or perms.vacation.view_vacationscheduleitem or perms.sanctions.view_sanction or perms.sanctions.add_sanction or perms.sanctions.view_sanctionnotification or perms.sanctions.view_sanctiontype or perms.sanctions.view_sanctionnotificationtype or perms.contract.view_laborregime or perms.contract.view_managementperiod or perms.schedule.can_manage_schedules or perms.schedule.can_manage_observations or perms.schedule.view_schedule or perms.schedule.view_scheduleobservation or perms.schedule.change_schedule or perms.payroll.view_payrollperiod or perms.payroll.view_payslip or perms.payroll.view_payrollconstant or perms.accounting.view_account or perms.payroll.view_income or perms.payroll.view_deduction or perms.payroll.view_institutionalcontribution or perms.biometric.view_biometricdevice or perms.biometric.view_biometricload or perms.biometric.view_attendanceregistry %}
+            {% if perms.licenses.view_medicallicense or perms.licenses.view_licensereception or perms.licenses.view_medicallicensetype or perms.budget.view_budgetline or perms.budget.view_program or perms.budget.view_groups_budget or perms.function_manual.view_jobprofile or perms.function_manual.can_admin or perms.function_manual.view_manualcatalog or perms.function_manual.view_occupationalmatrix or perms.function_manual.view_valuationnode or perms.function_manual.view_competency or perms.permitrequest.view_permitrequest or perms.permitrequest.change_permitrequest or perms.permitrequest.add_permitrequest or perms.permitrequest.view_permittype or perms.vacation.view_vacationrequest or perms.vacation.view_vacationperiod or perms.vacation.view_vacationscheduleplan or perms.vacation.view_vacationscheduleitem or perms.sanctions.view_sanction or perms.sanctions.add_sanction or perms.sanctions.view_sanctionnotification or perms.sanctions.view_sanctiontype or perms.sanctions.view_sanctionnotificationtype or perms.contract.view_laborregime or perms.contract.view_managementperiod or perms.schedule.can_manage_schedules or perms.schedule.can_manage_observations or perms.schedule.view_schedule or perms.schedule.view_scheduleobservation or perms.schedule.change_schedule or perms.payroll.view_payrollperiod or perms.payroll.view_payslip or perms.payroll.view_payrollconstant or perms.accounting.view_account or perms.payroll.view_income or perms.payroll.view_deduction or perms.payroll.view_institutionalcontribution or perms.biometric.view_biometricdevice or perms.biometric.view_biometricload or perms.biometric.view_attendanceregistry %}
                 <li class="sidebar-section-title">Gestion</li>
 
                 {% if perms.budget.view_budgetline or perms.budget.view_program or perms.budget.view_groups_budget %}
@@ -338,56 +341,70 @@
                         </ul>
                     </li>
                 {% endif %}
-                <!-- MÓDULO DE LICENCIAS Y SUSTITUTOS -->
+                <!-- MÓDULO LICENCIAS MÉDICAS  -->
                 {% if perms.licenses.view_medicallicense or perms.licenses.view_licensereception or perms.licenses.view_medicallicensetype %}
                     <li class="has-submenu">
-                        <a href="#" class="{% if 'licenses' in request.resolver_match.app_name %}active{% endif %}">
-                            <i class="fa-solid fa-notes-medical"></i>
-                            <span class="menu-text">Licencias Médicas</span>
-                            {% if licenses_sidebar_count > 0 %}
-                                <span class="sidebar-badge"
-                                      style="background-color: #ef4444; color: white;">{{ licenses_sidebar_count }}</span>
-                            {% endif %}
-                            <i class="fa-solid fa-chevron-right chevron-icon"></i>
+                        <a href="#"
+                           class="{% if request.resolver_match.app_name == 'licenses' %}active{% endif %} d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <i class="fa-solid fa-notes-medical me-2"></i>
+                                <span class="menu-text">Licencias Médicas</span>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                {% if licenses_sidebar_count and licenses_sidebar_count > 0 %}
+                                    <span class="sidebar-badge bg-danger"
+                                          title="{{ licenses_sidebar_count }} pendientes en total">
+                        {{ licenses_sidebar_count }}
+                    </span>
+                                {% endif %}
+                                <i class="fa-solid fa-chevron-right chevron-icon"></i>
+                            </div>
                         </a>
                         <ul class="submenu">
 
-                            <!-- 1. Recepción de Documentos -->
-                            {% if perms.licenses.view_licensereception or perms.licenses.add_licensereception %}
+                            <!-- 1. Recepción de Licencias -->
+                            {% if perms.licenses.view_licensereception %}
                                 <li>
                                     <a href="{% url 'licenses:reception_list' %}"
-                                       class="{% if request.resolver_match.url_name == 'reception_list' %}active-child{% endif %}">
-                                        <i class="fa-solid fa-inbox"></i>
-                                        <span class="menu-text">Recepción</span>
-                                        {% if licenses_pending_reception_count > 0 %}
-                                            <span class="sidebar-badge"
-                                                  style="background-color: #ef4444; color: white;">{{ licenses_pending_reception_count }}</span>
+                                       class="{% if request.resolver_match.url_name == 'reception_list' %}active-child{% endif %} d-flex justify-content-between align-items-center">
+                                        <div class="d-flex align-items-center">
+                                            <i class="fa-solid fa-inbox me-2"></i>
+                                            <span class="menu-text">Recepción de Documentos</span>
+                                        </div>
+                                        {% if licenses_pending_reception_count and licenses_pending_reception_count > 0 %}
+                                            <span class="sidebar-badge bg-danger">
+                                {{ licenses_pending_reception_count }}
+                            </span>
                                         {% endif %}
                                     </a>
                                 </li>
                             {% endif %}
 
-                            <!-- 2. Gestión de Licencias (Listado General) -->
+                            <!-- 2. Gestión de Licencias -->
                             {% if perms.licenses.view_medicallicense %}
                                 <li>
                                     <a href="{% url 'licenses:list' %}"
-                                       class="{% if request.resolver_match.url_name == 'list' %}active-child{% endif %}">
-                                        <i class="fa-solid fa-list-check"></i>
-                                        <span class="menu-text">Gestión de Licencias</span>
-                                        {% if licenses_pending_management_count > 0 %}
-                                            <span class="sidebar-badge"
-                                                  style="background-color: #ef4444; color: white;">{{ licenses_pending_management_count }}</span>
+                                       class="{% if request.resolver_match.url_name == 'list' %}active-child{% endif %} d-flex justify-content-between align-items-center">
+                                        <div class="d-flex align-items-center">
+                                            <i class="fa-solid fa-file-medical me-2"></i>
+                                            <span class="menu-text">Gestión de Licencias</span>
+                                        </div>
+                                        {% if licenses_pending_management_count and licenses_pending_management_count > 0 %}
+                                            <span class="sidebar-badge bg-danger"
+                                                  title="{{ licenses_pending_management_count }} licencias pendientes por procesar">
+                                {{ licenses_pending_management_count }}
+                            </span>
                                         {% endif %}
                                     </a>
                                 </li>
                             {% endif %}
 
-                            <!-- 3. Tipos de Licencias (Configuración de Firmas y Anexos) -->
+                            <!-- 3. Tipos de Licencia -->
                             {% if perms.licenses.view_medicallicensetype %}
                                 <li>
                                     <a href="{% url 'licenses:type_list' %}"
                                        class="{% if request.resolver_match.url_name == 'type_list' %}active-child{% endif %}">
-                                        <i class="fa-solid fa-sliders"></i>
+                                        <i class="fa-solid fa-list-check me-2"></i>
                                         <span class="menu-text">Tipos de Licencia</span>
                                     </a>
                                 </li>
@@ -396,7 +413,6 @@
                         </ul>
                     </li>
                 {% endif %}
-
                 <!-- MÓDULO DE PERMISOS -->
                 {% if perms.permitrequest.view_permitrequest or perms.permitrequest.view_permittype or perms.permitrequest.change_permitrequest or perms.permitrequest.add_permitrequest %}
                     <li class="has-submenu">

@@ -80,3 +80,13 @@
         </form>
     </div>
 </div>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        $('#helpMessageCreateModal').on('shown.bs.modal', function () {
+            $('#id_help_recipient').select2({
+                dropdownParent: $('#helpMessageCreateModal'),
+                width: '100%'
+            });
+        });
+    });
+</script>

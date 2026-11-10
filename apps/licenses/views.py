@@ -1,4 +1,4 @@
-from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.db import transaction
 from django.db.models import Q
 from django.http import JsonResponse, HttpResponse
@@ -117,8 +117,8 @@ def _subsidy_amount(effect):
     remuneration = getattr(budget_line, 'remuneration', None) or Decimal('0.00')
     daily_remuneration = remuneration / Decimal('30')
     return (
-        daily_remuneration * min(effect.employer_covered_days, 3) * Decimal('0.50')
-        + daily_remuneration * effect.days_to_discount
+            daily_remuneration * min(effect.employer_covered_days, 3) * Decimal('0.50')
+            + daily_remuneration * effect.days_to_discount
     ).quantize(Decimal('0.01'))
 
 
@@ -130,6 +130,8 @@ class LicenseTypeListView(LoginRequiredMixin, ListView):
     model = MedicalLicenseType
     template_name = 'licenses/type_list.html'
     context_object_name = 'types'
+    permission_required = 'licenses.view_medicallicensetype'
+    raise_exception = True
     paginate_by = 10
 
     def get_queryset(self):
@@ -288,6 +290,8 @@ class RequirementSaveAjaxView(LoginRequiredMixin, View):
 class LicenseReceptionListView(LoginRequiredMixin, ListView):
     model = LicenseReception
     template_name = 'licenses/reception_list.html'
+    permission_required = 'licenses.view_licensereception'
+    raise_exception = True
     context_object_name = 'receptions'
     paginate_by = 10
 
@@ -374,15 +378,18 @@ class LicenseReceptionSaveView(LoginRequiredMixin, View):
         checked_req_ids = [int(i) for i in request.POST.getlist('requirements_checked')]
 
         if not days_raw:
-            return JsonResponse({'success': False, 'message': 'El número de días de licencia es obligatorio.'}, status=400)
+            return JsonResponse({'success': False, 'message': 'El número de días de licencia es obligatorio.'},
+                                status=400)
         if not supporting_document:
             return JsonResponse({'success': False, 'message': 'El documento habilitante es obligatorio.'}, status=400)
         if len(supporting_document) > 255:
-            return JsonResponse({'success': False, 'message': 'El documento habilitante no puede superar 255 caracteres.'}, status=400)
+            return JsonResponse(
+                {'success': False, 'message': 'El documento habilitante no puede superar 255 caracteres.'}, status=400)
         try:
             license_days = int(days_raw)
         except ValueError:
-            return JsonResponse({'success': False, 'message': 'El número de días debe ser un valor entero.'}, status=400)
+            return JsonResponse({'success': False, 'message': 'El número de días debe ser un valor entero.'},
+                                status=400)
         if license_days < 0:
             return JsonResponse({'success': False, 'message': 'El número de días no puede ser negativo.'}, status=400)
 
@@ -393,7 +400,8 @@ class LicenseReceptionSaveView(LoginRequiredMixin, View):
         except ValueError:
             return JsonResponse({'success': False, 'message': 'Las fechas de la licencia no son válidas.'}, status=400)
         if not license_start_date:
-            return JsonResponse({'success': False, 'message': 'La fecha de inicio de la licencia es obligatoria.'}, status=400)
+            return JsonResponse({'success': False, 'message': 'La fecha de inicio de la licencia es obligatoria.'},
+                                status=400)
         license_end_date = (
             license_start_date + timedelta(days=license_days - 1)
             if license_days > 0 else None
@@ -504,15 +512,22 @@ class LicenseReceptionCreateModalView(LoginRequiredMixin, View):
         )
         return JsonResponse({'success': True, 'html': html})
 
+
 # ==========================================
 # 4. GESTIÓN DE LICENCIAS MÉDICAS
 # ==========================================
 
-class MedicalLicenseListView(LoginRequiredMixin, ListView):
+class MedicalLicenseListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     model = MedicalLicense
     template_name = 'licenses/license_list.html'
     context_object_name = 'licenses'
-    paginate_by = 15
+    paginate_by = 10
+    permission_required = 'licenses.view_medicallicense'
+    raise_exception = True
+
+    def _is_global_admin(self):
+        user = self.request.user
+        return user.is_superuser or user.has_perm('licenses.can_admin')
 
     def get_queryset(self):
         qs = MedicalLicense.objects.select_related(
@@ -521,11 +536,22 @@ class MedicalLicenseListView(LoginRequiredMixin, ListView):
             'personnel_action',
             'substitute_assignment__substitute_employee'
         ).prefetch_related('payroll_effects').filter(is_active=True)
-        if not (self.request.user.is_staff or self.request.user.is_superuser):
-            qs = qs.filter(
-                Q(employee__person__user=self.request.user)
-                | Q(employee__person__document_number=self.request.user.username)
+
+        if not self._is_global_admin():
+            user = self.request.user
+
+            # Relaciones reales del modelo:
+            reception_filter = (
+                    Q(reception__delivered_to=user) |
+                    Q(reception__received_by=user)
             )
+            owner_filter = (
+                    Q(created_by=user) |
+                    Q(employee__person__user=user) |
+                    Q(employee__person__document_number=user.username)
+            )
+
+            qs = qs.filter(reception_filter | owner_filter).distinct()
 
         q = self.request.GET.get('q', '').strip()
         if q:
@@ -557,7 +583,7 @@ class MedicalLicenseListView(LoginRequiredMixin, ListView):
                 status__in=[MedicalLicense.STATUS_DRAFT, MedicalLicense.STATUS_SUBMITTED]
             )
 
-        return qs
+        return qs.order_by('-created_at')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -565,6 +591,7 @@ class MedicalLicenseListView(LoginRequiredMixin, ListView):
         context['search_query'] = self.request.GET.get('q', '').strip()
         context['selected_type'] = self.request.GET.get('license_type', '').strip()
         context['selected_legalized'] = self.request.GET.get('is_legalized', '').strip()
+
         for license_instance in context['licenses']:
             period = (
                 ManagementPeriod.objects
@@ -584,11 +611,19 @@ class MedicalLicenseListView(LoginRequiredMixin, ListView):
             )
 
         active_qs = MedicalLicense.objects.filter(is_active=True)
-        if not (self.request.user.is_staff or self.request.user.is_superuser):
-            active_qs = active_qs.filter(
-                Q(employee__person__user=self.request.user)
-                | Q(employee__person__document_number=self.request.user.username)
+        if not self._is_global_admin():
+            user = self.request.user
+            reception_filter = (
+                    Q(reception__delivered_to=user) |
+                    Q(reception__received_by=user)
             )
+            owner_filter = (
+                    Q(created_by=user) |
+                    Q(employee__person__user=user) |
+                    Q(employee__person__document_number=user.username)
+            )
+            active_qs = active_qs.filter(reception_filter | owner_filter).distinct()
+
         context['license_stats'] = {
             'total': active_qs.count(),
             'pending': active_qs.filter(
@@ -870,7 +905,8 @@ class MedicalLicenseActionSaveView(LoginRequiredMixin, View):
             license_instance=license_instance
         )
         if not form.is_valid():
-            return JsonResponse({'success': False, 'errors': form.errors, 'message': 'Revise los campos de la acción.'}, status=400)
+            return JsonResponse({'success': False, 'errors': form.errors, 'message': 'Revise los campos de la acción.'},
+                                status=400)
         action = form.save(commit=False)
         action.authority_1 = license_instance.license_type.default_authority_1 or action.authority_1
         action.authority_2 = license_instance.license_type.default_authority_2
@@ -922,9 +958,9 @@ class MedicalLicenseReturnReceptionView(LoginRequiredMixin, View):
         license_instance.save(update_fields=['status', 'is_active', 'updated_by', 'updated_at'])
         reception.status = LicenseReception.STATUS_APPROVED
         reception.observations = (
-            (reception.observations or '')
-            + f'\n[DEVUELTA A RECEPCIÓN {timezone.now():%d/%m/%Y %H:%M}] '
-              f'Motivo: {return_observation}'
+                (reception.observations or '')
+                + f'\n[DEVUELTA A RECEPCIÓN {timezone.now():%d/%m/%Y %H:%M}] '
+                  f'Motivo: {return_observation}'
         )
         reception.save(update_fields=['status', 'observations'])
         return JsonResponse({'success': True, 'message': 'La licencia fue devuelta a recepción.'})

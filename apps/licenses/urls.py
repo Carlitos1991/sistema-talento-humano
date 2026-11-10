@@ -20,25 +20,20 @@ urlpatterns = [
     path('tipos/crear/', views.LicenseTypeCreateView.as_view(), name='type_create'),
     path('tipos/<int:pk>/editar/', views.LicenseTypeUpdateView.as_view(), name='type_update'),
 
-    # Requisitos / Anexos (Creación rápida)
+    # Requisitos / Anexos
     path('requisitos/crear-modal/', views.RequirementCreateModalView.as_view(), name='requirement_create_modal'),
     path('requisitos/guardar/', views.RequirementSaveAjaxView.as_view(), name='requirement_save_ajax'),
 
-    # Recepción de Documentos
+    # Recepción de Licencias y Documentos
     path('recepcion/', views.LicenseReceptionListView.as_view(), name='reception_list'),
     path('recepcion/crear-modal/', views.LicenseReceptionCreateModalView.as_view(), name='reception_create_modal'),
-    path('recepcion/obtener-requisitos/<int:type_id>/', views.get_type_requirements_api, name='get_type_requirements'),
+    path('recepcion/obtener-requisitos/<int:type_id>/', views.get_type_requirements_api,
+         name='get_type_requirements_api'),
     path('recepcion/guardar/', views.LicenseReceptionSaveView.as_view(), name='reception_save'),
     path('recepcion/<int:pk>/estado/', views.LicenseReceptionToggleStatusView.as_view(),
          name='reception_toggle_status'),
-    # Recepción de Licencias
-    path('recepcion/', views.LicenseReceptionListView.as_view(), name='reception_list'),
-    path('recepcion/crear-modal/', views.LicenseReceptionCreateModalView.as_view(), name='reception_create_modal'),
-    path('recepcion/guardar/', views.LicenseReceptionSaveView.as_view(), name='reception_save'),
-    path('recepcion/obtener-requisitos/<int:type_id>/', views.get_type_requirements_api,
-         name='get_type_requirements_api'),
 
-    # Nuevos Flujos de Estado (Validar / Entregar / PDF)
+    # Flujos de Estado (Validar / Entregar / PDF)
     path('recepcion/<int:pk>/validar-modal/', views.LicenseReceptionValidateModalView.as_view(),
          name='reception_validate_modal'),
     path('recepcion/<int:pk>/validar-guardar/', views.LicenseReceptionValidateSaveView.as_view(),
