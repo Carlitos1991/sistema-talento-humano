@@ -2,7 +2,9 @@
 <div class="table-container">
     <div class="table-scroll-top">
         <table class="managed-table exportable-table" data-title="Reporte Recepción de Licencias"
-               data-filename="Reporte_Recepcion_Licencias" data-list-url="{% url 'licenses:reception_list' %}">
+               data-filename="Reporte_Recepcion_Licencias"
+               data-list-url="{% url 'licenses:reception_list' %}"
+               data-external-pagination="true">
             <thead>
             <tr>
                 <th class="reception-select-col text-center no-sort">
@@ -12,7 +14,7 @@
                 <th class="width-25">Servidor / Funcionario</th>
                 <th class="width-15">Tipo Solicitado</th>
                 <th class="width-15">Fecha Recepción</th>
-                <th class="width-20">Checklist de Anexos Verificados</th>
+                <th class="width-20 no-sort">Anexos Verificados</th>
                 <th class="width-10 text-center">Estado</th>
                 <th class="width-10 text-center no-sort actions"><i class="fas fa-cogs"></i> Acciones</th>
             </tr>
@@ -49,12 +51,18 @@
                                     <small class="text-muted">Sin anexos requeridos</small>
                                 {% endfor %}
                             </div>
+
                         </td>
                         <td class="text-center">
                             {% if item.status == 'REGISTERED' %}
                                 <span class="badge badge-yellow"><i class="fas fa-clock me-1"></i>Registrado</span>
                             {% elif item.status == 'APPROVED' %}
                                 <span class="badge badge-green"><i class="fas fa-check-circle me-1"></i>Aprobado</span>
+                            {% elif item.status == 'APPROVED' %}
+                                <button class="btn-blue-circle" onclick="openReceptionDetailModal({{ item.id }})"
+                                        title="Ver detalle de recepción">
+                                    <i class="fas fa-eye"></i>
+                                </button>
                             {% elif item.status == 'DELIVERED' %}
                                 <span class="badge badge-blue-solid"><i
                                         class="fas fa-paper-plane me-1"></i>Entregado</span>
@@ -64,6 +72,10 @@
                         </td>
                         <td class="actions text-center">
                             <div class="actions-wrapper justify-content-center">
+                                <button class="btn-blue-circle" onclick="openReceptionDetailModal({{ item.id }})"
+                                        title="Ver detalle de recepción">
+                                    <i class="fas fa-eye"></i>
+                                </button>
                                 {% if item.status == 'REGISTERED' %}
                                     <!-- Botón VALIDAR para estado REGISTRADO -->
                                     <button class="btn-yellow-circle"
@@ -72,9 +84,10 @@
                                         <i class="fas fa-tasks"></i>
                                     </button>
                                 {% elif item.status == 'DELIVERED' %}
-                                    <button class="btn-blue-circle" onclick="openReceptionDetailModal({{ item.id }})"
-                                            title="Ver detalle de recepción">
-                                        <i class="fas fa-eye"></i>
+                                    <button class="btn-dark-blue-circle"
+                                            onclick="openReceptionDeliveryReport('{{ item.delivery_batch|default:'' }}', {{ item.id }}, '{{ item.delivered_to_id|default:'' }}')"
+                                            title="Ver reporte de entrega">
+                                        <i class="fas fa-file-pdf"></i>
                                     </button>
                                 {% endif %}
 
@@ -86,6 +99,7 @@
                                     </button>
                                 {% endif %}
                             </div>
+
                         </td>
                     </tr>
                 {% endfor %}
@@ -101,3 +115,41 @@
         </table>
     </div>
 </div>
+
+{% if paginator.num_pages > 0 %}
+    <div id="js-pagination" class="pagination-container">
+        <span class="pagination-info">
+            Mostrando {{ page_obj.start_index|default:"0" }}-{{ page_obj.end_index|default:"0" }}
+            de {{ paginator.count|default:"0" }}
+        </span>
+        <div class="pagination-controls">
+            <button type="button" class="page-btn {% if not page_obj.has_previous %}disabled{% endif %}"
+                    title="Primera" data-page="1"
+                    {% if not page_obj.has_previous %}disabled{% endif %}>
+                <i class="fas fa-angle-double-left"></i>
+            </button>
+            <button type="button" class="page-btn {% if not page_obj.has_previous %}disabled{% endif %}"
+                    title="Anterior"
+                    data-page="{% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% else %}1{% endif %}"
+                    {% if not page_obj.has_previous %}disabled{% endif %}>
+                <i class="fas fa-angle-left"></i>
+            </button>
+            <div class="page-input-wrapper">
+                <input type="number" class="page-input" value="{{ page_obj.number }}"
+                       min="1" max="{{ paginator.num_pages }}" aria-label="Página actual">
+                <span class="total-pages-badge">de {{ paginator.num_pages }}</span>
+            </div>
+            <button type="button" class="page-btn {% if not page_obj.has_next %}disabled{% endif %}"
+                    title="Siguiente"
+                    data-page="{% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages }}{% endif %}"
+                    {% if not page_obj.has_next %}disabled{% endif %}>
+                <i class="fas fa-angle-right"></i>
+            </button>
+            <button type="button" class="page-btn {% if not page_obj.has_next %}disabled{% endif %}"
+                    title="Última" data-page="{{ paginator.num_pages }}"
+                    {% if not page_obj.has_next %}disabled{% endif %}>
+                <i class="fas fa-angle-double-right"></i>
+            </button>
+        </div>
+    </div>
+{% endif %}

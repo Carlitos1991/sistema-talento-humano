@@ -1,0 +1,35 @@
+<div class="modal-overlay" id="subsidyReportModal">
+    <div class="modal-container-small">
+        <form method="post" action="{% url 'licenses:subsidy_report_export' %}"
+              onsubmit="generateLicenseSubsidyReport(event)">
+            {% csrf_token %}
+            <div class="modal-header-medium">
+                <h3 class="header-title">
+                    <i class="fas fa-file-excel me-2"></i>Reporte de Subsidios
+                </h3>
+                <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body-custom">
+                <div class="form-group">
+                    <label class="form-label">Mes del corte <span class="text-danger">*</span></label>
+                    <input type="month" name="period" class="input-field form-control"
+                           value="{{ current_month }}" required>
+                    <small class="text-muted">
+                        El corte considera del día 21 del mes anterior al día 20 del mes seleccionado.
+                        Los reportes ya generados pueden volver a descargarse seleccionando el mismo mes.
+                    </small>
+                </div>
+            </div>
+            <div class="modal-footer-fixed">
+                <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">
+                    Cancelar
+                </button>
+                <button type="submit" class="btn-dark-blue-rectangle">
+                    <i class="fas fa-download me-1"></i>Generar Excel
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

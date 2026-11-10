@@ -6,12 +6,14 @@ app_name = 'licenses'
 urlpatterns = [
     # Licencias
     path('', views.MedicalLicenseListView.as_view(), name='list'),
+    path('subsidios/modal/', views.LicenseSubsidyReportModalView.as_view(), name='subsidy_report_modal'),
+    path('subsidios/exportar/', views.LicenseSubsidyReportExportView.as_view(), name='subsidy_report_export'),
     path('crear/', views.MedicalLicenseCreateView.as_view(), name='create'),
     path('<int:pk>/accion-modal/', views.MedicalLicenseActionModalView.as_view(), name='action_modal'),
     path('<int:pk>/accion-guardar/', views.MedicalLicenseActionSaveView.as_view(), name='action_save'),
     path('<int:pk>/devolver-recepcion/', views.MedicalLicenseReturnReceptionView.as_view(), name='return_reception'),
-    path('<int:pk>/legalizar-modal/', views.MedicalLicenseLegalizeModalView.as_view(), name='legalize_modal'),
-    path('<int:pk>/legalizar/', views.MedicalLicenseLegalizeView.as_view(), name='legalize'),
+    path('<int:pk>/devolver-recepcion-modal/', views.MedicalLicenseReturnReceptionModalView.as_view(),
+         name='return_reception_modal'),
 
     # Tipos de Licencias
     path('tipos/', views.LicenseTypeListView.as_view(), name='type_list'),

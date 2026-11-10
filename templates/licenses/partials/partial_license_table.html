@@ -5,14 +5,14 @@
                data-filename="Reporte_Licencias_Medicas" data-page-size="10">
             <thead>
             <tr>
-                <th class="width-7">#</th>
-                <th class="width-20">Servidor / Funcionario</th>
-                <th class="width-15">Tipo de Licencia</th>
-                <th class="width-15">Periodo</th>
+                <th class="width-5">#</th>
+                <th class="width-17">Servidor</th>
+                <th class="width-13">Tipo de Licencia</th>
+                <th class="width-15">Régimen</th>
+                <th class="width-13">Periodo</th>
                 <th class="width-10 text-center">Duración</th>
-                <th class="width-15">Sustituto / Horario</th>
                 <th class="width-10 text-center no-sort">Estado</th>
-                <th class="width-10 text-center no-sort"><i class="fas fa-cogs"></i> Acciones</th>
+                <th class="width-15 text-center no-sort"><i class="fas fa-cogs"></i> Acciones</th>
             </tr>
             </thead>
             <tbody id="table-body">
@@ -23,13 +23,18 @@
                             <span class="badge badge-blue">#{{ lic.id }}</span>
                         </td>
                         <td>
-                            <div class="boss-mini-profile">
-                                <div class="avatar-placeholder-sm">
-                                    {{ lic.employee.person.first_name|first }}{{ lic.employee.person.last_name|first }}
-                                </div>
-                                <div class="boss-info">
-                                    <span class="boss-name-highlight">{{ lic.employee.person.first_name }} {{ lic.employee.person.last_name }}</span>
-                                    <small class="text-muted d-block">{{ lic.employee.person.document_number|default:"" }}</small>
+                            <div class="person-info">
+                                {% if lic.employee.person.photo %}
+                                    <img src="{{ lic.employee.person.photo.url }}"
+                                         alt="{{ lic.employee.person.first_name }}" class="person-avatar">
+                                {% else %}
+                                    <div class="person-avatar-placeholder">
+                                        {{ lic.employee.person.first_name|first }}{{ lic.employee.person.last_name|first }}
+                                    </div>
+                                {% endif %}
+                                <div class="person-details">
+                                    <h4>{{ lic.employee.person.last_name }} {{ lic.employee.person.first_name }}</h4>
+                                    <div class="small">CI: {{ lic.employee.person.document_number|default:"--" }}</div>
                                 </div>
                             </div>
                         </td>
@@ -39,63 +44,85 @@
                             </span>
                         </td>
                         <td>
-                            <small class="d-block"><strong>Desde:</strong> {{ lic.start_date|date:"d/m/Y" }}</small>
-                            <small class="d-block"><strong>Hasta:</strong> {{ lic.end_date|date:"d/m/Y" }}</small>
-                        </td>
-                        <td class="text-center">
-                            <span class="badge badge-dark-sm">{{ lic.total_days|default:"--" }} días</span>
+                            {% if lic.labor_regime_display == 'CT' %}
+                                <span class="badge badge-red">CT</span>
+                                <button type="button" class="btn-subsidy-mini"
+                                        data-subsidy-amount="{{ lic.subsidy_total|default:'0.00' }}"
+                                        onclick="showLicenseSubsidyAmount(this)"
+                                        title="Ver valor de descuento por subsidio">
+                                    <i class="fas fa-eye"></i> Ver valor
+                                </button>
+                            {% else %}
+                                <span class="badge badge-green">{{ lic.labor_regime_display }}</span>
+                            {% endif %}
                         </td>
                         <td>
-                            {% if lic.substitute_assignment %}
-                                <small class="d-block text-primary font-bold">
-                                    <i class="fas fa-user-friends me-1"></i>
-                                    {{ lic.substitute_assignment.substitute_employee.person.first_name }} {{ lic.substitute_assignment.substitute_employee.person.last_name }}
-                                </small>
+                            <small class="d-block"><strong>Desde:</strong> {{ lic.start_date|date:"d/m/Y" }}</small>
+                            <small class="d-block"><strong>Hasta:</strong>
+                                {% if lic.end_date %}{{ lic.end_date|date:"d/m/Y" }}{% else %}Indefinida{% endif %}
+                            </small>
+                        </td>
+                        <td class="text-center">
+                            {% if lic.end_date %}
+                                <span class="badge badge-dark-sm">{{ lic.total_days|default:"--" }} días</span>
                             {% else %}
-                                <span class="text-muted small">Sin sustituto</span>
+                                <span class="badge badge-dark-sm">Indefinida</span>
                             {% endif %}
                         </td>
                         <td class="text-center">
-                            {% if lic.is_legalized or lic.status == 'VALIDATED' or lic.status == 'ACTION_ISSUED' %}
-                                <span class="badge badge-green"><i
-                                        class="fas fa-check-circle me-1"></i>Legalizada</span>
+                            {% if lic.personnel_action and lic.personnel_action.is_registered %}
+                                <span class="badge badge-green"><i class="fas fa-check-circle me-1"></i>Registrada</span>
+                            {% elif lic.personnel_action %}
+                                <span class="badge badge-blue"><i class="fas fa-file-signature me-1"></i>Legalizada</span>
+                            {% elif lic.is_legalized or lic.status == 'VALIDATED' %}
+                                <span class="badge badge-blue"><i
+                                        class="fas fa-file-signature me-1"></i>Legalizada</span>
                             {% else %}
-                                <span class="badge badge-yellow"><i class="fas fa-clock me-1"></i>Pendiente</span>
+                                <span class="badge badge-gray"><i class="fas fa-clock me-1"></i>Pendiente</span>
                             {% endif %}
                         </td>
                         <td class="actions text-center">
                             <div class="actions-wrapper">
-                                {% if lic.status == 'SUBMITTED' or lic.status == 'DRAFT' %}
+                                {% if not lic.personnel_action_id and lic.status != 'CANCELLED' %}
                                     <button type="button" class="btn-thirteenth"
-                                            onclick="openAjaxModal('{% url 'licenses:legalize_modal' lic.id %}')"
-                                            title="Convalidar y generar Acción de Personal">
+                                            onclick="openAjaxModal('{% url 'licenses:action_modal' lic.id %}')"
+                                            title="Generar Acción de Personal">
                                         <i class="fas fa-file-signature"></i>
                                     </button>
                                     {% if lic.reception %}
-                                        <button type="button" class="btn-warning-circle"
-                                                onclick="returnReception('{% url 'licenses:return_reception' lic.id %}')"
+                                        <button type="button" class="btn-yellow-circle"
+                                                onclick="openReturnReceptionModal({{ lic.id }})"
                                                 title="Devolver a recepción: no llegó físicamente">
                                             <i class="fas fa-rotate-left"></i>
                                         </button>
                                     {% endif %}
                                 {% endif %}
-                                {% if lic.status == 'VALIDATED' or lic.status == 'ACTION_ISSUED' %}
-                                    <button type="button" class="btn-thirteenth"
-                                            onclick="openAjaxModal('{% url 'licenses:action_modal' lic.id %}')"
-                                            title="Generar o editar Acción de Personal">
-                                        <i class="fas fa-file-signature"></i>
+                                {% if lic.personnel_action_id %}
+                                    {% if not lic.personnel_action.is_registered %}
+                                        <button type="button" class="btn-yellow-circle"
+                                                onclick="openAjaxModal('{% url 'licenses:action_modal' lic.id %}')"
+                                                title="Editar Acción de Personal">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                    {% endif %}
+                                    <button type="button" class="btn-first js-license-print-action"
+                                            data-action-id="{{ lic.personnel_action_id }}"
+                                            title="Imprimir Acción">
+                                        <i class="fas fa-print"></i>
                                     </button>
-                                    <button type="button" class="btn-warning-circle"
-                                            onclick="returnReception('{% url 'licenses:return_reception' lic.id %}')"
-                                            title="Devolver a recepción">
-                                        <i class="fas fa-rotate-left"></i>
+                                    {% if not lic.personnel_action.is_registered %}
+                                        <button type="button" class="btn-green-circle js-license-register-action"
+                                                data-action-id="{{ lic.personnel_action_id }}"
+                                                title="Registrar Acción">
+                                            <i class="fas fa-check-circle"></i>
+                                        </button>
+                                    {% endif %}
+                                    <button type="button" class="btn-blue-circle"
+                                            onclick="openAjaxModal('{% url 'personnel_actions:action_detail' lic.personnel_action_id %}')"
+                                            title="Ver detalle de la acción">
+                                        <i class="fas fa-eye"></i>
                                     </button>
                                 {% endif %}
-                                <button type="button" class="btn-blue-circle"
-                                        onclick="openAjaxModal('{% url 'licenses:legalize_modal' lic.id %}')"
-                                        title="Ver Detalle">
-                                    <i class="fas fa-eye"></i>
-                                </button>
                             </div>
                         </td>
                     </tr>

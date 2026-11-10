@@ -5,6 +5,36 @@
 (function () {
     'use strict';
 
+    const updateReceptionEndDate = () => {
+        const startInput = document.querySelector('#receptionForm [name="license_start_date"]');
+        const daysInput = document.querySelector('#receptionForm [name="license_days"]');
+        const endInput = document.querySelector('#receptionForm [name="license_end_date"]');
+        if (!startInput || !daysInput || !endInput) return;
+
+        const days = Number.parseInt(daysInput.value, 10);
+        if (!startInput.value || !Number.isInteger(days) || days < 0) {
+            endInput.value = '';
+            return;
+        }
+        if (days === 0) {
+            endInput.value = '';
+            return;
+        }
+        const endDate = new Date(`${startInput.value}T00:00:00`);
+        endDate.setDate(endDate.getDate() + days - 1);
+        endInput.value = endDate.toISOString().slice(0, 10);
+    };
+
+    document.addEventListener('input', event => {
+        if (event.target.matches('#receptionForm [name="license_start_date"], #receptionForm [name="license_days"]')) {
+            updateReceptionEndDate();
+        }
+    });
+
+    document.addEventListener('submit', event => {
+        if (event.target.id === 'receptionForm') updateReceptionEndDate();
+    });
+
     window.returnReception = async function (url) {
         const result = typeof Swal !== 'undefined'
             ? await Swal.fire({
@@ -26,6 +56,120 @@
             .then(({ok, data}) => {
                 if (!ok || !data.success) throw new Error(data.message || 'No se pudo devolver la licencia.');
                 window.location.reload();
+            })
+            .catch(error => {
+                if (typeof Swal !== 'undefined') Swal.fire({icon: 'error', title: 'Error', text: error.message});
+            });
+    };
+
+    window.openReturnReceptionModal = function (licenseId) {
+        openAjaxModal(`/licencias/${licenseId}/devolver-recepcion-modal/`);
+    };
+
+    window.generateLicenseSubsidyReport = function (event) {
+        event.preventDefault();
+        const form = event.target;
+        const submitButton = form.querySelector('[type="submit"]');
+        if (submitButton) submitButton.disabled = true;
+        fetch(form.action, {
+            method: 'POST',
+            body: new FormData(form),
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        })
+            .then(async response => {
+                if (!response.ok) {
+                    const data = await response.json().catch(() => ({}));
+                    throw new Error(data.message || 'No se pudo generar el reporte.');
+                }
+                return response.blob();
+            })
+            .then(blob => {
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `Reporte_Subsidios_${form.period.value}.xlsx`;
+                link.click();
+                URL.revokeObjectURL(url);
+                closeModal();
+            })
+            .catch(error => {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({icon: 'error', title: 'Reporte de subsidios', text: error.message});
+                }
+            })
+            .finally(() => {
+                if (submitButton) submitButton.disabled = false;
+            });
+    };
+
+    document.addEventListener('click', event => {
+        const printButton = event.target.closest('.js-license-print-action');
+        if (printButton) {
+            event.preventDefault();
+            window.open(`/personnel_actions/${printButton.dataset.actionId}/pdf/`, '_blank');
+            return;
+        }
+
+        const registerButton = event.target.closest('.js-license-register-action');
+        if (!registerButton) return;
+        event.preventDefault();
+
+        const confirmed = typeof Swal === 'undefined'
+            ? window.confirm('¿Registrar esta acción de personal?')
+            : Swal.fire({
+                icon: 'question',
+                title: 'Registrar acción',
+                text: 'Al registrar se generarán los permisos de justificación y cambios de horario.',
+                showCancelButton: true,
+                confirmButtonText: 'Registrar',
+                cancelButtonText: 'Cancelar'
+            });
+
+        Promise.resolve(confirmed).then(result => {
+            if (typeof Swal !== 'undefined' && !result.isConfirmed) return;
+            if (typeof Swal === 'undefined' && !result) return;
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+            return fetch(`/personnel_actions/${registerButton.dataset.actionId}/register/`, {
+                method: 'POST',
+                headers: {'X-CSRFToken': csrfToken, 'X-Requested-With': 'XMLHttpRequest'}
+            });
+        }).then(response => {
+            if (!response) return null;
+            return response.json().then(data => ({ok: response.ok, data}));
+        }).then(result => {
+            if (!result) return;
+            if (!result.ok || !result.data.success) {
+                throw new Error(result.data.message || 'No se pudo registrar la acción.');
+            }
+            window.location.reload();
+        }).catch(error => {
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({icon: 'error', title: 'Error', text: error.message});
+            }
+        });
+    });
+
+    window.submitReturnReceptionForm = function (event) {
+        event.preventDefault();
+        const form = event.target;
+        fetch(form.action, {
+            method: 'POST',
+            body: new FormData(form),
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        })
+            .then(async response => {
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.message || 'No se pudo devolver la licencia.');
+                return data;
+            })
+            .then(data => {
+                closeModal();
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({icon: 'success', title: 'Licencia devuelta', text: data.message, timer: 1800, showConfirmButton: false})
+                        .then(() => window.location.reload());
+                } else {
+                    window.location.reload();
+                }
             })
             .catch(error => {
                 if (typeof Swal !== 'undefined') Swal.fire({icon: 'error', title: 'Error', text: error.message});
@@ -70,6 +214,22 @@
                 .catch(err => console.error('Error al filtrar tipos de licencias:', err));
         };
 
+        document.addEventListener('click', event => {
+            const infoButton = event.target.closest('.license-type-info-btn');
+            if (!infoButton) return;
+
+            const name = infoButton.dataset.licenseTypeName || 'Tipo de licencia';
+            const description = infoButton.dataset.licenseTypeDescription || 'Sin observaciones registradas.';
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'info',
+                    title: name,
+                    text: description,
+                    confirmButtonText: 'Cerrar'
+                });
+            }
+        });
+
         if (toggleInactive) {
             toggleInactive.addEventListener('change', refreshTable);
         }
@@ -79,6 +239,99 @@
             searchInput.addEventListener('input', () => {
                 clearTimeout(debounceTimer);
                 debounceTimer = setTimeout(refreshTable, 250);
+            });
+        }
+    };
+
+    window.initMedicalLicenseFilters = function () {
+            const form = document.getElementById('reception-filter-form');
+            const searchInput = document.getElementById('table-search-license');
+            const typeFilter = document.getElementById('filter_license_type');
+            const legalizedFilter = document.getElementById('filter_is_legalized');
+            const resetButton = document.getElementById('btnResetFilters');
+            if (!form || !searchInput || !typeFilter || !legalizedFilter) return;
+
+            const refresh = () => {
+                const params = new URLSearchParams();
+                const query = searchInput.value.trim();
+                if (query) params.set('q', query);
+                if (typeFilter.value) params.set('license_type', typeFilter.value);
+                if (legalizedFilter.value) params.set('is_legalized', legalizedFilter.value);
+
+                fetch(`${window.location.pathname}?${params.toString()}`, {
+                    headers: {'X-Requested-With': 'XMLHttpRequest'}
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (!data.success) throw new Error(data.message || 'No se pudo buscar.');
+                        const wrapper = document.getElementById('table-content-wrapper');
+                        if (wrapper) wrapper.innerHTML = data.html;
+                    })
+                    .catch(error => {
+                        console.error('Error al buscar licencias:', error);
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire({icon: 'error', title: 'Error', text: error.message});
+                        }
+                    });
+            };
+
+            form.addEventListener('submit', event => {
+                event.preventDefault();
+                refresh();
+            });
+            if (resetButton) {
+                resetButton.addEventListener('click', () => {
+                    searchInput.value = '';
+                    typeFilter.value = '';
+                    legalizedFilter.value = '';
+                    refresh();
+                });
+            }
+        };
+
+    window.initMedicalLicenseStats = function () {
+        const cards = document.querySelectorAll('#license-stats-row [data-license-status]');
+        const setActiveCard = (status) => {
+            cards.forEach(card => {
+                card.classList.toggle(
+                    'opacity-low',
+                    status !== 'all' && card.dataset.licenseStatus !== status
+                );
+            });
+        };
+
+        setActiveCard('all');
+        cards.forEach(card => {
+            card.addEventListener('click', () => {
+                const filter = document.getElementById('filter_is_legalized');
+                if (!filter) return;
+                const status = card.dataset.licenseStatus;
+                setActiveCard(status);
+                filter.value = status === 'all'
+                    ? ''
+                    : status === 'pending'
+                        ? 'pending_registered'
+                        : status;
+                document.getElementById('reception-filter-form')?.dispatchEvent(
+                    new Event('submit', {bubbles: true, cancelable: true})
+                );
+            });
+        });
+    };
+
+    window.showLicenseSubsidyAmount = function (button) {
+        const rawAmount = String(button.dataset.subsidyAmount || '0')
+            .replace(',', '.')
+            .trim();
+        const parsedAmount = Number.parseFloat(rawAmount);
+        const amount = Number.isFinite(parsedAmount) ? parsedAmount.toFixed(2) : '0.00';
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'info',
+                title: 'Descuento por subsidio',
+                text: `Valor calculado: $${amount}`,
+                confirmButtonText: 'Cerrar',
+                showCancelButton: false
             });
         }
     };
@@ -300,8 +553,25 @@
         }
     }
 
+    document.addEventListener('click', event => {
+        if (event.target.closest('.reception-select, .reception-select-all')) {
+            window.requestAnimationFrame(updateReceptionSelectionState);
+        }
+    });
+
     window.openReceptionDetailModal = function (receptionId) {
         openAjaxModal(`/licencias/recepcion/${receptionId}/detalle-modal/`);
+    };
+
+    window.openReceptionDeliveryReport = function (batch, receptionId, deliveredTo) {
+        const params = new URLSearchParams();
+        if (batch) {
+            params.set('batch', batch);
+        } else {
+            params.set('ids', receptionId);
+        }
+        if (deliveredTo) params.set('delivered_to', deliveredTo);
+        window.open(`/licencias/recepcion/reporte/?${params.toString()}`, '_blank');
     };
 
     window.openBulkDeliverReceptionModal = function () {
@@ -563,9 +833,11 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         // Inicializar Tipos de Licencias si estamos en esa vista
-        if (document.getElementById('toggleInactiveTypes') || document.getElementById('table-search')) {
+        if (document.getElementById('toggleInactiveTypes')) {
             window.initLicenseTypeFilters();
         }
+        window.initMedicalLicenseFilters();
+        window.initMedicalLicenseStats();
 
         // Inicializar Recepciones si estamos en esa vista
         if (window.$ && $.fn.select2) {
@@ -584,7 +856,7 @@
         }
 
         const filterForm = document.getElementById('reception-filter-form');
-        if (filterForm) {
+        if (filterForm && document.getElementById('table-search-reception')) {
             filterForm.addEventListener('submit', (e) => {
                 e.preventDefault();
                 applyReceptionFilters(1);
@@ -609,6 +881,7 @@
                 updateReceptionSelectionState();
             }
         });
+        updateReceptionSelectionState();
 
         const statusFilter = document.getElementById('filter_status');
         if (statusFilter) {
@@ -643,4 +916,22 @@
             }
         }
     }, true);
+
+    document.addEventListener('change', (e) => {
+        const pageInput = e.target.closest('#js-pagination .page-input');
+        if (!pageInput) return;
+        const page = Math.max(1, parseInt(pageInput.value, 10) || 1);
+        const maxPage = parseInt(pageInput.max, 10) || page;
+        applyReceptionFilters(Math.min(page, maxPage));
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') return;
+        const pageInput = e.target.closest('#js-pagination .page-input');
+        if (!pageInput) return;
+        e.preventDefault();
+        const page = Math.max(1, parseInt(pageInput.value, 10) || 1);
+        const maxPage = parseInt(pageInput.max, 10) || page;
+        applyReceptionFilters(Math.min(page, maxPage));
+    });
 })();

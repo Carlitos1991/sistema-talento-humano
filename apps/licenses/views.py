@@ -9,11 +9,21 @@ from django.utils import timezone
 from django.views import View
 from django.views.generic import CreateView, UpdateView
 from django.views.generic import ListView
-from datetime import datetime
+from datetime import datetime, timedelta
+from decimal import Decimal
+from io import BytesIO
+import uuid
+
+LICENSE_MONTH_NAMES = (
+    '', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+)
 
 # Importación desde otras apps raíz del sys.path
 from employee.models import Employee
+from contract.models import ManagementPeriod
 from core.models import User
+from institution.models import AdministrativeUnit
 from .forms import (
     MedicalLicenseForm,
     LicensePersonnelActionForm,
@@ -26,9 +36,52 @@ from .models import (
     MedicalLicenseType,
     LicenseReception,
     LicenseReceptionCheck,
-    LicenseSchedule
+    LicenseSchedule,
+    LicensePayrollEffect,
 )
-from .services import apply_validation_effects
+from .services import (
+    _ensure_license_action_movement,
+    apply_validation_effects,
+    create_draft_license_action,
+)
+
+
+def _human_resources_employees():
+    th_unit = AdministrativeUnit.objects.filter(
+        is_human_resources=True, is_active=True
+    ).first()
+    if not th_unit:
+        return Employee.objects.none()
+    return Employee.objects.select_related('person').filter(
+        area_id__in=th_unit.get_descendant_ids(),
+        is_active=True
+    ).order_by('person__last_name', 'person__first_name')
+
+
+def _human_resources_users():
+    th_unit = AdministrativeUnit.objects.filter(
+        is_human_resources=True, is_active=True
+    ).first()
+    if not th_unit:
+        return User.objects.none()
+    unit_ids = th_unit.get_descendant_ids()
+    employees = _human_resources_employees()
+    users = User.objects.filter(
+        person__employee_profile__area_id__in=unit_ids,
+        person__employee_profile__is_active=True,
+        is_active=True
+    ).order_by('last_name', 'first_name', 'username')
+    if users.exists():
+        return users
+    document_numbers = employees.exclude(
+        person__document_number__isnull=True
+    ).exclude(
+        person__document_number=''
+    ).values_list('person__document_number', flat=True)
+    return User.objects.filter(
+        username__in=document_numbers,
+        is_active=True
+    ).order_by('last_name', 'first_name', 'username')
 
 
 def _ensure_medical_license_from_reception(reception, user):
@@ -37,7 +90,7 @@ def _ensure_medical_license_from_reception(reception, user):
         return reception.medical_license
 
     start_date = reception.license_start_date or reception.reception_date.date()
-    end_date = reception.license_end_date or start_date
+    end_date = reception.license_end_date
     return MedicalLicense.objects.create(
         reception=reception,
         employee=reception.employee,
@@ -49,6 +102,24 @@ def _ensure_medical_license_from_reception(reception, user):
         status=MedicalLicense.STATUS_SUBMITTED,
         created_by=user,
     )
+
+
+def _subsidy_cutoff(year, month):
+    cutoff_end = datetime(year, month, 20).date()
+    previous_month = cutoff_end.replace(day=1) - timedelta(days=1)
+    return previous_month.replace(day=21), cutoff_end
+
+
+def _subsidy_amount(effect):
+    budget_line = effect.license.employee.current_budget_line.select_related(
+        'position_item'
+    ).first()
+    remuneration = getattr(budget_line, 'remuneration', None) or Decimal('0.00')
+    daily_remuneration = remuneration / Decimal('30')
+    return (
+        daily_remuneration * min(effect.employer_covered_days, 3) * Decimal('0.50')
+        + daily_remuneration * effect.days_to_discount
+    ).quantize(Decimal('0.01'))
 
 
 # ==========================================
@@ -261,11 +332,14 @@ class LicenseReceptionListView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         # Base completa para las tarjetas estadísticas
         full_qs = LicenseReception.objects.exclude(status=LicenseReception.STATUS_CANCELLED)
+        registered_count = full_qs.filter(status=LicenseReception.STATUS_REGISTERED).count()
+        approved_count = full_qs.filter(status=LicenseReception.STATUS_APPROVED).count()
+        delivered_count = full_qs.filter(status=LicenseReception.STATUS_DELIVERED).count()
         context['stats'] = {
-            'total': full_qs.count(),
-            'registered': full_qs.filter(status=LicenseReception.STATUS_REGISTERED).count(),
-            'approved': full_qs.filter(status=LicenseReception.STATUS_APPROVED).count(),
-            'delivered': full_qs.filter(status=LicenseReception.STATUS_DELIVERED).count(),
+            'total': registered_count + approved_count + delivered_count,
+            'registered': registered_count,
+            'approved': approved_count,
+            'delivered': delivered_count,
         }
         context['license_types'] = MedicalLicenseType.objects.filter(is_active=True)
         context['reception_statuses'] = LicenseReception.STATUS_CHOICES
@@ -295,18 +369,40 @@ class LicenseReceptionSaveView(LoginRequiredMixin, View):
         license_type_id = request.POST.get('license_type')
         observations = request.POST.get('observations', '')
         start_date_raw = request.POST.get('license_start_date')
-        end_date_raw = request.POST.get('license_end_date')
+        days_raw = request.POST.get('license_days', '').strip()
+        supporting_document = request.POST.get('supporting_document', '').strip()
         checked_req_ids = [int(i) for i in request.POST.getlist('requirements_checked')]
+
+        if not days_raw:
+            return JsonResponse({'success': False, 'message': 'El número de días de licencia es obligatorio.'}, status=400)
+        if not supporting_document:
+            return JsonResponse({'success': False, 'message': 'El documento habilitante es obligatorio.'}, status=400)
+        if len(supporting_document) > 255:
+            return JsonResponse({'success': False, 'message': 'El documento habilitante no puede superar 255 caracteres.'}, status=400)
+        try:
+            license_days = int(days_raw)
+        except ValueError:
+            return JsonResponse({'success': False, 'message': 'El número de días debe ser un valor entero.'}, status=400)
+        if license_days < 0:
+            return JsonResponse({'success': False, 'message': 'El número de días no puede ser negativo.'}, status=400)
 
         employee = get_object_or_404(Employee, pk=employee_id)
         license_type = get_object_or_404(MedicalLicenseType, pk=license_type_id)
         try:
             license_start_date = datetime.strptime(start_date_raw, '%Y-%m-%d').date() if start_date_raw else None
-            license_end_date = datetime.strptime(end_date_raw, '%Y-%m-%d').date() if end_date_raw else None
         except ValueError:
             return JsonResponse({'success': False, 'message': 'Las fechas de la licencia no son válidas.'}, status=400)
-        if license_start_date and license_end_date and license_end_date < license_start_date:
-            return JsonResponse({'success': False, 'message': 'La fecha fin no puede ser anterior a la fecha inicio.'}, status=400)
+        if not license_start_date:
+            return JsonResponse({'success': False, 'message': 'La fecha de inicio de la licencia es obligatoria.'}, status=400)
+        license_end_date = (
+            license_start_date + timedelta(days=license_days - 1)
+            if license_days > 0 else None
+        )
+        if license_days == 0:
+            observations = (
+                f'{observations}\nLicencia indefinida desde '
+                f'{license_start_date:%d/%m/%Y}.'
+            ).strip()
 
         # 1. Crear cabecera inicial
         reception = LicenseReception.objects.create(
@@ -315,6 +411,8 @@ class LicenseReceptionSaveView(LoginRequiredMixin, View):
             received_by=request.user,
             license_start_date=license_start_date,
             license_end_date=license_end_date,
+            license_days=license_days,
+            supporting_document=supporting_document,
             observations=observations,
             status=LicenseReception.STATUS_REGISTERED
         )
@@ -392,7 +490,9 @@ class LicenseReceptionToggleStatusView(LoginRequiredMixin, View):
 
 class LicenseReceptionCreateModalView(LoginRequiredMixin, View):
     def get(self, request, *args, **kwargs):
-        employees = Employee.objects.select_related('person').filter(is_active=True)
+        employees = Employee.objects.select_related('person').filter(
+            is_active=True
+        ).order_by('person__last_name', 'person__first_name')
         license_types = MedicalLicenseType.objects.filter(is_active=True)
         html = render_to_string(
             'licenses/modals/modal_reception_form.html',
@@ -418,17 +518,21 @@ class MedicalLicenseListView(LoginRequiredMixin, ListView):
         qs = MedicalLicense.objects.select_related(
             'employee__person',
             'license_type',
+            'personnel_action',
             'substitute_assignment__substitute_employee'
-        ).filter(is_active=True)
+        ).prefetch_related('payroll_effects').filter(is_active=True)
+        if not (self.request.user.is_staff or self.request.user.is_superuser):
+            qs = qs.filter(
+                Q(employee__person__user=self.request.user)
+                | Q(employee__person__document_number=self.request.user.username)
+            )
 
         q = self.request.GET.get('q', '').strip()
         if q:
             qs = qs.filter(
-                Q(employee__first_name__icontains=q) |
-                Q(employee__last_name__icontains=q) |
-                Q(employee__identification_number__icontains=q) |
-                Q(substitute_assignment__substitute_employee__first_name__icontains=q) |
-                Q(substitute_assignment__substitute_employee__last_name__icontains=q) |
+                Q(employee__person__first_name__icontains=q) |
+                Q(employee__person__last_name__icontains=q) |
+                Q(employee__person__document_number__icontains=q) |
                 Q(medical_certificate_number__icontains=q) |
                 Q(diagnosis__icontains=q)
             )
@@ -438,10 +542,20 @@ class MedicalLicenseListView(LoginRequiredMixin, ListView):
             qs = qs.filter(license_type_id=license_type_id)
 
         legalized = self.request.GET.get('is_legalized', '').strip()
-        if legalized in ['true', '1', 'True']:
-            qs = qs.filter(status__in=[MedicalLicense.STATUS_VALIDATED, MedicalLicense.STATUS_ACTION_ISSUED])
-        elif legalized in ['false', '0', 'False']:
-            qs = qs.filter(status__in=[MedicalLicense.STATUS_DRAFT, MedicalLicense.STATUS_SUBMITTED])
+        if legalized in ['registered']:
+            qs = qs.filter(personnel_action__is_registered=True)
+        elif legalized in ['legalized', 'true', '1', 'True']:
+            qs = qs.filter(
+                Q(personnel_action__isnull=False, personnel_action__is_registered=False)
+                | Q(
+                    personnel_action__isnull=True,
+                    status__in=[MedicalLicense.STATUS_VALIDATED, MedicalLicense.STATUS_ACTION_ISSUED],
+                )
+            )
+        elif legalized in ['pending', 'pending_registered', 'false', '0', 'False']:
+            qs = qs.filter(
+                status__in=[MedicalLicense.STATUS_DRAFT, MedicalLicense.STATUS_SUBMITTED]
+            )
 
         return qs
 
@@ -451,13 +565,45 @@ class MedicalLicenseListView(LoginRequiredMixin, ListView):
         context['search_query'] = self.request.GET.get('q', '').strip()
         context['selected_type'] = self.request.GET.get('license_type', '').strip()
         context['selected_legalized'] = self.request.GET.get('is_legalized', '').strip()
+        for license_instance in context['licenses']:
+            period = (
+                ManagementPeriod.objects
+                .select_related('contract_type__labor_regime')
+                .filter(
+                    employee=license_instance.employee,
+                    start_date__lte=license_instance.start_date,
+                )
+                .order_by('-start_date')
+                .first()
+            )
+            regime = period.contract_type.labor_regime if period and period.contract_type else None
+            license_instance.labor_regime_display = regime.code if regime else 'N/D'
+            license_instance.subsidy_total = sum(
+                (effect.estimated_discount_amount for effect in license_instance.payroll_effects.all()),
+                Decimal('0.00'),
+            )
 
         active_qs = MedicalLicense.objects.filter(is_active=True)
-        context['total_licenses'] = active_qs.count()
+        if not (self.request.user.is_staff or self.request.user.is_superuser):
+            active_qs = active_qs.filter(
+                Q(employee__person__user=self.request.user)
+                | Q(employee__person__document_number=self.request.user.username)
+            )
+        context['license_stats'] = {
+            'total': active_qs.count(),
+            'pending': active_qs.filter(
+                status__in=[MedicalLicense.STATUS_DRAFT, MedicalLicense.STATUS_SUBMITTED]
+            ).count(),
+            'legalized': active_qs.filter(
+                Q(personnel_action__isnull=False, personnel_action__is_registered=False)
+                | Q(
+                    personnel_action__isnull=True,
+                    status__in=[MedicalLicense.STATUS_VALIDATED, MedicalLicense.STATUS_ACTION_ISSUED],
+                )
+            ).count(),
+            'registered': active_qs.filter(personnel_action__is_registered=True).count(),
+        }
         context['total_substitutes'] = active_qs.filter(substitute_assignment__isnull=False).count()
-        context['total_legalized'] = active_qs.filter(
-            status__in=[MedicalLicense.STATUS_VALIDATED, MedicalLicense.STATUS_ACTION_ISSUED]
-        ).count()
         return context
 
     def render_to_response(self, context, **response_kwargs):
@@ -469,6 +615,147 @@ class MedicalLicenseListView(LoginRequiredMixin, ListView):
             )
             return JsonResponse({'success': True, 'html': html})
         return super().render_to_response(context, **response_kwargs)
+
+
+class LicenseSubsidyReportModalView(LoginRequiredMixin, View):
+    def get(self, request):
+        html = render_to_string(
+            'licenses/modals/modal_subsidy_report.html',
+            {'current_month': timezone.now().date().strftime('%Y-%m')},
+            request=request,
+        )
+        return JsonResponse({'success': True, 'html': html})
+
+
+class LicenseSubsidyReportExportView(LoginRequiredMixin, View):
+    @transaction.atomic
+    def post(self, request):
+        period = (request.POST.get('period') or '').strip()
+        try:
+            year, month = (int(value) for value in period.split('-', 1))
+            _cutoff_start, cutoff_end = _subsidy_cutoff(year, month)
+        except (TypeError, ValueError):
+            return JsonResponse(
+                {'success': False, 'message': 'Seleccione un mes válido.'},
+                status=400,
+            )
+
+        pending_effects = (
+            Q(
+                subsidy_reported=False,
+                license__start_date__lte=cutoff_end,
+                created_at__date__lte=cutoff_end,
+                target_year__isnull=True,
+                target_month__isnull=True,
+                license_year__isnull=False,
+                license_month__isnull=False,
+            )
+        )
+        reported_effects = Q(
+            subsidy_reported=True,
+            target_year=year,
+            target_month=month,
+        )
+        effects = list(
+            LicensePayrollEffect.objects
+            .select_for_update()
+            .select_related(
+                'license__employee__person',
+                'license__personnel_action',
+            )
+            .filter(
+                license__is_active=True,
+                license__personnel_action__is_registered=True,
+                labor_regime='CT',
+            ).filter(
+                Q(employer_covered_days__gt=0)
+                | Q(days_to_discount__gt=0)
+            ).filter(pending_effects | reported_effects)
+        )
+        if not effects:
+            return JsonResponse(
+                {'success': False, 'message': 'No existen subsidios pendientes para este corte.'},
+                status=404,
+            )
+
+        rows = []
+        calculated_at = timezone.now()
+        for effect in effects:
+            license_instance = effect.license
+            if not effect.subsidy_reported:
+                effect.estimated_discount_amount = _subsidy_amount(effect)
+                effect.save(update_fields=['estimated_discount_amount'])
+            person = license_instance.employee.person
+            license_month = effect.license_month or license_instance.start_date.month
+            license_year = effect.license_year or license_instance.start_date.year
+            rows.append({
+                'document': person.document_number or '',
+                'name': f'{person.last_name} {person.first_name}'.strip(),
+                'month': (
+                    f'{LICENSE_MONTH_NAMES[license_month]} '
+                    f'{license_year}'
+                ),
+                'days': effect.employer_covered_days + effect.days_to_discount,
+                'amount': effect.estimated_discount_amount,
+            })
+            if not effect.subsidy_reported:
+                LicensePayrollEffect.objects.filter(pk=effect.pk).update(
+                    subsidy_reported=True,
+                    subsidy_reported_at=calculated_at,
+                    target_year=year,
+                    target_month=month,
+                )
+
+        rows.sort(key=lambda row: (row['name'].lower(), row['month']))
+        from openpyxl import Workbook
+        from openpyxl.styles import Alignment, Font, PatternFill
+
+        workbook = Workbook()
+        sheet = workbook.active
+        sheet.title = 'Subsidios'
+        sheet.append([f'Reporte de Subsidios - Corte al {cutoff_end:%d/%m/%Y}'])
+        sheet.append([
+            'Cédula', 'Apellidos y nombres', 'Mes de licencia',
+            'Días subsidio', 'Valor calculado'
+        ])
+        for row in rows:
+            sheet.append([
+                row['document'],
+                row['name'],
+                row['month'],
+                row['days'],
+                float(row['amount']),
+            ])
+        sheet.append([])
+        sheet.append([
+            '', 'TOTAL', '',
+            sum(row['days'] for row in rows),
+            float(sum((row['amount'] for row in rows), Decimal('0.00')))
+        ])
+        sheet.append([])
+        sheet.append(['', f'Elaborado por: {request.user.get_full_name() or request.user.username}'])
+        sheet.merge_cells('A1:E1')
+        sheet['A1'].font = Font(bold=True, size=14)
+        sheet['A1'].alignment = Alignment(horizontal='center')
+        for cell in sheet[2]:
+            cell.font = Font(bold=True, color='FFFFFF')
+            cell.fill = PatternFill('solid', fgColor='1F4E78')
+        for cell in sheet['E'][2:]:
+            cell.number_format = '$#,##0.00'
+        for column, width in {'A': 16, 'B': 42, 'C': 18, 'D': 16, 'E': 18}.items():
+            sheet.column_dimensions[column].width = width
+
+        output = BytesIO()
+        workbook.save(output)
+        output.seek(0)
+        response = HttpResponse(
+            output.getvalue(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+        response['Content-Disposition'] = (
+            f'attachment; filename="Reporte_Subsidios_{year}_{month:02d}.xlsx"'
+        )
+        return response
 
 
 class MedicalLicenseCreateView(LoginRequiredMixin, View):
@@ -522,13 +809,31 @@ class MedicalLicenseActionModalView(LoginRequiredMixin, View):
     def get(self, request, pk):
         license_instance = get_object_or_404(
             MedicalLicense.objects.select_related('employee__person', 'license_type', 'personnel_action'),
-            pk=pk, is_active=True, status__in=[MedicalLicense.STATUS_VALIDATED, MedicalLicense.STATUS_ACTION_ISSUED]
+            pk=pk, is_active=True,
+            status__in=[
+                MedicalLicense.STATUS_DRAFT,
+                MedicalLicense.STATUS_SUBMITTED,
+                MedicalLicense.STATUS_VALIDATED,
+                MedicalLicense.STATUS_ACTION_ISSUED,
+            ]
         )
         if not license_instance.personnel_action_id:
-            apply_validation_effects(license_instance)
+            action = create_draft_license_action(license_instance)
+            license_instance.personnel_action = action
+            license_instance.status = MedicalLicense.STATUS_ACTION_ISSUED
+            license_instance.save(update_fields=['personnel_action', 'status', 'updated_at'])
             license_instance.refresh_from_db()
+        action = license_instance.personnel_action
+        _ensure_license_action_movement(action)
+        action.authority_1 = license_instance.license_type.default_authority_1 or action.authority_1
+        action.authority_2 = license_instance.license_type.default_authority_2
+        action.reviewer = license_instance.license_type.default_reviewer
+        action.register = license_instance.license_type.default_register
+        action.save(update_fields=[
+            'authority_1', 'authority_2', 'reviewer', 'register',
+        ])
         form = LicensePersonnelActionForm(
-            instance=license_instance.personnel_action,
+            instance=action,
             license_instance=license_instance
         )
         html = render_to_string(
@@ -546,19 +851,35 @@ class MedicalLicenseActionSaveView(LoginRequiredMixin, View):
             MedicalLicense.objects.select_for_update().select_related('employee', 'license_type'),
             pk=pk, is_active=True
         )
-        if license_instance.status not in [MedicalLicense.STATUS_VALIDATED, MedicalLicense.STATUS_ACTION_ISSUED]:
-            return JsonResponse({'success': False, 'message': 'La licencia debe estar convalidada.'}, status=400)
+        if license_instance.status not in [
+            MedicalLicense.STATUS_DRAFT,
+            MedicalLicense.STATUS_SUBMITTED,
+            MedicalLicense.STATUS_VALIDATED,
+            MedicalLicense.STATUS_ACTION_ISSUED,
+        ]:
+            return JsonResponse({'success': False, 'message': 'La licencia no puede generar una acción.'}, status=400)
         if not license_instance.personnel_action_id:
-            apply_validation_effects(license_instance)
+            action = create_draft_license_action(license_instance)
+            license_instance.personnel_action = action
+            license_instance.status = MedicalLicense.STATUS_ACTION_ISSUED
+            license_instance.save(update_fields=['personnel_action', 'status', 'updated_at'])
             license_instance.refresh_from_db()
+        action = license_instance.personnel_action
         form = LicensePersonnelActionForm(
-            request.POST, instance=license_instance.personnel_action,
+            request.POST, instance=action,
             license_instance=license_instance
         )
         if not form.is_valid():
             return JsonResponse({'success': False, 'errors': form.errors, 'message': 'Revise los campos de la acción.'}, status=400)
         action = form.save(commit=False)
+        action.authority_1 = license_instance.license_type.default_authority_1 or action.authority_1
+        action.authority_2 = license_instance.license_type.default_authority_2
+        action.reviewer = license_instance.license_type.default_reviewer
+        action.register = license_instance.license_type.default_register
         action.save()
+        _ensure_license_action_movement(action)
+        license_instance.status = MedicalLicense.STATUS_ACTION_ISSUED
+        license_instance.save(update_fields=['status', 'updated_at'])
         license_instance.start_date = form.cleaned_data['date_from']
         license_instance.end_date = form.cleaned_data['date_to']
         license_instance.updated_by = request.user
@@ -582,7 +903,6 @@ class MedicalLicenseActionSaveView(LoginRequiredMixin, View):
             )
         else:
             LicenseSchedule.objects.filter(license=license_instance).delete()
-        apply_validation_effects(license_instance)
         return JsonResponse({'success': True, 'message': 'Acción de personal actualizada correctamente.'})
 
 
@@ -590,6 +910,9 @@ class MedicalLicenseReturnReceptionView(LoginRequiredMixin, View):
     @transaction.atomic
     def post(self, request, pk):
         license_instance = get_object_or_404(MedicalLicense, pk=pk, is_active=True)
+        return_observation = request.POST.get('return_observation', '').strip()
+        if not return_observation:
+            return JsonResponse({'success': False, 'message': 'Debe indicar el motivo de la devolución.'}, status=400)
         reception = license_instance.reception
         if not reception:
             return JsonResponse({'success': False, 'message': 'La licencia no tiene recepción de origen.'}, status=400)
@@ -598,66 +921,27 @@ class MedicalLicenseReturnReceptionView(LoginRequiredMixin, View):
         license_instance.updated_by = request.user
         license_instance.save(update_fields=['status', 'is_active', 'updated_by', 'updated_at'])
         reception.status = LicenseReception.STATUS_APPROVED
-        reception.observations = (reception.observations or '') + f'\n[DEVUELTA A RECEPCIÓN {timezone.now():%d/%m/%Y %H:%M}]'
+        reception.observations = (
+            (reception.observations or '')
+            + f'\n[DEVUELTA A RECEPCIÓN {timezone.now():%d/%m/%Y %H:%M}] '
+              f'Motivo: {return_observation}'
+        )
         reception.save(update_fields=['status', 'observations'])
         return JsonResponse({'success': True, 'message': 'La licencia fue devuelta a recepción.'})
 
 
-class MedicalLicenseLegalizeModalView(LoginRequiredMixin, View):
-    def get(self, request, pk, *args, **kwargs):
-        try:
-            license_instance = MedicalLicense.objects.select_related('employee').get(pk=pk, is_active=True)
-        except MedicalLicense.DoesNotExist:
-            return JsonResponse({'success': False, 'message': 'Licencia no encontrada.'}, status=404)
-
+class MedicalLicenseReturnReceptionModalView(LoginRequiredMixin, View):
+    def get(self, request, pk):
+        license_instance = get_object_or_404(
+            MedicalLicense.objects.select_related('employee__person', 'license_type', 'reception'),
+            pk=pk, is_active=True
+        )
         html = render_to_string(
-            'licenses/modals/modal_legalize_confirm.html',
+            'licenses/modals/modal_return_reception.html',
             {'license': license_instance},
             request=request
         )
         return JsonResponse({'success': True, 'html': html})
-
-
-class MedicalLicenseLegalizeView(LoginRequiredMixin, View):
-    @transaction.atomic
-    def post(self, request, pk, *args, **kwargs):
-        try:
-            license_instance = MedicalLicense.objects.get(pk=pk, is_active=True)
-        except MedicalLicense.DoesNotExist:
-            return JsonResponse({'success': False, 'message': 'Licencia médica no encontrada.'}, status=404)
-
-        if license_instance.is_legalized:
-            return JsonResponse({
-                'success': False,
-                'message': 'Esta licencia médica ya se encuentra legalizada.'
-            }, status=400)
-
-        license_instance.status = MedicalLicense.STATUS_VALIDATED
-        license_instance.convalidation_date = timezone.now()
-        if hasattr(request, 'user') and request.user.is_authenticated:
-            license_instance.convalidated_by = request.user
-            license_instance.updated_by = request.user
-        license_instance.save()
-        apply_validation_effects(license_instance)
-
-        licenses = MedicalLicense.objects.select_related(
-            'employee__person',
-            'license_type',
-            'substitute_assignment__substitute_employee'
-        ).filter(is_active=True)[:15]
-
-        html_table = render_to_string(
-            'licenses/partials/partial_license_table.html',
-            {'licenses': licenses},
-            request=request
-        )
-
-        return JsonResponse({
-            'success': True,
-            'status': 'success',
-            'message': 'La licencia médica ha sido convalidada exitosamente.',
-            'html': html_table
-        })
 
 
 def get_type_requirements_api(request, type_id):
@@ -730,7 +1014,7 @@ class LicenseReceptionDeliverModalView(LoginRequiredMixin, View):
             pk=pk
         )
         # Usuarios/Analistas receptores de Talento Humano
-        users = User.objects.filter(is_active=True).order_by('first_name', 'last_name')
+        users = _human_resources_users()
 
         html = render_to_string(
             'licenses/modals/modal_deliver_reception.html',
@@ -747,7 +1031,7 @@ class LicenseReceptionBulkDeliverModalView(LoginRequiredMixin, View):
     """Abre el modal para remitir varias recepciones aprobadas."""
 
     def get(self, request, *args, **kwargs):
-        users = User.objects.filter(is_active=True).order_by('first_name', 'last_name')
+        users = _human_resources_users()
         html = render_to_string(
             'licenses/modals/modal_bulk_deliver_reception.html',
             {'users': users},
@@ -771,7 +1055,7 @@ class LicenseReceptionBulkDeliverSaveView(LoginRequiredMixin, View):
         if not delivered_to_id:
             return JsonResponse({'success': False, 'message': 'Debe seleccionar el servidor destinatario.'}, status=400)
 
-        dest_user = get_object_or_404(User, pk=delivered_to_id, is_active=True)
+        dest_user = get_object_or_404(_human_resources_users(), pk=delivered_to_id)
         receptions = list(
             LicenseReception.objects.select_for_update().filter(
                 pk__in=reception_ids,
@@ -788,15 +1072,17 @@ class LicenseReceptionBulkDeliverSaveView(LoginRequiredMixin, View):
             f"\n[ENTREGA {timezone.now().strftime('%d/%m/%Y %H:%M')}] "
             f"Entregado a: {dest_user.get_full_name()}. Obs: {delivery_observation}"
         )
+        delivery_batch = uuid.uuid4()
         for reception in receptions:
             reception.status = LicenseReception.STATUS_DELIVERED
+            reception.delivery_batch = delivery_batch
+            reception.delivered_to = dest_user
             reception.observations = (reception.observations or '') + obs_entry
-            reception.save(update_fields=['status', 'observations'])
+            reception.save(update_fields=['status', 'delivery_batch', 'delivered_to', 'observations'])
             _ensure_medical_license_from_reception(reception, request.user)
 
         report_url = reverse('licenses:reception_report')
-        report_url += '?' + '&'.join(f'ids={reception.id}' for reception in receptions)
-        report_url += f'&delivered_to={dest_user.id}'
+        report_url += f'?batch={receptions[0].delivery_batch}&delivered_to={dest_user.id}'
         return JsonResponse({
             'success': True,
             'status': 'success',
@@ -813,8 +1099,7 @@ class LicenseReceptionDetailModalView(LoginRequiredMixin, View):
             LicenseReception.objects.select_related(
                 'employee__person', 'license_type'
             ).prefetch_related('checked_items__requirement'),
-            pk=pk,
-            status=LicenseReception.STATUS_DELIVERED
+            pk=pk
         )
         html = render_to_string(
             'licenses/modals/modal_reception_detail.html',
@@ -836,17 +1121,19 @@ class LicenseReceptionDeliverSaveView(LoginRequiredMixin, View):
         if not delivered_to_id:
             return JsonResponse({'success': False, 'message': 'Debe seleccionar el servidor destinatario.'}, status=400)
 
-        dest_user = get_object_or_404(User, pk=delivered_to_id)
+        dest_user = get_object_or_404(_human_resources_users(), pk=delivered_to_id)
 
         reception.status = LicenseReception.STATUS_DELIVERED
+        reception.delivery_batch = uuid.uuid4()
+        reception.delivered_to = dest_user
         # Se guarda el destinatario y notas si existen en el modelo, o en la observación
         obs_entry = f"\n[ENTREGA {timezone.now().strftime('%d/%m/%Y %H:%M')}] Entregado a: {dest_user.get_full_name()}. Obs: {delivery_observation}"
         reception.observations = (reception.observations or '') + obs_entry
         reception.save()
         _ensure_medical_license_from_reception(reception, request.user)
 
-        pdf_url = reverse('licenses:reception_pdf_report', kwargs={'pk': reception.pk})
-        pdf_url += f'?delivered_to={dest_user.id}'
+        pdf_url = reverse('licenses:reception_report')
+        pdf_url += f'?batch={reception.delivery_batch}&delivered_to={dest_user.id}'
 
         return JsonResponse({
             'success': True,
@@ -863,6 +1150,13 @@ class LicenseReceptionPdfReportView(LoginRequiredMixin, View):
         receptions = LicenseReception.objects.select_related(
             'employee__person', 'license_type', 'received_by'
         ).prefetch_related('checked_items__requirement').filter(pk=pk)
+        receptions = list(receptions)
+        for reception in receptions:
+            reception.verified_attachments = ', '.join(
+                check.requirement.name
+                for check in reception.checked_items.all()
+                if check.is_checked
+            )
 
         html_string = render_to_string('licenses/reports/pdf_reception_delivery.html', {
             'receptions': receptions,
@@ -890,6 +1184,7 @@ class LicenseReceptionReportView(LoginRequiredMixin, View):
 
     def get(self, request, *args, **kwargs):
         reception_ids = [value for value in request.GET.getlist('ids') if value.isdigit()]
+        delivery_batch = request.GET.get('batch', '').strip()
         receptions = LicenseReception.objects.select_related(
             'employee__person', 'license_type', 'received_by'
         ).prefetch_related('checked_items__requirement').filter(
@@ -897,8 +1192,23 @@ class LicenseReceptionReportView(LoginRequiredMixin, View):
         )
         if reception_ids:
             receptions = receptions.filter(pk__in=reception_ids)
+        elif delivery_batch:
+            receptions = receptions.filter(delivery_batch=delivery_batch)
+        if not request.GET.get('delivered_to') and delivery_batch:
+            delivered_to = LicenseReception.objects.filter(
+                delivery_batch=delivery_batch
+            ).values_list('delivered_to', flat=True).first()
+        else:
+            delivered_to = request.GET.get('delivered_to')
         receptions = receptions.order_by('employee__person__last_name', 'employee__person__first_name')
-        delivered_to = User.objects.filter(pk=request.GET.get('delivered_to')).first()
+        receptions = list(receptions)
+        for reception in receptions:
+            reception.verified_attachments = ', '.join(
+                check.requirement.name
+                for check in reception.checked_items.all()
+                if check.is_checked
+            )
+        delivered_to = User.objects.filter(pk=delivered_to).first()
         html_string = render_to_string('licenses/reports/pdf_reception_delivery.html', {
             'receptions': receptions,
             'user': request.user,

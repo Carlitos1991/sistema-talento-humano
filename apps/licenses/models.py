@@ -3,6 +3,7 @@ from django.db import models
 from django.conf import settings
 from django.core.validators import FileExtensionValidator, MinValueValidator
 from django.utils.translation import gettext_lazy as _
+from django.utils import timezone
 
 from core.models import User
 from employee.models import Employee
@@ -119,8 +120,23 @@ class LicenseReception(models.Model):
         null=True,
         blank=True
     )
+    license_days = models.PositiveIntegerField(
+        verbose_name='Número de días de licencia',
+        null=True,
+        blank=True
+    )
     received_by = models.ForeignKey('core.User', on_delete=models.PROTECT)
+    supporting_document = models.CharField(
+        max_length=255,
+        verbose_name='Documento habilitante',
+        default='',
+    )
     observations = models.TextField(blank=True, null=True)
+    delivery_batch = models.UUIDField(null=True, blank=True, db_index=True, editable=False)
+    delivered_to = models.ForeignKey(
+        'core.User', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='delivered_license_receptions'
+    )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_REGISTERED)
 
     class Meta:
@@ -170,7 +186,7 @@ class MedicalLicense(models.Model):
     )
 
     start_date = models.DateField(_("Fecha Inicio"))
-    end_date = models.DateField(_("Fecha Fin"))
+    end_date = models.DateField(_("Fecha Fin"), null=True, blank=True)
     total_days = models.PositiveIntegerField(_("Total Días"), editable=False, default=0)
 
     cie10_code = models.CharField(_("Código CIE-10"), max_length=10, blank=True, null=True)
@@ -240,6 +256,8 @@ class MedicalLicense(models.Model):
     def save(self, *args, **kwargs):
         if self.start_date and self.end_date:
             self.total_days = (self.end_date - self.start_date).days + 1
+        elif self.start_date:
+            self.total_days = 0
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -324,8 +342,11 @@ class LicensePayrollEffect(models.Model):
         on_delete=models.CASCADE,
         related_name='payroll_effects'
     )
-    target_year = models.PositiveIntegerField(_("Año de Aplicación"))
-    target_month = models.PositiveIntegerField(_("Mes de Aplicación (1-12)"))
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
+    target_year = models.PositiveIntegerField(_("Año de Aplicación"), null=True, blank=True)
+    target_month = models.PositiveIntegerField(_("Mes de Aplicación (1-12)"), null=True, blank=True)
+    license_year = models.PositiveIntegerField(_("Año de Licencia"), null=True, blank=True)
+    license_month = models.PositiveIntegerField(_("Mes de Licencia (1-12)"), null=True, blank=True)
 
     days_to_discount = models.PositiveIntegerField(_("Días Sujetos a Subsidio IESS"))
     labor_regime = models.CharField(_("Régimen Laboral"), max_length=50, default='LOSEP')
@@ -351,6 +372,12 @@ class LicensePayrollEffect(models.Model):
         'payroll.PayrollPeriod',
         on_delete=models.SET_NULL, null=True, blank=True,
         related_name='applied_license_subsidies'
+    )
+    subsidy_reported = models.BooleanField(
+        _("Subsidio incluido en reporte"), default=False, db_index=True
+    )
+    subsidy_reported_at = models.DateTimeField(
+        _("Fecha de cálculo del subsidio"), null=True, blank=True
     )
 
     class Meta:

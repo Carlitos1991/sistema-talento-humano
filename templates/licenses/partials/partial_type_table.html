@@ -9,10 +9,8 @@
                data-external-search="true">
             <thead>
             <tr>
-                <th class="license-type-code" data-field="code">Código</th>
                 <th class="license-type-name" data-field="name">Nombre del Tipo</th>
-                <th class="license-type-requirements">Requisitos / Anexos Preconfigurados</th>
-                <th class="license-type-signatures">Firmas Configuradas</th>
+                <th class="license-type-requirements no-sort text-center">Requisitos</th>
                 <th class="license-type-status text-center" data-field="is_active">Estado</th>
                 <th class="license-type-actions no-sort text-center actions">Acciones</th>
             </tr>
@@ -20,14 +18,19 @@
             <tbody id="table-body">
             {% if types %}
                 {% for item in types %}
-                    <tr class="location-row" id="row-license-type-{{ item.pk }}">
-                        <td class="license-type-code-cell"><strong>{{ item.code }}</strong></td>
-                        <td class="license-type-name-cell bold text-primary">
-                            <span class="license-type-title">{{ item.name }}</span>
-                            {% if item.description %}
-                                <small class="license-type-description">{{ item.description|truncatewords:8 }}</small>
-                            {% endif %}
-                        </td>
+                        <tr class="location-row" id="row-license-type-{{ item.pk }}">
+                            <td class="license-type-name-cell bold text-primary">
+                                <span class="license-type-name-content">
+                                    <button type="button" class="license-type-info-btn"
+                                            data-license-type-name="{{ item.name }}"
+                                            data-license-type-description="{{ item.description|default:'Sin observaciones registradas.' }}"
+                                            title="Ver detalle de {{ item.name }}"
+                                            aria-label="Ver detalle de {{ item.name }}">
+                                        <i class="fas fa-info"></i>
+                                    </button>
+                                    <span class="license-type-title">{{ item.name }}</span>
+                                </span>
+                            </td>
                         <td class="license-type-requirements-cell">
                             {% if item.requirements.all %}
                                 <div class="license-type-badges">
@@ -40,16 +43,6 @@
                             {% else %}
                                 <span class="text-muted small">Sin anexos requeridos</span>
                             {% endif %}
-                        </td>
-                        <td class="license-type-signatures-cell">
-                            <div class="license-type-signature-list">
-                                {% if item.default_authority_1 %}
-                                    <span><i class="fas fa-signature text-primary me-1"></i><b>Auth 1</b><span>{{ item.default_authority_1.get_full_name }}</span></span>
-                                {% endif %}
-                                {% if item.default_authority_2 %}
-                                    <span><i class="fas fa-file-signature text-info me-1"></i><b>Auth 2</b><span>{{ item.default_authority_2.get_full_name }}</span></span>
-                                {% endif %}
-                            </div>
                         </td>
                         <td class="license-type-status-cell text-center">
                             {% if item.is_active %}
@@ -71,7 +64,7 @@
                 {% endfor %}
             {% else %}
                 <tr>
-                    <td colspan="6">
+                    <td colspan="5">
                         <div class="empty-state-container">
                             <i class="fas fa-file-circle-xmark empty-state-icon"></i>
                             <p class="empty-state-text">No se encontraron tipos de licencias médicas.</p>

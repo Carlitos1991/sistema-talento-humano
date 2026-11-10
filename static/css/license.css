@@ -183,10 +183,6 @@
     border-bottom: 1px solid #e9ecef;
 }
 
-.license-type-code {
-    width: 14%;
-}
-
 .license-type-table {
     table-layout: fixed;
 }
@@ -194,40 +190,80 @@
 .license-type-table th,
 .license-type-table td {
     overflow-wrap: anywhere;
+    vertical-align: middle;
 }
 
 .license-type-name {
-    width: 19%;
+    width: 34%;
 }
 
 .license-type-requirements {
-    width: 25%;
-}
-
-.license-type-signatures {
-    width: 23%;
+    width: 40%;
 }
 
 .license-type-status {
-    width: 9%;
+    width: 13%;
 }
 
 .license-type-actions {
-    width: 10%;
+    width: 13%;
 }
 
-.managed-table .license-type-code-cell,
 .managed-table .license-type-name-cell,
-.managed-table .license-type-requirements-cell,
-.managed-table .license-type-signatures-cell {
-    vertical-align: top;
+.managed-table .license-type-requirements-cell {
+    vertical-align: middle;
     padding: 12px 10px;
+}
+
+.license-type-status-cell,
+.license-type-actions-cell {
+    vertical-align: middle !important;
+    padding: 12px 10px;
+}
+
+.license-type-name-cell {
+    min-height: 64px;
+}
+
+.license-type-name-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.license-type-info-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: #f1f5f9;
+    color: #64748b;
+    cursor: pointer;
+    font-size: 9px;
+    transition: background-color .2s ease, color .2s ease, transform .2s ease;
+}
+
+.license-type-info-btn:hover,
+.license-type-info-btn:focus-visible {
+    background: #24418c;
+    color: #fff;
+    transform: scale(1.08);
 }
 
 .license-type-title,
 .license-type-description {
-    display: block;
     line-height: 1.25;
+}
+
+.license-type-title {
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 .license-type-description {
@@ -237,6 +273,8 @@
 .license-type-badges {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
     gap: 5px;
 }
 
@@ -358,12 +396,6 @@
     border-bottom: 1px solid #f1f5f9;
 }
 
-@media (max-width: 900px) {
-    .license-type-signatures {
-        display: none;
-    }
-}
-
 @media (max-width: 768px) {
     .reception-detail-grid {
         grid-template-columns: 1fr;
@@ -425,4 +457,150 @@
 .select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover {
     color: #ef4444 !important;
     background: transparent !important;
+}
+
+.license-search-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, .9fr);
+    gap: 10px;
+    align-items: center;
+    width: 100%;
+}
+
+
+.license-search-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+}
+
+.license-search-panel .search-toolbar {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 0;
+    width: 100%;
+    margin: 0;
+}
+
+.license-search-panel .search-filter-actions {
+    position: static;
+    transform: none;
+    width: max-content;
+    flex-wrap: nowrap;
+    margin: 0;
+}
+
+.license-search-row .table-search-input {
+    width: 100%;
+    min-width: 0;
+}
+
+.license-search-row .btn-dark-blue-rectangle {
+    white-space: nowrap;
+}
+
+.person-info {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+.person-avatar,
+.person-avatar-placeholder {
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.person-avatar-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #315bdc, #1d4ed8);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.person-details h4 {
+    margin: 0;
+    color: #334155;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.25;
+}
+
+@media (max-width: 900px) {
+    .license-search-row {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .license-search-row .table-search-input--large {
+        grid-column: span 2;
+    }
+}
+.license-search-toolbar .search-filter-actions {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    justify-content: center;
+    width: max-content;
+}
+
+.license-search-toolbar {
+    position: relative;
+}
+
+.license-search-toolbar .license-subsidy-report-btn {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    white-space: nowrap;
+}
+
+.btn-green-rectangle {
+    background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+    border: none;
+    border-radius: 14px;
+    color: #ffffff;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0.6rem 1.6rem;
+    font-family: 'Inter', 'Roboto', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+    transition: all 0.2s ease;
+}
+
+.btn-green-rectangle:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+}
+
+.btn-subsidy-mini {
+    align-items: center;
+    background: #eef6ff;
+    border: 1px solid #9fc5ed;
+    border-radius: 6px;
+    color: #1769aa;
+    display: inline-flex;
+    font-size: 0.7rem;
+    gap: 4px;
+    padding: 3px 6px;
+    white-space: nowrap;
+}
+
+.btn-subsidy-mini:hover {
+    background: #dceeff;
 }

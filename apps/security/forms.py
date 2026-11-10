@@ -44,6 +44,7 @@ class RoleForm(BaseFormMixin, forms.ModelForm):
             'contract': 'Contratos',
             'payroll': 'Nómina',
             'permitrequest': 'Permisos y Licencias',
+            'licenses': 'Licencias Médicas',
             'sanctions': 'Sanciones',
             'schedule': 'Horarios',
             'personnel_actions': 'Acciones de Personal',

@@ -344,6 +344,10 @@
                         <a href="#" class="{% if 'licenses' in request.resolver_match.app_name %}active{% endif %}">
                             <i class="fa-solid fa-notes-medical"></i>
                             <span class="menu-text">Licencias Médicas</span>
+                            {% if licenses_sidebar_count > 0 %}
+                                <span class="sidebar-badge"
+                                      style="background-color: #ef4444; color: white;">{{ licenses_sidebar_count }}</span>
+                            {% endif %}
                             <i class="fa-solid fa-chevron-right chevron-icon"></i>
                         </a>
                         <ul class="submenu">
@@ -355,6 +359,10 @@
                                        class="{% if request.resolver_match.url_name == 'reception_list' %}active-child{% endif %}">
                                         <i class="fa-solid fa-inbox"></i>
                                         <span class="menu-text">Recepción</span>
+                                        {% if licenses_pending_reception_count > 0 %}
+                                            <span class="sidebar-badge"
+                                                  style="background-color: #ef4444; color: white;">{{ licenses_pending_reception_count }}</span>
+                                        {% endif %}
                                     </a>
                                 </li>
                             {% endif %}
@@ -366,6 +374,10 @@
                                        class="{% if request.resolver_match.url_name == 'list' %}active-child{% endif %}">
                                         <i class="fa-solid fa-list-check"></i>
                                         <span class="menu-text">Gestión de Licencias</span>
+                                        {% if licenses_pending_management_count > 0 %}
+                                            <span class="sidebar-badge"
+                                                  style="background-color: #ef4444; color: white;">{{ licenses_pending_management_count }}</span>
+                                        {% endif %}
                                     </a>
                                 </li>
                             {% endif %}

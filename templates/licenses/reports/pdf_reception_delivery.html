@@ -65,6 +65,14 @@
             font-size: 11px;
         }
 
+        .items-table th.period-start {
+            background-color: #9f1239;
+        }
+
+        .items-table th.period-end {
+            background-color: #9f1239;
+        }
+
         .signatures {
             margin-top: 60px;
             width: 100%;
@@ -85,11 +93,9 @@
 </head>
 <body>
 <div class="header">
-    <h2>Municipio de Loja - Dirección de Tecnología / Talento Humano</h2>
+    <h2>Municipio de Loja - Dirección de Talento Humano</h2>
     <p>REPORTE DE RECEPCIONES ENTREGADAS DE LICENCIAS MÉDICAS</p>
     <p>Fecha de Emisión: {{ current_date|date:"d/m/Y H:i" }}</p>
-    <p>Generado por: {{ user.get_full_name|default:user.username }}</p>
-    <p>Remitido hacia: {% if delivered_to %}{{ delivered_to.get_full_name|default:delivered_to.username }}{% else %}No especificado{% endif %}</p>
 </div>
 
 <table class="items-table">
@@ -97,9 +103,12 @@
     <tr>
         <th style="width: 8%;">N°</th>
         <th style="width: 18%;">Cédula</th>
-        <th style="width: 24%;">Apellidos y Nombres</th>
-        <th style="width: 25%;">Tipo de Licencia</th>
-        <th style="width: 25%;">Fecha Recepción</th>
+        <th style="width: 20%;">Apellidos y Nombres</th>
+        <th style="width: 20%;">Tipo de Licencia</th>
+        <th style="width: 14%;">Fecha Recepción</th>
+        <th class="period-start" style="width: 10%;">Desde</th>
+        <th class="period-end" style="width: 10%;">Hasta</th>
+        <th style="width: 20%;">Anexos Verificados</th>
     </tr>
     </thead>
     <tbody>
@@ -110,6 +119,9 @@
     <td>{{ reception.employee.person.last_name }} {{ reception.employee.person.first_name }}</td>
     <td>{{ reception.license_type.name }}</td>
     <td>{{ reception.reception_date|date:"d/m/Y H:i" }}</td>
+    <td>{{ reception.license_start_date|date:"d/m/Y" }}</td>
+    <td>{{ reception.license_end_date|date:"d/m/Y" }}</td>
+    <td>{{ reception.verified_attachments|default:"-" }}</td>
         </tr>
     {% endfor %}
     </tbody>
@@ -120,13 +132,11 @@
         <td>
             <div class="line"></div>
             <strong>ENTREGUÉ CONFORME</strong><br>
-            <span>Ventanilla / Recepción TH</span><br>
             <small>{{ user.get_full_name|default:user.username }}</small>
         </td>
         <td>
             <div class="line"></div>
             <strong>RECIBÍ CONFORME</strong><br>
-            <span>Servidor / Destinatario</span><br>
             <small>{% if delivered_to %}{{ delivered_to.get_full_name|default:delivered_to.username }}{% else %}No especificado{% endif %}</small>
         </td>
     </tr>

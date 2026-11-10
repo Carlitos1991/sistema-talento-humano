@@ -907,6 +907,17 @@ class ActionRegisterView(LoginRequiredMixin, View):
                 action.register = request.user
                 action.save(update_fields=['is_registered', 'register'])
 
+                from licenses.models import MedicalLicense
+                try:
+                    medical_license = action.medical_license
+                except MedicalLicense.DoesNotExist:
+                    medical_license = None
+                if medical_license:
+                    from licenses.services import apply_validation_effects
+                    medical_license.status = medical_license.STATUS_ACTION_ISSUED
+                    medical_license.save(update_fields=['status', 'updated_at'])
+                    apply_validation_effects(medical_license)
+
         except Exception as e:
             return JsonResponse(
                 {'status': 'error', 'success': False, 'message': f'No se pudo registrar la acción: {str(e)}'},

@@ -7,6 +7,8 @@ from core.models import User
 from employee.models import Employee
 from .models import MedicalLicense, MedicalLicenseType, LicenseSubstitute, LicenseSchedule, LicenseTypeRequirement
 from personnel_actions.forms import PersonnelActionForm
+from personnel_actions.models import ActionType
+from .services import render_license_action_text
 
 
 class MedicalLicenseForm(forms.ModelForm):
@@ -109,7 +111,8 @@ class LicensePersonnelActionForm(PersonnelActionForm):
         widget=forms.DateInput(attrs={'type': 'date', 'class': 'input-field'}, format='%Y-%m-%d')
     )
     date_to = forms.DateField(
-        label='Fecha hasta',
+        label='Fecha hasta (dejar vacía si es indefinida)',
+        required=False,
         widget=forms.DateInput(attrs={'type': 'date', 'class': 'input-field'}, format='%Y-%m-%d')
     )
     schedule_mode = forms.ChoiceField(
@@ -136,11 +139,32 @@ class LicensePersonnelActionForm(PersonnelActionForm):
     def __init__(self, *args, license_instance=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.license_instance = license_instance
+        if license_instance:
+            self.fields['employee'].queryset = Employee.objects.filter(
+                pk=license_instance.employee_id
+            ).select_related('person')
+            self.fields['action_type'].queryset = ActionType.objects.filter(
+                code='LICENCIA', is_active=True
+            )
         self.fields['employee'].disabled = True
         self.fields['action_type'].disabled = True
         if license_instance:
             self.initial.setdefault('date_from', license_instance.start_date)
             self.initial.setdefault('date_to', license_instance.end_date)
+            if not self.instance.pk or not self.instance.explanation:
+                description = (license_instance.license_type.description or '').strip()
+                self.initial.setdefault(
+                    'explanation',
+                    render_license_action_text(
+                        description, license_instance.start_date, license_instance.end_date
+                    )
+                    or f'Licencia médica #{license_instance.pk}: {license_instance.diagnosis}'
+                )
+            if not self.instance.pk or not self.instance.motivation:
+                self.initial.setdefault(
+                    'motivation',
+                    getattr(license_instance.reception, 'supporting_document', '') or ''
+                )
             adjustment = getattr(license_instance, 'schedule_adjustment', None)
             if adjustment:
                 self.initial.setdefault('schedule_mode', 'CUSTOM' if adjustment.custom_entry_time else 'ENTRY_DELAY')
@@ -213,7 +237,7 @@ class LicenseTypeForm(forms.ModelForm):
             'description': forms.Textarea(attrs={
                 'class': 'input-field form-control',
                 'rows': 2,
-                'placeholder': 'Detalle legal o normativo que aplica a esta licencia...'
+                'placeholder': 'Ej: En la ciudad de Loja se concede [DIAS] días de licencia...'
             }),
             'default_authority_1': forms.Select(attrs={
                 'class': 'input-field form-control select2-modal',

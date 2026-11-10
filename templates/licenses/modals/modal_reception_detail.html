@@ -10,6 +10,9 @@
                 <div><span class="detail-label">Funcionario</span><strong>{{ reception.employee.person.last_name }} {{ reception.employee.person.first_name }}</strong></div>
                 <div><span class="detail-label">Tipo de licencia</span><strong>{{ reception.license_type.name }}</strong></div>
                 <div><span class="detail-label">Fecha de recepción</span><strong>{{ reception.reception_date|date:"d/m/Y H:i" }}</strong></div>
+                <div><span class="detail-label">Periodo de licencia</span><strong>{{ reception.license_start_date|date:"d/m/Y" }} al {{ reception.license_end_date|date:"d/m/Y" }}</strong></div>
+                <div><span class="detail-label">Número de días</span><strong>{{ reception.license_days|default:"--" }}</strong></div>
+                <div><span class="detail-label">Documento habilitante</span><strong>{{ reception.supporting_document|default:"--" }}</strong></div>
             </div>
             <div class="reception-detail-section">
                 <span class="detail-label">Documentos verificados</span>

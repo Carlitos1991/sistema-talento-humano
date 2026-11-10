@@ -3,7 +3,10 @@
         <form method="post" action="{% url 'licenses:action_save' license.id %}" onsubmit="submitAjaxForm(event)">
             {% csrf_token %}
             <div class="modal-header-medium">
-                <h3 class="header-title"><i class="fas fa-file-signature me-2"></i>Acción de Personal</h3>
+                <h3 class="header-title">
+                    <i class="fas fa-file-signature me-2"></i>
+                    Acción de Personal{% if form.number.value %}: {{ form.number.value }}{% endif %}
+                </h3>
                 <button type="button" class="btn-close-circle" onclick="closeModal()"><i class="fas fa-times"></i></button>
             </div>
             <div class="modal-body-custom">
@@ -21,14 +24,16 @@
                     <h5 class="section-title"><i class="fa-solid fa-file-alt"></i> DATOS DE LA ACCIÓN</h5>
                     <div class="grid-2-cols">
                         <div class="form-group">
-                            <label class="form-label">Empleado</label>
-                            {{ form.employee }}
+                            <label class="form-label">Tipo de acción</label>
+                            <input type="text" class="input-field" value="{{ license.license_type.name|default:'LICENCIA' }}" readonly>
+                            <input type="hidden" name="action_type" value="{{ form.action_type.value }}">
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Tipo de acción *</label>
-                            {{ form.action_type }}
+                            <label class="form-label">Número de acción</label>
+                            <input type="text" class="input-field" value="{{ form.number.value|default:'' }}" readonly>
                         </div>
                     </div>
+                    <input type="hidden" name="employee" value="{{ license.employee_id }}">
                     <input type="hidden" name="number" value="{{ form.number.value|default:'' }}">
                     <div class="grid-2-cols">
                         <div class="form-group">
@@ -59,13 +64,17 @@
                     <h5 class="section-title"><i class="fa-solid fa-comment-dots"></i> MOTIVACIÓN Y EXPLICACIÓN</h5>
                     <div class="form-group">
                         <label class="form-label">Motivación</label>
-                        {{ form.motivation }}
+                        <textarea name="motivation" class="input-field form-control" rows="2">{{ form.motivation.value|default:'' }}</textarea>
                     </div>
                     <div class="form-group mt-3">
                         <label class="form-label">Explicación</label>
-                        {{ form.explanation }}
+                        <textarea name="explanation" class="input-field form-control" rows="4">{{ form.explanation.value|default:'' }}</textarea>
                     </div>
                 </div>
+                <input type="hidden" name="authority_1" value="{{ form.authority_1.value|default:'' }}">
+                <input type="hidden" name="authority_2" value="{{ form.authority_2.value|default:'' }}">
+                <input type="hidden" name="reviewer" value="{{ form.reviewer.value|default:'' }}">
+                <input type="hidden" name="register" value="{{ form.register.value|default:'' }}">
                 <div class="form-section-card mt-3">
                     <details>
                         <summary class="section-title mb-0">
@@ -91,15 +100,6 @@
                             </small>
                         </div>
                     </details>
-                </div>
-                <div class="form-section-card mt-3">
-                    <h5 class="section-title"><i class="fa-solid fa-signature"></i> FIRMAS</h5>
-                    <div class="grid-2-cols">
-                        <div class="form-group"><label class="form-label">Autoridad 1</label>{{ form.authority_1 }}</div>
-                        <div class="form-group"><label class="form-label">Autoridad 2</label>{{ form.authority_2 }}</div>
-                        <div class="form-group"><label class="form-label">Revisado por</label>{{ form.reviewer }}</div>
-                        <div class="form-group"><label class="form-label">Registrado por</label>{{ form.register }}</div>
-                    </div>
                 </div>
             </div>
             <div class="modal-footer-fixed">
