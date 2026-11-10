@@ -735,8 +735,8 @@ class PersonPhotoUpdateView(LoginRequiredMixin, PermissionRequiredMixin, View):
             if not photo:
                 return JsonResponse({'success': False, 'message': 'Debe seleccionar una foto.'}, status=400)
 
-            if hasattr(photo, 'size') and photo.size > 1 * 1024 * 1024:
-                return JsonResponse({'success': False, 'message': 'La imagen es muy pesada. Máximo 1MB.'}, status=400)
+            if hasattr(photo, 'size') and photo.size > 5 * 1024 * 1024:
+                return JsonResponse({'success': False, 'message': 'La imagen es muy pesada. Máximo 5MB.'}, status=400)
 
             person.photo = photo
             person.save(update_fields=['photo'])

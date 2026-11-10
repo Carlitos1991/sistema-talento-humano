@@ -141,8 +141,8 @@ class PersonForm(BaseFormMixin, forms.ModelForm):
         photo = self.cleaned_data.get('photo')
         if photo:
             if hasattr(photo, 'size'):
-                if photo.size > 1 * 1024 * 1024:  # 1MB
-                    raise ValidationError("La imagen es muy pesada. Máximo 1MB.")
+                if photo.size > 5 * 1024 * 1024:  # 5MB
+                    raise ValidationError("La imagen es muy pesada. Máximo 5MB.")
         return photo
 
     def clean_birth_date(self):
