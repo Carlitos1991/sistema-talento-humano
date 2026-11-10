@@ -340,17 +340,18 @@ class HelpMessageForm(BaseFormMixin, forms.Form):
         current_user = kwargs.pop('current_user', None)
         super().__init__(*args, **kwargs)
 
-        # Obtenemos las personas asociadas a usuarios activos
+        # Filtrar personas con usuario activo
         qs = Person.objects.filter(
             user__isnull=False,
             user__is_active=True
         ).select_related('user').order_by('last_name', 'first_name')
 
-        # Excluimos al usuario actual para que no se autosenvíe mensajes
+        # Excluir al usuario actual en sesión
         if current_user:
             qs = qs.exclude(user=current_user)
 
         self.fields['recipient_person'].queryset = qs
+
 
 class HelpMessageReplyForm(BaseFormMixin, forms.Form):
     detail = forms.CharField(

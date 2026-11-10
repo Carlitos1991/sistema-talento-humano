@@ -706,7 +706,6 @@ class HelpMessageListView(LoginRequiredMixin, ListView):
         own_messages = HelpMessage.objects.filter(
             Q(recipient_user=self.request.user) | Q(sender_user=self.request.user)
         )
-        # CORREGIDO: Pasar current_user al instanciar HelpMessageForm
         context['create_form'] = HelpMessageForm(current_user=self.request.user)
         context['reply_form'] = HelpMessageReplyForm()
         context['sumilla_form'] = HelpMessageSumillaForm(current_user=self.request.user)

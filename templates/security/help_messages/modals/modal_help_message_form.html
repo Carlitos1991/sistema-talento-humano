@@ -80,13 +80,30 @@
         </form>
     </div>
 </div>
+<!-- Al final de modal_help_message_form.html -->
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        $('#helpMessageCreateModal').on('shown.bs.modal', function () {
-            $('#id_help_recipient').select2({
-                dropdownParent: $('#helpMessageCreateModal'),
-                width: '100%'
+        const modal = document.getElementById('helpMessageCreateModal');
+        if (!modal) return;
+
+        // MutationObserver para re-inicializar Select2 limpio cada vez que se quita la clase 'hidden'
+        const observer = new MutationObserver(function (mutations) {
+            mutations.forEach(function (mutation) {
+                if (mutation.attributeName === 'class' && !modal.classList.contains('hidden')) {
+                    const $select = $('#id_help_recipient');
+                    if ($select.hasClass('select2-hidden-accessible')) {
+                        $select.select2('destroy');
+                    }
+                    $select.select2({
+                        width: '100%',
+                        dropdownParent: $(modal),
+                        placeholder: 'Seleccione una persona',
+                        allowClear: true
+                    });
+                }
             });
         });
+
+        observer.observe(modal, {attributes: true});
     });
 </script>
