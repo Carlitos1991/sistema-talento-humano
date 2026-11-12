@@ -4,20 +4,20 @@
               onsubmit="submitReturnReceptionForm(event)">
             {% csrf_token %}
             <div class="modal-header-medium">
-                <h3 class="header-title"><i class="fas fa-rotate-left me-2"></i>Devolver a recepción</h3>
-                <button type="button" class="btn-close-circle" onclick="closeModal()">
-                    <i class="fas fa-times"></i>
+                <h3 class="header-title"><i class="fas fa-rotate-left"></i> Devolver a recepción</h3>
+                <button type="button" class="btn-close-circle" onclick="closeModal()"><i class="fas fa-times"></i>
                 </button>
             </div>
             <div class="modal-body-custom">
                 <div class="form-section-card">
-                    <div class="section-title"><i class="fas fa-file-medical text-primary"></i> Datos de la licencia</div>
-                    <p class="mb-1"><strong>Servidor:</strong> {{ license.employee.person.full_name }}</p>
-                    <p class="mb-0"><strong>Tipo:</strong> {{ license.license_type.name }}</p>
+                    <div class="section-title"><i class="fas fa-file-medical text-primary"></i> Datos de la licencia
+                    </div>
+                    <p class="summary-line"><strong>Servidor:</strong> {{ license.employee.person.full_name }}</p>
+                    <p class="summary-line"><strong>Tipo:</strong> {{ license.license_type.name }}</p>
                 </div>
-                <div class="form-section-card mt-3">
-                    <label class="form-label">Observaciones de devolución <span class="text-danger">*</span></label>
-                    <textarea name="return_observation" class="input-field form-control" rows="4" required
+                <div class="form-section-card section-spaced">
+                    <label class="form-label">Observaciones de devolución <span class="text-red">*</span></label>
+                    <textarea name="return_observation" class="input-field" rows="4" required
                               maxlength="1000"
                               placeholder="Detalle el motivo: error en los datos, no se entregó físicamente u otra causa..."></textarea>
                 </div>
@@ -25,7 +25,7 @@
             <div class="modal-footer-fixed">
                 <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">Cancelar</button>
                 <button type="submit" class="btn-dark-blue-rectangle">
-                    <i class="fas fa-rotate-left me-1"></i>Confirmar devolución
+                    <i class="fas fa-rotate-left"></i> Confirmar devolución
                 </button>
             </div>
         </form>

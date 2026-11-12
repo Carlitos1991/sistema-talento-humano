@@ -110,7 +110,6 @@ TEMPLATES = [
                 'security.context_processors.help_messages_notifications',
                 'vacation.context_processors.schedule_discrepancy_notifications',
                 'sanctions.context_processors.pending_assignments',
-                'licenses.context_processors.license_notifications',
                 'documents.context_processors.procedure_counters',
             ],
         },

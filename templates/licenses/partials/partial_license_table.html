@@ -57,8 +57,8 @@
                             {% endif %}
                         </td>
                         <td>
-                            <small class="d-block"><strong>Desde:</strong> {{ lic.start_date|date:"d/m/Y" }}</small>
-                            <small class="d-block"><strong>Hasta:</strong>
+                            <small class="block-meta"><strong>Desde:</strong> {{ lic.start_date|date:"d/m/Y" }}</small>
+                            <small class="block-meta"><strong>Hasta:</strong>
                                 {% if lic.end_date %}{{ lic.end_date|date:"d/m/Y" }}{% else %}Indefinida{% endif %}
                             </small>
                         </td>
@@ -71,14 +71,11 @@
                         </td>
                         <td class="text-center">
                             {% if lic.personnel_action and lic.personnel_action.is_registered %}
-                                <span class="badge badge-green"><i class="fas fa-check-circle me-1"></i>Registrada</span>
-                            {% elif lic.personnel_action %}
-                                <span class="badge badge-blue"><i class="fas fa-file-signature me-1"></i>Legalizada</span>
-                            {% elif lic.is_legalized or lic.status == 'VALIDATED' %}
-                                <span class="badge badge-blue"><i
-                                        class="fas fa-file-signature me-1"></i>Legalizada</span>
+                                <span class="badge badge-green"><i class="fas fa-check-circle"></i> Registrada</span>
+                            {% elif lic.personnel_action or lic.is_legalized or lic.status == 'VALIDATED' %}
+                                <span class="badge badge-blue"><i class="fas fa-file-signature"></i> Legalizada</span>
                             {% else %}
-                                <span class="badge badge-gray"><i class="fas fa-clock me-1"></i>Pendiente</span>
+                                <span class="badge badge-gray"><i class="fas fa-clock"></i> Pendiente</span>
                             {% endif %}
                         </td>
                         <td class="actions text-center">
@@ -129,8 +126,8 @@
                 {% endfor %}
             {% else %}
                 <tr>
-                    <td colspan="8" class="text-center py-4 text-muted">
-                        <i class="fas fa-folder-open fa-2x mb-2 d-block"></i>
+                    <td colspan="8" class="empty-cell-state">
+                        <i class="fas fa-folder-open empty-cell-icon"></i>
                         No se encontraron registros de licencias médicas.
                     </td>
                 </tr>

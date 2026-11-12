@@ -4,11 +4,10 @@
 {% block title %}Licencias Médicas y Sustitutos | SIGETH{% endblock %}
 
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/license.css' %}">
+    <link rel="stylesheet" href="{% static 'css/licenses.css' %}">
 {% endblock %}
 
 {% block content %}
-    <!-- HEADER -->
     <div class="header-card">
         <div>
             <h1>Licencias Médicas y Sustitutos</h1>
@@ -18,7 +17,7 @@
             <div>
                 <button type="button" class="btn-white-rectangle"
                         onclick="openAjaxModal('{% url 'licenses:create' %}')">
-                    <i class="fas fa-plus-circle me-1"></i> Nueva Licencia Médica
+                    <i class="fas fa-plus-circle"></i> Nueva Licencia Médica
                 </button>
             </div>
         {% endif %}
@@ -55,9 +54,8 @@
         </div>
     </div>
 
-    <!-- TABLA PRINCIPAL Y CONTROLES -->
     <div class="content-table">
-        <form id="reception-filter-form">
+        <form id="license-filter-form">
             <div class="search-panel">
                 <div class="search-grid">
                     <input type="text" id="table-search-license" class="input-field"
@@ -65,43 +63,43 @@
                            autocomplete="off" autocapitalize="off" autocorrect="off"
                            spellcheck="false" value="{{ search_query }}">
                     <div class="person-filter-field">
-                    <select id="filter_license_type" class="input-field">
-                        <option value="">Todos los tipos</option>
-                        {% for ltype in license_types %}
-                            <option value="{{ ltype.id }}"
-                                    {% if selected_type == ltype.id|stringformat:"s" %}selected{% endif %}>
-                                {{ ltype.name }}
-                            </option>
-                        {% endfor %}
-                    </select>
+                        <select id="filter_license_type" class="input-field">
+                            <option value="">Todos los tipos</option>
+                            {% for ltype in license_types %}
+                                <option value="{{ ltype.id }}"
+                                        {% if selected_type == ltype.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ ltype.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
                     </div>
                     <div class="person-filter-field">
-                    <select id="filter_is_legalized" class="input-field">
-                        <option value="">Todos</option>
-                        <option value="legalized" {% if selected_legalized == 'legalized' %}selected{% endif %}>
-                            Legalizadas
-                        </option>
-                        <option value="pending_registered"
-                                {% if selected_legalized == 'pending_registered' %}selected{% endif %}>
-                            Pendientes Registradas
-                        </option>
-                        <option value="registered"
-                                {% if selected_legalized == 'registered' %}selected{% endif %}>
-                            Registradas
-                        </option>
-                    </select>
+                        <select id="filter_is_legalized" class="input-field">
+                            <option value="">Todos</option>
+                            <option value="legalized" {% if selected_legalized == 'legalized' %}selected{% endif %}>
+                                Legalizadas
+                            </option>
+                            <option value="pending_registered"
+                                    {% if selected_legalized == 'pending_registered' %}selected{% endif %}>
+                                Pendientes Registradas
+                            </option>
+                            <option value="registered"
+                                    {% if selected_legalized == 'registered' %}selected{% endif %}>
+                                Registradas
+                            </option>
+                        </select>
                     </div>
                 </div>
             </div>
         </form>
+
         <div class="search-toolbar license-search-toolbar">
             <div class="table-controls person-filter-controls"></div>
             <div class="search-filter-actions">
-                <button type="submit" form="reception-filter-form" class="btn-blue-rectangle" id="btnLicenseSearch">
+                <button type="submit" form="license-filter-form" class="btn-blue-rectangle" id="btnLicenseSearch">
                     <i class="fas fa-search"></i> Buscar
                 </button>
-                <button type="button" class="btn-blue-rectangle-outline" id="btnResetFilters"
-                        title="Limpiar Filtros">
+                <button type="button" class="btn-blue-rectangle-outline" id="btnResetFilters" title="Limpiar Filtros">
                     <i class="fas fa-eraser"></i> Limpiar
                 </button>
             </div>
@@ -110,17 +108,7 @@
                 <i class="fas fa-file-excel"></i> Reporte Subsidios
             </button>
         </div>
-        <div class="table-controls toolbar-row">
-            <div class="toolbar-left rubric-export-controls">
 
-
-            </div>
-            <div class="toolbar-right">
-
-            </div>
-        </div>
-
-        <!-- CONTENEDOR PARCIAL RECARGABLE AJAX -->
         <div id="table-content-wrapper">
             {% include 'licenses/partials/partial_license_table.html' %}
         </div>
@@ -128,5 +116,5 @@
 {% endblock %}
 
 {% block extra_js %}
-    <script src="{% static 'js/license/license.js' %}"></script>
+    <script src="{% static 'js/licenses/licenses.js' %}"></script>
 {% endblock %}

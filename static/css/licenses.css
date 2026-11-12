@@ -1,6 +1,10 @@
 /* ==========================================================================
-   SIGETH - ESTILOS SELECT2 Y BOTÓN DE ANEXOS EN MODAL
+   SIGETH - LICENSES MODULE STYLES
    ========================================================================== */
+
+.reception-filter-form {
+    margin-bottom: 1rem;
+}
 
 .reception-search-wrapper {
     width: min(100%, 820px);
@@ -11,12 +15,13 @@
     gap: 10px;
 }
 
-.reception-search-wrapper > div {
+.reception-search-grow {
     flex: 1 1 auto;
     min-width: 0;
 }
 
 .reception-search-wrapper .budget-search-input {
+    width: 100%;
     height: 38px;
     font-size: 0.9rem;
 }
@@ -29,8 +34,8 @@
 
 .reception-advanced-panel {
     width: min(100%, 820px);
-    margin-right: auto;
-    margin-left: auto;
+    margin: 1rem auto 0;
+    padding-top: 1rem;
     border-top: 1px solid #e8edf4;
 }
 
@@ -44,12 +49,16 @@
     min-width: 0;
 }
 
-.reception-filter-field .form-label {
+.field-label-sm {
+    display: block;
+    margin: 0 0 4px;
     color: #475569;
+    font-size: 0.82rem;
     font-weight: 600;
 }
 
 .reception-filter-field .input-field {
+    width: 100%;
     height: 38px;
     font-size: 0.88rem;
 }
@@ -90,63 +99,84 @@
     box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08);
 }
 
-.reception-requirement-item .form-label,
-.validate-reception-item .form-label {
+.requirement-label {
     display: flex;
     align-items: center;
+    gap: 8px;
     min-width: 0;
+    margin: 0;
+    cursor: pointer;
     font-size: 0.88rem;
+    font-weight: 500;
+    color: #1e293b;
 }
 
-.reception-requirement-item .form-label span,
-.validate-reception-item .form-label strong {
+.requirement-label span,
+.requirement-label strong {
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.requirement-switch {
-    flex: 0 0 auto;
-    padding-left: 0;
-}
-
-.requirement-switch .form-check-input {
+.requirement-checkbox {
     appearance: none;
     -webkit-appearance: none;
     position: relative;
-    width: 28px !important;
-    height: 28px !important;
+    width: 26px;
+    height: 26px;
     margin: 0;
     cursor: pointer;
     border: 2px solid #94a3b8;
     border-radius: 6px;
     background: #ffffff;
-    box-shadow: none;
     transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
 }
 
-.requirement-switch .form-check-input:checked {
+.requirement-checkbox:checked {
     background-color: #2563eb;
     border-color: #2563eb;
 }
 
-.requirement-switch .form-check-input:checked::after {
+.requirement-checkbox:checked::after {
     content: "";
     position: absolute;
     left: 7px;
-    top: 3px;
-    width: 8px;
-    height: 14px;
+    top: 2px;
+    width: 7px;
+    height: 13px;
     border: solid #ffffff;
     border-width: 0 3px 3px 0;
     transform: rotate(45deg);
 }
 
-.requirement-switch .form-check-input:active {
+.requirement-checkbox:active {
     transform: scale(0.92);
 }
 
-.requirement-switch .form-check-input:focus {
+.requirement-checkbox:focus {
+    outline: none;
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+}
+
+.attachments-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.block-meta {
+    display: block;
+}
+
+.empty-cell-state {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: #64748b;
+}
+
+.empty-cell-icon {
+    display: block;
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
 }
 
 .validate-reception-body {
@@ -246,13 +276,13 @@
     color: #64748b;
     cursor: pointer;
     font-size: 9px;
-    transition: background-color .2s ease, color .2s ease, transform .2s ease;
+    transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
 }
 
 .license-type-info-btn:hover,
 .license-type-info-btn:focus-visible {
     background: #24418c;
-    color: #fff;
+    color: #ffffff;
     transform: scale(1.08);
 }
 
@@ -282,25 +312,6 @@
     font-size: 11px;
     line-height: 1.2;
     white-space: normal;
-}
-
-.license-type-signature-list {
-    display: flex;
-    flex-direction: column;
-    gap: 7px;
-    font-size: 0.78rem;
-    line-height: 1.2;
-}
-
-.license-type-signature-list > span {
-    display: grid;
-    grid-template-columns: 18px 45px minmax(0, 1fr);
-    align-items: start;
-    gap: 3px;
-}
-
-.license-type-signature-list > span > span {
-    overflow-wrap: anywhere;
 }
 
 .reception-bulk-deliver-btn {
@@ -357,70 +368,6 @@
     accent-color: #2563eb;
 }
 
-.bulk-deliver-summary {
-    padding: 10px 12px;
-    border-radius: 8px;
-    background: #eff6ff;
-    color: #1e3a8a;
-}
-
-.reception-detail-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-}
-
-.reception-detail-grid > div,
-.reception-detail-section {
-    padding: 10px 12px;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    background: #fff;
-}
-
-.detail-label {
-    display: block;
-    margin-bottom: 4px;
-    color: #64748b;
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-}
-
-.reception-detail-section {
-    margin-top: 12px;
-}
-
-.reception-detail-check {
-    padding: 5px 0;
-    border-bottom: 1px solid #f1f5f9;
-}
-
-@media (max-width: 768px) {
-    .reception-detail-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
-.btn-submodal-add {
-    background-color: #ffffff;
-    color: #1a2b4c;
-    border: 1.5px solid #1a2b4c;
-    border-radius: 6px;
-    padding: 5px 12px;
-    font-size: 12px;
-    font-weight: 600;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: all 0.2s ease;
-}
-
-.btn-submodal-add:hover {
-    background-color: #1a2b4c;
-    color: #ffffff;
-}
-
-/* Arreglo visual de los Tags seleccionados en Select2 dentro de Modales */
 .select2-container--default .select2-selection--multiple {
     border: 1px solid #ced4da !important;
     border-radius: 6px !important;
@@ -438,7 +385,7 @@
     font-size: 13px !important;
     font-weight: 500 !important;
     margin-top: 4px !important;
-    margin-margin-right: 5px !important;
+    margin-right: 5px !important;
 }
 
 .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
@@ -457,48 +404,6 @@
 .select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover {
     color: #ef4444 !important;
     background: transparent !important;
-}
-
-.license-search-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, .9fr);
-    gap: 10px;
-    align-items: center;
-    width: 100%;
-}
-
-
-.license-search-panel {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
-}
-
-.license-search-panel .search-toolbar {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 0;
-    width: 100%;
-    margin: 0;
-}
-
-.license-search-panel .search-filter-actions {
-    position: static;
-    transform: none;
-    width: max-content;
-    flex-wrap: nowrap;
-    margin: 0;
-}
-
-.license-search-row .table-search-input {
-    width: 100%;
-    min-width: 0;
-}
-
-.license-search-row .btn-dark-blue-rectangle {
-    white-space: nowrap;
 }
 
 .person-info {
@@ -521,7 +426,7 @@
     align-items: center;
     justify-content: center;
     background: linear-gradient(135deg, #315bdc, #1d4ed8);
-    color: #fff;
+    color: #ffffff;
     font-size: 11px;
     font-weight: 700;
 }
@@ -534,15 +439,10 @@
     line-height: 1.25;
 }
 
-@media (max-width: 900px) {
-    .license-search-row {
-        grid-template-columns: 1fr 1fr;
-    }
-
-    .license-search-row .table-search-input--large {
-        grid-column: span 2;
-    }
+.license-search-toolbar {
+    position: relative;
 }
+
 .license-search-toolbar .search-filter-actions {
     position: absolute;
     left: 50%;
@@ -550,10 +450,6 @@
     transform: translate(-50%, -50%);
     justify-content: center;
     width: max-content;
-}
-
-.license-search-toolbar {
-    position: relative;
 }
 
 .license-search-toolbar .license-subsidy-report-btn {
@@ -599,8 +495,225 @@
     gap: 4px;
     padding: 3px 6px;
     white-space: nowrap;
+    cursor: pointer;
 }
 
 .btn-subsidy-mini:hover {
     background: #dceeff;
+}
+
+.loading-state-inline {
+    text-align: center;
+    padding: 0.75rem;
+    color: #2563eb;
+    font-size: 0.85rem;
+}
+
+.muted-note-inline {
+    padding: 0.5rem;
+    color: #64748b;
+    font-size: 0.82rem;
+}
+
+.error-note-inline {
+    padding: 0.5rem;
+    color: #dc2626;
+    font-size: 0.82rem;
+}
+
+/* ==========================================================================
+   MODALS LAYOUT & UTILITIES (NO BOOTSTRAP / NO INLINE STYLES)
+   ========================================================================== */
+
+.modal-body-padded {
+    padding: 1rem 1.25rem;
+}
+
+.section-spaced {
+    margin-top: 1rem;
+}
+
+.field-spaced {
+    margin-top: 0.75rem;
+}
+
+.field-group-compact {
+    margin-bottom: 0;
+}
+
+.grid-3-cols {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.switch-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    align-items: stretch;
+}
+
+.switch-option-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 90px;
+    padding: 0.75rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background-color: #f8fafc;
+    text-align: center;
+}
+
+.switch-option-title {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+    color: #1e293b;
+    cursor: pointer;
+}
+
+.switch-option-control {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+.switch-wrapper-compact {
+    min-width: 110px;
+    padding: 4px 10px;
+}
+
+.switch-row-inline {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.alert-box-error {
+    margin-bottom: 1rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid #fecaca;
+    border-left: 4px solid #dc2626;
+    border-radius: 6px;
+    background-color: #fef2f2;
+    color: #991b1b;
+    font-size: 0.88rem;
+}
+
+.alert-box-info {
+    padding: 0.75rem 1rem;
+    border: 1px solid #bfdbfe;
+    border-left: 4px solid #2563eb;
+    border-radius: 6px;
+    background-color: #eff6ff;
+    color: #1e40af;
+    font-size: 0.85rem;
+}
+
+.form-help-muted {
+    display: block;
+    margin-top: 4px;
+    color: #64748b;
+    font-size: 0.8rem;
+}
+
+.summary-line {
+    margin: 0 0 0.35rem;
+    font-size: 0.9rem;
+    color: #1e293b;
+}
+
+.summary-line:last-child {
+    margin-bottom: 0;
+}
+
+.details-summary-header {
+    cursor: pointer;
+    margin-bottom: 0;
+}
+
+.bulk-deliver-summary {
+    margin: 0 0 1rem;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: #eff6ff;
+    color: #1e3a8a;
+    font-size: 0.9rem;
+}
+
+.reception-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.reception-detail-grid > div,
+.reception-detail-section {
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.detail-label {
+    display: block;
+    margin-bottom: 4px;
+    color: #64748b;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.reception-detail-section {
+    margin-top: 12px;
+}
+
+.reception-detail-check {
+    padding: 5px 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+@media (max-width: 768px) {
+    .grid-3-cols,
+    .switch-cards-grid,
+    .reception-detail-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ==========================================================================
+   RECEPTION MODAL ALIGNMENT & VALIDATION STATES
+   ========================================================================== */
+
+#receptionModal .modal-container-medium {
+    width: min(94vw, 760px);
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+#receptionModal .modal-container-medium > form {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-height: 90vh;
+}
+
+#receptionModal .modal-header-medium,
+#receptionModal .modal-body-custom,
+#receptionModal .modal-footer-fixed {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+#receptionModal .input-field.is-invalid,
+#receptionModal .select2-container--default .select2-selection--single.is-invalid {
+    border-color: #dc2626 !important;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
 }

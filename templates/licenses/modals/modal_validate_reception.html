@@ -5,37 +5,36 @@
               id="validateReceptionForm" onsubmit="submitValidateReceptionForm(event)">
             {% csrf_token %}
             <div class="modal-header-medium">
-                <h3 class="header-title"><i class="fas fa-tasks me-2"></i> Validar Requisitos Pendientes
-                    (#REC-{{ reception.id }})</h3>
+                <h3 class="header-title">
+                    <i class="fas fa-tasks"></i> Validar Requisitos Pendientes (#REC-{{ reception.id }})
+                </h3>
                 <button type="button" class="btn-close-circle" onclick="closeModal()"><i class="fas fa-times"></i>
                 </button>
             </div>
             <div class="modal-body-custom validate-reception-body">
-                <p class="validate-reception-help">Marque los anexos físicos que el funcionario está entregando en este
-                    momento para regularizar el expediente.</p>
+                <p class="validate-reception-help">
+                    Marque los anexos físicos que el funcionario está entregando en este momento para regularizar el
+                    expediente.
+                </p>
                 <div class="validate-reception-list">
                     {% for chk in pending_checks %}
                         <div class="validate-reception-item">
-                            <label for="pchk_{{ chk.id }}" class="form-label mb-0 cursor-pointer">
-                                <i class="fas fa-file-lines text-primary me-2"></i>
+                            <label for="pchk_{{ chk.id }}" class="requirement-label">
+                                <i class="fas fa-file-lines text-primary"></i>
                                 <strong>{{ chk.requirement.name }}</strong>
                             </label>
-                            <div class="form-check form-switch requirement-switch mb-0">
-                                <input type="checkbox" name="pending_checked" value="{{ chk.id }}"
-                                       id="pchk_{{ chk.id }}" class="form-check-input cursor-pointer"
-                                       >
-                            </div>
+                            <input type="checkbox" name="pending_checked" value="{{ chk.id }}"
+                                   id="pchk_{{ chk.id }}" class="requirement-checkbox">
                         </div>
                     {% empty %}
-                        <div class="alert alert-info py-2 small mb-0">Todos los anexos ya se encuentran verificados.
-                        </div>
+                        <div class="alert-box-info">Todos los anexos ya se encuentran verificados.</div>
                     {% endfor %}
                 </div>
             </div>
             <div class="modal-footer-fixed">
                 <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">Cancelar</button>
-                <button type="submit" class="btn-dark-blue-rectangle"><i class="fas fa-check-double me-1"></i> Confirmar
-                    y Guardar
+                <button type="submit" class="btn-dark-blue-rectangle">
+                    <i class="fas fa-check-double"></i> Confirmar y Guardar
                 </button>
             </div>
         </form>

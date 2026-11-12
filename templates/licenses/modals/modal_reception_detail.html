@@ -1,18 +1,37 @@
 <div class="modal-overlay" id="receptionDetailModal">
     <div class="modal-container-medium">
         <div class="modal-header-medium">
-            <h3 class="header-title"><i class="fas fa-file-lines me-2"></i> Detalle de Recepción #REC-{{ reception.id }}</h3>
+            <h3 class="header-title"><i class="fas fa-file-lines"></i> Detalle de Recepción #REC-{{ reception.id }}</h3>
             <button type="button" class="btn-close-circle" onclick="closeModal()"><i class="fas fa-times"></i></button>
         </div>
-        <div class="modal-body-custom reception-detail-body">
+        <div class="modal-body-custom modal-body-padded">
             <div class="reception-detail-grid">
-                <div><span class="detail-label">Cédula</span><strong>{{ reception.employee.person.document_number }}</strong></div>
-                <div><span class="detail-label">Funcionario</span><strong>{{ reception.employee.person.last_name }} {{ reception.employee.person.first_name }}</strong></div>
-                <div><span class="detail-label">Tipo de licencia</span><strong>{{ reception.license_type.name }}</strong></div>
-                <div><span class="detail-label">Fecha de recepción</span><strong>{{ reception.reception_date|date:"d/m/Y H:i" }}</strong></div>
-                <div><span class="detail-label">Periodo de licencia</span><strong>{{ reception.license_start_date|date:"d/m/Y" }} al {{ reception.license_end_date|date:"d/m/Y" }}</strong></div>
-                <div><span class="detail-label">Número de días</span><strong>{{ reception.license_days|default:"--" }}</strong></div>
-                <div><span class="detail-label">Documento habilitante</span><strong>{{ reception.supporting_document|default:"--" }}</strong></div>
+                <div><span
+                        class="detail-label">Cédula</span><strong>{{ reception.employee.person.document_number }}</strong>
+                </div>
+                <div><span
+                        class="detail-label">Funcionario</span><strong>{{ reception.employee.person.last_name }} {{ reception.employee.person.first_name }}</strong>
+                </div>
+                <div><span
+                        class="detail-label">Tipo de licencia</span><strong>{{ reception.license_type.name }}</strong>
+                </div>
+                <div><span
+                        class="detail-label">Fecha de recepción</span><strong>{{ reception.reception_date|date:"d/m/Y H:i" }}</strong>
+                </div>
+                <div>
+                    <span class="detail-label">Periodo de licencia</span>
+                    <strong>
+                        {{ reception.license_start_date|date:"d/m/Y" }}
+                        {% if reception.license_end_date %} al {{ reception.license_end_date|date:"d/m/Y" }}{% else %}
+                            (Indefinida){% endif %}
+                    </strong>
+                </div>
+                <div><span
+                        class="detail-label">Número de días</span><strong>{{ reception.license_days|default:"0" }}</strong>
+                </div>
+                <div><span
+                        class="detail-label">Documento habilitante</span><strong>{{ reception.supporting_document|default:"--" }}</strong>
+                </div>
             </div>
             <div class="reception-detail-section">
                 <span class="detail-label">Documentos verificados</span>
@@ -22,12 +41,12 @@
                         {{ chk.requirement.name }}
                     </div>
                 {% empty %}
-                    <span class="text-muted small">Sin anexos registrados.</span>
+                    <span class="form-help-muted">Sin anexos registrados.</span>
                 {% endfor %}
             </div>
             <div class="reception-detail-section">
                 <span class="detail-label">Observaciones</span>
-                <p>{{ reception.observations|default:"Sin observaciones registradas." }}</p>
+                <p class="summary-line">{{ reception.observations|default:"Sin observaciones registradas." }}</p>
             </div>
         </div>
         <div class="modal-footer-fixed">

@@ -5,15 +5,16 @@
               onsubmit="submitDeliverReceptionForm(event)">
             {% csrf_token %}
             <div class="modal-header-medium">
-                <h3 class="header-title"><i class="fas fa-paper-plane me-2"></i> Remitir / Entregar Expediente
-                    (#REC-{{ reception.id }})</h3>
+                <h3 class="header-title">
+                    <i class="fas fa-paper-plane"></i> Remitir / Entregar Expediente (#REC-{{ reception.id }})
+                </h3>
                 <button type="button" class="btn-close-circle" onclick="closeModal()"><i class="fas fa-times"></i>
                 </button>
             </div>
-            <div class="modal-body-custom p-3">
-                <div class="form-group mb-3">
+            <div class="modal-body-custom modal-body-padded">
+                <div class="form-group">
                     <label class="form-label">Entregar a (Servidor / Analista Destino) <span
-                            class="text-danger">*</span></label>
+                            class="text-red">*</span></label>
                     <select name="delivered_to" class="input-field select2-modal" required>
                         <option value="">-- Seleccione el funcionario receptor --</option>
                         {% for u in users %}
@@ -21,16 +22,16 @@
                         {% endfor %}
                     </select>
                 </div>
-                <div class="form-group mb-0">
+                <div class="form-group field-group-compact field-spaced">
                     <label class="form-label">Observaciones de Entrega</label>
-                    <textarea name="delivery_observation" class="input-field form-control" rows="3"
+                    <textarea name="delivery_observation" class="input-field" rows="3"
                               placeholder="Notas adicionales al entregar la documentación física..."></textarea>
                 </div>
             </div>
             <div class="modal-footer-fixed">
                 <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">Cancelar</button>
-                <button type="submit" class="btn-dark-blue-rectangle"><i class="fas fa-print me-1"></i> Entregar y Generar
-                    Acta PDF
+                <button type="submit" class="btn-dark-blue-rectangle">
+                    <i class="fas fa-print"></i> Entregar y Generar Acta PDF
                 </button>
             </div>
         </form>

@@ -4,15 +4,17 @@
             {% csrf_token %}
             <div class="modal-header-medium">
                 <h3 class="header-title">
-                    <i class="fas fa-file-signature me-2"></i>
+                    <i class="fas fa-file-signature"></i>
                     Acción de Personal{% if form.number.value %}: {{ form.number.value }}{% endif %}
                 </h3>
-                <button type="button" class="btn-close-circle" onclick="closeModal()"><i class="fas fa-times"></i></button>
+                <button type="button" class="btn-close-circle" onclick="closeModal()"><i class="fas fa-times"></i>
+                </button>
             </div>
             <div class="modal-body-custom">
                 {% if form.non_field_errors %}
-                    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                    <div class="alert-box-error">{{ form.non_field_errors }}</div>
                 {% endif %}
+
                 <div class="form-section-card">
                     <h5 class="section-title"><i class="fa-regular fa-id-badge"></i> INFORMACIÓN DEL EMPLEADO</h5>
                     <div class="employee-card-badge">
@@ -20,12 +22,14 @@
                         <small>CI: {{ license.employee.person.document_number|default:"--" }}</small>
                     </div>
                 </div>
-                <div class="form-section-card mt-3">
+
+                <div class="form-section-card section-spaced">
                     <h5 class="section-title"><i class="fa-solid fa-file-alt"></i> DATOS DE LA ACCIÓN</h5>
                     <div class="grid-2-cols">
                         <div class="form-group">
                             <label class="form-label">Tipo de acción</label>
-                            <input type="text" class="input-field" value="{{ license.license_type.name|default:'LICENCIA' }}" readonly>
+                            <input type="text" class="input-field"
+                                   value="{{ license.license_type.name|default:'LICENCIA' }}" readonly>
                             <input type="hidden" name="action_type" value="{{ form.action_type.value }}">
                         </div>
                         <div class="form-group">
@@ -35,67 +39,78 @@
                     </div>
                     <input type="hidden" name="employee" value="{{ license.employee_id }}">
                     <input type="hidden" name="number" value="{{ form.number.value|default:'' }}">
-                    <div class="grid-2-cols">
+
+                    <div class="grid-2-cols field-spaced">
                         <div class="form-group">
-                            <label class="form-label">Fecha de emisión *</label>
+                            <label class="form-label">Fecha de emisión <span class="text-red">*</span></label>
                             {{ form.date_issue }}
                             {{ form.date_issue.errors }}
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Fecha de vigencia *</label>
+                            <label class="form-label">Fecha de vigencia <span class="text-red">*</span></label>
                             {{ form.date_effective }}
                             {{ form.date_effective.errors }}
                         </div>
                     </div>
-                    <div class="grid-2-cols mt-3">
+
+                    <div class="grid-2-cols field-spaced">
                         <div class="form-group">
-                            <label class="form-label">Fecha desde *</label>
+                            <label class="form-label">Fecha desde <span class="text-red">*</span></label>
                             {{ form.date_from }}
                             {{ form.date_from.errors }}
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Fecha hasta *</label>
+                            <label class="form-label">Fecha hasta</label>
                             {{ form.date_to }}
                             {{ form.date_to.errors }}
                         </div>
                     </div>
                 </div>
-                <div class="form-section-card mt-3">
+
+                <div class="form-section-card section-spaced">
                     <h5 class="section-title"><i class="fa-solid fa-comment-dots"></i> MOTIVACIÓN Y EXPLICACIÓN</h5>
                     <div class="form-group">
                         <label class="form-label">Motivación</label>
-                        <textarea name="motivation" class="input-field form-control" rows="2">{{ form.motivation.value|default:'' }}</textarea>
+                        <textarea name="motivation" class="input-field"
+                                  rows="2">{{ form.motivation.value|default:'' }}</textarea>
+                        {{ form.motivation.errors }}
                     </div>
-                    <div class="form-group mt-3">
+                    <div class="form-group field-spaced">
                         <label class="form-label">Explicación</label>
-                        <textarea name="explanation" class="input-field form-control" rows="4">{{ form.explanation.value|default:'' }}</textarea>
+                        <textarea name="explanation" class="input-field"
+                                  rows="4">{{ form.explanation.value|default:'' }}</textarea>
+                        {{ form.explanation.errors }}
                     </div>
                 </div>
+
                 <input type="hidden" name="authority_1" value="{{ form.authority_1.value|default:'' }}">
                 <input type="hidden" name="authority_2" value="{{ form.authority_2.value|default:'' }}">
                 <input type="hidden" name="reviewer" value="{{ form.reviewer.value|default:'' }}">
                 <input type="hidden" name="register" value="{{ form.register.value|default:'' }}">
-                <div class="form-section-card mt-3">
+
+                <div class="form-section-card section-spaced">
                     <details>
-                        <summary class="section-title mb-0">
+                        <summary class="section-title details-summary-header">
                             <i class="fa-solid fa-clock"></i> JUSTIFICAR CAMBIO DE HORARIO
                         </summary>
-                        <div class="mt-3">
+                        <div class="field-spaced">
                             <div class="form-group">
                                 <label class="form-label">Modalidad</label>
                                 {{ form.schedule_mode }}
                             </div>
-                            <div class="grid-2-cols mt-3">
+                            <div class="grid-2-cols field-spaced">
                                 <div class="form-group">
                                     <label class="form-label">Hora desde</label>
                                     {{ form.custom_entry_time }}
+                                    {{ form.custom_entry_time.errors }}
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label">Hora hasta</label>
                                     {{ form.custom_exit_time }}
+                                    {{ form.custom_exit_time.errors }}
                                 </div>
                             </div>
-                            <small class="text-muted">
+                            <small class="form-help-muted">
                                 Puede justificar una jornada completa o solo la franja horaria afectada.
                             </small>
                         </div>
@@ -104,7 +119,7 @@
             </div>
             <div class="modal-footer-fixed">
                 <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">Cancelar</button>
-                <button type="submit" class="btn-dark-blue-rectangle"><i class="fas fa-save me-1"></i>Guardar</button>
+                <button type="submit" class="btn-dark-blue-rectangle"><i class="fas fa-save"></i> Guardar</button>
             </div>
         </form>
     </div>

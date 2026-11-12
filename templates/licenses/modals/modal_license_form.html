@@ -1,4 +1,4 @@
-<div class="modal-overlay hidden" id="licenseModal">
+<div class="modal-overlay" id="licenseModal">
     <div class="modal-container-medium">
         <form action="{% url 'licenses:create' %}" method="POST" id="licenseCreateForm"
               onsubmit="submitAjaxForm(event)">
@@ -6,7 +6,7 @@
 
             <div class="modal-header-medium">
                 <h3 class="header-title">
-                    <i class="fa-solid fa-file-medical me-2"></i>
+                    <i class="fa-solid fa-file-medical"></i>
                     <span>{% if form.instance.pk %}Editar Licencia Médica{% else %}Nueva Licencia
                         Médica{% endif %}</span>
                 </h3>
@@ -17,92 +17,155 @@
 
             <div class="modal-body-content modal-body-custom">
                 {% if form.non_field_errors %}
-                    <div class="alert alert-danger mb-3">
+                    <div class="alert-box-error">
                         {% for error in form.non_field_errors %}
-                            <span>{{ error }}</span><br>
+                            <div>{{ error }}</div>
                         {% endfor %}
                     </div>
                 {% endif %}
 
-                <!-- DATOS DEL SERVIDOR Y TIPO -->
-                <div class="form-section-card mb-3">
-                    <div class="row g-3">
-                        <div class="col-md-6 form-group">
-                            <label class="form-label">Servidor Municipal <span class="text-red">*</span></label>
+                <!-- 1. DATOS PRINCIPALES Y CERTIFICADO MÉDICO -->
+                <div class="form-section-card">
+                    <div class="grid-2-cols">
+                        <div class="form-group">
+                            <label class="form-label" for="{{ form.employee.id_for_label }}">
+                                Servidor Municipal <span class="text-red">*</span>
+                            </label>
                             {{ form.employee }}
                             {% if form.employee.errors %}
-                                <div class="text-error">{{ form.employee.errors.0 }}</div>{% endif %}
+                                <div class="text-error">{{ form.employee.errors.0 }}</div>
+                            {% endif %}
                         </div>
-                        <div class="col-md-6 form-group">
-                            <label class="form-label">Tipo de Licencia <span class="text-red">*</span></label>
+                        <div class="form-group">
+                            <label class="form-label" for="{{ form.license_type.id_for_label }}">
+                                Tipo de Licencia <span class="text-red">*</span>
+                            </label>
                             {{ form.license_type }}
                             {% if form.license_type.errors %}
-                                <div class="text-error">{{ form.license_type.errors.0 }}</div>{% endif %}
+                                <div class="text-error">{{ form.license_type.errors.0 }}</div>
+                            {% endif %}
                         </div>
                     </div>
 
-                    <div class="row g-3 mt-1">
-                        <div class="col-md-4 form-group">
-                            <label class="form-label">N° Certificado Médico</label>
+                    <div class="grid-3-cols field-spaced">
+                        <div class="form-group">
+                            <label class="form-label" for="{{ form.medical_certificate_number.id_for_label }}">
+                                N° Certificado Médico
+                            </label>
                             {{ form.medical_certificate_number }}
                         </div>
-                        <div class="col-md-4 form-group">
-                            <label class="form-label">Fecha Inicio <span class="text-red">*</span></label>
+                        <div class="form-group">
+                            <label class="form-label" for="{{ form.start_date.id_for_label }}">
+                                Fecha Inicio <span class="text-red">*</span>
+                            </label>
                             {{ form.start_date }}
+                            {% if form.start_date.errors %}
+                                <div class="text-error">{{ form.start_date.errors.0 }}</div>
+                            {% endif %}
                         </div>
-                        <div class="col-md-4 form-group">
-                            <label class="form-label">Fecha Fin <span class="text-red">*</span></label>
+                        <div class="form-group">
+                            <label class="form-label" for="{{ form.end_date.id_for_label }}">
+                                Fecha Fin
+                            </label>
                             {{ form.end_date }}
+                            {% if form.end_date.errors %}
+                                <div class="text-error">{{ form.end_date.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="grid-3-cols field-spaced">
+                        <div class="form-group">
+                            <label class="form-label" for="{{ form.issuing_entity.id_for_label }}">
+                                Entidad Emisora <span class="text-red">*</span>
+                            </label>
+                            {{ form.issuing_entity }}
+                            {% if form.issuing_entity.errors %}
+                                <div class="text-error">{{ form.issuing_entity.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="{{ form.doctor_name.id_for_label }}">
+                                Médico Tratante
+                            </label>
+                            {{ form.doctor_name }}
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="{{ form.cie10_code.id_for_label }}">
+                                Código CIE-10
+                            </label>
+                            {{ form.cie10_code }}
                         </div>
                     </div>
                 </div>
 
-                <!-- SWITCHES DE OPCIONES ESPECIALES (SUSTITUTO / JORNADA) -->
-                <div class="form-section-card py-3 px-3 mb-3">
-                    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: stretch;">
-
-                        <!-- SWITCH SUSTITUTO -->
-                        <div class="d-flex flex-column justify-content-between align-items-center p-2 rounded border bg-light"
-                             style="min-height: 90px; text-align: center;">
-                            <label for="id_has_substitute"
-                                   class="form-label font-bold text-dark mb-2 cursor-pointer d-flex align-items-center justify-content-center gap-1">
+                <!-- 2. SWITCHES Y CAMPOS CONDICIONALES (SUSTITUTO / JORNADA REDUCIDA) -->
+                <div class="form-section-card section-spaced">
+                    <div class="switch-cards-grid">
+                        <div class="switch-option-card">
+                            <label for="id_has_substitute" class="switch-option-title">
                                 <i class="fa-solid fa-user-friends text-blue"></i> ¿Requiere Sustituto?
                             </label>
-                            <div class="d-flex align-items-center justify-content-center w-100">
+                            <div class="switch-option-control">
                                 {{ form.has_substitute }}
-                                <label class="switch-wrapper" for="id_has_substitute"
-                                       style="min-width: 110px; padding: 4px 10px;">
+                                <label class="switch-wrapper switch-wrapper-compact" for="id_has_substitute">
                                     <div class="switch-circle"></div>
                                     <span class="switch-text">Sustituto</span>
                                 </label>
                             </div>
                         </div>
 
-                        <!-- SWITCH JORNADA REDUCIDA -->
-                        <div class="d-flex flex-column justify-content-between align-items-center p-2 rounded border bg-light"
-                             style="min-height: 90px; text-align: center;">
-                            <label for="id_has_reduced_hours"
-                                   class="form-label font-bold text-dark mb-2 cursor-pointer d-flex align-items-center justify-content-center gap-1">
+                        <div class="switch-option-card">
+                            <label for="id_has_reduced_hours" class="switch-option-title">
                                 <i class="fa-solid fa-clock text-warning"></i> ¿Jornada Reducida?
                             </label>
-                            <div class="d-flex align-items-center justify-content-center w-100">
+                            <div class="switch-option-control">
                                 {{ form.has_reduced_hours }}
-                                <label class="switch-wrapper" for="id_has_reduced_hours"
-                                       style="min-width: 110px; padding: 4px 10px;">
+                                <label class="switch-wrapper switch-wrapper-compact" for="id_has_reduced_hours">
                                     <div class="switch-circle"></div>
                                     <span class="switch-text">Reducida</span>
                                 </label>
                             </div>
                         </div>
+                    </div>
 
+                    <div class="grid-2-cols field-spaced">
+                        <!-- BLOQUE CONDICIONAL 1: SUSTITUTO -->
+                        <div class="form-group {% if not form.has_substitute.value %}hidden{% endif %}"
+                             id="substitute-field-wrapper">
+                            <label class="form-label" for="{{ form.substitute.id_for_label }}">
+                                Funcionario Sustituto <span class="text-red">*</span>
+                            </label>
+                            {{ form.substitute }}
+                            {% if form.substitute.errors %}
+                                <div class="text-error">{{ form.substitute.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- BLOQUE CONDICIONAL 2: HORAS REDUCIDAS -->
+                        <div class="form-group {% if not form.has_reduced_hours.value %}hidden{% endif %}"
+                             id="reduced-hours-field-wrapper">
+                            <label class="form-label" for="{{ form.reduced_hours.id_for_label }}">
+                                Horas de Reducción Diaria <span class="text-red">*</span>
+                            </label>
+                            {{ form.reduced_hours }}
+                            {% if form.reduced_hours.errors %}
+                                <div class="text-error">{{ form.reduced_hours.errors.0 }}</div>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
 
-                <!-- DIAGNÓSTICO -->
-                <div class="form-section-card">
-                    <div class="form-group">
-                        <label class="form-label">Diagnóstico / Observaciones</label>
+                <!-- 3. DIAGNÓSTICO -->
+                <div class="form-section-card section-spaced">
+                    <div class="form-group field-group-compact">
+                        <label class="form-label" for="{{ form.diagnosis.id_for_label }}">
+                            Diagnóstico / Observaciones <span class="text-red">*</span>
+                        </label>
                         {{ form.diagnosis }}
+                        {% if form.diagnosis.errors %}
+                            <div class="text-error">{{ form.diagnosis.errors.0 }}</div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -110,7 +173,7 @@
             <div class="modal-footer-medium modal-footer-spaced">
                 <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">Cancelar</button>
                 <button type="submit" class="btn-dark-blue-rectangle">
-                    <i class="fas fa-save me-1"></i> Guardar Licencia
+                    <i class="fas fa-save"></i> Guardar Licencia
                 </button>
             </div>
         </form>

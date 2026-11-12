@@ -32,24 +32,17 @@ class MedicalLicenseType(models.Model):
     code = models.CharField(max_length=35, unique=True, verbose_name="Código", help_text="Ej: LIC_MED, LIC_SUST")
     name = models.CharField(max_length=150, verbose_name="Nombre del Tipo de Licencia")
     description = models.TextField(blank=True, null=True, verbose_name="Descripción / Base Legal")
+    description_ct = models.TextField(blank=True, null=True,
+                                      verbose_name='Descripción / Base Legal (Código de Trabajo - CT)')
 
     # Requisitos / Anexos preconfigurados
-    requirements = models.ManyToManyField(
-        LicenseTypeRequirement,
-        blank=True,
-        related_name="license_types",
-        verbose_name="Requisitos / Anexos Requeridos"
-    )
+    requirements = models.ManyToManyField(LicenseTypeRequirement, blank=True, related_name="license_types",
+                                          verbose_name="Requisitos / Anexos Requeridos")
 
     # Firmas Preconfiguradas (Por Defecto) para la Acción de Personal
-    default_authority_1 = models.ForeignKey(
-        User,
-        verbose_name='Autoridad Nominadora (1)',
-        on_delete=models.SET_NULL,
-        related_name='default_auth1_license_types',
-        limit_choices_to={'is_active': True},
-        null=True, blank=True
-    )
+    default_authority_1 = models.ForeignKey(User, verbose_name='Autoridad Nominadora (1)', on_delete=models.SET_NULL,
+                                            related_name='default_auth1_license_types',
+                                            limit_choices_to={'is_active': True}, null=True, blank=True)
     default_authority_2 = models.ForeignKey(
         User,
         verbose_name='Director de Talento Humano (2)',
@@ -90,15 +83,20 @@ class MedicalLicenseType(models.Model):
         verbose_name = 'Tipo de Licencia Médica'
         verbose_name_plural = 'Tipos de Licencias Médicas'
 
+    def get_legal_basis_for_regime(self, is_labor_code=False):
+        if is_labor_code and self.description_ct:
+            return self.description_ct
+        return self.description or ''
+
     def __str__(self):
         return f"{self.code} - {self.name}"
 
 
 class LicenseReception(models.Model):
     STATUS_REGISTERED = 'REGISTERED'  # Documentos físicos recibidos / Pendientes
-    STATUS_APPROVED = 'APPROVED'      # Checklist 100% verificado y conforme
-    STATUS_DELIVERED = 'DELIVERED'    # Remitido para elaboración de Acción de Personal
-    STATUS_CANCELLED = 'CANCELLED'    # Dado de baja
+    STATUS_APPROVED = 'APPROVED'  # Checklist 100% verificado y conforme
+    STATUS_DELIVERED = 'DELIVERED'  # Remitido para elaboración de Acción de Personal
+    STATUS_CANCELLED = 'CANCELLED'  # Dado de baja
 
     STATUS_CHOICES = [
         (STATUS_REGISTERED, 'Registrado'),

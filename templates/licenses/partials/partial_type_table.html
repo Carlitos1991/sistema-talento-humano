@@ -18,25 +18,26 @@
             <tbody id="table-body">
             {% if types %}
                 {% for item in types %}
-                        <tr class="location-row" id="row-license-type-{{ item.pk }}">
-                            <td class="license-type-name-cell bold text-primary">
-                                <span class="license-type-name-content">
-                                    <button type="button" class="license-type-info-btn"
-                                            data-license-type-name="{{ item.name }}"
-                                            data-license-type-description="{{ item.description|default:'Sin observaciones registradas.' }}"
-                                            title="Ver detalle de {{ item.name }}"
-                                            aria-label="Ver detalle de {{ item.name }}">
-                                        <i class="fas fa-info"></i>
-                                    </button>
-                                    <span class="license-type-title">{{ item.name }}</span>
-                                </span>
-                            </td>
+                    <tr class="location-row" id="row-license-type-{{ item.pk }}">
+                        <td class="license-type-name-cell bold text-primary">
+                            <span class="license-type-name-content">
+                                <button type="button" class="license-type-info-btn"
+                                        data-license-type-name="{{ item.name }}"
+                                        data-license-type-description="{{ item.description|default:'Sin base legal LOSEP registrada.' }}"
+                                        data-license-type-description-ct="{{ item.description_ct|default:'Usa la misma base legal de LOSEP.' }}"
+                                        title="Ver detalle de {{ item.name }}"
+                                        aria-label="Ver detalle de {{ item.name }}">
+                                    <i class="fas fa-info"></i>
+                                </button>
+                                <span class="license-type-title">{{ item.name }}</span>
+                            </span>
+                        </td>
                         <td class="license-type-requirements-cell">
                             {% if item.requirements.all %}
                                 <div class="license-type-badges">
                                     {% for req in item.requirements.all %}
                                         <span class="badge badge-blue-solid license-type-badge">
-                                            <i class="fas fa-paperclip me-1"></i>{{ req.name }}
+                                            <i class="fas fa-paperclip"></i> {{ req.name }}
                                         </span>
                                     {% endfor %}
                                 </div>
@@ -64,7 +65,7 @@
                 {% endfor %}
             {% else %}
                 <tr>
-                    <td colspan="5">
+                    <td colspan="4">
                         <div class="empty-state-container">
                             <i class="fas fa-file-circle-xmark empty-state-icon"></i>
                             <p class="empty-state-text">No se encontraron tipos de licencias médicas.</p>

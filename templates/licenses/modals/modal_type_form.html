@@ -1,7 +1,6 @@
 {% load static %}
 <div class="modal-overlay" id="licenseTypeModalOverlay">
     <div class="modal-container-medium">
-
         <div class="modal-header-medium">
             <div class="header-content-group">
                 <div class="header-icon-circle">
@@ -23,7 +22,6 @@
             {{ form.code }}
 
             <div class="modal-body-custom">
-                <!-- 1. IDENTIFICACIÓN -->
                 <div class="form-section-card">
                     <div class="section-title">
                         <i class="fas fa-info-circle text-primary"></i> Identificación del Tipo de Licencia
@@ -31,40 +29,45 @@
 
                     <div class="form-group">
                         <label class="form-label" for="{{ form.name.id_for_label }}">
-                            Nombre del Tipo de Licencia <span class="text-danger">*</span>
+                            Nombre del Tipo de Licencia <span class="text-red">*</span>
                         </label>
                         {{ form.name }}
                         <div class="invalid-feedback" id="error-name"></div>
                     </div>
 
-                    <div class="form-group mt-2">
+                    <div class="form-group field-spaced">
                         <label class="form-label" for="{{ form.description.id_for_label }}">
-                            Descripción / Base Legal
+                            Descripción / Base Legal (LOSEP)
                         </label>
                         {{ form.description }}
-                        <small class="form-help-text">
-                            Variables disponibles:
+                    </div>
+
+                    <div class="form-group field-spaced">
+                        <label class="form-label" for="{{ form.description_ct.id_for_label }}">
+                            Descripción / Base Legal (Código de Trabajo - CT)
+                        </label>
+                        {{ form.description_ct }}
+                        <small class="form-help-muted">
+                            Variables disponibles en ambos campos:
                             <strong>[DIAS]</strong>, <strong>[FECHA_INICIO]</strong> y
-                            <strong>[FECHA_FIN]</strong>. Se reemplazan automáticamente usando las fechas
-                            de la licencia.
+                            <strong>[FECHA_FIN]</strong>. Si se deja vacío el campo de CT, se usará el texto de LOSEP.
                         </small>
                     </div>
                 </div>
 
-                <!-- 2. ANEXOS / REQUISITOS PRECONFIGURADOS -->
-                <div class="form-section-card mt-3">
+                <div class="form-section-card section-spaced">
                     <div class="section-header-flex">
-                        <div class="section-title mb-0">
+                        <div class="section-title">
                             <i class="fas fa-paperclip text-primary"></i> Anexos y Requisitos Requeridos (Checklist
                             Recepción)
                         </div>
                         <button type="button" class="btn-submodal-add" onclick="openRequirementModal()"
                                 title="Agregar nuevo anexo al catálogo">
-                            <i class="fas fa-plus me-1"></i> NUEVO REQUISITO
+                            <i class="fas fa-plus"></i> NUEVO REQUISITO
                         </button>
                     </div>
 
-                    <div class="form-group mt-3">
+                    <div class="form-group field-spaced">
                         <label class="form-label" for="{{ form.requirements_list.id_for_label }}">
                             Seleccione los requisitos obligatorios que se pedirán en Ventanilla / Recepción
                         </label>
@@ -72,8 +75,7 @@
                     </div>
                 </div>
 
-                <!-- 3. FIRMAS PRECONFIGURADAS -->
-                <div class="form-section-card mt-3">
+                <div class="form-section-card section-spaced">
                     <div class="section-title">
                         <i class="fas fa-signature text-primary"></i> Firmas Preconfiguradas (Borrador de Acción de
                         Personal)
@@ -86,21 +88,18 @@
                             </label>
                             {{ form.default_authority_1 }}
                         </div>
-
                         <div class="form-group">
                             <label class="form-label" for="{{ form.default_authority_2.id_for_label }}">
                                 Director de Talento Humano (2)
                             </label>
                             {{ form.default_authority_2 }}
                         </div>
-
                         <div class="form-group">
                             <label class="form-label" for="{{ form.default_reviewer.id_for_label }}">
                                 Revisado Por
                             </label>
                             {{ form.default_reviewer }}
                         </div>
-
                         <div class="form-group">
                             <label class="form-label" for="{{ form.default_register.id_for_label }}">
                                 Registrado Por
@@ -110,11 +109,10 @@
                     </div>
                 </div>
 
-                <!-- 4. ESTADO DE OPERACIÓN -->
-                <div class="form-section-card mt-3">
-                    <div class="form-group mb-0 d-flex align-items-center">
+                <div class="form-section-card section-spaced">
+                    <div class="switch-row-inline">
                         {{ form.is_active }}
-                        <label class="switch-wrapper mb-0" for="{{ form.is_active.id_for_label }}">
+                        <label class="switch-wrapper" for="{{ form.is_active.id_for_label }}">
                             <div class="switch-circle"></div>
                             <span class="switch-text">Tipo de Licencia Activo para Operación</span>
                         </label>
@@ -125,7 +123,7 @@
             <div class="modal-footer-fixed">
                 <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">Cancelar</button>
                 <button type="submit" class="btn-dark-blue-rectangle">
-                    <i class="fas fa-save me-1"></i>
+                    <i class="fas fa-save"></i>
                     {% if is_edit or form.instance.pk %}Actualizar Tipo{% else %}Guardar Tipo{% endif %}
                 </button>
             </div>

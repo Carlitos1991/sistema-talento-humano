@@ -1,0 +1,118 @@
+/* ==========================================================================
+   SIGETH - PDF RECEPTION DELIVERY REPORT STYLES
+   ========================================================================== */
+
+@page {
+    size: A4 landscape;
+    margin: 15mm;
+}
+
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 11px;
+    color: #1e293b;
+    margin: 0;
+}
+
+.report-header {
+    text-align: center;
+    margin-bottom: 18px;
+    border-bottom: 2px solid #1a365d;
+    padding-bottom: 10px;
+}
+
+.report-header h2 {
+    margin: 0;
+    color: #1a365d;
+    font-size: 15px;
+    text-transform: uppercase;
+}
+
+.report-header p {
+    margin: 3px 0;
+    font-size: 11px;
+    color: #475569;
+}
+
+.items-table {
+    width: 100%;
+    margin-bottom: 30px;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.items-table th,
+.items-table td {
+    padding: 7px 6px;
+    border: 1px solid #cbd5e1;
+    text-align: left;
+    word-wrap: break-word;
+}
+
+.items-table th {
+    background-color: #1a365d;
+    color: #ffffff;
+    font-size: 10px;
+    text-transform: uppercase;
+}
+
+.items-table th.period-header {
+    background-color: #9f1239;
+    text-align: center;
+}
+
+.col-num {
+    width: 5%;
+    text-align: center;
+}
+
+.col-id {
+    width: 12%;
+}
+
+.col-name {
+    width: 22%;
+}
+
+.col-type {
+    width: 16%;
+}
+
+.col-date {
+    width: 13%;
+}
+
+.col-start {
+    width: 9%;
+}
+
+.col-end {
+    width: 9%;
+}
+
+.col-attachments {
+    width: 14%;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.signatures-table {
+    margin-top: 55px;
+    width: 100%;
+    border-collapse: collapse;
+    text-align: center;
+}
+
+.signatures-table td {
+    width: 50%;
+    vertical-align: bottom;
+    padding: 0 20px;
+}
+
+.signature-line {
+    border-top: 1px solid #334155;
+    width: 75%;
+    margin: 0 auto 6px auto;
+}

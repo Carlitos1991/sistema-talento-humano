@@ -4,7 +4,7 @@ from . import views
 app_name = 'licenses'
 
 urlpatterns = [
-    # Licencias
+    # Medical Licenses
     path('', views.MedicalLicenseListView.as_view(), name='list'),
     path('subsidios/modal/', views.LicenseSubsidyReportModalView.as_view(), name='subsidy_report_modal'),
     path('subsidios/exportar/', views.LicenseSubsidyReportExportView.as_view(), name='subsidy_report_export'),
@@ -15,25 +15,25 @@ urlpatterns = [
     path('<int:pk>/devolver-recepcion-modal/', views.MedicalLicenseReturnReceptionModalView.as_view(),
          name='return_reception_modal'),
 
-    # Tipos de Licencias
+    # License Types
     path('tipos/', views.LicenseTypeListView.as_view(), name='type_list'),
     path('tipos/crear/', views.LicenseTypeCreateView.as_view(), name='type_create'),
     path('tipos/<int:pk>/editar/', views.LicenseTypeUpdateView.as_view(), name='type_update'),
 
-    # Requisitos / Anexos
+    # Requirements
     path('requisitos/crear-modal/', views.RequirementCreateModalView.as_view(), name='requirement_create_modal'),
     path('requisitos/guardar/', views.RequirementSaveAjaxView.as_view(), name='requirement_save_ajax'),
 
-    # Recepción de Licencias y Documentos
+    # Document Reception
     path('recepcion/', views.LicenseReceptionListView.as_view(), name='reception_list'),
     path('recepcion/crear-modal/', views.LicenseReceptionCreateModalView.as_view(), name='reception_create_modal'),
-    path('recepcion/obtener-requisitos/<int:type_id>/', views.get_type_requirements_api,
-         name='get_type_requirements_api'),
+    path('recepcion/obtener-requisitos/<int:type_id>/', views.LicenseTypeRequirementsView.as_view(),
+         name='get_type_requirements'),
     path('recepcion/guardar/', views.LicenseReceptionSaveView.as_view(), name='reception_save'),
     path('recepcion/<int:pk>/estado/', views.LicenseReceptionToggleStatusView.as_view(),
          name='reception_toggle_status'),
 
-    # Flujos de Estado (Validar / Entregar / PDF)
+    # Reception Workflow & Reports
     path('recepcion/<int:pk>/validar-modal/', views.LicenseReceptionValidateModalView.as_view(),
          name='reception_validate_modal'),
     path('recepcion/<int:pk>/validar-guardar/', views.LicenseReceptionValidateSaveView.as_view(),

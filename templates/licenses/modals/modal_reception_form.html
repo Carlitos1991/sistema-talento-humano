@@ -1,8 +1,7 @@
 {% load static %}
 <div class="modal-overlay" id="receptionModal">
     <div class="modal-container-medium">
-        <form action="{% url 'licenses:reception_save' %}" method="POST" id="receptionForm"
-              onsubmit="submitAjaxForm(event)">
+        <form action="{% url 'licenses:reception_save' %}" method="POST" id="receptionForm" novalidate>
             {% csrf_token %}
 
             <div class="modal-header-medium">
@@ -18,14 +17,15 @@
             </div>
 
             <div class="modal-body-custom">
-                <!-- 1. DATOS DE IDENTIFICACIÓN -->
-                <div class="form-section-card mb-3">
-                    <div class="section-title mb-2">
-                        <i class="fas fa-user-check text-primary me-1"></i> Datos del Servidor y Tipo de Solicitud
+                <div id="receptionFormAlert" class="alert-box-error hidden"></div>
+
+                <div class="form-section-card">
+                    <div class="section-title">
+                        <i class="fas fa-user-check text-primary"></i> Datos del Servidor y Tipo de Solicitud
                     </div>
                     <div class="grid-2-cols">
                         <div class="form-group">
-                            <label class="form-label">Servidor Municipal <span class="text-danger">*</span></label>
+                            <label class="form-label">Servidor Municipal <span class="text-red">*</span></label>
                             <select name="employee" id="id_reception_employee" class="input-field select2-modal"
                                     required>
                                 <option value="">-- Seleccione el servidor --</option>
@@ -38,7 +38,7 @@
                             </select>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Tipo de Licencia <span class="text-danger">*</span></label>
+                            <label class="form-label">Tipo de Licencia <span class="text-red">*</span></label>
                             <select name="license_type" id="id_reception_license_type" class="input-field select2-modal"
                                     required>
                                 <option value="">-- Seleccione tipo de licencia --</option>
@@ -48,42 +48,41 @@
                             </select>
                         </div>
                     </div>
-                    <div class="grid-2-cols mt-2">
+                    <div class="grid-2-cols field-spaced">
                         <div class="form-group">
-                            <label class="form-label">Inicio de licencia <span class="text-danger">*</span></label>
-                            <input type="date" name="license_start_date" class="input-field form-control" required>
+                            <label class="form-label">Inicio de licencia <span class="text-red">*</span></label>
+                            <input type="date" name="license_start_date" class="input-field" required>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Número de días <span class="text-danger">*</span></label>
-                            <input type="number" name="license_days" class="input-field form-control"
-                                   min="0" step="1" required>
-                            <small class="text-muted">Ingrese 0 si la licencia es indefinida.</small>
+                            <label class="form-label">Número de días <span class="text-red">*</span></label>
+                            <input type="number" name="license_days" class="input-field" min="0" step="1" required>
+                            <small class="form-help-muted">Ingrese 0 si la licencia es indefinida.</small>
                         </div>
                     </div>
                     <input type="hidden" name="license_end_date" id="license_end_date">
                 </div>
 
-                <!-- 2. CHECKLIST REQUISITOS -->
-                <div class="form-section-card mb-3">
-                    <div class="section-title mb-2">
-                        <i class="fas fa-tasks text-primary me-1"></i> Verificación de Anexos / Documentos Requeridos
+                <div class="form-section-card section-spaced">
+                    <div class="section-title">
+                        <i class="fas fa-tasks text-primary"></i> Verificación de Anexos / Documentos Requeridos
                     </div>
-                    <div class="form-group mb-3">
-                        <label class="form-label">Documento habilitante <span class="text-danger">*</span></label>
-                        <input type="text" name="supporting_document" class="input-field form-control"
+                    <div class="form-group">
+                        <label class="form-label">Documento habilitante <span class="text-red">*</span></label>
+                        <input type="text" name="supporting_document" class="input-field"
                                maxlength="255" required
                                placeholder="Ingrese el documento que habilita la licencia">
                     </div>
-                    <div id="requirements_checklist_container" class="reception-requirements-container">
-                        <span class="text-muted small">Seleccione un tipo de licencia para desplegar los anexos requeridos.</span>
+                    <div id="requirements_checklist_container" class="reception-requirements-container field-spaced">
+                        <div class="muted-note-inline">Seleccione un tipo de licencia para desplegar los anexos
+                            requeridos.
+                        </div>
                     </div>
                 </div>
 
-                <!-- 3. OBSERVACIONES -->
-                <div class="form-section-card">
-                    <div class="form-group mb-0">
+                <div class="form-section-card section-spaced">
+                    <div class="form-group field-group-compact">
                         <label class="form-label">Observaciones de Recepción</label>
-                        <textarea name="observations" class="input-field form-control" rows="2"
+                        <textarea name="observations" class="input-field" rows="2"
                                   placeholder="Detalle de observaciones sobre el estado físico de los documentos presentados en ventanilla..."></textarea>
                     </div>
                 </div>
@@ -92,7 +91,7 @@
             <div class="modal-footer-fixed">
                 <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">Cancelar</button>
                 <button type="submit" class="btn-dark-blue-rectangle">
-                    <i class="fas fa-check-circle me-1"></i> Confirmar Recepción
+                    <i class="fas fa-check-circle"></i> Confirmar Recepción
                 </button>
             </div>
         </form>

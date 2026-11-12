@@ -1,98 +1,13 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <title>Reporte de Recepciones Entregadas</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            font-size: 12px;
-            color: #333;
-            margin: 20px;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #1a365d;
-            padding-bottom: 10px;
-        }
-
-        .header h2 {
-            margin: 0;
-            color: #1a365d;
-            text-transform: uppercase;
-        }
-
-        .header p {
-            margin: 2px 0;
-            font-size: 11px;
-            color: #666;
-        }
-
-        .info-table {
-            width: 100%;
-            margin-bottom: 20px;
-            border-collapse: collapse;
-        }
-
-        .info-table td {
-            padding: 6px;
-            border: 1px solid #ddd;
-        }
-
-        .info-table td.label {
-            font-weight: bold;
-            background-color: #f7fafc;
-            width: 25%;
-        }
-
-        .items-table {
-            width: 100%;
-            margin-bottom: 30px;
-            border-collapse: collapse;
-        }
-
-        .items-table th, .items-table td {
-            padding: 8px;
-            border: 1px solid #cbd5e1;
-            text-align: left;
-        }
-
-        .items-table th {
-            background-color: #1a365d;
-            color: white;
-            font-size: 11px;
-        }
-
-        .items-table th.period-start {
-            background-color: #9f1239;
-        }
-
-        .items-table th.period-end {
-            background-color: #9f1239;
-        }
-
-        .signatures {
-            margin-top: 60px;
-            width: 100%;
-            text-align: center;
-        }
-
-        .signatures td {
-            width: 50%;
-            vertical-align: bottom;
-        }
-
-        .line {
-            border-top: 1px solid #333;
-            width: 80%;
-            margin: 0 auto 5px auto;
-        }
-    </style>
+    <link rel="stylesheet" href="{% static 'css/licenses/pdf_reception_delivery.css' %}">
 </head>
 <body>
-<div class="header">
+<div class="report-header">
     <h2>Municipio de Loja - Dirección de Talento Humano</h2>
     <p>REPORTE DE RECEPCIONES ENTREGADAS DE LICENCIAS MÉDICAS</p>
     <p>Fecha de Emisión: {{ current_date|date:"d/m/Y H:i" }}</p>
@@ -101,43 +16,44 @@
 <table class="items-table">
     <thead>
     <tr>
-        <th style="width: 8%;">N°</th>
-        <th style="width: 18%;">Cédula</th>
-        <th style="width: 20%;">Apellidos y Nombres</th>
-        <th style="width: 20%;">Tipo de Licencia</th>
-        <th style="width: 14%;">Fecha Recepción</th>
-        <th class="period-start" style="width: 10%;">Desde</th>
-        <th class="period-end" style="width: 10%;">Hasta</th>
-        <th style="width: 20%;">Anexos Verificados</th>
+        <th class="col-num">N°</th>
+        <th class="col-id">Cédula</th>
+        <th class="col-name">Apellidos y Nombres</th>
+        <th class="col-type">Tipo de Licencia</th>
+        <th class="col-date">Fecha Recepción</th>
+        <th class="period-header col-start">Desde</th>
+        <th class="period-header col-end">Hasta</th>
+        <th class="col-attachments">Anexos Verificados</th>
     </tr>
     </thead>
     <tbody>
     {% for reception in receptions %}
         <tr>
-    <td>{{ forloop.counter }}</td>
-    <td>{{ reception.employee.person.document_number }}</td>
-    <td>{{ reception.employee.person.last_name }} {{ reception.employee.person.first_name }}</td>
-    <td>{{ reception.license_type.name }}</td>
-    <td>{{ reception.reception_date|date:"d/m/Y H:i" }}</td>
-    <td>{{ reception.license_start_date|date:"d/m/Y" }}</td>
-    <td>{{ reception.license_end_date|date:"d/m/Y" }}</td>
-    <td>{{ reception.verified_attachments|default:"-" }}</td>
+            <td class="text-center">{{ forloop.counter }}</td>
+            <td>{{ reception.employee.person.document_number }}</td>
+            <td>{{ reception.employee.person.last_name }} {{ reception.employee.person.first_name }}</td>
+            <td>{{ reception.license_type.name }}</td>
+            <td>{{ reception.reception_date|date:"d/m/Y H:i" }}</td>
+            <td class="text-center">{{ reception.license_start_date|date:"d/m/Y" }}</td>
+            <td class="text-center">{{ reception.license_end_date|date:"d/m/Y"|default:"Indefinida" }}</td>
+            <td>{{ reception.verified_attachments|default:"-" }}</td>
         </tr>
     {% endfor %}
     </tbody>
 </table>
 
-<table class="signatures">
+<table class="signatures-table">
     <tr>
         <td>
-            <div class="line"></div>
+            <div class="signature-line"></div>
             <strong>ENTREGUÉ CONFORME</strong><br>
             <small>{{ user.get_full_name|default:user.username }}</small>
         </td>
         <td>
-            <div class="line"></div>
+            <div class="signature-line"></div>
             <strong>RECIBÍ CONFORME</strong><br>
-            <small>{% if delivered_to %}{{ delivered_to.get_full_name|default:delivered_to.username }}{% else %}No especificado{% endif %}</small>
+            <small>{% if delivered_to %}{{ delivered_to.get_full_name|default:delivered_to.username }}{% else %}No
+                especificado{% endif %}</small>
         </td>
     </tr>
 </table>

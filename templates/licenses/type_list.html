@@ -4,17 +4,17 @@
 {% block title %}Tipos de Licencias Médicas | SIGETH{% endblock %}
 
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/license.css' %}">
+    <link rel="stylesheet" href="{% static 'css/licenses.css' %}">
 {% endblock %}
 
 {% block content %}
     <div class="header-card">
         <div>
-            <h1><i class="fa-solid fa-sliders me-2"></i> Tipos de Licencias Médicas</h1>
+            <h1><i class="fa-solid fa-sliders"></i> Tipos de Licencias Médicas</h1>
             <p>Definición de tipos de licencias, borradores de Acción de Personal y catálogo de anexos.</p>
         </div>
         <button type="button" class="btn-white-rectangle" onclick="openAjaxModal('{% url 'licenses:type_create' %}')">
-            <i class="fas fa-plus me-1"></i> NUEVO TIPO DE LICENCIA
+            <i class="fas fa-plus"></i> NUEVO TIPO DE LICENCIA
         </button>
     </div>
 
@@ -38,11 +38,10 @@
         </div>
     </div>
 
-    <!-- Contenedores para Modales AJAX -->
     <div id="modal-root"></div>
     <div id="submodal-root"></div>
 {% endblock %}
 
 {% block extra_js %}
-    <script src="{% static 'js/license/license.js' %}"></script>
+    <script src="{% static 'js/licenses/licenses.js' %}"></script>
 {% endblock %}

@@ -4,23 +4,21 @@
 {% block title %}Recepción de Licencias | SIGETH{% endblock %}
 
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/license.css' %}">
+    <link rel="stylesheet" href="{% static 'css/licenses.css' %}">
 {% endblock %}
 
 {% block content %}
-    <!-- 1. Encabezado -->
     <div class="header-card">
         <div>
-            <h1><i class="fas fa-inbox me-2"></i> Recepción e Inspección Documental</h1>
+            <h1><i class="fas fa-inbox"></i> Recepción e Inspección Documental</h1>
             <p>Ventanilla de control físico y checklist de anexos previos al trámite de licencias médicas.</p>
         </div>
         <button type="button" class="btn-white-rectangle"
                 onclick="openAjaxModal('{% url 'licenses:reception_create_modal' %}')">
-            <i class="fas fa-plus me-1"></i> NUEVA RECEPCIÓN
+            <i class="fas fa-plus"></i> NUEVA RECEPCIÓN
         </button>
     </div>
 
-    <!-- 2. Estadísticas (Stat Cards Filtros Rápidos) -->
     <div class="stats-row" id="reception-stats-row">
         <div class="stat-card color-one" data-reception-status="all" id="card-filter-all">
             <div class="stat-left">
@@ -55,30 +53,28 @@
         </div>
     </div>
 
-    <!-- 3. Panel de Búsqueda y Tabla -->
     <div id="table-app">
         <div class="content-table">
-            <form id="reception-filter-form" class="mb-3">
+            <form id="reception-filter-form" class="reception-filter-form">
                 <div class="search-panel">
                     <div class="reception-search-wrapper">
-                        <div class="flex-grow-1">
+                        <div class="reception-search-grow">
                             <input type="text" name="q" id="table-search-reception"
-                                   class="form-control budget-search-input"
+                                   class="input-field budget-search-input"
                                    placeholder="Buscar por nombres, apellidos o cédula del funcionario...">
                         </div>
                         <button type="button" class="btn-white-rectangle budget-btn-toggle"
                                 id="btn-toggle-advanced-reception"
                                 title="Filtros avanzados">
-                            <i class="fa-solid fa-sliders me-1"></i> Filtros
-                            <i class="fa-solid fa-chevron-down ms-1" id="icon-toggle-advanced-reception"></i>
+                            <i class="fa-solid fa-sliders"></i> Filtros
+                            <i class="fa-solid fa-chevron-down" id="icon-toggle-advanced-reception"></i>
                         </button>
                     </div>
 
-                    <div id="advanced-search-container-reception" class="hidden mt-3 pt-3 reception-advanced-panel">
+                    <div id="advanced-search-container-reception" class="hidden reception-advanced-panel">
                         <div class="reception-advanced-grid">
                             <div class="reception-filter-field">
-                                <label class="form-label small m-0 mb-1" for="filter_license_type">Tipo de
-                                    Licencia:</label>
+                                <label class="field-label-sm" for="filter_license_type">Tipo de Licencia:</label>
                                 <select name="license_type" id="filter_license_type" class="input-field select2">
                                     <option value="">Todos los tipos</option>
                                     {% for ltype in license_types %}
@@ -87,7 +83,7 @@
                                 </select>
                             </div>
                             <div class="reception-filter-field">
-                                <label class="form-label small m-0 mb-1" for="filter_status">Estado:</label>
+                                <label class="field-label-sm" for="filter_status">Estado:</label>
                                 <select name="status" id="filter_status" class="input-field select2">
                                     <option value="">Todos los estados activos</option>
                                     {% for status_value, status_label in reception_statuses %}
@@ -96,11 +92,11 @@
                                 </select>
                             </div>
                             <div class="reception-filter-field">
-                                <label class="form-label small m-0 mb-1" for="filter_date_from">Fecha Desde:</label>
+                                <label class="field-label-sm" for="filter_date_from">Fecha Desde:</label>
                                 <input type="date" name="date_from" id="filter_date_from" class="input-field">
                             </div>
                             <div class="reception-filter-field">
-                                <label class="form-label small m-0 mb-1" for="filter_date_to">Fecha Hasta:</label>
+                                <label class="field-label-sm" for="filter_date_to">Fecha Hasta:</label>
                                 <input type="date" name="date_to" id="filter_date_to" class="input-field">
                             </div>
                         </div>
@@ -109,35 +105,31 @@
 
                 <div class="search-toolbar">
                     <div class="table-controls person-filter-controls rubric-export-controls"></div>
-
                     <div class="search-filter-actions">
                         <button type="submit" class="btn-blue-rectangle" id="btn-reception-submit">
-                            <i class="fas fa-search me-1"></i> BUSCAR
+                            <i class="fas fa-search"></i> BUSCAR
                         </button>
                         <button type="button" class="btn-blue-rectangle-outline" id="btn-reception-clear">
-                            <i class="fas fa-eraser me-1"></i> LIMPIAR
+                            <i class="fas fa-eraser"></i> LIMPIAR
                         </button>
                     </div>
                     <button type="button" class="btn-green-rectangle reception-bulk-deliver-btn"
                             id="btn-reception-deliver" disabled>
-                        <i class="fas fa-paper-plane me-1"></i> REMITIR
+                        <i class="fas fa-paper-plane"></i> REMITIR
                     </button>
                 </div>
             </form>
 
-            <!-- Tabla Parcial -->
             <div id="table-content-wrapper">
                 {% include 'licenses/partials/partial_reception_table.html' %}
             </div>
-
         </div>
     </div>
 
-    <!-- Modales AJAX -->
     <div id="modal-root"></div>
     <div id="submodal-root"></div>
 {% endblock %}
 
 {% block extra_js %}
-    <script src="{% static 'js/license/license.js' %}"></script>
+    <script src="{% static 'js/licenses/licenses.js' %}"></script>
 {% endblock %}

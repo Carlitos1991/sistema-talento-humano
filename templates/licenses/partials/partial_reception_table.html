@@ -32,18 +32,18 @@
                         <td class="text-center"><span class="badge badge-blue">#REC-{{ item.id }}</span></td>
                         <td>
                             <strong>{{ item.employee.person.last_name }} {{ item.employee.person.first_name }}</strong>
-                            <small class="d-block text-muted">C.I.: {{ item.employee.person.document_number }}</small>
+                            <small class="block-meta text-muted">C.I.: {{ item.employee.person.document_number }}</small>
                         </td>
                         <td><span class="badge badge-blue-solid">{{ item.license_type.name }}</span></td>
                         <td><small>{{ item.reception_date|date:"d/m/Y H:i" }}</small></td>
                         <td>
-                            <div class="d-flex flex-column gap-1">
+                            <div class="attachments-stack">
                                 {% for chk in item.checked_items.all %}
                                     <small>
                                         {% if chk.is_checked %}
-                                            <i class="fas fa-check-circle text-green me-1"></i>
+                                            <i class="fas fa-check-circle text-green"></i>
                                         {% else %}
-                                            <i class="fas fa-times-circle text-red me-1"></i>
+                                            <i class="fas fa-times-circle text-red"></i>
                                         {% endif %}
                                         {{ chk.requirement.name }}
                                     </small>
@@ -51,40 +51,33 @@
                                     <small class="text-muted">Sin anexos requeridos</small>
                                 {% endfor %}
                             </div>
-
                         </td>
                         <td class="text-center">
                             {% if item.status == 'REGISTERED' %}
-                                <span class="badge badge-yellow"><i class="fas fa-clock me-1"></i>Registrado</span>
+                                <span class="badge badge-yellow"><i class="fas fa-clock"></i> Registrado</span>
                             {% elif item.status == 'APPROVED' %}
-                                <span class="badge badge-green"><i class="fas fa-check-circle me-1"></i>Aprobado</span>
-                            {% elif item.status == 'APPROVED' %}
-                                <button class="btn-blue-circle" onclick="openReceptionDetailModal({{ item.id }})"
-                                        title="Ver detalle de recepción">
-                                    <i class="fas fa-eye"></i>
-                                </button>
+                                <span class="badge badge-green"><i class="fas fa-check-circle"></i> Aprobado</span>
                             {% elif item.status == 'DELIVERED' %}
-                                <span class="badge badge-blue-solid"><i
-                                        class="fas fa-paper-plane me-1"></i>Entregado</span>
+                                <span class="badge badge-blue-solid"><i class="fas fa-paper-plane"></i> Entregado</span>
                             {% else %}
-                                <span class="badge badge-red"><i class="fas fa-ban me-1"></i>Dado de Baja</span>
+                                <span class="badge badge-red"><i class="fas fa-ban"></i> Dado de Baja</span>
                             {% endif %}
                         </td>
                         <td class="actions text-center">
-                            <div class="actions-wrapper justify-content-center">
-                                <button class="btn-blue-circle" onclick="openReceptionDetailModal({{ item.id }})"
+                            <div class="actions-wrapper">
+                                <button type="button" class="btn-blue-circle"
+                                        onclick="openReceptionDetailModal({{ item.id }})"
                                         title="Ver detalle de recepción">
                                     <i class="fas fa-eye"></i>
                                 </button>
                                 {% if item.status == 'REGISTERED' %}
-                                    <!-- Botón VALIDAR para estado REGISTRADO -->
-                                    <button class="btn-yellow-circle"
+                                    <button type="button" class="btn-yellow-circle"
                                             onclick="openValidateReceptionModal({{ item.id }})"
                                             title="Validar Anexos Pendientes">
                                         <i class="fas fa-tasks"></i>
                                     </button>
                                 {% elif item.status == 'DELIVERED' %}
-                                    <button class="btn-dark-blue-circle"
+                                    <button type="button" class="btn-dark-blue-circle"
                                             onclick="openReceptionDeliveryReport('{{ item.delivery_batch|default:'' }}', {{ item.id }}, '{{ item.delivered_to_id|default:'' }}')"
                                             title="Ver reporte de entrega">
                                         <i class="fas fa-file-pdf"></i>
@@ -92,22 +85,21 @@
                                 {% endif %}
 
                                 {% if item.status != 'CANCELLED' and item.status != 'DELIVERED' %}
-                                    <button class="btn-red-circle"
+                                    <button type="button" class="btn-red-circle"
                                             onclick="changeReceptionStatus({{ item.id }}, 'CANCELLED')"
                                             title="Dar de Baja">
                                         <i class="fas fa-times"></i>
                                     </button>
                                 {% endif %}
                             </div>
-
                         </td>
                     </tr>
                 {% endfor %}
             {% else %}
                 <tr>
-                    <td colspan="8" class="text-center py-4 text-muted">
-                        <i class="fas fa-folder-open fa-2x mb-2 d-block"></i> No se encontraron recepciones de
-                        licencias.
+                    <td colspan="8" class="empty-cell-state">
+                        <i class="fas fa-folder-open empty-cell-icon"></i>
+                        No se encontraron recepciones de licencias.
                     </td>
                 </tr>
             {% endif %}
@@ -141,7 +133,8 @@
             </div>
             <button type="button" class="page-btn {% if not page_obj.has_next %}disabled{% endif %}"
                     title="Siguiente"
-                    data-page="{% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages }}{% endif %}"
+                    data-page="
+                            {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages }}{% endif %}"
                     {% if not page_obj.has_next %}disabled{% endif %}>
                 <i class="fas fa-angle-right"></i>
             </button>
