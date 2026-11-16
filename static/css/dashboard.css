@@ -760,21 +760,37 @@
 }
 
 .institutional-logo {
-    max-height: 90px;
-    max-width: 260px;
+    max-height: 100px;
+    max-width: 270px;
     width: auto;
     height: auto;
     object-fit: contain;
-    /* Resalta bordes sutiles en logos vectoriales monocromáticos */
     filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
 }
 
-.institutional-logo {
-    max-height: 120px;
-    max-width: 280px;
-    width: auto;
-    height: auto;
-    object-fit: contain;
+/* Colores de leyenda de gráficos y etiquetas compactas (sin style inline en dashboard.html) */
+.legend-dot-amber {
+    background-color: #f59e0b;
+}
+
+.legend-dot-emerald {
+    background-color: #10b981;
+}
+
+.legend-dot-blue {
+    background-color: #3b82f6;
+}
+
+.legend-dot-red {
+    background-color: #ef4444;
+}
+
+.legend-dot-pink {
+    background-color: #ec4899;
+}
+
+.form-label-sm {
+    font-size: 0.75rem;
 }
 
 .institutional-logo-placeholder {

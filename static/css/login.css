@@ -1,22 +1,22 @@
 /* =====================================================================
-   02. LOGIN
+   02. LOGIN Y RECUPERACIÓN DE CREDENCIALES
    ===================================================================== */
 .login-container {
-    height: 100vh;
-    width: 100vw;
+    min-height: 100vh;
+    width: 100%;
     display: flex;
     justify-content: center;
     align-items: center;
     background-color: var(--primary-color);
     position: relative;
-    overflow: hidden;
+    overflow-x: hidden;
     padding: 1.5rem;
     box-sizing: border-box;
 }
 
-@supports (height: 100dvh) {
+@supports (min-height: 100dvh) {
     .login-container {
-        height: 100dvh;
+        min-height: 100dvh;
     }
 }
 
@@ -48,7 +48,6 @@
     text-align: center;
     margin-bottom: 1.75rem;
 }
-
 
 .login-logo {
     max-width: 220px;
@@ -83,7 +82,7 @@
     font-size: 0.95rem;
 }
 
-/* Pantallas auxiliares de acceso: creación y recuperación de credenciales. */
+/* Pantallas auxiliares de acceso: creación y recuperación de credenciales */
 .login-description {
     color: #64748b;
     font-size: 0.9rem;
@@ -95,9 +94,57 @@
     margin-bottom: 0.55rem;
 }
 
+.login-description-error {
+    color: #b91c1c;
+    font-weight: 500;
+}
+
 .login-back-link {
     margin-top: 0.85rem;
     text-align: right;
+}
+
+/* Modal de carga moderno para solicitudes AJAX de autenticación */
+.swal2-loading-modern {
+    border-radius: 18px !important;
+    padding: 1.5rem 1.4rem !important;
+    box-shadow: 0 24px 48px -12px rgba(15, 23, 42, 0.32) !important;
+}
+
+.loading-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.4rem 0;
+}
+
+.loading-ring {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 4px solid #dbeafe;
+    border-top-color: #203c7d;
+    animation: spinLoading 0.85s linear infinite;
+}
+
+.loading-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.loading-subtitle {
+    margin: 0;
+    font-size: 0.86rem;
+    color: #475569;
+}
+
+@keyframes spinLoading {
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 @media (max-width: 480px) {
@@ -108,4 +155,106 @@
     .login-logo {
         max-width: 185px;
     }
+}
+
+/* Alerta integrada dentro de la tarjeta de login */
+.login-alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+    padding: 0.75rem 0.95rem;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    line-height: 1.45;
+    margin-bottom: 1.15rem;
+    border: 1px solid transparent;
+    text-align: left;
+}
+
+.login-alert i {
+    margin-top: 0.15rem;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+}
+
+.login-alert-error {
+    background-color: #fef2f2;
+    border-color: #fecaca;
+    color: #991b1b;
+}
+
+.login-alert-success {
+    background-color: #f0fdf4;
+    border-color: #bbf7d0;
+    color: #166534;
+}
+
+/* Enlace de retorno centrado y consistente con .btn-link */
+.login-back-link {
+    margin-top: 1rem;
+    text-align: center;
+}
+
+.login-back-link .btn-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: var(--primary-color);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.login-back-link .btn-link:hover {
+    color: #162b5b;
+    text-decoration: underline;
+}
+
+/* Ajuste para que el placeholder con icono izquierdo no se monte */
+.login-card .input-icon-wrapper .form-control {
+    padding-left: 2.5rem;
+}
+
+/* =====================================================================
+   ESTABILIZACIÓN DE SWEETALERT2 EN PANTALLAS DE AUTENTICACIÓN
+   ===================================================================== */
+
+/* 1. Evita cualquier salto o cambio de ancho/alto en body y contenedor */
+html,
+body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow-x: hidden;
+}
+
+body.swal2-shown,
+body.swal2-height-auto {
+    padding-right: 0 !important;
+    overflow: hidden !important;
+    height: 100% !important;
+}
+
+.swal2-container {
+    padding: 1rem !important;
+    overflow-y: hidden !important;
+}
+
+/* 2. Elimina el efecto de rebote/movimiento al abrir y cerrar el modal */
+.swal2-popup.swal2-show,
+.swal2-popup.swal2-hide {
+    animation: none !important;
+    transition: none !important;
+}
+
+/* 3. Oculta el botón Cancel forzado por estilos globales */
+.swal2-popup .swal2-cancel {
+    display: none !important;
+}
+
+/* 4. Oculta por completo la barra de botones en el modal de carga */
+.swal2-popup.swal2-loading-modern .swal2-actions {
+    display: none !important;
 }

@@ -17,18 +17,17 @@
                     </h3>
                 </div>
                 <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
-                    <i class="fas fa-times"></i>
+                    <i class="fa-solid fa-times"></i>
                 </button>
             </div>
 
             <!-- BODY -->
-            <div class="modal-body modal-body-custom schedule-modal-body">
+            <div class="modal-body modal-body-custom">
                 <div class="form-section-card">
                     <div class="section-title">
                         <i class="fa-solid fa-map-location-dot text-green"></i> Información Geográfica
                     </div>
 
-                    <!-- Nombre de la Ubicación -->
                     <div class="form-group">
                         <label class="form-label" for="id_location_name">Nombre de la Ubicación *</label>
                         <input type="text"
@@ -41,7 +40,6 @@
                         <div class="invalid-feedback" id="error-name"></div>
                     </div>
 
-                    <!-- Datos informativos de jerarquía (solo lectura) -->
                     <div class="grid-2-cols mt-3">
                         <div class="form-group">
                             <label class="form-label">Nivel Jerárquico</label>
@@ -63,7 +61,6 @@
                     </div>
                 </div>
 
-                <!-- Estado del Registro -->
                 <div class="form-section-card mt-3">
                     <div class="form-group mb-0">
                         <label class="form-label">Estado de la Ubicación</label>
@@ -81,13 +78,13 @@
                 </div>
             </div>
 
-            <!-- FOOTER CON BOTONES INSTITUCIONALES AZUL OSCURO -->
+            <!-- FOOTER -->
             <div class="modal-footer-fixed">
                 <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">
                     <i class="fa-solid fa-xmark me-1"></i> CANCELAR
                 </button>
                 <button type="submit" class="btn-dark-blue-rectangle">
-                    <i class="fas fa-save me-1"></i> {% if is_edit %}ACTUALIZAR{% else %}GUARDAR{% endif %}
+                    <i class="fa-solid fa-save me-1"></i> {% if is_edit %}ACTUALIZAR{% else %}GUARDAR{% endif %}
                 </button>
             </div>
         </form>

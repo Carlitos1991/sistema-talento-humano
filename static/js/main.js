@@ -5,11 +5,11 @@ window.App.Modal = window.App.Modal || {};
 window.App.Ajax = window.App.Ajax || {};
 window.App.Telework = window.App.Telework || {};
 window.App.UI = window.App.UI || {};
+
 /**
  * SIGETH - GESTOR CENTRALIZADO (MODALES, AJAX, FILTROS Y TABLAS)
  * Archivo motor del sistema.
  */
-
 /* ==========================================================================
    1. SEGURIDAD & CSRF (DJANGO)
    ========================================================================== */
@@ -91,17 +91,23 @@ if (typeof Swal !== 'undefined') {
         opts.heightAuto = false;
         opts.buttonsStyling = false;
 
-        // Textos estándar en español
-        if (!opts.confirmButtonText) opts.confirmButtonText = 'Entendido';
-        if (!opts.cancelButtonText) opts.cancelButtonText = 'Cancelar';
+        const userWillOpen = opts.willOpen;
+        opts.willOpen = (popup) => {
+            document.documentElement.classList.remove('swal2-shown');
+            if (typeof userWillOpen === 'function') userWillOpen(popup);
+        };
 
-        // Clases CSS institucionales
-        if (!opts.customClass) {
-            opts.customClass = {
-                confirmButton: 'swal2-confirm btn-swal-success',
-                cancelButton: 'swal2-cancel btn-swal-cancel'
-            };
-        }
+        const userDidOpen = opts.didOpen;
+        opts.didOpen = (popup) => {
+            document.documentElement.classList.remove('swal2-shown');
+            if (typeof userDidOpen === 'function') userDidOpen(popup);
+        };
+
+        const userDidClose = opts.didClose;
+        opts.didClose = () => {
+            document.documentElement.classList.remove('swal2-shown');
+            if (typeof userDidClose === 'function') userDidClose();
+        };
 
         // REGLA: Si tiene temporizador, jamás muestra botones
         if (opts.timer && Number(opts.timer) > 0) {
@@ -258,7 +264,6 @@ let currentScrollY = 0;
 // 4.1 Modales estáticos (renderizados en HTML)
 window.App.Modal.openModal = function (id) {
     currentScrollY = window.scrollY;
-    document.documentElement.classList.add('no-scroll');
     document.body.classList.add('no-scroll');
 
     const modal = document.getElementById(id);
@@ -275,7 +280,6 @@ window.App.Modal.openModal = function (id) {
 // 4.2 Modales dinámicos vía AJAX
 window.App.Modal.openAjaxModal = function (url, callback = null) {
     currentScrollY = window.scrollY;
-    document.documentElement.classList.add('no-scroll');
     document.body.classList.add('no-scroll');
 
     fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
@@ -338,7 +342,6 @@ window.App.Modal.openAjaxModal = function (url, callback = null) {
             if (callback) callback(root);
         })
         .catch(error => {
-            document.documentElement.classList.remove('no-scroll');
             document.body.classList.remove('no-scroll');
             window.scrollTo(0, currentScrollY);
 
@@ -372,7 +375,6 @@ window.App.Modal.closeModal = function (id = null) {
         root.innerHTML = '';
     }
 
-    document.documentElement.classList.remove('no-scroll');
     document.body.classList.remove('no-scroll');
     window.scrollTo(0, currentScrollY);
 };
@@ -1742,6 +1744,17 @@ document.addEventListener('DOMContentLoaded', function () {
             }
             window.App.UI.applyRubricFilters();
         });
+    }
+});
+document.addEventListener('click', (event) => {
+    if (event.target.closest('[data-close-modal]')) {
+        event.preventDefault();
+        window.App.Modal.closeModal();
+        return;
+    }
+
+    if (event.target.classList && event.target.classList.contains('modal-overlay')) {
+        window.App.Modal.closeModal();
     }
 });
 

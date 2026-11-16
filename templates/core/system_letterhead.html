@@ -325,6 +325,7 @@
                                     <div class="dropzone-preview {% if not configuration or not configuration.logo %}d-none{% endif %}"
                                          id="previewBoxLogo">
                                         <img id="imgPreviewLogo" src="
+
                                                 {% if configuration and configuration.logo %}{{ configuration.logo.url }}?v={{ configuration.updated_at|date:'U' }}{% endif %}"
                                              alt="Preview Logo">
                                         <span class="dropzone-filename" id="filenameLogo">Logo actual</span>
@@ -339,7 +340,7 @@
                             <div class="form-group">
                                 <label class="form-label">Hoja Membretada (Fondo A4 de Reportes)</label>
                                 <div class="dropzone-file" id="dropzoneLetterhead">
-                                    <input type="file" name="letterhead" id="{{ form.letterhead.id_for_label }}"
+                                    <input type="file" name="letterhead" id="{{ config_form.letterhead.id_for_label }}" 
                                            accept="image/*" class="dropzone-input">
                                     <div class="dropzone-placeholder {% if configuration and configuration.letterhead %}d-none{% endif %}"
                                          id="placeholderLetterhead">
@@ -350,6 +351,7 @@
                                     <div class="dropzone-preview {% if not configuration or not configuration.letterhead %}d-none{% endif %}"
                                          id="previewBoxLetterhead">
                                         <img id="imgPreviewLetterhead" src="
+
                                                 {% if configuration and configuration.letterhead %}{{ configuration.letterhead.url }}?v={{ configuration.updated_at|date:'U' }}{% endif %}"
                                              alt="Preview Membretada">
                                         <span class="dropzone-filename" id="filenameLetterhead">Membretada actual</span>

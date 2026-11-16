@@ -1,57 +1,12 @@
 /* static/js/dashboard.js */
 
-// ==========================================
-// 1. UTILIDADES GLOBALES (No tocar)
-// ==========================================
-window.getCookie = function (name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
-            }
-        }
-    }
-    return cookieValue;
-};
-
-// Configuración Global de SweetAlert2 en Español
-if (typeof Swal !== 'undefined') {
-    // Establecer textos por defecto en español globalmente
-    const swalDefaults = Swal.mixin({
-        confirmButtonText: 'Aceptar',
-        cancelButtonText: 'Cancelar',
-        denyButtonText: 'Denegar'
-    });
-    
-    // Sobrescribir el Swal global con los defaults en español
-    window.Swal = swalDefaults;
-    
-    // Toast notification personalizado
-    window.Toast = Swal.mixin({
-        toast: true,
-        position: 'top-end',
-        showConfirmButton: false,
-        timer: 3000,
-        timerProgressBar: true,
-        didOpen: (toast) => {
-            toast.addEventListener('mouseenter', Swal.stopTimer);
-            toast.addEventListener('mouseleave', Swal.resumeTimer);
-        }
-    });
-}
-
-// ==========================================
-// 2. LÓGICA DEL LAYOUT (Vanilla JS)
-// ==========================================
 document.addEventListener('DOMContentLoaded', () => {
     const wrapper = document.querySelector('.layout-wrapper');
     const sidebar = document.querySelector('.sidebar');
+
     const isSidebarCollapsed = () => {
-        return !!(wrapper && wrapper.classList.contains('is-collapsed')) || !!(sidebar && sidebar.classList.contains('collapsed'));
+        return !!(wrapper && wrapper.classList.contains('is-collapsed'))
+            || !!(sidebar && sidebar.classList.contains('collapsed'));
     };
 
     const closeCollapsedSubmenus = (exceptItem = null) => {
@@ -113,9 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.querySelectorAll('.sidebar .has-submenu > a').forEach((trigger) => {
         trigger.addEventListener('click', (event) => {
-            if (!isSidebarCollapsed()) {
-                return;
-            }
+            if (!isSidebarCollapsed()) return;
 
             event.preventDefault();
             event.stopPropagation();
@@ -126,62 +79,43 @@ document.addEventListener('DOMContentLoaded', () => {
             closeCollapsedSubmenus(parentItem);
             parentItem.classList.toggle('collapsed-open', !wasOpen);
 
-            if (!wasOpen) {
-                if (submenu) {
-                    positionFloatingSubmenu(submenu, trigger);
-                }
+            if (!wasOpen && submenu) {
+                positionFloatingSubmenu(submenu, trigger);
             }
         });
     });
 
     document.addEventListener('click', (event) => {
-        if (!isSidebarCollapsed()) {
-            return;
-        }
-
-        const clickedInsideSidebar = event.target.closest('.sidebar');
-        if (!clickedInsideSidebar) {
+        if (!isSidebarCollapsed()) return;
+        if (!event.target.closest('.sidebar')) {
             closeCollapsedSubmenus();
         }
     });
 
     window.addEventListener('resize', () => {
-        if (!isSidebarCollapsed()) {
-            return;
-        }
-
+        if (!isSidebarCollapsed()) return;
         const openItem = document.querySelector('.sidebar .has-submenu.collapsed-open');
-        if (!openItem) {
-            return;
-        }
+        if (!openItem) return;
 
         const trigger = openItem.querySelector(':scope > a');
         const submenu = openItem.querySelector('.submenu');
-        if (!trigger || !submenu) {
-            return;
+        if (trigger && submenu) {
+            positionFloatingSubmenu(submenu, trigger);
         }
-
-        positionFloatingSubmenu(submenu, trigger);
     });
 
-    // User Dropdown (Si existe)
     const userTrigger = document.querySelector('.user-trigger');
-    const dropdownMenu = document.querySelector('.dropdown-menu'); // Asegúrate de tener clases unicas si hay varios
+    const dropdownMenu = document.querySelector('.dropdown-menu');
 
     if (userTrigger && dropdownMenu) {
-        // Toggle click
         userTrigger.addEventListener('click', (e) => {
             e.stopPropagation();
-            dropdownMenu.classList.toggle('hidden'); // O la clase que uses para mostrar/ocultar
-            // Si usas style.display en tu css:
-            // dropdownMenu.style.display = dropdownMenu.style.display === 'block' ? 'none' : 'block';
+            dropdownMenu.classList.toggle('hidden');
         });
 
-        // Click fuera para cerrar
         document.addEventListener('click', (e) => {
             if (!userTrigger.contains(e.target) && !dropdownMenu.contains(e.target)) {
                 dropdownMenu.classList.add('hidden');
-                // dropdownMenu.style.display = 'none';
             }
         });
     }

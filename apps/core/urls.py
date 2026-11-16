@@ -1,6 +1,4 @@
-from django.contrib.auth import views as auth_views
-from django.urls import path, include
-
+from django.urls import include, path
 from . import views
 
 app_name = 'core'
@@ -16,11 +14,11 @@ urlpatterns = [
     path('oidc/', include('mozilla_django_oidc.urls')),
     path('logout/', views.CustomLogoutView.as_view(), name='logout'),
 
-    # 2. Panel Principal (Dashboard) y Perfil
+    # 2. Panel Principal y Perfil
     path('', views.DashboardView.as_view(), name='dashboard'),
     path('profile/', views.ProfileView.as_view(), name='profile'),
 
-    # 3. Gestión de Catálogos (Cabecera)
+    # 3. Gestión de Catálogos
     path('catalogs/', views.CatalogListView.as_view(), name='catalog_list'),
     path('catalogs/modal/form/', views.CatalogModalFormView.as_view(), name='catalog_modal_create'),
     path('catalogs/modal/form/<int:pk>/', views.CatalogModalFormView.as_view(), name='catalog_modal_update'),
@@ -39,12 +37,12 @@ urlpatterns = [
     path('catalogs/items/update/<int:pk>/', views.CatalogItemUpdateView.as_view(), name='catalog_item_update'),
     path('catalogs/items/toggle/<int:pk>/', views.CatalogItemToggleStatusView.as_view(), name='catalog_item_toggle'),
 
-    # 5. Ubicaciones Geográficas (Locations)
+    # 5. Ubicaciones Geográficas
     path('settings/locations/', views.LocationListView.as_view(), name='location_list'),
     path('settings/locations/create/', views.LocationCreateView.as_view(), name='location_create'),
     path('settings/locations/update/<int:pk>/', views.LocationUpdateView.as_view(), name='location_update'),
     path('settings/locations/toggle/<int:pk>/', views.location_toggle_status, name='location_toggle'),
-    path('api/locations/', views.LocationJsonView.as_view(), name='location_list_json'),
+    path('settings/locations/options/', views.LocationCascadeOptionsView.as_view(), name='location_list_json'),
 
     # 6. Configuración del Sistema y Hoja Membretada
     path('settings/letterhead/', views.SystemLetterheadView.as_view(), name='system_letterhead'),

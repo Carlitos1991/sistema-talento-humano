@@ -38,11 +38,7 @@ class LocationManager {
         const cards = document.querySelectorAll('#location-stats-row .stat-card');
         cards.forEach((card) => {
             const cardLevel = card.getAttribute('data-level');
-            if (String(cardLevel) === String(level)) {
-                card.classList.remove('opacity-low');
-            } else {
-                card.classList.add('opacity-low');
-            }
+            card.classList.toggle('opacity-low', String(cardLevel) !== String(level));
         });
     }
 
@@ -100,8 +96,8 @@ class LocationManager {
         fetch(url, {
             headers: {'X-Requested-With': 'XMLHttpRequest'}
         })
-            .then(res => res.json())
-            .then(data => {
+            .then((res) => res.json())
+            .then((data) => {
                 const wrapper = document.getElementById('table-content-wrapper');
                 if (wrapper && data.html) {
                     wrapper.innerHTML = data.html;
@@ -115,21 +111,36 @@ class LocationManager {
                     }
                 }
             })
-            .catch(err => console.error('Error cargando ubicaciones:', err));
+            .catch((err) => console.error('Error cargando ubicaciones:', err));
     }
 
     bindActionDelegation() {
         document.addEventListener('click', (event) => {
-            // 1. Abrir Modal de creación raíz
-            const btnCreateRoot = event.target.closest('[data-action="create-root-location"]');
-            if (btnCreateRoot) {
+            // 1. Abrir Modal (Crear raíz, crear hijo o editar)
+            const btnModal = event.target.closest('[data-action="create-root-location"], [data-action="open-location-modal"]');
+            if (btnModal) {
                 event.preventDefault();
-                const url = btnCreateRoot.dataset.modalUrl;
-                window.openAjaxModal(url, (root) => this.setupFormModal(root));
+                const url = btnModal.dataset.modalUrl;
+                if (url && window.openAjaxModal) {
+                    window.openAjaxModal(url, (root) => this.setupFormModal(root));
+                }
                 return;
             }
 
-            // 2. Navegar hacia abajo por clic en el Nombre
+            // 2. Activar / Desactivar ubicación
+            const btnToggle = event.target.closest('[data-action="toggle-location-status"]');
+            if (btnToggle) {
+                event.preventDefault();
+                const url = btnToggle.dataset.toggleUrl;
+                const itemName = btnToggle.dataset.itemName;
+                const isActive = btnToggle.dataset.isActive === 'true';
+                if (url && window.toggleStatusAjax) {
+                    window.toggleStatusAjax(url, itemName, isActive, () => this.loadLocationsTable());
+                }
+                return;
+            }
+
+            // 3. Navegar hacia abajo por clic en el Nombre
             const linkParent = event.target.closest('[data-action="filter-parent"]');
             if (linkParent) {
                 event.preventDefault();
@@ -139,7 +150,7 @@ class LocationManager {
                 return;
             }
 
-            // 3. Navegar hacia arriba por Nivel (ej: volver a Países)
+            // 4. Navegar hacia arriba por Nivel (ej: volver a Países)
             const linkLevel = event.target.closest('[data-action="filter-level"]');
             if (linkLevel) {
                 event.preventDefault();

@@ -1,6 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="es" class="app-loading">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -29,13 +29,6 @@
     <link rel="stylesheet" href="{% static 'css/table-manager.css' %}">
     <link rel="stylesheet" href="{% static 'css/modal-change-password.css' %}">
     {% block extra_css %}{% endblock %}
-
-    <style>
-        /* Evita mostrar el HTML antes de que los scripts inicialicen el layout y las tablas. */
-        html.app-loading body {
-            visibility: hidden;
-        }
-    </style>
 </head>
 <body {% if request.user.is_authenticated and request.session.force_change_on_login %}data-force-change="1"{% endif %}>
 
@@ -76,9 +69,6 @@
     ]
 </script>
 
-<!-- =========================================================================
-     SCRIPTS BASE Y LIBRERÍAS DE TERCEROS (ORDEN ESTRICTO)
-     ========================================================================= -->
 <!-- 1. jQuery (Requerido antes de Select2) -->
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 
@@ -88,10 +78,10 @@
 <!-- 3. SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-<!-- 4. ExcelJS (Librería para exportación de tablas con estilos, bordes y sin alertas) -->
+<!-- 4. ExcelJS -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 
-<!-- 5. Motor Central SIGETH (Inicializa CSRF, Modales, Tablas y Adapta SweetAlert2) -->
+<!-- 5. Motor Central SIGETH -->
 <script src="{% static 'js/main.js' %}?v={% now 'U' %}"></script>
 <script src="{% static 'js/core/modal-change-password.js' %}"></script>
 
@@ -103,87 +93,5 @@
 <script src="{% static 'js/sidebar.js' %}"></script>
 <script src="{% static 'js/dashboard.js' %}"></script>
 <script src="{% static 'js/capture_device_info.js' %}"></script>
-
-<!-- =========================================================================
-     INICIALIZACIÓN GLOBAL DE SELECT2, ALERTAS Y COMPENSACIÓN DE SCROLL
-     ========================================================================= -->
-<script>
-    // Inicialización global de mensajes Django mediante SweetAlert2 configurado por main.js
-    document.addEventListener('DOMContentLoaded', function () {
-        const node = document.getElementById('django-messages');
-        if (!node || typeof Swal === 'undefined') return;
-
-        let payload = [];
-        try {
-            payload = JSON.parse(node.textContent || '[]');
-        } catch (error) {
-            payload = [];
-        }
-
-        if (!Array.isArray(payload) || payload.length === 0) return;
-
-        const iconMap = {
-            success: 'success',
-            error: 'error',
-            danger: 'error',
-            warning: 'warning',
-            info: 'info'
-        };
-
-        payload.forEach((item, index) => {
-            const rawTag = (item.tag || '').split(' ')[0].toLowerCase();
-            const icon = iconMap[rawTag] || 'info';
-
-            setTimeout(() => {
-                if (typeof window.showToast === 'function') {
-                    window.showToast(item.text, icon);
-                } else {
-                    Swal.fire({
-                        icon,
-                        title: item.text || '',
-                        timer: 3200
-                    });
-                }
-            }, index * 180);
-        });
-    });
-
-    // Configuración por defecto en español para Select2
-    $(document).ready(function () {
-        if ($.fn.select2 && $.fn.select2.defaults && $.fn.select2.defaults.set) {
-            $.fn.select2.defaults.set('language', {
-                inputTooShort: function (args) {
-                    const remaining = args.minimum - args.input.length;
-                    return 'Por favor ingrese ' + remaining + ' carácter' + (remaining !== 1 ? 'es' : '') + ' más';
-                },
-                noResults: function () {
-                    return 'No se encontraron resultados';
-                },
-                searching: function () {
-                    return 'Buscando...';
-                }
-            });
-        }
-        $('.select2').select2({width: '100%'});
-    });
-
-    // Compensación de ancho de scrollbar para evitar saltos al abrir modales
-    function syncScrollbarCompensation() {
-        const width = Math.max(0, window.innerWidth - document.documentElement.clientWidth);
-        document.documentElement.style.setProperty('--viewport-scrollbar-width', `${width}px`);
-    }
-
-    syncScrollbarCompensation();
-    window.addEventListener('resize', syncScrollbarCompensation);
-
-    document.addEventListener('DOMContentLoaded', function () {
-        syncScrollbarCompensation();
-        requestAnimationFrame(function () {
-            requestAnimationFrame(function () {
-                document.documentElement.classList.remove('app-loading');
-            });
-        });
-    });
-</script>
 </body>
 </html>

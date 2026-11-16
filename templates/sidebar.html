@@ -140,16 +140,16 @@
                         {% if perms.documents.view_virtualoffice %}
                             <li>
                                 <a href="{% url 'documents:virtual_office' %}"
-                                   class="{% if request.resolver_match.url_name == 'virtual_office' %}active-child{% endif %} d-flex justify-content-between align-items-center">
-                                    <div class="d-flex align-items-center">
-                                        <i class="fa-solid fa-desktop me-2"></i>
+                                   class="sidebar-link-between {% if request.resolver_match.url_name == 'virtual_office' %}active-child{% endif %}">
+                                    <span class="sidebar-link-content">
+                                        <i class="fa-solid fa-desktop"></i>
                                         <span class="menu-text">Oficina Virtual</span>
-                                    </div>
+                                    </span>
                                     {% if sidebar_pending_tramites_count and sidebar_pending_tramites_count > 0 %}
-                                        <span class="sidebar-badge" style="background-color: #ef4444; color: white;"
+                                        <span class="sidebar-badge sidebar-badge-danger"
                                               title="{{ sidebar_pending_tramites_count }} trámites pendientes por despachar">
-                                {{ sidebar_pending_tramites_count }}
-                            </span>
+                                            {{ sidebar_pending_tramites_count }}
+                                        </span>
                                     {% endif %}
                                 </a>
                             </li>
@@ -507,8 +507,7 @@
                             <i class="fa-solid fa-gavel"></i>
                             <span class="menu-text">Sanciones</span>
                             {% if sanctions_pending_assignments_count > 0 %}
-                                <span class="sidebar-badge"
-                                      style="background-color: #ef4444; color: white;">{{ sanctions_pending_assignments_count }}</span>
+                                <span class="sidebar-badge sidebar-badge-danger">{{ sanctions_pending_assignments_count }}</span>
                             {% endif %}
                             <i class="fa-solid fa-chevron-right chevron-icon"></i>
                         </a>

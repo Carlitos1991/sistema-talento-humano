@@ -13,10 +13,10 @@
         {% if perms.core.add_location %}
             <div class="header-actions">
                 <button type="button"
-                        class="btn-dark-blue-rectangle"
+                        class="btn-white-rectangle"
                         data-action="create-root-location"
                         data-modal-url="{% url 'core:location_create' %}">
-                    <i class="fas fa-plus me-1"></i> NUEVA UBICACIÓN
+                    <i class="fa-solid fa-plus me-1"></i> NUEVA UBICACIÓN
                 </button>
             </div>
         {% endif %}
@@ -24,7 +24,6 @@
 
     <!-- 2. Estadísticas por Nivel Jerárquico -->
     <div class="stats-row" id="location-stats-row">
-        <!-- Nivel 1: Países -->
         <div class="stat-card color-one" id="card-filter-1" data-level="1">
             <div class="stat-left">
                 <h3>PAÍSES</h3>
@@ -33,7 +32,6 @@
             <i class="fa-solid fa-earth-americas stat-icon"></i>
         </div>
 
-        <!-- Nivel 2: Provincias -->
         <div class="stat-card color-two opacity-low" id="card-filter-2" data-level="2">
             <div class="stat-left">
                 <h3>PROVINCIAS</h3>
@@ -42,7 +40,6 @@
             <i class="fa-regular fa-map stat-icon"></i>
         </div>
 
-        <!-- Nivel 3: Ciudades -->
         <div class="stat-card color-three opacity-low" id="card-filter-3" data-level="3">
             <div class="stat-left">
                 <h3>CIUDADES</h3>
@@ -51,7 +48,6 @@
             <i class="fa-solid fa-city stat-icon"></i>
         </div>
 
-        <!-- Nivel 4: Parroquias -->
         <div class="stat-card color-four opacity-low" id="card-filter-4" data-level="4">
             <div class="stat-left">
                 <h3>PARROQUIAS</h3>
@@ -61,7 +57,7 @@
         </div>
     </div>
 
-    <!-- 3. Contenedor de Tabla sin contenedores vacíos -->
+    <!-- 3. Contenedor de Tabla -->
     <div id="table-app">
         <div class="content-table">
             <div class="table-controls toolbar-row mb-3">
@@ -74,16 +70,11 @@
                            placeholder="Buscar por nombre de ubicación...">
                 </div>
             </div>
-
-            <!-- Inyección de la tabla parcial -->
             <div id="table-content-wrapper">
                 {% include 'core/locations/partials/partial_location_table.html' %}
             </div>
         </div>
     </div>
-
-    <!-- Contenedor Universal para Modales de main.js -->
-    <div id="modal-root"></div>
 {% endblock %}
 
 {% block extra_js %}

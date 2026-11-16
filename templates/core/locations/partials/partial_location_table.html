@@ -14,18 +14,18 @@
                 <th class="width-20 no-sort"><i class="fa-solid fa-indent"></i> Depende De</th>
                 <th class="width-10 no-sort text-center"><i class="fa-solid fa-circle-dot"></i> Estado</th>
                 {% if perms.core.add_location or perms.core.change_location %}
-                    <th class="actions width-13 no-sort text-center"><i class="fas fa-cogs"></i> Acciones</th>
+                    <th class="actions width-13 no-sort text-center"><i class="fa-solid fa-cogs"></i> Acciones</th>
                 {% endif %}
             </tr>
             </thead>
             <tbody id="table-body">
             {% for location in locations %}
                 <tr id="row-{{ location.id }}" data-status="{{ location.is_active|yesno:'true,false' }}">
-                    <td class="text-center font-monospace">{{ forloop.counter }}</td>
+                    <td class="text-center">{{ forloop.counter }}</td>
                     <td>
                         {% if location.level < 4 %}
-                            <a href="javascript:void(0);"
-                               class="link fw-bold text-primary"
+                            <a href="#"
+                               class="link bold"
                                data-action="filter-parent"
                                data-parent-id="{{ location.id }}"
                                title="Ver dependencias de {{ location.name }}">
@@ -36,21 +36,21 @@
                         {% endif %}
                     </td>
                     <td class="text-center">
-                        <span class="badge badge-gray font-monospace">{{ location.level_label }}</span>
+                        <span class="badge badge-gray">{{ location.level_label }}</span>
                     </td>
                     <td>
                         {% if location.parent %}
                             {% if location.parent.parent_id %}
-                                <a href="javascript:void(0);"
-                                   class="link text-secondary"
+                                <a href="#"
+                                   class="link"
                                    data-action="filter-parent"
                                    data-parent-id="{{ location.parent.parent_id }}"
                                    title="Subir a {{ location.parent.parent.name }}">
                                     <i class="fa-solid fa-turn-up fa-flip-horizontal me-1"></i>{{ location.parent.name }}
                                 </a>
                             {% else %}
-                                <a href="javascript:void(0);"
-                                   class="link text-secondary"
+                                <a href="#"
+                                   class="link"
                                    data-action="filter-level"
                                    data-level="1"
                                    title="Volver al listado de Países">
@@ -58,7 +58,7 @@
                                 </a>
                             {% endif %}
                         {% else %}
-                            <span class="text-muted fst-italic">- Raíz -</span>
+                            <span class="text-muted italic">- Raíz -</span>
                         {% endif %}
                     </td>
                     <td class="text-center">
@@ -70,37 +70,42 @@
                     {% if perms.core.add_location or perms.core.change_location %}
                         <td class="actions text-center">
                             <div class="actions-wrapper justify-content-center">
-                                <!-- Agregar Sub-Ubicación (Hijo) -->
                                 {% if location.level < 4 and perms.core.add_location %}
                                     <button type="button"
                                             class="btn-green-circle"
-                                            onclick="openAjaxModal('{% url 'core:location_create' %}?parent_id={{ location.id }}')"
+                                            data-action="open-location-modal"
+                                            data-modal-url="{% url 'core:location_create' %}?parent_id={{ location.id }}"
                                             title="Agregar sub-ubicación de {{ location.name }}">
                                         <i class="fa-solid fa-plus"></i>
                                     </button>
                                 {% endif %}
 
-                                <!-- Editar -->
                                 {% if perms.core.change_location %}
                                     <button type="button"
                                             class="btn-blue-circle"
-                                            onclick="openAjaxModal('{% url 'core:location_update' location.id %}')"
+                                            data-action="open-location-modal"
+                                            data-modal-url="{% url 'core:location_update' location.id %}"
                                             title="Editar Ubicación">
                                         <i class="fa-solid fa-pen-to-square"></i>
                                     </button>
 
-                                    <!-- Alternar Estado -->
                                     {% if location.is_active %}
                                         <button type="button"
                                                 class="btn-red-circle"
-                                                onclick="toggleStatusAjax('{% url 'core:location_toggle' location.id %}', 'la ubicación {{ location.name|escapejs }}', true)"
+                                                data-action="toggle-location-status"
+                                                data-toggle-url="{% url 'core:location_toggle' location.id %}"
+                                                data-item-name="la ubicación {{ location.name }}"
+                                                data-is-active="true"
                                                 title="Desactivar">
                                             <i class="fa-solid fa-toggle-off"></i>
                                         </button>
                                     {% else %}
                                         <button type="button"
                                                 class="btn-green-circle"
-                                                onclick="toggleStatusAjax('{% url 'core:location_toggle' location.id %}', 'la ubicación {{ location.name|escapejs }}', false)"
+                                                data-action="toggle-location-status"
+                                                data-toggle-url="{% url 'core:location_toggle' location.id %}"
+                                                data-item-name="la ubicación {{ location.name }}"
+                                                data-is-active="false"
                                                 title="Activar">
                                             <i class="fa-solid fa-toggle-on"></i>
                                         </button>
@@ -112,9 +117,11 @@
                 </tr>
             {% empty %}
                 <tr>
-                    <td colspan="6" class="text-center py-4 text-muted">
-                        <i class="fa-solid fa-inbox fa-2x mb-2 opacity-50"></i>
-                        <p class="mb-0">No hay ubicaciones registradas en este nivel.</p>
+                    <td colspan="6">
+                        <div class="no-results-content">
+                            <i class="fa-solid fa-inbox no-results-icon"></i>
+                            <p class="no-results-text">No hay ubicaciones registradas en este nivel.</p>
+                        </div>
                     </td>
                 </tr>
             {% endfor %}

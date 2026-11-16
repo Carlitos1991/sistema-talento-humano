@@ -88,7 +88,7 @@ EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
 EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'False') == 'True'
 
-DEFAULT_FROM_EMAIL = f"Municipio de Loja - Nómina <{EMAIL_HOST_USER}>"
+DEFAULT_FROM_EMAIL = f"SIGETH - MUNICIPIO DE LOJA <{EMAIL_HOST_USER}>"
 
 ROOT_URLCONF = 'talento_humano.urls'
 

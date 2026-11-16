@@ -12,7 +12,6 @@
     <link rel="icon" type="image/png" href="{% static 'img/favicon.png' %}?v=20260415">
 
     <!-- 2. FUENTES e ICONOS -->
-    <!-- Fuentes Institucionales -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..700&family=Lexend:wght@400;600;700;800;900&display=swap"
@@ -25,33 +24,50 @@
 </head>
 <body>
 
-<div class="login-container" id="loginApp">
+<div class="login-container">
     <div class="login-card">
-
-        <!-- HEADER CON LOGO -->
         <div class="login-header">
             <img src="{% static 'img/LOGO2027.png' %}" alt="Logo" class="login-logo">
             <h2>Sistema de Gestión de Talento Humano</h2>
         </div>
 
+        {% if messages %}
+            {% for message in messages %}
+                <div class="login-alert {% if 'error' in message.tags %}login-alert-error{% else %}login-alert-success{% endif %}"
+                     role="alert">
+                    <i class="fa-solid {% if 'error' in message.tags %}fa-circle-exclamation{% else %}fa-circle-check{% endif %}"></i>
+                    <span>{{ message }}</span>
+                </div>
+            {% endfor %}
+        {% endif %}
+
         <form method="post">
             {% csrf_token %}
             <input type="hidden" name="next" value="{{ next }}">
-            <!-- CAMPO USUARIO -->
+
             <div class="form-group">
                 <div class="input-icon-wrapper">
                     <i class="fa-solid fa-user input-icon-left"></i>
-                    <input type="text" name="username" class="form-control with-icon" placeholder="Nombre de usuario"
+                    <input type="text"
+                           name="username"
+                           value="{{ username|default:'' }}"
+                           class="form-control with-icon"
+                           placeholder="Nombre de usuario"
                            required
-                           autofocus>
+                           {% if not username %}autofocus{% endif %}>
                 </div>
             </div>
-            <!-- CAMPO CONTRASEÑA -->
+
             <div class="form-group">
                 <div class="input-icon-wrapper">
                     <i class="fa-solid fa-lock input-icon-left"></i>
-                    <input type="password" id="passwordInput" name="password" class="form-control with-icon"
-                           placeholder="Contraseña" required>
+                    <input type="password"
+                           id="passwordInput"
+                           name="password"
+                           class="form-control with-icon"
+                           placeholder="Contraseña"
+                           required
+                           {% if username %}autofocus{% endif %}>
                     <i class="fa fa-eye toggle-password" id="togglePasswordBtn"></i>
                 </div>
 
@@ -60,34 +76,18 @@
                 </div>
             </div>
 
-            <!-- BOTÓN DE ACCIÓN -->
             <button type="submit" class="btn-success-login">
                 Ingresar al Sistema
             </button>
-            <div class="text-center">
+
+            <div class="login-back-link">
                 <a href="{% url 'core:create_user_from_login' %}" class="btn-link">Crear usuario</a>
             </div>
         </form>
     </div>
 </div>
 
-<!-- SCRIPTS -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-<!-- DATA ISLAND (Mensajes Django) -->
-<script id="django-messages" type="application/json">
-    [
-    {% for message in messages %}
-        {
-            "tag": "{{ message.tags }}",
-                "text": "{{ message }}"
-            }{% if not forloop.last %},{% endif %}
-        {% endfor %}
-    ]
-</script>
-
-<!-- LÓGICA JS EXTERNA -->
-<script src="{% static 'js/login.js' %}?v=20260721"></script>
-
+<script src="{% static 'js/login.js' %}?v=20261116"></script>
 </body>
 </html>

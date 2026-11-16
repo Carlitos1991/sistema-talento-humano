@@ -32,7 +32,7 @@
                     <div class="stat-label">TOTAL ACTIVOS</div>
                     <div class="stat-number">{{ total_employees }}</div>
                 </div>
-                <div class="stat-icon blue"><i class="fas fa-users"></i></div>
+                <div class="stat-icon blue"><i class="fa-solid fa-users"></i></div>
             </div>
 
             <div class="stat-card">
@@ -40,7 +40,7 @@
                     <div class="stat-label">EMPLEADOS</div>
                     <div class="stat-number">{{ empleados }}</div>
                 </div>
-                <div class="stat-icon orange"><i class="fas fa-user-check"></i></div>
+                <div class="stat-icon orange"><i class="fa-solid fa-user-check"></i></div>
             </div>
 
             <div class="stat-card">
@@ -48,7 +48,7 @@
                     <div class="stat-label">TRABAJADORES</div>
                     <div class="stat-number">{{ trabajadores }}</div>
                 </div>
-                <div class="stat-icon green"><i class="fas fa-user-tie"></i></div>
+                <div class="stat-icon green"><i class="fa-solid fa-user-tie"></i></div>
             </div>
 
             <div class="stat-card">
@@ -56,7 +56,7 @@
                     <div class="stat-label">CONTRATADOS</div>
                     <div class="stat-number">{{ contratados }}</div>
                 </div>
-                <div class="stat-icon cyan"><i class="fas fa-user-clock"></i></div>
+                <div class="stat-icon cyan"><i class="fa-solid fa-user-clock"></i></div>
             </div>
         </div>
 
@@ -67,7 +67,7 @@
                     <div class="stat-label">MASCULINO / FEMENINO</div>
                     <div class="stat-number">{{ empleados_masculino }} / {{ empleados_femenino }}</div>
                 </div>
-                <div class="stat-icon purple-grad"><i class="fas fa-venus-mars"></i></div>
+                <div class="stat-icon purple-grad"><i class="fa-solid fa-venus-mars"></i></div>
             </div>
 
             <div class="stat-card">
@@ -75,7 +75,7 @@
                     <div class="stat-label">CON TÍTULO UNIVERSITARIO</div>
                     <div class="stat-number">{{ empleados_con_titulo }}</div>
                 </div>
-                <div class="stat-icon pink-grad"><i class="fas fa-graduation-cap"></i></div>
+                <div class="stat-icon pink-grad"><i class="fa-solid fa-graduation-cap"></i></div>
             </div>
 
             <div class="stat-card">
@@ -83,7 +83,7 @@
                     <div class="stat-label">CON DISCAPACIDAD</div>
                     <div class="stat-number">{{ empleados_con_discapacidad }}</div>
                 </div>
-                <div class="stat-icon yellow-grad"><i class="fas fa-wheelchair"></i></div>
+                <div class="stat-icon yellow-grad"><i class="fa-solid fa-wheelchair"></i></div>
             </div>
 
             <div class="stat-card">
@@ -91,7 +91,7 @@
                     <div class="stat-label">EMPLEADOS SUSTITUTOS</div>
                     <div class="stat-number">{{ empleados_sustitutos }}</div>
                 </div>
-                <div class="stat-icon emerald-grad"><i class="fas fa-user-friends"></i></div>
+                <div class="stat-icon emerald-grad"><i class="fa-solid fa-user-friends"></i></div>
             </div>
         </div>
 
@@ -102,7 +102,7 @@
                     <div class="stat-label">TOTAL PARTIDAS</div>
                     <div class="stat-number">{{ total_partidas }}</div>
                 </div>
-                <div class="stat-icon blue"><i class="fas fa-list"></i></div>
+                <div class="stat-icon blue"><i class="fa-solid fa-list"></i></div>
             </div>
 
             <div class="stat-card">
@@ -110,7 +110,7 @@
                     <div class="stat-label">PARTIDAS OCUPADAS</div>
                     <div class="stat-number">{{ partidas_ocupadas }}</div>
                 </div>
-                <div class="stat-icon orange"><i class="fas fa-user"></i></div>
+                <div class="stat-icon orange"><i class="fa-solid fa-user"></i></div>
             </div>
 
             <div class="stat-card">
@@ -118,7 +118,7 @@
                     <div class="stat-label">PARTIDAS LIBRES</div>
                     <div class="stat-number">{{ partidas_libres }}</div>
                 </div>
-                <div class="stat-icon green"><i class="fas fa-lock-open"></i></div>
+                <div class="stat-icon green"><i class="fa-solid fa-lock-open"></i></div>
             </div>
 
             <div class="stat-card">
@@ -126,7 +126,7 @@
                     <div class="stat-label">PARTIDAS EN CONCURSO</div>
                     <div class="stat-number">{{ partidas_concurso }}</div>
                 </div>
-                <div class="stat-icon cyan"><i class="fas fa-trophy"></i></div>
+                <div class="stat-icon cyan"><i class="fa-solid fa-trophy"></i></div>
             </div>
         </div>
 
@@ -134,7 +134,7 @@
         {% if top_areas %}
             <div class="top-areas-card">
                 <h3 class="top-areas-title">
-                    <i class="fas fa-building"></i> Áreas con Más Personal Activo
+                    <i class="fa-solid fa-building"></i> Áreas con Más Personal Activo
                 </h3>
                 <div class="top-areas-list">
                     {% for area in top_areas %}
@@ -152,7 +152,7 @@
         <div class="charts-grid">
             <div class="chart-card">
                 <div class="chart-header">
-                    <i class="fas fa-chart-bar"></i>
+                    <i class="fa-solid fa-chart-bar"></i>
                     <h3>Distribución de Partidas Presupuestarias</h3>
                 </div>
                 <div class="chart-body">
@@ -162,36 +162,36 @@
 
             <div class="chart-card">
                 <div class="chart-header">
-                    <i class="fas fa-chart-pie"></i>
+                    <i class="fa-solid fa-chart-pie"></i>
                     <h3>Distribución de Personal Activo</h3>
                 </div>
                 <div class="chart-body">
                     <canvas id="employeeDonutChart"></canvas>
                 </div>
                 <div class="chart-legend">
-                    <div class="legend-item"><span class="legend-color" style="background: #f59e0b;"></span><span>Empleados</span>
+                    <div class="legend-item"><span class="legend-color legend-dot-amber"></span><span>Empleados</span>
                     </div>
-                    <div class="legend-item"><span class="legend-color" style="background: #10b981;"></span><span>Trabajadores</span>
+                    <div class="legend-item"><span
+                            class="legend-color legend-dot-emerald"></span><span>Trabajadores</span></div>
+                    <div class="legend-item"><span class="legend-color legend-dot-blue"></span><span>Contratados</span>
                     </div>
-                    <div class="legend-item"><span class="legend-color" style="background: #3b82f6;"></span><span>Contratados</span>
-                    </div>
-                    <div class="legend-item"><span class="legend-color" style="background: #ef4444;"></span><span>Profesionales</span>
+                    <div class="legend-item"><span class="legend-color legend-dot-red"></span><span>Profesionales</span>
                     </div>
                 </div>
             </div>
 
             <div class="chart-card">
                 <div class="chart-header">
-                    <i class="fas fa-venus-mars"></i>
+                    <i class="fa-solid fa-venus-mars"></i>
                     <h3>Distribución por Género</h3>
                 </div>
                 <div class="chart-body">
                     <canvas id="genderChart"></canvas>
                 </div>
                 <div class="chart-legend">
-                    <div class="legend-item"><span class="legend-color" style="background: #3b82f6;"></span><span>Masculino</span>
+                    <div class="legend-item"><span class="legend-color legend-dot-blue"></span><span>Masculino</span>
                     </div>
-                    <div class="legend-item"><span class="legend-color" style="background: #ec4899;"></span><span>Femenino</span>
+                    <div class="legend-item"><span class="legend-color legend-dot-pink"></span><span>Femenino</span>
                     </div>
                 </div>
             </div>
@@ -236,7 +236,6 @@
         {% if boss_unit %}
             <!-- Métricas y Accesos Rápidos de Jefatura -->
             <div class="stats-grid">
-                <!-- 1. Personal a Cargo -->
                 <div class="stat-card stat-card-link-wrapper">
                     <a href="{{ boss_unit_detail_url }}" class="stat-card-link"
                        title="Ver listado de personal de la unidad">
@@ -246,12 +245,11 @@
                             <div class="stat-hint">Servidores activos adscritos</div>
                         </div>
                         <div class="stat-icon blue">
-                            <i class="fas fa-users-gear"></i>
+                            <i class="fa-solid fa-users-gear"></i>
                         </div>
                     </a>
                 </div>
 
-                <!-- 2. Trámites y Sumillas Pendientes (Con Círculo Rojo) -->
                 <div class="stat-card stat-card-link-wrapper position-relative">
                     <a href="{% url 'documents:virtual_office' %}" class="stat-card-link"
                        title="Ir a la Oficina Virtual de Despacho">
@@ -272,7 +270,6 @@
                     </a>
                 </div>
 
-                <!-- 3. Permisos por Autorizar -->
                 <div class="stat-card">
                     <div class="stat-content">
                         <div class="stat-label">PERMISOS POR AUTORIZAR</div>
@@ -280,11 +277,10 @@
                         <div class="stat-hint">Solicitudes de personal</div>
                     </div>
                     <div class="stat-icon orange">
-                        <i class="fas fa-calendar-check"></i>
+                        <i class="fa-solid fa-calendar-check"></i>
                     </div>
                 </div>
 
-                <!-- 4. Documentos del Área -->
                 <div class="stat-card stat-card-link-wrapper">
                     <a href="{% url 'documents:document_list' %}" class="stat-card-link"
                        title="Ver documentos y memorandos emitidos">
@@ -305,7 +301,7 @@
                 <div class="panel-card-header">
                     <div>
                         <h3 class="panel-card-title">
-                            <i class="fas fa-list-check"></i>
+                            <i class="fa-solid fa-list-check"></i>
                             Permisos solicitados por el personal
                         </h3>
                         <p class="panel-card-desc">Revisa y tramita las solicitudes emitidas por el equipo de tu
@@ -320,15 +316,15 @@
                 <div class="table-filters-container">
                     <div class="filters-row">
                         <div class="form-group mb-0 filter-item">
-                            <label class="form-label" style="font-size:0.75rem;">Fecha Desde</label>
+                            <label class="form-label form-label-sm">Fecha Desde</label>
                             <input type="date" class="input-field" data-boss-date-from>
                         </div>
                         <div class="form-group mb-0 filter-item">
-                            <label class="form-label" style="font-size:0.75rem;">Fecha Hasta</label>
+                            <label class="form-label form-label-sm">Fecha Hasta</label>
                             <input type="date" class="input-field" data-boss-date-to>
                         </div>
                         <div class="form-group mb-0 filter-item">
-                            <label class="form-label" style="font-size:0.75rem;">Estado</label>
+                            <label class="form-label form-label-sm">Estado</label>
                             <select class="input-field" data-boss-status>
                                 <option value="REQUESTED" selected>Solicitado</option>
                                 <option value="APPROVED">Aprobado</option>
@@ -337,7 +333,7 @@
                             </select>
                         </div>
                         <div class="form-group mb-0 filter-search">
-                            <label class="form-label" style="font-size:0.75rem;">Buscar por Apellidos</label>
+                            <label class="form-label form-label-sm">Buscar por Apellidos</label>
                             <div class="search-input-wrapper">
                                 <i class="fa-solid fa-magnifying-glass search-icon"></i>
                                 <input type="text" class="input-field pl-search" data-boss-lastname
@@ -423,23 +419,23 @@
                                                     data-permit-id="{{ p.id }}"
                                                     class="btn-action-round btn-action-approve"
                                                     title="Aprobar Permiso">
-                                                <i class="fas fa-check"></i>
+                                                <i class="fa-solid fa-check"></i>
                                             </button>
                                             <button type="button" data-boss-open-response data-action="reject"
                                                     data-permit-id="{{ p.id }}"
                                                     class="btn-action-round btn-action-reject"
                                                     title="Rechazar Permiso">
-                                                <i class="fas fa-times"></i>
+                                                <i class="fa-solid fa-times"></i>
                                             </button>
                                         {% elif p.status == 'APPROVED' %}
                                             <a href="{% url 'permissions:permit_report' p.id %}" target="_blank"
                                                class="btn-action-round btn-action-print" title="Imprimir Reporte">
-                                                <i class="fas fa-print"></i>
+                                                <i class="fa-solid fa-print"></i>
                                             </a>
                                         {% endif %}
                                         <a href="{% url 'permissions:permit_detail' p.id %}" target="_blank"
                                            class="btn-action-round btn-action-view" title="Ver Detalle">
-                                            <i class="fas fa-eye"></i>
+                                            <i class="fa-solid fa-eye"></i>
                                         </a>
                                     </div>
                                 </td>
@@ -461,24 +457,24 @@
                 </div>
 
                 <!-- Paginación de Permisos -->
-                <div class="pagination-container" style="margin-top: 1rem;" data-boss-pagination>
+                <div class="pagination-container mt-3" data-boss-pagination>
                     <div class="pagination-info" data-boss-page-info>Mostrando 0-0 de 0</div>
                     <div class="pagination-controls" data-boss-controls>
                         <button type="button" class="page-btn" title="Primera" data-boss-first>
-                            <i class="fas fa-angle-double-left"></i>
+                            <i class="fa-solid fa-angles-left"></i>
                         </button>
                         <button type="button" class="page-btn" title="Anterior" data-boss-prev>
-                            <i class="fas fa-angle-left"></i>
+                            <i class="fa-solid fa-angle-left"></i>
                         </button>
                         <div class="page-input-wrapper">
                             <input type="number" class="page-input" min="1" value="1" data-boss-page-input>
                             <span class="total-pages-badge" data-boss-total-pages>de 1</span>
                         </div>
                         <button type="button" class="page-btn" title="Siguiente" data-boss-next>
-                            <i class="fas fa-angle-right"></i>
+                            <i class="fa-solid fa-angle-right"></i>
                         </button>
                         <button type="button" class="page-btn" title="Última" data-boss-last>
-                            <i class="fas fa-angle-double-right"></i>
+                            <i class="fa-solid fa-angles-right"></i>
                         </button>
                     </div>
                 </div>
@@ -521,7 +517,6 @@
                 </div>
 
                 <div class="d-flex gap-2">
-                    <!-- Botón directo al perfil y módulos del empleado -->
                     {% if request.user.person %}
                         <a href="{% url 'employee:self_dashboard' %}" class="btn-dark-blue-rectangle"
                            title="Ir a mi oficina virtual y módulos personales">
@@ -534,7 +529,6 @@
 
         <!-- Tarjetas Rápidas de la Oficina del Servidor -->
         <div class="stats-grid">
-            <!-- 1. Trámites y Tareas Asignadas a Mí (Con Círculo Rojo) -->
             <div class="stat-card stat-card-link-wrapper position-relative">
                 <a href="{% url 'documents:virtual_office' %}" class="stat-card-link"
                    title="Mis trámites e informes pendientes">
@@ -555,34 +549,6 @@
                 </a>
             </div>
 
-{#            <!-- 2. Permisos del Servidor -->#}
-{#            <div class="stat-card">#}
-{#                <div class="stat-content">#}
-{#                    <div class="stat-label">MIS PERMISOS (AÑO ACTIVO)</div>#}
-{#                    <div class="stat-number">{{ employee_permits_count|default:0 }}</div>#}
-{#                    <div class="stat-hint">Solicitudes emitidas</div>#}
-{#                </div>#}
-{#                <div class="stat-icon orange">#}
-{#                    <i class="fa-solid fa-calendar-check"></i>#}
-{#                </div>#}
-{#            </div>#}
-
-            <!-- 3. Redactar Documento -->
-{#            <div class="stat-card stat-card-link-wrapper">#}
-{#                <a href="{% url 'documents:document_list' %}" class="stat-card-link"#}
-{#                   title="Redactar memorando o consultar documentos">#}
-{#                    <div class="stat-content">#}
-{#                        <div class="stat-label">MIS MEMORANDOS</div>#}
-{#                        <div class="stat-number">{{ employee_docs_count|default:0 }}</div>#}
-{#                        <div class="stat-hint">Redactados en el sistema</div>#}
-{#                    </div>#}
-{#                    <div class="stat-icon green">#}
-{#                        <i class="fa-solid fa-file-lines"></i>#}
-{#                    </div>#}
-{#                </a>#}
-{#            </div>#}
-
-            <!-- 4. Acceso Rápido al Perfil Completo -->
             {% if request.user.person %}
                 <div class="stat-card stat-card-link-wrapper">
                     <a href="{% url 'employee:self_dashboard' %}" class="stat-card-link"
