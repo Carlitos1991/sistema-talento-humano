@@ -863,7 +863,7 @@ def load_attendance_ajax(request, pk):
             load_entry = BiometricLoad.objects.create(biometric=device, load_type="DIRECT_SYNC")
             for rec in raw_records:
                 user_id = str(rec.user_id).strip().lstrip('0')
-                inst = InstitutionalData.objects.filter(biometric_id=user_id).first()
+                inst = InstitutionalData.objects.filter(biometric_id__regex=rf'^0*{user_id}$').first()
                 if inst:
                     registry_datetime = rec.timestamp
                     if hasattr(registry_datetime, 'tzinfo') and registry_datetime.tzinfo is not None:
@@ -989,7 +989,7 @@ def upload_biometric_file_ajax(request, pk):
                     try:
                         naive_date = datetime.strptime(parts[1].strip(), '%Y-%m-%d %H:%M:%S')
                         reg_date = make_aware(naive_date)
-                        inst_data = InstitutionalData.objects.filter(biometric_id=user_pin).first()
+                        inst_data = InstitutionalData.objects.filter(biometric_id__regex=rf'^0*{user_id}$').first()
                         if inst_data and not AttendanceRegistry.objects.filter(employee=inst_data.employee,
                                                                                registry_date=reg_date).exists():
                             AttendanceRegistry.objects.create(
@@ -1733,7 +1733,7 @@ def migrate_user_adms_ajax(request):
     try:
         data = json.loads(request.body.decode('utf-8') or '{}')
         target_device_id = data.get('target_device_id')
-        pin = str(data.get('pin', '')).strip()
+        pin = str(data.get('pin', '')).strip().lstrip('0')
         name = str(data.get('name', '')).strip()
         is_admin = bool(data.get('is_admin', False))
 

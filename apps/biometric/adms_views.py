@@ -122,11 +122,12 @@ def adms_receive_attendance(request):
 
                 lines = raw_body.splitlines()
 
-                # 1. Pre-cargar empleados en un diccionario
-                emps_map = {
-                    e.biometric_id: e
-                    for e in InstitutionalData.objects.filter(biometric_id__isnull=False).select_related('employee')
-                }
+                # 1. Pre-cargar empleados normalizando el biometric_id
+                emps_map = {}
+                for e in InstitutionalData.objects.filter(biometric_id__isnull=False).select_related('employee'):
+                    clean_db_pin = str(e.biometric_id).strip().lstrip('0')
+                    if clean_db_pin:
+                        emps_map[clean_db_pin] = e
 
                 new_registries = []
                 load_log = BiometricLoad.objects.create(
@@ -136,7 +137,8 @@ def adms_receive_attendance(request):
                 )
 
                 for line in lines:
-                    if not line.strip(): continue
+                    if not line.strip():
+                        continue
                     user_pin, time_str = None, None
 
                     # Parseo de formatos (Nuevo y Antiguo)
@@ -149,13 +151,12 @@ def adms_receive_attendance(request):
                             user_pin, time_str = parts[0], parts[1]
 
                     if user_pin and time_str:
-                        clean_pin = user_pin.strip().lstrip('0')
+                        clean_pin = str(user_pin).strip().lstrip('0')
                         inst_data = emps_map.get(clean_pin)
 
                         if inst_data:
                             try:
                                 reg_date = datetime.strptime(time_str, '%Y-%m-%d %H:%M:%S')
-                                # Agregamos a la lista para procesar en lote
                                 new_registries.append(AttendanceRegistry(
                                     employee=inst_data.employee,
                                     biometric_load=load_log,
