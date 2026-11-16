@@ -1012,7 +1012,7 @@ def upload_biometric_file_ajax(request, pk):
 
 # -------------------------------------------------------------
 # REPORTES Y RECEPTORES
-# -------------------------------------------------------------
+# ------------------------------<-------------------------------
 
 @method_decorator(csrf_exempt, name='dispatch')
 class ADMSReceiverView(View):

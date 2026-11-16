@@ -1322,6 +1322,7 @@ window.App.UI.toggleAccordionSection = function (targetContentId) {
 window.App.UI.handleLocationCascade = function (selectElement, targetSelectId) {
     const parentId = selectElement.value;
     const targetSelect = $(`#${targetSelectId}`);
+    const baseUrl = selectElement.dataset.locationsUrl || '/settings/locations/options/';
 
     targetSelect.empty().append('<option value="">Cargando...</option>').trigger('change');
 
@@ -1330,7 +1331,7 @@ window.App.UI.handleLocationCascade = function (selectElement, targetSelectId) {
         return;
     }
 
-    fetch(`/api/locations/?parent_id=${parentId}`, {
+    fetch(`${baseUrl}?parent_id=${parentId}`, {
         headers: {'X-Requested-With': 'XMLHttpRequest'}
     })
         .then(res => {
@@ -1340,7 +1341,6 @@ window.App.UI.handleLocationCascade = function (selectElement, targetSelectId) {
         .then(response => {
             targetSelect.empty().append('<option value="">-- Seleccione --</option>');
 
-            // Tu vista LocationJsonView responde con { success: true, data: [...] }
             const items = response.data || response;
 
             if (Array.isArray(items)) {
