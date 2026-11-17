@@ -19,7 +19,7 @@
                    target="_blank"
                    rel="noopener noreferrer"
                    class="btn-white-rectangle text-decoration-none">
-                    <i class="fa-solid fa-file-pdf text-red me-1"></i> Generar Reporte PDF
+                    <i class="fa-solid fa-file-pdf text-red me-1"></i> Reporte PDF
                 </a>
 
                 {% if request.user.is_staff %}
@@ -134,8 +134,7 @@
                                             </div>
                                             <div class="form-group">
                                                 <label class="form-label">
-                                                    Nueva Fecha Fin {% if not entry.is_current %}*{% else %}(Opcional si
-                                                    sigue en curso){% endif %}
+                                                    Nueva Fecha Fin {% if not entry.is_current %}*{% else %}(Opcional){% endif %}
                                                 </label>
                                                 <input type="date" name="end_date" class="input-field"
                                                        value="{{ entry.end_date|date:'Y-m-d' }}"
