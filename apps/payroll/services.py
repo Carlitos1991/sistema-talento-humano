@@ -331,6 +331,16 @@ class PayrollCalculatorService:
         eligible_employees = self._filter_employees(employees)
         eligible_ids = {emp.id for emp in eligible_employees}
 
+        stale_ids = [emp.id for emp in employees if emp.id not in eligible_ids]
+        if stale_ids:
+            with transaction.atomic():
+                PendingDebt.objects.filter(
+                    period=self.period, employee_id__in=stale_ids
+                ).delete()
+                Payslip.objects.filter(
+                    period=self.period, employee_id__in=stale_ids
+                ).delete()
+
         eligible_pairs = [(emp, days) for emp, days in employees_with_days if emp.id in eligible_ids]
         payslip_buffer = [
             Payslip(employee=emp, period=self.period, worked_days=days)
