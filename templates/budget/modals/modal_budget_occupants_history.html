@@ -108,7 +108,7 @@
                                         </div>
                                     </div>
 
-                                    {% if request.user.is_staff and not forloop.first %}
+                                    {% if request.user.is_staff%}
                                         <button type="button"
                                                 class="btn-blue-rectangle-outline js-toggle-edit-dates"
                                                 data-entry-id="{{ entry.id }}"
