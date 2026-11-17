@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Historial de Ocupantes - Partida {{ line.number_individual|default:line.code }}</title>
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 35mm 20mm 25mm 18mm;
+        {% if letterhead_path %}
+            background-image: url("{{ letterhead_path }}");
+            background-size: cover;
+        {% endif %}
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 10px;
+            color: #000;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 14px;
+        }
+
+        .header h2 {
+            margin: 0 0 4px 0;
+            font-size: 14px;
+            font-weight: bold;
+            color: #000;
+            text-transform: uppercase;
+        }
+
+        .header p {
+            margin: 0;
+            font-size: 9px;
+            color: #444;
+        }
+
+        /* Información de la partida */
+        .budget-info {
+            margin: 12px 0 16px 0;
+            width: 100%;
+        }
+
+        .budget-info table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #999;
+            background-color: #f5f5f5;
+        }
+
+        .budget-info td {
+            padding: 5px 8px;
+            font-size: 9.5px;
+            border: 1px solid #ccc;
+        }
+
+        .budget-info td strong {
+            font-weight: bold;
+            color: #000;
+        }
+
+        /* Tabla de ocupantes */
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+        }
+
+        .history-table th {
+            background-color: #203c7d;
+            color: #fff;
+            padding: 6px 5px;
+            text-align: center;
+            border: 1px solid #666;
+            font-size: 9px;
+            font-weight: bold;
+        }
+
+        .history-table td {
+            padding: 5px 6px;
+            border: 1px solid #999;
+            font-size: 9px;
+            vertical-align: middle;
+        }
+
+        .history-table tr:nth-child(even) td {
+            background-color: #f9fafb;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .status-active {
+            font-weight: bold;
+            color: #15803d;
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 22px;
+            padding-top: 8px;
+            border-top: 1px solid #999;
+            font-size: 8.5px;
+            color: #333;
+            text-align: left;
+        }
+
+        .footer p {
+            margin: 2px 0;
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h2>Historial de Ocupantes - Partida {{ line.number_individual|default:line.code }}</h2>
+    <p>Total de asignaciones registradas: {{ total_assignments }}</p>
+</div>
+
+<div class="budget-info">
+    <table>
+        <tr>
+            <td width="18%"><strong>Partida Indiv.:</strong></td>
+            <td width="32%">{{ line.number_individual|default:"S/N" }}</td>
+            <td width="18%"><strong>Estado Actual:</strong></td>
+            <td width="32%">{{ line.status_item.name|upper }}</td>
+        </tr>
+        <tr>
+            <td><strong>Código:</strong></td>
+            <td>{{ line.code }}</td>
+            <td><strong>Régimen:</strong></td>
+            <td>{{ line.regime_item.name|default:"-"|upper }}</td>
+        </tr>
+        <tr>
+            <td><strong>Cargo:</strong></td>
+            <td colspan="3">{{ line.position_item.name|default:"POR DEFINIR"|upper }}</td>
+        </tr>
+    </table>
+</div>
+
+<table class="history-table">
+    <thead>
+    <tr>
+        <th width="5%">N°</th>
+        <th width="13%">CÉDULA</th>
+        <th width="30%">APELLIDOS Y NOMBRES</th>
+        <th width="12%">CONDICIÓN</th>
+        <th width="11%">FECHA INICIO</th>
+        <th width="11%">FECHA FIN</th>
+        <th width="18%">OBSERVACIÓN</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for entry in history %}
+        <tr>
+            <td class="text-center">{{ forloop.counter }}</td>
+            <td class="text-center">{{ entry.employee.person.document_number|default:"-" }}</td>
+            <td>{{ entry.employee.person.last_name|upper }} {{ entry.employee.person.first_name|upper }}</td>
+            <td class="text-center">
+                {% if entry.is_acting %}ENCARGO{% else %}TITULAR{% endif %}
+            </td>
+            <td class="text-center">{{ entry.start_date|date:"d/m/Y" }}</td>
+            <td class="text-center">
+                {% if entry.is_current %}
+                    <span class="status-active">En curso</span>
+                {% else %}
+                    {{ entry.end_date|date:"d/m/Y"|default:"-" }}
+                {% endif %}
+            </td>
+            <td>{{ entry.observation|default:"-" }}</td>
+        </tr>
+    {% empty %}
+        <tr>
+            <td colspan="7" class="text-center" style="padding: 20px; color: #666;">
+                No existen registros de ocupantes en esta partida.
+            </td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+<div class="footer">
+    <p><strong>Impreso por:</strong> {{ generated_by.get_full_name|default:generated_by.username|upper }}</p>
+    <p><strong>Fecha de impresión:</strong> {{ today|date:"d/m/Y" }} a las {{ today|date:"H:i" }}</p>
+</div>
+
+</body>
+</html>

@@ -1752,9 +1752,17 @@ document.addEventListener('click', (event) => {
         window.App.Modal.closeModal();
         return;
     }
-
     if (event.target.classList && event.target.classList.contains('modal-overlay')) {
         window.App.Modal.closeModal();
+        return;
+    }
+    const modalTrigger = event.target.closest('[data-modal-url]');
+    if (modalTrigger && !event.defaultPrevented && !modalTrigger.dataset.customModal) {
+        event.preventDefault();
+        const url = modalTrigger.dataset.modalUrl;
+        if (url) {
+            window.App.Modal.openAjaxModal(url);
+        }
     }
 });
 

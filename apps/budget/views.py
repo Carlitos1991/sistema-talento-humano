@@ -1,14 +1,21 @@
-from datetime import date, datetime, timedelta
-
-from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from datetime import date, timedelta
+from datetime import datetime
+from io import BytesIO
+from xhtml2pdf import pisa
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Q, Count
 from django.http import JsonResponse
-from django.shortcuts import render, get_object_or_404
-from django.views.generic import ListView, CreateView, UpdateView, View, DetailView
-
+from django.shortcuts import get_object_or_404
+from django.shortcuts import render
+from django.template.loader import get_template
+from django.views import View
+from django.views.generic import ListView, CreateView, UpdateView, DetailView
+from django.http import JsonResponse, HttpResponse
 from core.models import CatalogItem
+from core.models import SystemConfiguration
 from employee.models import Employee
 from .forms import BudgetLineForm, ProgramForm, ActivityForm, SubprogramForm, ProjectForm, block_parent_field, \
     AssignIndividualNumberForm, BudgetChangeStatusForm, BudgetGroupForm
@@ -734,3 +741,232 @@ class BudgetGroupLinesView(LoginRequiredMixin, View):
             'group': group,
             'lines': lines
         })
+
+
+class BudgetAssignmentUpdateDatesView(LoginRequiredMixin, UserPassesTestMixin, View):
+
+    def test_func(self):
+        return self.request.user.is_staff
+
+    def post(self, request, pk):
+        entry = get_object_or_404(BudgetAssignmentHistory, pk=pk)
+
+        # Bloquear edición de la asignación actual o la más reciente
+        latest_entry = (
+            BudgetAssignmentHistory.objects.filter(
+                budget_line_id=entry.budget_line_id
+            )
+            .order_by('-start_date', '-id')
+            .first()
+        )
+        if latest_entry and entry.id == latest_entry.id:
+            return JsonResponse(
+                {
+                    'success': False,
+                    'message': (
+                        'No se permite modificar las fechas de la asignación'
+                        ' actual o más reciente.'
+                    ),
+                },
+                status=400,
+            )
+
+        start_date_str = (request.POST.get('start_date') or '').strip()
+        end_date_str = (request.POST.get('end_date') or '').strip()
+
+        if not start_date_str or not end_date_str:
+            return JsonResponse(
+                {
+                    'success': False,
+                    'message': (
+                        'Tanto la fecha desde como la fecha hasta son'
+                        ' obligatorias.'
+                    ),
+                },
+                status=400,
+            )
+
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            return JsonResponse(
+                {'success': False, 'message': 'Formato de fecha inválido.'},
+                status=400,
+            )
+
+        if end_date < start_date:
+            return JsonResponse(
+                {
+                    'success': False,
+                    'message': (
+                        'La fecha hasta no puede ser menor que la fecha desde.'
+                    ),
+                },
+                status=400,
+            )
+
+        entry.start_date = start_date
+        entry.end_date = end_date
+        update_fields = ['start_date', 'end_date']
+        if hasattr(entry, 'is_current') and not isinstance(
+                getattr(type(entry), 'is_current', None), property
+        ):
+            entry.is_current = False
+            update_fields.append('is_current')
+
+        entry.save(update_fields=update_fields)
+        return JsonResponse({
+            'success': True,
+            'message': 'Fechas actualizadas correctamente.',
+            'formatted_start': entry.start_date.strftime('%d/%m/%Y'),
+            'formatted_end': entry.end_date.strftime('%d/%m/%Y'),
+        })
+
+
+class BudgetEmployeeSearchSelect2View(LoginRequiredMixin, View):
+    """Endpoint Select2 AJAX para buscar empleados por nombre, apellido o cédula."""
+
+    def get(self, request):
+        term = (request.GET.get('q') or request.GET.get('term') or '').strip()
+        if len(term) < 2:
+            return JsonResponse({'results': []})
+
+        words = term.split()
+        qs = Employee.objects.select_related('person').distinct()
+
+        for word in words:
+            qs = qs.filter(
+                Q(person__first_name__icontains=word)
+                | Q(person__last_name__icontains=word)
+                | Q(person__document_number__icontains=word)
+            )
+
+        employees = qs.order_by('person__last_name', 'person__first_name')[:25]
+
+        results = []
+        for emp in employees:
+            full_name = f"{emp.person.last_name} {emp.person.first_name}".strip().upper()
+            doc = emp.person.document_number or 'S/N'
+            results.append({
+                'id': emp.id,
+                'text': f"{full_name} (CI: {doc})",
+            })
+
+        return JsonResponse({'results': results})
+
+
+class BudgetOccupantManualCreateView(LoginRequiredMixin, UserPassesTestMixin, View):
+    """Modal y guardado manual de un ocupante histórico en la partida."""
+
+    def test_func(self):
+        return self.request.user.is_staff
+
+    def get(self, request, pk):
+        line = get_object_or_404(BudgetLine, pk=pk)
+        return render(
+            request,
+            'budget/modals/modal_budget_add_occupant.html',
+            {'line': line},
+        )
+
+    def post(self, request, pk):
+        line = get_object_or_404(BudgetLine, pk=pk)
+        employee_id = (request.POST.get('employee_id') or '').strip()
+        start_date_str = (request.POST.get('start_date') or '').strip()
+        end_date_str = (request.POST.get('end_date') or '').strip()
+        observation = (request.POST.get('observation') or '').strip()
+        is_acting = request.POST.get('is_acting') == 'on'
+
+        if not employee_id or not start_date_str or not end_date_str:
+            return JsonResponse(
+                {
+                    'success': False,
+                    'message': 'Empleado, fecha de inicio y fecha de fin son obligatorios.',
+                },
+                status=400,
+            )
+
+        try:
+            start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        except ValueError:
+            return JsonResponse(
+                {'success': False, 'message': 'Formato de fecha inválido.'},
+                status=400,
+            )
+
+        if end_date < start_date:
+            return JsonResponse(
+                {
+                    'success': False,
+                    'message': 'La fecha de fin no puede ser menor que la fecha de inicio.',
+                },
+                status=400,
+            )
+
+        employee = get_object_or_404(Employee, pk=employee_id)
+
+        BudgetAssignmentHistory.objects.create(
+            budget_line=line,
+            employee=employee,
+            start_date=start_date,
+            end_date=end_date,
+            is_acting=is_acting,
+            is_current=False,
+            observation=observation or 'Registro histórico ingresado manualmente.',
+        )
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Ocupante histórico agregado correctamente.',
+        })
+
+
+class BudgetOccupantsHistoryPdfView(LoginRequiredMixin, View):
+    """Genera el reporte PDF del historial de ocupantes de una partida."""
+
+    def get(self, request, pk):
+        line = get_object_or_404(
+            BudgetLine.objects.select_related(
+                'activity__project__subprogram__program',
+                'position_item',
+                'status_item',
+                'regime_item',
+                'group_item',
+            ),
+            pk=pk,
+        )
+        history = (
+            line.assignments.all()
+            .select_related('employee__person')
+            .order_by('-start_date', '-id')
+        )
+
+        sys_config = SystemConfiguration.get_current()
+        letterhead_path = None
+        if sys_config and sys_config.letterhead:
+            try:
+                letterhead_path = sys_config.letterhead.path.replace('\\', '/')
+            except Exception:
+                letterhead_path = None
+
+        template = get_template('budget/reports/pdf_occupants_history.html')
+        html = template.render({
+            'line': line,
+            'history': history,
+            'total_assignments': history.count(),
+            'letterhead_path': letterhead_path,
+            'today': datetime.now(),
+            'generated_by': request.user,
+        })
+
+        buffer = BytesIO()
+        pdf = pisa.pisaDocument(BytesIO(html.encode('UTF-8')), buffer, encoding='UTF-8')
+        if not pdf.err:
+            part_num = line.number_individual or line.code
+            response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
+            response['Content-Disposition'] = f'inline; filename="Historial_Ocupantes_{part_num}.pdf"'
+            return response
+
+        return HttpResponse('Error al generar el reporte PDF de ocupantes.', status=500)

@@ -18,8 +18,7 @@
             <a href="{% url 'biometric:offline_attendance' %}" class="btn-white-rectangle" title="Asistencia Offline">
                 <i class="fa-solid fa-wifi-slash text-blue me-1"></i> Asistencia Offline
             </a>
-            <!-- Desacoplado: ya no depende de id ni de clases CSS para abrir el modal -->
-            <button type="button" class="btn-blue-rectangle" data-action="open-modal"
+            <button type="button" class="btn-blue-rectangle"
                     data-modal-url="{% url 'biometric:biometric_modal_create' %}">
                 <i class="fa-solid fa-plus me-1"></i> NUEVO BIOMÉTRICO
             </button>

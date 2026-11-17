@@ -1,0 +1,102 @@
+{% load static %}
+<div class="modal-overlay hidden" id="addBudgetOccupantModal">
+    <div class="modal-container-medium">
+        <div class="modal-header">
+            <div class="header-content-group">
+                <div class="header-icon-circle"><i class="fa-solid fa-user-plus"></i></div>
+                <h3 class="header-title">
+                    Agregar Ocupante Histórico - Partida {{ line.number_individual|default:line.code }}
+                </h3>
+            </div>
+            <button type="button"
+                    class="btn-close-circle"
+                    onclick="openAjaxModal('{% url 'budget:history_occupants' line.id %}')"
+                    title="Volver al historial">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <form id="budget-add-occupant-form"
+              action="{% url 'budget:history_occupants_add' line.id %}"
+              data-history-url="{% url 'budget:history_occupants' line.id %}"
+              method="POST">
+            {% csrf_token %}
+            <div class="modal-body-custom">
+                <!-- Resumen de la partida -->
+                <div class="employee-card-badge mb-3">
+                    <div class="employee-avatar-wrapper" style="width: 46px; height: 46px; background-color: #203c7d;">
+                        <i class="fa-solid fa-briefcase text-white" style="font-size: 1.1rem;"></i>
+                    </div>
+                    <div class="employee-card-details">
+                        <span class="employee-card-name">{{ line.position_item.name|default:"CARGO POR DEFINIR" }}</span>
+                        <span class="small text-muted">Código: {{ line.code }}</span>
+                    </div>
+                </div>
+
+                <!-- Select2 AJAX de Empleados -->
+                <div class="form-group mb-3">
+                    <label class="form-label" for="id_manual_occupant_employee">Servidor / Empleado *</label>
+                    <select name="employee_id"
+                            id="id_manual_occupant_employee"
+                            class="input-field select2-user-ajax"
+                            data-ajax-url="{% url 'budget:employee_search_select2' %}"
+                            data-minimum-input-length="2"
+                            data-placeholder="Escriba apellidos, nombres o cédula para buscar..."
+                            data-allow-clear="true"
+                            required>
+                        <option value=""></option>
+                    </select>
+                    <span class="form-hint">Escriba al menos 2 letras o números para buscar</span>
+                </div>
+
+                <!-- Fecha de Inicio y Fecha de Fin -->
+                <div class="grid-2-cols mb-3">
+                    <div class="form-group">
+                        <label class="form-label" for="id_manual_start_date">Fecha de Inicio *</label>
+                        <input type="date"
+                               id="id_manual_start_date"
+                               name="start_date"
+                               class="input-field"
+                               required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="id_manual_end_date">Fecha de Fin *</label>
+                        <input type="date"
+                               id="id_manual_end_date"
+                               name="end_date"
+                               class="input-field"
+                               required>
+                    </div>
+                </div>
+
+                <!-- Checkbox alineado a la izquierda -->
+                <div class="form-group mb-3">
+                    <label class="d-inline-flex align-items-center cursor-pointer" style="gap: 8px; width: auto;">
+                        <input type="checkbox" name="is_acting" style="width: auto; margin: 0;">
+                        <span class="small bold">Es Encargo / Subrogación Temporal</span>
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="id_manual_observation">Observación / Documento de respaldo</label>
+                    <textarea id="id_manual_observation"
+                              name="observation"
+                              rows="2"
+                              class="input-field"
+                              placeholder="Ej: Acción de personal o contrato histórico migrado..."></textarea>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button"
+                        class="btn-white-rectangle"
+                        onclick="openAjaxModal('{% url 'budget:history_occupants' line.id %}')">
+                    Cancelar
+                </button>
+                <button type="submit" class="btn-blue-rectangle">
+                    <i class="fa-solid fa-save me-1"></i> Guardar Ocupante
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

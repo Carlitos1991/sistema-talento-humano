@@ -586,13 +586,16 @@
 // Observador único sin re-ejecuciones múltiples
 const modalObserver = new MutationObserver((mutations) => {
     for (let mutation of mutations) {
-        if (mutation.addedNodes.length) {
-            const form = document.getElementById('budget-item-form');
-            if (form && form.dataset.cascadesInitialized !== 'true') {
-                window.initBudgetFormCascades();
-                break;
-            }
+        if (!mutation.addedNodes.length) continue;
+
+        const form = document.getElementById('budget-item-form');
+        if (form && form.dataset.cascadesInitialized !== 'true') {
+            window.initBudgetFormCascades();
         }
+        if (document.getElementById('addBudgetOccupantModal')) {
+            window.initBudgetAddOccupantSelect2();
+        }
+        break;
     }
 });
 
@@ -608,4 +611,200 @@ document.addEventListener('DOMContentLoaded', () => {
             window.searchEmployee();
         }
     });
-});
+});// --- EDICIÓN DE FECHAS EN HISTORIAL DE OCUPANTES (SOLO STAFF) ---
+document.addEventListener('click', (e) => {
+    const editBtn = e.target.closest('.js-toggle-edit-dates');
+    if (editBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const entryId = editBtn.dataset.entryId;
+        const displayDiv = document.getElementById('dates-display-' + entryId);
+        const formEl = document.getElementById('dates-form-' + entryId);
+        if (displayDiv && formEl) {
+            displayDiv.classList.add('hidden');
+            formEl.classList.remove('hidden');
+        }
+        return;
+    }
+
+    const cancelBtn = e.target.closest('.js-cancel-edit-dates');
+    if (cancelBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const entryId = cancelBtn.dataset.entryId;
+        const displayDiv = document.getElementById('dates-display-' + entryId);
+        const formEl = document.getElementById('dates-form-' + entryId);
+        if (displayDiv && formEl) {
+            formEl.classList.add('hidden');
+            displayDiv.classList.remove('hidden');
+        }
+    }
+}, true);
+
+document.addEventListener('submit', async (e) => {
+    const form = e.target;
+    if (!form || !form.classList.contains('js-update-assignment-dates-form')) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const entryId = form.dataset.entryId;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const csrfToken = form.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+    const formData = new FormData(form);
+
+    if (submitBtn) submitBtn.disabled = true;
+
+    try {
+        const response = await fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': csrfToken
+            }
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || 'No se pudieron actualizar las fechas.');
+        }
+
+        const displayDiv = document.getElementById('dates-display-' + entryId);
+        if (displayDiv) {
+            const startSpan = displayDiv.querySelector('.js-start-date-text');
+            const endSpan = displayDiv.querySelector('.js-end-date-text');
+            if (startSpan) startSpan.textContent = data.formatted_start;
+            const isOngoing = data.formatted_end === 'En curso';
+            if (endSpan) {
+                endSpan.textContent = data.formatted_end;
+                if (!isOngoing) {
+                    const endWrapper = endSpan.closest('.value-bold');
+                    if (endWrapper) {
+                        endWrapper.classList.remove('text-blue');
+                        endWrapper.classList.add('text-red');
+                        const icon = endWrapper.querySelector('i');
+                        if (icon) {
+                            icon.classList.remove('fa-infinity');
+                            icon.classList.add('fa-calendar-times');
+                        }
+                    }
+                }
+            }
+
+            // Solo las asignaciones finalizadas cambian el punto de la línea de tiempo
+            if (!isOngoing) {
+                const marker = displayDiv.closest('.timeline-item')?.querySelector('.timeline-marker');
+                if (marker) {
+                    marker.classList.remove('status-actual');
+                    marker.classList.add('status-finalizado');
+                }
+            }
+
+            form.classList.add('hidden');
+            displayDiv.classList.remove('hidden');
+        }
+
+        if (typeof window.showToast === 'function') {
+            window.showToast(data.message, 'success');
+        }
+    } catch (error) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({icon: 'warning', title: 'Atención', text: error.message});
+        }
+    } finally {
+        if (submitBtn) submitBtn.disabled = false;
+    }
+}, true);
+// --- GUARDAR OCUPANTE HISTÓRICO MANUAL ---
+document.addEventListener('submit', async (e) => {
+    const form = e.target;
+    if (!form || form.id !== 'budget-add-occupant-form') return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const csrfToken = form.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+    const historyUrl = form.dataset.historyUrl;
+    const formData = new FormData(form);
+
+    if (submitBtn) submitBtn.disabled = true;
+
+    try {
+        const response = await fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': csrfToken
+            }
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || 'No se pudo registrar el ocupante.');
+        }
+
+        if (typeof window.showToast === 'function') {
+            window.showToast(data.message, 'success');
+        }
+
+        if (historyUrl && typeof window.openAjaxModal === 'function') {
+            window.openAjaxModal(historyUrl);
+        }
+    } catch (error) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({icon: 'warning', title: 'Atención', text: error.message});
+        }
+    } finally {
+        if (submitBtn) submitBtn.disabled = false;
+    }
+}, true);
+window.initBudgetAddOccupantSelect2 = function () {
+    const modal = document.getElementById('addBudgetOccupantModal');
+    if (!modal || !window.$ || !$.fn.select2) return;
+
+    const $select = $('#id_manual_occupant_employee');
+    if (!$select.length || $select.data('ajaxInitialized') === true) return;
+
+    const searchUrl = $select.data('ajaxUrl');
+    if (!searchUrl) return;
+
+    if ($select.hasClass('select2-hidden-accessible')) {
+        $select.select2('destroy');
+    }
+
+    $select.data('ajaxInitialized', true).select2({
+        width: '100%',
+        dropdownParent: $('#addBudgetOccupantModal'),
+        minimumInputLength: 2,
+        placeholder: 'Escriba apellidos, nombres o cédula para buscar...',
+        allowClear: true,
+        language: {
+            inputTooShort: function () {
+                return 'Escriba 2 o más caracteres para buscar...';
+            },
+            searching: function () {
+                return 'Buscando empleados...';
+            },
+            noResults: function () {
+                return 'No se encontraron empleados';
+            }
+        },
+        ajax: {
+            url: searchUrl,
+            dataType: 'json',
+            delay: 200,
+            data: function (params) {
+                return {q: params.term || ''};
+            },
+            processResults: function (data) {
+                return {results: data.results || []};
+            },
+            cache: true
+        }
+    });
+};

@@ -2,14 +2,34 @@
 <div class="modal-overlay hidden">
     <div class="modal-container-xl">
         <!-- HEADER -->
-        <div class="modal-header-medium">
-            <h3 class="header-title">
-                <i class="fa-solid fa-users-viewfinder me-2"></i> Historial de Ocupantes -
-                Partida {{ line.number_individual|default:line.code }}
-            </h3>
-            <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
-                <i class="fas fa-times"></i>
-            </button>
+        <div class="modal-header-medium flex-column align-items-stretch" style="gap: 12px;">
+            <div class="d-flex justify-content-between align-items-center w-100">
+                <h3 class="header-title m-0">
+                    <i class="fa-solid fa-users-viewfinder me-2"></i> Historial de Ocupantes -
+                    Partida {{ line.number_individual|default:line.code }}
+                </h3>
+                <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <!-- Botones centrados de acción -->
+            <div class="d-flex justify-content-center align-items-center flex-wrap" style="gap: 12px;">
+                <a href="{% url 'budget:history_occupants_pdf' line.id %}"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   class="btn-white-rectangle text-decoration-none">
+                    <i class="fa-solid fa-file-pdf text-red me-1"></i> Generar Reporte PDF
+                </a>
+
+                {% if request.user.is_staff %}
+                    <button type="button"
+                            class="btn-blue-rectangle"
+                            data-modal-url="{% url 'budget:history_occupants_add' line.id %}">
+                        <i class="fa-solid fa-user-plus me-1"></i> Agregar Ocupante
+                    </button>
+                {% endif %}
+            </div>
         </div>
 
         <!-- BODY -->
@@ -62,23 +82,77 @@
                                 </div>
                             </div>
 
-                            <div class="grid-2-cols mt-3 border-top pt-3">
-                                <div>
-                                    <label class="label-muted">Fecha Inicio</label>
-                                    <span class="value-bold text-green">
-                                        <i class="fas fa-calendar-check me-1"></i>{{ entry.start_date|date:"d/m/Y" }}
-                                    </span>
+                            <div class="mt-3 border-top pt-3">
+                                <!-- Vista de lectura -->
+                                <div class="d-flex justify-content-between align-items-center"
+                                     id="dates-display-{{ entry.id }}">
+                                    <div class="grid-2-cols flex-grow-1">
+                                        <div>
+                                            <label class="label-muted">Fecha Inicio</label>
+                                            <span class="value-bold text-green">
+                                                <i class="fas fa-calendar-check me-1"></i>
+                                                <span class="js-start-date-text">{{ entry.start_date|date:"d/m/Y" }}</span>
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <label class="label-muted">Fecha Fin</label>
+                                            <span class="value-bold {% if entry.is_current %}text-blue{% else %}text-red{% endif %}">
+                                                {% if entry.is_current %}
+                                                    <i class="fas fa-infinity me-1"></i>
+                                                    <span class="js-end-date-text">En curso</span>
+                                                {% else %}
+                                                    <i class="fas fa-calendar-times me-1"></i>
+                                                    <span class="js-end-date-text">{{ entry.end_date|date:"d/m/Y" }}</span>
+                                                {% endif %}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {% if request.user.is_staff and not forloop.first %}
+                                        <button type="button"
+                                                class="btn-blue-rectangle-outline js-toggle-edit-dates"
+                                                data-entry-id="{{ entry.id }}"
+                                                title="Corregir fechas">
+                                            <i class="fas fa-calendar-alt me-1"></i> Actualizar fechas
+                                        </button>
+                                    {% endif %}
                                 </div>
-                                <div>
-                                    <label class="label-muted">Fecha Fin</label>
-                                    <span class="value-bold {% if entry.is_current %}text-blue{% else %}text-red{% endif %}">
-                                        {% if entry.is_current %}
-                                            <i class="fas fa-infinity me-1"></i>En curso
-                                        {% else %}
-                                            <i class="fas fa-calendar-times me-1"></i>{{ entry.end_date|date:"d/m/Y" }}
-                                        {% endif %}
-                                    </span>
-                                </div>
+
+                                <!-- Formulario de edición inline (Solo Staff, excepto la asignación más reciente) -->
+                                {% if request.user.is_staff and not forloop.first %}
+                                    <form class="js-update-assignment-dates-form hidden mt-3"
+                                          id="dates-form-{{ entry.id }}"
+                                          data-entry-id="{{ entry.id }}"
+                                          action="{% url 'budget:update_assignment_dates' entry.id %}"
+                                          method="POST">
+                                        {% csrf_token %}
+                                        <div class="grid-3-cols">
+                                            <div class="form-group">
+                                                <label class="form-label">Nueva Fecha Inicio *</label>
+                                                <input type="date" name="start_date" class="input-field"
+                                                       value="{{ entry.start_date|date:'Y-m-d' }}" required>
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="form-label">Nueva Fecha Fin *</label>
+                                                <input type="date" name="end_date" class="input-field"
+                                                       value="{{ entry.end_date|date:'Y-m-d' }}" required>
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="form-label">&nbsp;</label>
+                                                <div class="d-flex align-items-center" style="gap: 8px;">
+                                                    <button type="submit" class="btn-blue-rectangle">
+                                                        <i class="fas fa-save me-1"></i> Guardar
+                                                    </button>
+                                                    <button type="button"
+                                                            class="btn-dark-blue-rectangle-outline js-cancel-edit-dates"
+                                                            data-entry-id="{{ entry.id }}">
+                                                        Cancelar
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </form>
+                                {% endif %}
                             </div>
 
                             {% if entry.observation %}

@@ -31,4 +31,12 @@ urlpatterns = [
     path('groups/', views.BudgetGroupListView.as_view(), name='budget_group_list'),
     path('groups/<int:pk>/update/', views.BudgetGroupUpdateView.as_view(), name='budget_group_update'),
     path('groups/<int:pk>/lines/', views.BudgetGroupLinesView.as_view(), name='budget_group_lines'),
+    path('history/occupants/<int:pk>/', views.BudgetOccupantsHistoryView.as_view(), name='history_occupants'),
+    path('history/occupants/assignment/<int:pk>/update-dates/', views.BudgetAssignmentUpdateDatesView.as_view(),
+         name='update_assignment_dates'),
+    path('api/employees/search/', views.BudgetEmployeeSearchSelect2View.as_view(), name='employee_search_select2', ),
+    path('history/occupants/<int:pk>/add/', views.BudgetOccupantManualCreateView.as_view(),
+         name='history_occupants_add', ),
+    path('history/occupants/<int:pk>/pdf/', views.BudgetOccupantsHistoryPdfView.as_view(),
+         name='history_occupants_pdf', ),
 ]
