@@ -108,7 +108,7 @@
                                         </div>
                                     </div>
 
-                                    {% if request.user.is_staff%}
+                                    {% if request.user.is_staff %}
                                         <button type="button"
                                                 class="btn-blue-rectangle-outline js-toggle-edit-dates"
                                                 data-entry-id="{{ entry.id }}"
@@ -119,7 +119,7 @@
                                 </div>
 
                                 <!-- Formulario de edición inline (Solo Staff, excepto la asignación más reciente) -->
-                                {% if request.user.is_staff and not forloop.first %}
+                                {% if request.user.is_staff %}
                                     <form class="js-update-assignment-dates-form hidden mt-3"
                                           id="dates-form-{{ entry.id }}"
                                           data-entry-id="{{ entry.id }}"
@@ -133,9 +133,13 @@
                                                        value="{{ entry.start_date|date:'Y-m-d' }}" required>
                                             </div>
                                             <div class="form-group">
-                                                <label class="form-label">Nueva Fecha Fin *</label>
+                                                <label class="form-label">
+                                                    Nueva Fecha Fin {% if not entry.is_current %}*{% else %}(Opcional si
+                                                    sigue en curso){% endif %}
+                                                </label>
                                                 <input type="date" name="end_date" class="input-field"
-                                                       value="{{ entry.end_date|date:'Y-m-d' }}" required>
+                                                       value="{{ entry.end_date|date:'Y-m-d' }}"
+                                                       {% if not entry.is_current %}required{% endif %}>
                                             </div>
                                             <div class="form-group">
                                                 <label class="form-label">&nbsp;</label>

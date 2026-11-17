@@ -676,26 +676,23 @@ document.addEventListener('submit', async (e) => {
             const startSpan = displayDiv.querySelector('.js-start-date-text');
             const endSpan = displayDiv.querySelector('.js-end-date-text');
             if (startSpan) startSpan.textContent = data.formatted_start;
-            const isOngoing = data.formatted_end === 'En curso';
             if (endSpan) {
                 endSpan.textContent = data.formatted_end;
-                if (!isOngoing) {
-                    const endWrapper = endSpan.closest('.value-bold');
-                    if (endWrapper) {
-                        endWrapper.classList.remove('text-blue');
-                        endWrapper.classList.add('text-red');
-                        const icon = endWrapper.querySelector('i');
-                        if (icon) {
-                            icon.classList.remove('fa-infinity');
-                            icon.classList.add('fa-calendar-times');
-                        }
+                const endWrapper = endSpan.closest('.value-bold');
+                if (endWrapper && !data.is_current) {
+                    endWrapper.classList.remove('text-blue');
+                    endWrapper.classList.add('text-red');
+                    const icon = endWrapper.querySelector('i');
+                    if (icon) {
+                        icon.classList.remove('fa-infinity');
+                        icon.classList.add('fa-calendar-times');
                     }
                 }
             }
 
-            // Solo las asignaciones finalizadas cambian el punto de la línea de tiempo
-            if (!isOngoing) {
-                const marker = displayDiv.closest('.timeline-item')?.querySelector('.timeline-marker');
+            if (!data.is_current) {
+                const timelineItem = displayDiv.closest('.timeline-item');
+                const marker = timelineItem?.querySelector('.timeline-marker');
                 if (marker) {
                     marker.classList.remove('status-actual');
                     marker.classList.add('status-finalizado');

@@ -751,57 +751,45 @@ class BudgetAssignmentUpdateDatesView(LoginRequiredMixin, UserPassesTestMixin, V
     def post(self, request, pk):
         entry = get_object_or_404(BudgetAssignmentHistory, pk=pk)
 
-        # Bloquear edición de la asignación actual o la más reciente
-        latest_entry = (
-            BudgetAssignmentHistory.objects.filter(
-                budget_line_id=entry.budget_line_id
-            )
-            .order_by('-start_date', '-id')
-            .first()
-        )
-        if latest_entry and entry.id == latest_entry.id:
+        start_date_str = (request.POST.get('start_date') or '').strip()
+        end_date_str = (request.POST.get('end_date') or '').strip()
+
+        if not start_date_str:
             return JsonResponse(
                 {
                     'success': False,
-                    'message': (
-                        'No se permite modificar las fechas de la asignación'
-                        ' actual o más reciente.'
-                    ),
+                    'message': 'La fecha de inicio es obligatoria.',
                 },
                 status=400,
             )
 
-        start_date_str = (request.POST.get('start_date') or '').strip()
-        end_date_str = (request.POST.get('end_date') or '').strip()
-
-        if not start_date_str or not end_date_str:
+        if not entry.is_current and not end_date_str:
             return JsonResponse(
                 {
                     'success': False,
-                    'message': (
-                        'Tanto la fecha desde como la fecha hasta son'
-                        ' obligatorias.'
-                    ),
+                    'message': 'La fecha de fin es obligatoria para asignaciones finalizadas.',
                 },
                 status=400,
             )
 
         try:
             start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
-            end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+            end_date = (
+                datetime.strptime(end_date_str, '%Y-%m-%d').date()
+                if end_date_str
+                else None
+            )
         except ValueError:
             return JsonResponse(
                 {'success': False, 'message': 'Formato de fecha inválido.'},
                 status=400,
             )
 
-        if end_date < start_date:
+        if end_date and end_date < start_date:
             return JsonResponse(
                 {
                     'success': False,
-                    'message': (
-                        'La fecha hasta no puede ser menor que la fecha desde.'
-                    ),
+                    'message': 'La fecha fin no puede ser menor que la fecha inicio.',
                 },
                 status=400,
             )
@@ -809,9 +797,9 @@ class BudgetAssignmentUpdateDatesView(LoginRequiredMixin, UserPassesTestMixin, V
         entry.start_date = start_date
         entry.end_date = end_date
         update_fields = ['start_date', 'end_date']
-        if hasattr(entry, 'is_current') and not isinstance(
-                getattr(type(entry), 'is_current', None), property
-        ):
+
+        # Si se ingresó una fecha fin a una asignación que estaba en curso, se marca como finalizada
+        if end_date and entry.is_current:
             entry.is_current = False
             update_fields.append('is_current')
 
@@ -820,7 +808,8 @@ class BudgetAssignmentUpdateDatesView(LoginRequiredMixin, UserPassesTestMixin, V
             'success': True,
             'message': 'Fechas actualizadas correctamente.',
             'formatted_start': entry.start_date.strftime('%d/%m/%Y'),
-            'formatted_end': entry.end_date.strftime('%d/%m/%Y'),
+            'formatted_end': entry.end_date.strftime('%d/%m/%Y') if entry.end_date else 'En curso',
+            'is_current': entry.is_current,
         })
 
 
