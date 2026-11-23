@@ -578,9 +578,8 @@ def location_toggle_status(request, pk):
     })
 
 
-class LocationCascadeOptionsView(LoginRequiredMixin, PermissionRequiredMixin, View):
+class LocationCascadeOptionsView(LoginRequiredMixin, View):
     """Retorna opciones de ubicaciones activas para selectores Select2 en cascada."""
-    permission_required = 'core.view_location'
 
     def get(self, request, *args, **kwargs):
         parent_id = request.GET.get('parent_id')
