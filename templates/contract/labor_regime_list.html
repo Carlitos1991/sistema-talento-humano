@@ -13,10 +13,9 @@
          data-active="{{ stats_active|default:0 }}"
          data-inactive="{{ stats_inactive|default:0 }}">
 
-        <!-- Encabezado Oficial -->
         <div class="header-card">
             <div>
-                <h1><i class="fa-solid fa-briefcase me-2"></i> Regímenes Laborales</h1>
+                <h1><i class="fa-solid fa-briefcase"></i> Regímenes Laborales</h1>
                 <p>Administración de regímenes laborales y normativa institucional.</p>
             </div>
             <button type="button" class="btn-blue-rectangle" id="btn-create-regime">
@@ -24,41 +23,13 @@
             </button>
         </div>
 
-        <!-- Tarjetas de Estadísticas Filtrables -->
-        <div class="stats-row">
-            <div class="stat-card color-one" id="stat-card-total" data-status="">
-                <div class="stat-left">
-                    <h3>TOTAL</h3>
-                    <div class="number" id="stat-val-total">{{ stats_total|default:0 }}</div>
-                </div>
-                <i class="fas fa-layer-group stat-icon"></i>
-            </div>
-            <div class="stat-card color-two" id="stat-card-active" data-status="true">
-                <div class="stat-left">
-                    <h3>ACTIVOS</h3>
-                    <div class="number" id="stat-val-active">{{ stats_active|default:0 }}</div>
-                </div>
-                <i class="fas fa-check-circle stat-icon"></i>
-            </div>
-            <div class="stat-card color-three" id="stat-card-inactive" data-status="false">
-                <div class="stat-left">
-                    <h3>INACTIVOS</h3>
-                    <div class="number" id="stat-val-inactive">{{ stats_inactive|default:0 }}</div>
-                </div>
-                <i class="fas fa-times-circle stat-icon"></i>
-            </div>
-        </div>
-
-        <!-- Contenedor Principal de la Tabla -->
         <div class="table-app">
             <div class="content-table">
-                <div class="table-controls p-3">
-                    <div class="search-box">
+                <div class="table-controls toolbar-row">
+                    <div class="toolbar-center"></div>
+                    <div class="toolbar-right">
                         <input type="text" id="regime-search-input" class="table-search-input"
                                placeholder="Buscar régimen por código o nombre...">
-                        <button type="button" class="search-btn" title="Buscar">
-                            <i class="fas fa-search"></i>
-                        </button>
                     </div>
                 </div>
 
@@ -67,11 +38,9 @@
                 </div>
             </div>
         </div>
-
-        <!-- Modales Nativos -->
-        {% include 'contract/modals/modal_labor_regime_form.html' %}
-        {% include 'contract/modals/modal_contract_type_list.html' %}
     </div>
+    {% include 'contract/modals/modal_labor_regime_form.html' %}
+    {% include 'contract/modals/modal_contract_type_list.html' %}
 {% endblock %}
 
 {% block extra_js %}

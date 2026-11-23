@@ -1,4 +1,6 @@
-/* Layout Integrado para Búsqueda y Dropzone Excel */
+/* =========================================================================
+   LAYOUT INTEGRADO PARA BÚSQUEDA Y DROPZONE EXCEL
+   ========================================================================= */
 .permit-integrated-search-grid {
     display: grid;
     grid-template-columns: 105px repeat(3, minmax(0, 1fr));
@@ -80,10 +82,10 @@
     margin-top: 4px;
     display: inline-flex;
     align-items: center;
+    gap: 4px;
     white-space: nowrap;
 }
 
-/* Badge flotante a la izquierda sin desplazar las columnas */
 .permit-excel-left-badge {
     position: absolute;
     right: calc(100% + 14px);
@@ -127,41 +129,17 @@
     padding-right: 8px;
 }
 
-/* Centrado del buscador de identidad en el Paso 2 */
-.wizard-identity-search-wrapper {
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin: 0 auto;
-}
-
-.wizard-identity-search-wrapper .search-box {
-    width: 100%;
-    max-width: 420px;
-    margin: 0 auto;
-    position: relative;
-    display: flex;
-    align-items: center;
-}
-
-.wizard-identity-search-wrapper .search-box .table-search-input {
-    width: 100%;
-    max-width: 100%;
-    height: 44px;
-    padding-right: 48px;
-    box-sizing: border-box;
-}
-
-/* Forzar disposición en columna centrada en el Paso 2 */
+/* =========================================================================
+   PASO 2 DEL WIZARD: VALIDACIÓN DE IDENTIDAD
+   ========================================================================= */
 .wizard-step-centered-card {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
-    text-align: center !important;
-    padding: 3rem 1.5rem !important;
-    margin: 0 auto !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 3rem 1.5rem;
+    margin: 0 auto;
 }
 
 .wizard-step-centered-card .avatar-placeholder-md {
@@ -179,35 +157,6 @@
     max-width: 500px;
 }
 
-/* Contenedor y caja de búsqueda */
-.wizard-identity-search-wrapper {
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin: 0 auto;
-}
-
-.wizard-identity-search-wrapper .search-box {
-    width: 100%;
-    max-width: 420px;
-    margin: 0 auto;
-    position: relative;
-    display: flex;
-    align-items: center;
-}
-
-.wizard-identity-search-wrapper .search-box .table-search-input {
-    width: 100% !important;
-    max-width: 100% !important;
-    height: 44px;
-    padding-right: 48px;
-    box-sizing: border-box;
-}
-
-/* =========================================================================
-   PASO 2: INPUT Y BOTÓN A LA PAR (SIN DESBORDAMIENTOS)
-   ========================================================================= */
 .wizard-identity-search-wrapper {
     width: 100%;
     display: flex;
@@ -236,14 +185,14 @@
 
 .wizard-search-field {
     flex: 1;
-    height: 100% !important;
-    border: none !important;
-    outline: none !important;
-    padding: 0 1rem !important;
+    height: 100%;
+    border: none;
+    outline: none;
+    padding: 0 1rem;
     font-size: 0.95rem;
     color: #1e293b;
-    background: transparent !important;
-    box-shadow: none !important;
+    background: transparent;
+    box-shadow: none;
 }
 
 .wizard-search-btn {
@@ -272,14 +221,14 @@
 }
 
 /* =========================================================================
-   FOOTER DEL WIZARD: SEPARACIÓN DE BOTONES
+   FOOTER DEL WIZARD Y UTILIDADES GENERALES (SIN BOOTSTRAP)
    ========================================================================= */
 .wizard-footer-actions {
-    display: flex !important;
-    justify-content: center !important;
-    align-items: center !important;
-    gap: 1.5rem !important; /* Espacio de 24px entre ANTERIOR y FINALIZAR GESTIÓN */
-    padding: 1.25rem 2rem !important;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1.25rem 2rem;
 }
 
 .wizard-footer-actions .btn-dark-blue-rectangle-outline,
@@ -288,5 +237,255 @@
 }
 
 .export-only-col {
-    display: none !important;
+    display: none;
+}
+
+.header-actions-group {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-left: auto;
+}
+
+.modal-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-left: auto;
+}
+
+.wizard-stepper-right {
+    margin-left: auto;
+    margin-right: 1.5rem;
+}
+
+.banner-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    width: 100%;
+}
+
+.banner-budget-right {
+    margin-left: auto;
+    text-align: right;
+}
+
+.block-meta {
+    display: block;
+}
+
+.card-spaced {
+    margin-bottom: 1rem;
+}
+
+.card-top-spaced {
+    margin-top: 1.25rem;
+}
+
+.card-flush {
+    margin-bottom: 0;
+}
+
+.form-group-spaced {
+    margin-bottom: 1rem;
+}
+
+.form-group-flush {
+    margin-bottom: 0;
+}
+
+.checkbox-label-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+
+.period-filters-form {
+    margin-bottom: 1rem;
+}
+
+.notification-search-form {
+    display: flex;
+    width: 100%;
+    justify-content: flex-end;
+}
+
+.is-invisible {
+    visibility: hidden;
+}
+
+.table-controls-padded {
+    padding: 1rem;
+}
+
+.doc-upload-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.doc-actions-row {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+/* Vista previa de plantilla contractual */
+.contract-preview-sheet {
+    width: 100%;
+    min-height: 715px;
+    margin: 1rem auto;
+    padding: 2.4rem 2rem 1.4rem;
+    border: 1px solid #ddd;
+    background: #ffffff;
+}
+
+.contract-preview-title {
+    text-align: center;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    font-size: 1.05rem;
+}
+
+.contract-preview-title--contract {
+    margin-bottom: 1.2rem;
+    font-size: 1.08rem;
+}
+
+.contract-preview-date {
+    text-align: left;
+    margin-bottom: 1.1rem;
+    font-size: 0.92rem;
+}
+
+.contract-preview-action-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 1rem;
+}
+
+.contract-preview-hint {
+    margin: 0;
+    color: #6b7280;
+    font-size: 0.9rem;
+}
+
+.contract-preview-empty {
+    text-align: justify;
+    margin-bottom: 0.6rem;
+    line-height: 1.42;
+    font-size: 0.95rem;
+}
+
+/* Barra de chips de variables genéricas */
+.template-variables-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}
+
+.btn-variable-chip {
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    color: #0f172a;
+    border-radius: 6px;
+    padding: 0.3rem 0.6rem;
+    font-size: 0.8rem;
+    font-family: monospace;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-variable-chip:hover {
+    background: #e0f2fe;
+    border-color: #0284c7;
+    color: #0369a1;
+}
+
+/* Editor enriquecido nativo */
+.wysiwyg-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.5rem;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+}
+
+.wysiwyg-btn {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: #1e293b;
+    border-radius: 5px;
+    width: 32px;
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+
+.wysiwyg-btn:hover {
+    background: #e2e8f0;
+}
+
+.wysiwyg-divider {
+    width: 1px;
+    height: 20px;
+    background: #cbd5e1;
+    margin: 0 0.2rem;
+}
+
+.wysiwyg-editor-surface {
+    min-height: 680px;
+    max-height: 715px;
+    overflow-y: auto;
+    padding: 1.1rem 1.25rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 0 0 8px 8px;
+    background: #ffffff;
+    font-family: Arial, sans-serif;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: #111827;
+    outline: none;
+}
+
+.wysiwyg-editor-surface:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.wysiwyg-editor-surface:empty::before {
+    content: attr(data-placeholder);
+    color: #94a3b8;
+    pointer-events: none;
+}
+
+.swal-form-grid {
+    text-align: left;
+    display: grid;
+    gap: 1rem;
+}
+
+.swal-form-grid-2 {
+    text-align: left;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+}
+
+.swal-form-spacer {
+    margin-top: 1rem;
+    text-align: left;
 }

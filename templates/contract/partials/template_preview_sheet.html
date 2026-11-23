@@ -1,0 +1,23 @@
+<div class="contract-preview-sheet">
+    {% if is_action_template %}
+        <div class="contract-preview-title">ACCIÓN DE PERSONAL</div>
+        <div class="contract-preview-action-grid">
+            <div><strong>Tipo de Acción:</strong><br>{{ action_data.action_type|default:"Pendiente" }}</div>
+            <div><strong>Autoridad 1:</strong><br>{{ action_data.authority_1|default:"Pendiente" }}</div>
+            <div><strong>Autoridad 2:</strong><br>{{ action_data.authority_2|default:"Pendiente" }}</div>
+            <div><strong>Revisado Por:</strong><br>{{ action_data.reviewer|default:"Pendiente" }}</div>
+            <div><strong>Elaborado Por:</strong><br>{{ action_data.elaboration|default:"Pendiente" }}</div>
+            <div><strong>Registrado Por:</strong><br>{{ action_data.register|default:"Pendiente" }}</div>
+        </div>
+        <p class="contract-preview-hint">
+            Esta plantilla se complementa con los datos que se registran en el paso 3 del inicio de gestión.
+        </p>
+    {% else %}
+        <div class="contract-preview-title contract-preview-title--contract">
+            CONTRATO NRO. {{ doc_number }}
+        </div>
+        <div class="template-sections contract-preview-body">
+            {{ sections_html|safe }}
+        </div>
+    {% endif %}
+</div>

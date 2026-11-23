@@ -1,0 +1,72 @@
+{% load static %}
+<div class="table-container">
+    <table class="table-hover" id="contract-types-table">
+        <thead>
+        <tr>
+            <th class="width-42">Nombre de la Modalidad</th>
+            <th class="width-24">Categoría</th>
+            <th class="width-14 text-center">Estado</th>
+            <th class="width-20 actions text-center">Acciones</th>
+        </tr>
+        </thead>
+        <tbody id="contract-types-tbody">
+        {% for ct in contract_types %}
+            <tr>
+                <td class="bold">{{ ct.name }}</td>
+                <td>
+                    <span class="badge badge-blue">{{ ct.get_contract_type_category_display }}</span>
+                </td>
+                <td class="text-center">
+                    {% if ct.is_active %}
+                        <span class="badge badge-green">Activo</span>
+                    {% else %}
+                        <span class="badge badge-gray">Inactivo</span>
+                    {% endif %}
+                </td>
+                <td class="actions text-center">
+                    <div class="actions-wrapper">
+                        <a href="{% url 'contract:template_editor_create' ct.id %}"
+                           class="btn-dark-blue-circle"
+                           title="Configurar Plantilla">
+                            <i class="fas fa-file-word"></i>
+                        </a>
+                        <button type="button"
+                                class="btn-blue-circle"
+                                data-ct-action="edit"
+                                data-id="{{ ct.id }}"
+                                data-code="{{ ct.code }}"
+                                data-name="{{ ct.name }}"
+                                data-category="{{ ct.contract_type_category }}"
+                                title="Editar Modalidad">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        {% if ct.is_active %}
+                            <button type="button"
+                                    class="btn-red-circle"
+                                    data-ct-action="toggle"
+                                    data-id="{{ ct.id }}"
+                                    title="Dar de Baja">
+                                <i class="fas fa-toggle-on"></i>
+                            </button>
+                        {% else %}
+                            <button type="button"
+                                    class="btn-green-circle"
+                                    data-ct-action="toggle"
+                                    data-id="{{ ct.id }}"
+                                    title="Activar">
+                                <i class="fas fa-toggle-off"></i>
+                            </button>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="4" class="contract-types-empty-cell">
+                    No existen modalidades registradas para este régimen.
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>

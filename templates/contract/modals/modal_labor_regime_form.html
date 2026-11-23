@@ -5,7 +5,6 @@
             {% csrf_token %}
             <input type="hidden" id="regime_id" name="id" value="">
 
-            <!-- HEADER ESTANDARIZADO -->
             <div class="modal-header-medium">
                 <div class="header-content-group">
                     <div class="header-icon-circle"><i class="fas fa-briefcase"></i></div>
@@ -16,20 +15,20 @@
                 </button>
             </div>
 
-            <!-- CUERPO DEL FORMULARIO -->
             <div class="modal-body-content modal-body-custom">
-                <div class="form-section-card mb-0">
-                    <div class="form-group mb-3">
+                <div class="form-section-card card-flush">
+                    <div class="form-group form-group-spaced">
                         <label class="form-label" for="regime_code">Código *</label>
                         <input type="text" id="regime_code" name="code"
                                class="form-control uppercase-input"
                                required
                                placeholder="EJ: LOSEP">
-                        <small id="regime-code-hint" class="form-hint hidden">El código no puede modificarse una vez
-                            creado.</small>
+                        <small id="regime-code-hint" class="form-hint hidden">
+                            El código no puede modificarse una vez creado.
+                        </small>
                     </div>
 
-                    <div class="form-group mb-3">
+                    <div class="form-group form-group-spaced">
                         <label class="form-label" for="regime_name">Nombre *</label>
                         <input type="text" id="regime_name" name="name"
                                class="form-control"
@@ -37,7 +36,7 @@
                                placeholder="Nombre del régimen">
                     </div>
 
-                    <div class="form-group mb-0">
+                    <div class="form-group form-group-flush">
                         <label class="form-label" for="regime_description">Descripción</label>
                         <textarea id="regime_description" name="description"
                                   class="input-field"
@@ -47,12 +46,12 @@
                 </div>
             </div>
 
-            <!-- FOOTER ESTANDARIZADO -->
             <div class="modal-footer-medium modal-footer-spaced">
-                <button type="button" id="btn-cancel-regime-form" class="btn-dark-blue-rectangle-outline">CANCELAR
+                <button type="button" id="btn-cancel-regime-form" class="btn-dark-blue-rectangle-outline">
+                    CANCELAR
                 </button>
                 <button type="submit" id="btn-submit-regime-form" class="btn-blue-rectangle">
-                    <i class="fas fa-save me-1"></i> <span id="regime-submit-text">GUARDAR</span>
+                    <i class="fas fa-save"></i> <span id="regime-submit-text">GUARDAR</span>
                 </button>
             </div>
         </form>

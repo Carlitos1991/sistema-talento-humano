@@ -1,53 +1,53 @@
-import base64
 import json
-import mimetypes
 import os
 import re
 from datetime import datetime, timedelta
-from pathlib import Path
-import unicodedata
-from django.db.models import CharField, Q
-from django.db.models.functions import Coalesce, Lower
-from institution.models import AdministrativeUnit
-from .models import ManagementPeriod
+
 import openpyxl
-import unicodedata
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.core.exceptions import ValidationError
 from django.db import transaction
-from django.db.models import Prefetch
-from django.db.models import Q, CharField
-from django.db.models.functions import Coalesce
-from django.db.models.functions import Lower
-from django.http import JsonResponse, HttpResponse
-from django.shortcuts import get_object_or_404
-from django.shortcuts import redirect
-from django.shortcuts import render
+from django.db.models import CharField, Prefetch, Q
+from django.db.models.functions import Coalesce, Lower
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.utils import timezone
 from django.utils.decorators import method_decorator
-from django.utils.html import escape
-from django.utils.safestring import mark_safe
 from django.views.decorators.http import require_http_methods
 from django.views.generic import ListView, View
 
-from budget.models import BudgetModificationHistory, BudgetAssignmentHistory
-from core.models import CatalogItem
-from core.models import SystemConfiguration
-from core.models import User
-from employee.models import Employee, InstitutionalData
+from budget.models import BudgetLine
+from core.models import SystemConfiguration, User
+from employee.models import Employee
 from institution.models import AdministrativeUnit
 from person.models import Person
 from personnel_actions.models import ActionType
 from schedule.models import Schedule
-from .forms import LaborRegimeForm, ContractTypeForm
+from .forms import (
+    ContractTypeForm,
+    HistoricalManagementPeriodForm,
+    LaborRegimeForm,
+    ManagementPeriodCreateForm,
+    ManagementPeriodPartialUpdateForm,
+    ManagementPeriodTerminateForm,
+)
 from .models import (
-    LaborRegime,
-    ContractType,
-    ManagementPeriod,
-    History,
     ContractTemplate,
     ContractTemplateSection,
+    ContractType,
+    History,
+    LaborRegime,
+    ManagementPeriod,
+)
+from .services import (
+    ContractExportService,
+    ContractTemplateService,
+    HistoricalContractService,
+    ManagementPeriodService,
+    build_user_full_name,
+    clean_text_accents,
+    is_action_contract_type,
 )
 
 PERIOD_SORT_FIELDS = {
@@ -72,105 +72,11 @@ def _normalize_contract_template_content(content):
 def _parse_period_sort(request):
     sort_field = (request.GET.get('sort_field') or 'created_at').strip()
     sort_dir = (request.GET.get('sort_dir') or 'desc').strip().lower()
-
     mapped_field = PERIOD_SORT_FIELDS.get(sort_field, 'created_at')
 
     if sort_dir == 'desc':
         return [f'-{mapped_field}', '-pk']
     return [mapped_field, 'pk']
-
-
-def _render_contract_inline_formatting(content):
-    raw_text = str(content or '').replace('\r\n', '\n').replace('\r', '\n')
-    safe_text = escape(raw_text)
-    safe_text = safe_text.replace('\t', '&nbsp;' * 4)
-    safe_text = re.sub(r' {2,}', lambda match: '&nbsp;' * len(match.group(0)), safe_text)
-    safe_text = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', safe_text, flags=re.DOTALL)
-    safe_text = re.sub(r'__(.+?)__', r'<u>\1</u>', safe_text, flags=re.DOTALL)
-    safe_text = re.sub(r'(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)', r'<em>\1</em>', safe_text, flags=re.DOTALL)
-    safe_text = re.sub(r'\[SIZE_DOWN\](.+?)\[/SIZE_DOWN\]', r'<span style="font-size:0.9em;">\1</span>', safe_text,
-                       flags=re.DOTALL)
-    safe_text = re.sub(r'\[SIZE_UP\](.+?)\[/SIZE_UP\]', r'<span style="font-size:1.1em;">\1</span>', safe_text,
-                       flags=re.DOTALL)
-    safe_text = re.sub(r'\[ALIGN_LEFT\](.+?)\[/ALIGN_LEFT\]',
-                       r'<span style="display:block; text-align:left;">\1</span>', safe_text, flags=re.DOTALL)
-    safe_text = re.sub(r'\[ALIGN_CENTER\](.+?)\[/ALIGN_CENTER\]',
-                       r'<span style="display:block; text-align:center;">\1</span>', safe_text, flags=re.DOTALL)
-    safe_text = re.sub(r'\[ALIGN_RIGHT\](.+?)\[/ALIGN_RIGHT\]',
-                       r'<span style="display:block; text-align:right;">\1</span>', safe_text, flags=re.DOTALL)
-    return safe_text.replace('\n', '<br>')
-
-
-def _is_action_template(contract_type):
-    if not contract_type:
-        return False
-
-    category = (getattr(contract_type, 'contract_type_category', '') or '').upper().strip()
-    if category == ContractType.TYPE_ACCION_PERSONAL:
-        return True
-
-    haystack = f"{getattr(contract_type, 'code', '') or ''} {getattr(contract_type, 'name', '') or ''}".upper()
-    action_tokens = [
-        'NOMBR',
-        'ACCION DE PERSONAL',
-        'ACCION_PERSONAL',
-        'ASCENSO',
-        'ENCARGO',
-        'TRASPASO',
-        'SUBROGACION',
-        'REASIGN',
-    ]
-    return any(token in haystack for token in action_tokens)
-
-
-def _get_contract_today_date():
-    return timezone.now().date()
-
-
-def _build_contract_user_full_name(user):
-    if not user:
-        return ''
-
-    try:
-        person = getattr(user, 'person', None)
-        if person:
-            full_name = (person.full_name or '').strip()
-            if full_name:
-                return full_name.upper()
-    except Exception:
-        pass
-
-    full_name = (user.get_full_name() or '').strip()
-    if full_name:
-        return full_name.upper()
-
-    return (user.username or '').strip().upper()
-
-
-def _get_contract_letterhead_resource(request):
-    configuration = SystemConfiguration.get_current()
-    if configuration is None:
-        configuration = SystemConfiguration.objects.filter(letterhead__isnull=False).exclude(letterhead='').order_by(
-            '-effective_date').first()
-
-    if not configuration or not configuration.letterhead:
-        return ''
-
-    try:
-        file_path = Path(configuration.letterhead.path)
-        if file_path.exists():
-            raw_bytes = file_path.read_bytes()
-            mime_type, _ = mimetypes.guess_type(str(file_path))
-            mime_type = mime_type or 'image/png'
-            encoded = base64.b64encode(raw_bytes).decode('ascii')
-            return f'data:{mime_type};base64,{encoded}'
-    except Exception:
-        pass
-
-    try:
-        return request.build_absolute_uri(configuration.letterhead.url)
-    except Exception:
-        return ''
 
 
 def _get_action_types_for_template():
@@ -199,13 +105,16 @@ class LaborRegimeListView(LoginRequiredMixin, PermissionRequiredMixin, ListView)
         return context
 
 
-class LaborRegimeTablePartialView(LoginRequiredMixin, View):
+class LaborRegimeTablePartialView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'contract.view_laborregime'
+
     def get(self, request):
-        name = request.GET.get('name', '')
-        is_active = request.GET.get('is_active', '')
+        name = request.GET.get('name', '').strip()
+        is_active = request.GET.get('is_active', '').strip()
         queryset = LaborRegime.objects.all().order_by('code')
 
-        if name: queryset = queryset.filter(name__icontains=name)
+        if name:
+            queryset = queryset.filter(Q(name__icontains=name) | Q(code__icontains=name))
         if is_active == 'true':
             queryset = queryset.filter(is_active=True)
         elif is_active == 'false':
@@ -218,13 +127,17 @@ class LaborRegimeTablePartialView(LoginRequiredMixin, View):
             'inactive': all_qs.filter(is_active=False).count(),
         }
 
-        html = render_to_string('contract/partials/partial_labor_regime_table.html', {
-            'regimes': queryset
-        }, request=request)
+        html = render_to_string(
+            'contract/partials/partial_labor_regime_table.html',
+            {'regimes': queryset},
+            request=request,
+        )
         return JsonResponse({'table_html': html, 'stats': stats})
 
 
-class LaborRegimeDetailAPIView(LoginRequiredMixin, View):
+class LaborRegimeDetailAPIView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'contract.view_laborregime'
+
     def get(self, request, pk):
         regime = get_object_or_404(LaborRegime, pk=pk)
         return JsonResponse({
@@ -234,37 +147,94 @@ class LaborRegimeDetailAPIView(LoginRequiredMixin, View):
                 'code': regime.code,
                 'name': regime.name,
                 'description': regime.description or '',
-                'is_active': regime.is_active
+                'is_active': regime.is_active,
             }
         })
 
 
+class LaborRegimeCreateView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'contract.add_laborregime'
+
+    def post(self, request):
+        form = LaborRegimeForm(request.POST)
+        if form.is_valid():
+            try:
+                with transaction.atomic():
+                    instance = form.save(commit=False)
+                    instance.created_by = request.user
+                    instance.save()
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Régimen Laboral creado exitosamente.'
+                })
+            except Exception as exc:
+                return JsonResponse({
+                    'success': False,
+                    'message': f'Error al guardar: {str(exc)}'
+                }, status=500)
+
+        return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+
+
+class LaborRegimeUpdateView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'contract.change_laborregime'
+
+    def post(self, request, pk):
+        instance = get_object_or_404(LaborRegime, pk=pk)
+        form = LaborRegimeForm(request.POST, instance=instance)
+
+        if form.is_valid():
+            try:
+                with transaction.atomic():
+                    updated_instance = form.save(commit=False)
+                    updated_instance.updated_by = request.user
+                    updated_instance.save()
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Régimen Laboral actualizado correctamente.'
+                })
+            except Exception as exc:
+                return JsonResponse({
+                    'success': False,
+                    'message': f'Error al actualizar: {str(exc)}'
+                }, status=500)
+
+        return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+
+
+class LaborRegimeToggleStatusView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'contract.change_laborregime'
+
+    def post(self, request, pk):
+        instance = get_object_or_404(LaborRegime, pk=pk)
+        instance.is_active = not instance.is_active
+        instance.updated_by = request.user
+        instance.save(update_fields=['is_active', 'updated_by', 'updated_at'])
+
+        message = 'Régimen activado (Alta)' if instance.is_active else 'Régimen desactivado (Baja)'
+        return JsonResponse({'success': True, 'message': message})
+
+
 class ContractTypeListView(LoginRequiredMixin, View):
-    """
-    Retorna los tipos de contrato vinculados a un régimen laboral específico.
-    """
+    """Lista las modalidades contractuales asociadas a un régimen renderizando su parcial HTML."""
 
     def get(self, request, regime_id):
         regime = get_object_or_404(LaborRegime, pk=regime_id)
-        types = regime.contract_types.all().order_by('name')
+        contract_types = ContractType.objects.filter(labor_regime=regime).order_by('name')
+        table_html = render_to_string(
+            'contract/partials/partial_contract_type_table.html',
+            {'contract_types': contract_types, 'regime': regime},
+            request=request,
+        )
+        return JsonResponse({
+            'success': True,
+            'regime_name': regime.name,
+            'table_html': table_html,
+        })
 
-        data = [{
-            'id': t.id,
-            'code': t.code,
-            'name': t.name,
-            'category': t.contract_type_category,
-            'category_display': t.get_contract_type_category_display(),
-            'is_active': t.is_active
-        } for t in types]
 
-        return JsonResponse({'success': True, 'contract_types': data})
-
-
-class ContractTypeCreateView(LoginRequiredMixin, View):
-    """
-    Crea un nuevo tipo de contrato vinculado a un régimen.
-    Diseñado para ser llamado vía AJAX desde SweetAlert2.
-    """
+class ContractTypeCreateView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'contract.add_contracttype'
 
     def post(self, request):
         form = ContractTypeForm(request.POST)
@@ -278,115 +248,17 @@ class ContractTypeCreateView(LoginRequiredMixin, View):
                     'success': True,
                     'message': 'Modalidad laboral registrada con éxito.'
                 })
-            except Exception as e:
+            except Exception as exc:
                 return JsonResponse({
                     'success': False,
-                    'message': f'Error interno: {str(e)}'
+                    'message': f'Error interno: {str(exc)}'
                 }, status=500)
 
-        # Enviamos los errores de validación (ej: código duplicado)
-        return JsonResponse({
-            'success': False,
-            'errors': form.errors
-        }, status=400)
+        return JsonResponse({'success': False, 'errors': form.errors}, status=400)
 
 
-class ContractTypeToggleStatusView(LoginRequiredMixin, View):
-    """
-    Alterna el estado activo/inactivo de una modalidad.
-    """
-
-    def post(self, request, pk):
-        instance = get_object_or_404(ContractType, pk=pk)
-        instance.is_active = not instance.is_active
-        instance.updated_by = request.user
-        instance.save()
-        return JsonResponse({
-            'success': True,
-            'message': f'Estado de "{instance.name}" actualizado.'
-        })
-
-
-class LaborRegimeCreateView(LoginRequiredMixin, PermissionRequiredMixin, View):
-    """Procesa la creación de un nuevo régimen laboral."""
-    permission_required = 'contract.add_laborregime'
-
-    def post(self, request):
-        form = LaborRegimeForm(request.POST)
-        if form.is_valid():
-            try:
-                with transaction.atomic():
-                    instance = form.save(commit=False)
-                    instance.created_by = request.user  # Auditoría BaseModel
-                    instance.save()
-                return JsonResponse({
-                    'success': True,
-                    'message': 'Régimen Laboral creado exitosamente.'
-                })
-            except Exception as e:
-                return JsonResponse({
-                    'success': False,
-                    'message': f'Error al guardar: {str(e)}'
-                }, status=500)
-
-        return JsonResponse({
-            'success': False,
-            'errors': form.errors
-        }, status=400)
-
-
-class LaborRegimeUpdateView(LoginRequiredMixin, PermissionRequiredMixin, View):
-    """Procesa la actualización de un régimen existente."""
-    permission_required = 'contract.change_laborregime'
-
-    def post(self, request, pk):
-        instance = get_object_or_404(LaborRegime, pk=pk)
-        form = LaborRegimeForm(request.POST, instance=instance)
-
-        if form.is_valid():
-            try:
-                with transaction.atomic():
-                    updated_instance = form.save(commit=False)
-                    updated_instance.updated_by = request.user  # Auditoría BaseModel
-                    updated_instance.save()
-                return JsonResponse({
-                    'success': True,
-                    'message': 'Régimen Laboral actualizado correctamente.'
-                })
-            except Exception as e:
-                return JsonResponse({
-                    'success': False,
-                    'message': f'Error al actualizar: {str(e)}'
-                }, status=500)
-
-        return JsonResponse({
-            'success': False,
-            'errors': form.errors
-        }, status=400)
-
-
-class LaborRegimeToggleStatusView(LoginRequiredMixin, PermissionRequiredMixin, View):
-    """Alterna el estado is_active (Alta/Baja) de un régimen."""
-    permission_required = 'contract.change_laborregime'
-
-    def post(self, request, pk):
-        instance = get_object_or_404(LaborRegime, pk=pk)
-        # Cambiamos el estado (Toggle logic)
-        instance.is_active = not instance.is_active
-        instance.updated_by = request.user
-        instance.save()
-
-        message = "Régimen activado (Alta)" if instance.is_active else "Régimen desactivado (Baja)"
-        return JsonResponse({
-            'success': True,
-            'message': message
-        })
-
-
-class ContractTypeUpdateView(LoginRequiredMixin, View):
-    """
-    Actualiza un tipo de contrato existente.
-    """
+class ContractTypeUpdateView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'contract.change_contracttype'
 
     def post(self, request, pk):
         instance = get_object_or_404(ContractType, pk=pk)
@@ -401,29 +273,28 @@ class ContractTypeUpdateView(LoginRequiredMixin, View):
                     'success': True,
                     'message': 'Modalidad actualizada correctamente.'
                 })
-            except Exception as e:
-                return JsonResponse({'success': False, 'message': str(e)}, status=500)
+            except Exception as exc:
+                return JsonResponse({'success': False, 'message': str(exc)}, status=500)
 
         return JsonResponse({'success': False, 'errors': form.errors}, status=400)
 
 
-class ContractTemplateEditorCreateView(LoginRequiredMixin, PermissionRequiredMixin, View):
+class ContractTypeToggleStatusView(LoginRequiredMixin, PermissionRequiredMixin, View):
     permission_required = 'contract.change_contracttype'
 
-    def _seed_action_template_sections(self, template, user):
-        existing_sections = list(template.sections.filter(is_active=True).order_by('order'))
-        if len(existing_sections) >= 6:
-            return
+    def post(self, request, pk):
+        instance = get_object_or_404(ContractType, pk=pk)
+        instance.is_active = not instance.is_active
+        instance.updated_by = request.user
+        instance.save(update_fields=['is_active', 'updated_by', 'updated_at'])
+        return JsonResponse({
+            'success': True,
+            'message': f'Estado de "{instance.name}" actualizado.'
+        })
 
-        for index in range(len(existing_sections), 6):
-            ContractTemplateSection.objects.create(
-                template=template,
-                section_type='PARAGRAPH',
-                content='',
-                order=index,
-                created_by=user,
-                updated_by=user,
-            )
+
+class ContractTemplateEditorCreateView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'contract.change_contracttype'
 
     def get(self, request, contract_type_id):
         contract_type = get_object_or_404(ContractType, pk=contract_type_id)
@@ -440,8 +311,8 @@ class ContractTemplateEditorCreateView(LoginRequiredMixin, PermissionRequiredMix
         template.updated_by = request.user
         template.save(update_fields=['created_by', 'updated_by', 'updated_at'])
 
-        if _is_action_template(contract_type):
-            self._seed_action_template_sections(template, request.user)
+        if is_action_contract_type(contract_type):
+            ContractTemplateService.ensure_action_template_sections(template, request.user)
 
         return redirect('contract:template_editor_detail', pk=template.pk)
 
@@ -454,23 +325,12 @@ class ContractTemplateEditorDetailView(LoginRequiredMixin, PermissionRequiredMix
             ContractTemplate.objects.select_related('contract_type__labor_regime'),
             pk=pk,
         )
-        is_action_template = _is_action_template(template.contract_type)
+        is_action_template = is_action_contract_type(template.contract_type)
         action_template_fields = []
+        editor_body_html = ''
 
         if is_action_template:
-            if template.sections.filter(is_active=True).count() < 6:
-                existing_sections = list(template.sections.filter(is_active=True).order_by('order'))
-                for index in range(len(existing_sections), 6):
-                    ContractTemplateSection.objects.create(
-                        template=template,
-                        section_type='PARAGRAPH',
-                        content='',
-                        order=index,
-                        created_by=request.user,
-                        updated_by=request.user,
-                    )
-
-            sections = list(template.sections.filter(is_active=True).order_by('order'))[:6]
+            sections = ContractTemplateService.ensure_action_template_sections(template, request.user)
             field_specs = [
                 ('action_type', 'Tipo de Acción'),
                 ('authority_1', 'Autoridad 1'),
@@ -490,55 +350,29 @@ class ContractTemplateEditorDetailView(LoginRequiredMixin, PermissionRequiredMix
                 }
                 for index, (key, label) in enumerate(field_specs)
             ]
-
-        available_mappings = [
-            {'placeholder': '[FULL_NAME]', 'label': 'Nombre completo de la persona'},
-            {'placeholder': '[DOCUMENT_NUMBER]', 'label': 'Cédula / documento de identidad'},
-            {'placeholder': '[DOC_NUMBER]', 'label': 'Número del contrato/acción de personal'},
-            {'placeholder': '[CONTRACT_TYPE]', 'label': 'Nombre de la modalidad'},
-            {'placeholder': '[DOCUMENT_CATEGORY]', 'label': 'Etiqueta Contrato o Acción de Personal'},
-            {'placeholder': '[LABOR_REGIME]', 'label': 'Régimen laboral'},
-            {'placeholder': '[POSITION]', 'label': 'Cargo'},
-            {'placeholder': '[REMUNERATION]', 'label': 'Remuneración'},
-            {'placeholder': '[UNIT]', 'label': 'Unidad administrativa'},
-            {'placeholder': '[WORKPLACE]', 'label': 'Lugar de trabajo'},
-            {'placeholder': '[SCHEDULE]', 'label': 'Horario'},
-            {'placeholder': '[START_DATE]', 'label': 'Fecha de inicio (dd/mm/aaaa)'},
-            {'placeholder': '[END_DATE]', 'label': 'Fecha de fin (dd/mm/aaaa o INDEFINIDO)'},
-            {'placeholder': '[today]', 'label': 'Fecha actual en español'},
-            {'placeholder': '[YEAR]', 'label': 'Año actual'},
-            {'placeholder': '[ACTION_ISSUE_DATE]', 'label': 'Fecha de elaboración de acción'},
-            {'placeholder': '[ACTION_EFFECTIVE_FROM]', 'label': 'Fecha rige desde'},
-            {'placeholder': '[ACTION_EFFECTIVE_TO]', 'label': 'Fecha rige hasta'},
-            {'placeholder': '[MOTIVATION]', 'label': 'Motivación de la acción'},
-            {'placeholder': '[EXPLANATION]', 'label': 'Explicación de la acción'},
-            {'placeholder': '[ACTION_EXPLANATION_HEADER]', 'label': 'Encabezado de explicación de acción'},
-            {'placeholder': '[PREPARED_BY]', 'label': 'Usuario que elaboró el documento'},
-            {'placeholder': '[AUTHORITY_1]', 'label': 'Máxima autoridad'},
-        ]
+        else:
+            editor_body_html = ContractTemplateService.get_editor_body_html(template)
 
         context = {
             'template': template,
-            'available_mappings': available_mappings,
+            'available_mappings': ContractTemplateService.GENERIC_VARIABLES,
+            'editor_body_html': editor_body_html,
             'is_action_template': is_action_template,
             'action_template_fields': action_template_fields,
             'action_types': [
-                {
-                    'id': item.id,
-                    'name': item.name,
-                }
+                {'id': item.id, 'name': item.name}
                 for item in _get_action_types_for_template()
             ],
             'authorities': [
-                {
-                    'id': item.id,
-                    'name': item.name,
-                    'position': item.position,
-                }
+                {'id': item.id, 'name': item.name, 'position': item.position}
                 for item in _get_authorities_for_template()
             ],
         }
-        template_name = 'contract/template_editor/action_template_editor.html' if is_action_template else 'contract/template_editor/template_editor.html'
+        template_name = (
+            'contract/template_editor/action_template_editor.html'
+            if is_action_template
+            else 'contract/template_editor/template_editor.html'
+        )
         return render(request, template_name, context)
 
 
@@ -546,80 +380,46 @@ class ContractTemplateEditorOptionsAPIView(LoginRequiredMixin, PermissionRequire
     permission_required = 'contract.change_contracttype'
 
     def get(self, request):
-        action_types = [
-            {
-                'id': item.id,
-                'name': item.name,
-            }
-            for item in _get_action_types_for_template()
-        ]
-        authorities = [
-            {
-                'id': item.id,
-                'name': item.name,
-                'position': item.position,
-            }
-            for item in _get_authorities_for_template()
-        ]
         return JsonResponse({
             'success': True,
-            'action_types': action_types,
-            'authorities': authorities,
+            'action_types': [
+                {'id': item.id, 'name': item.name}
+                for item in _get_action_types_for_template()
+            ],
+            'authorities': [
+                {'id': item.id, 'name': item.name, 'position': item.position}
+                for item in _get_authorities_for_template()
+            ],
         })
 
 
-def _build_contract_replacements(period):
-    today = _get_contract_today_date()
-    person = period.employee.person
-    category_label = 'ACCIÓN DE PERSONAL' if period.contract_type.contract_type_category == ContractType.TYPE_ACCION_PERSONAL else 'CONTRATO'
-    elaboration_date = period.elaboration_date.strftime('%d/%m/%Y') if getattr(period, 'elaboration_date',
-                                                                               None) else '-'
+class ContractTemplateSaveBodyAjaxView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """Guarda el contenido enriquecido del editor WYSIWYG de base.html para la plantilla."""
+    permission_required = 'contract.change_contracttype'
 
-    return {
-        '[FULL_NAME]': person.full_name or '-',
-        '[DOCUMENT_NUMBER]': person.document_number or '-',
-        '[DOC_NUMBER]': period.document_number or '-',
-        '[CONTRACT_TYPE]': period.contract_type.name or '-',
-        '[DOCUMENT_CATEGORY]': category_label,
-        '[LABOR_REGIME]': period.contract_type.labor_regime.name or '-',
-        '[POSITION]': period.display_position or '-',
-        '[REMUNERATION]': str(period.display_remuneration) if period.display_remuneration is not None else '-',
-        '[UNIT]': period.administrative_unit.name if period.administrative_unit else '-',
-        '[WORKPLACE]': period.workplace or '-',
-        '[SCHEDULE]': period.schedule.name if period.schedule else '-',
-        '[START_DATE]': period.start_date.strftime('%d/%m/%Y') if period.start_date else '-',
-        '[END_DATE]': period.end_date.strftime('%d/%m/%Y') if period.end_date else 'INDEFINIDO',
-        '[today]': today.strftime('%d/%m/%Y'),
-        '[YEAR]': str(today.year),
-        '[ACTION_ISSUE_DATE]': elaboration_date,
-        '[ACTION_EFFECTIVE_FROM]': period.start_date.strftime('%d/%m/%Y') if period.start_date else '-',
-        '[ACTION_EFFECTIVE_TO]': period.end_date.strftime('%d/%m/%Y') if period.end_date else '-',
-        '[MOTIVATION]': period.action_motivation or '-',
-        '[EXPLANATION]': period.action_explanation or '-',
-        '[ACTION_EXPLANATION_HEADER]': 'Se hace constar la siguiente acción de personal:',
-        '[PREPARED_BY]': _build_contract_user_full_name(period.created_by),
-        '[AUTHORITY_1]': (getattr(SystemConfiguration.get_current(), 'max_authority_name', '') or '').strip().upper(),
-        '[EMPLOYEE_FULL_NAME]': person.full_name or '-',
-    }
+    @method_decorator(require_http_methods(['POST']))
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
 
+    def post(self, request, template_id):
+        template = get_object_or_404(ContractTemplate, pk=template_id)
+        try:
+            if request.content_type == 'application/json':
+                data = json.loads(request.body)
+                raw_html = data.get('content', '')
+            else:
+                raw_html = request.POST.get('content', '')
 
-def _render_contract_sections_html(template, replacements):
-    rows = []
-    sections = template.sections.filter(is_active=True).order_by('order')
-    for section in sections:
-        content = section.content or ''
-        for placeholder, replacement in replacements.items():
-            content = content.replace(placeholder, replacement)
-
-        rendered = _render_contract_inline_formatting(content)
-        if section.section_type == 'TITLE':
-            rows.append(
-                f'<h4 style="text-align:left; margin-top:0.9rem; margin-bottom:0.35rem; font-size:1rem;">{rendered}</h4>')
-        else:
-            rows.append(
-                f'<p style="text-align:justify; margin-bottom:0.6rem; line-height:1.42; font-size:0.95rem;">{rendered}</p>')
-
-    return ''.join(rows)
+            section = ContractTemplateService.save_editor_body_html(template, raw_html, request.user)
+            return JsonResponse({
+                'success': True,
+                'message': 'Plantilla contractual guardada correctamente.',
+                'section_id': section.id,
+            })
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'error': 'JSON inválido'}, status=400)
+        except Exception as exc:
+            return JsonResponse({'success': False, 'error': str(exc)}, status=500)
 
 
 class ContractTemplateSectionCreateAjaxView(LoginRequiredMixin, PermissionRequiredMixin, View):
@@ -627,8 +427,6 @@ class ContractTemplateSectionCreateAjaxView(LoginRequiredMixin, PermissionRequir
 
     @method_decorator(require_http_methods(['POST']))
     def dispatch(self, request, *args, **kwargs):
-        if not request.user.has_perm(self.permission_required):
-            return JsonResponse({'success': False, 'error': 'No tiene permisos para agregar secciones.'}, status=403)
         return super().dispatch(request, *args, **kwargs)
 
     def post(self, request, template_id):
@@ -674,8 +472,6 @@ class ContractTemplateSectionUpdateAjaxView(LoginRequiredMixin, PermissionRequir
 
     @method_decorator(require_http_methods(['POST']))
     def dispatch(self, request, *args, **kwargs):
-        if not request.user.has_perm(self.permission_required):
-            return JsonResponse({'success': False, 'error': 'No tiene permisos para editar secciones.'}, status=403)
         return super().dispatch(request, *args, **kwargs)
 
     def post(self, request, section_id):
@@ -709,8 +505,6 @@ class ContractTemplateSectionDeleteAjaxView(LoginRequiredMixin, PermissionRequir
 
     @method_decorator(require_http_methods(['POST']))
     def dispatch(self, request, *args, **kwargs):
-        if not request.user.has_perm(self.permission_required):
-            return JsonResponse({'success': False, 'error': 'No tiene permisos para eliminar secciones.'}, status=403)
         return super().dispatch(request, *args, **kwargs)
 
     def post(self, request, section_id):
@@ -725,8 +519,6 @@ class ContractTemplateSectionReorderAjaxView(LoginRequiredMixin, PermissionRequi
 
     @method_decorator(require_http_methods(['POST']))
     def dispatch(self, request, *args, **kwargs):
-        if not request.user.has_perm(self.permission_required):
-            return JsonResponse({'success': False, 'error': 'No tiene permisos para reordenar secciones.'}, status=403)
         return super().dispatch(request, *args, **kwargs)
 
     def post(self, request, template_id):
@@ -734,10 +526,10 @@ class ContractTemplateSectionReorderAjaxView(LoginRequiredMixin, PermissionRequi
         try:
             data = json.loads(request.body)
             for item in data.get('sections', []):
-                section = ContractTemplateSection.objects.get(pk=item['id'], template=template)
-                section.order = item['order']
-                section.updated_by = request.user
-                section.save(update_fields=['order', 'updated_by', 'updated_at'])
+                ContractTemplateSection.objects.filter(
+                    pk=item['id'],
+                    template=template
+                ).update(order=item['order'], updated_by=request.user)
             return JsonResponse({'success': True})
         except json.JSONDecodeError:
             return JsonResponse({'error': 'JSON inválido'}, status=400)
@@ -747,99 +539,75 @@ class ContractTemplateSectionReorderAjaxView(LoginRequiredMixin, PermissionRequi
 
 class ContractTemplatePreviewAjaxView(LoginRequiredMixin, PermissionRequiredMixin, View):
     permission_required = 'contract.change_contracttype'
+    template_name = 'contract/partials/template_preview_sheet.html'
 
     def get(self, request, template_id):
+        today_str = timezone.now().date().strftime('%d/%m/%Y')
         try:
             template = get_object_or_404(
                 ContractTemplate.objects.select_related('contract_type__labor_regime'),
                 pk=template_id,
             )
-            is_action_template = _is_action_template(template.contract_type)
+            is_action_template = is_action_contract_type(template.contract_type)
 
             if is_action_template:
-                sections = list(template.sections.filter(is_active=True).order_by('order'))
-                selected_action_type = ActionType.objects.filter(
-                    pk=(sections[0].content or '').strip(),
-                    is_active=True,
-                ).first() if len(sections) > 0 else None
-                selected_authority_1 = User.objects.filter(
-                    pk=(sections[1].content or '').strip(),
-                    is_active=True,
-                ).first() if len(sections) > 1 else None
-                selected_authority_2 = User.objects.filter(
-                    pk=(sections[2].content or '').strip(),
-                    is_active=True,
-                ).first() if len(sections) > 2 else None
-                selected_reviewer = User.objects.filter(
-                    pk=(sections[3].content or '').strip(),
-                    is_active=True,
-                ).first() if len(sections) > 3 else None
-                selected_elaboration = User.objects.filter(
-                    pk=(sections[4].content or '').strip(),
-                    is_active=True,
-                ).first() if len(sections) > 4 else None
-                selected_register = User.objects.filter(
-                    pk=(sections[5].content or '').strip(),
-                    is_active=True,
-                ).first() if len(sections) > 5 else None
-
-                preview_html = f'''
-                <div style="max-width: 800px; margin: 1rem auto; padding: 2rem; border: 1px solid #ddd; background: white;">
-                    <div style="text-align:center; font-weight:bold; margin-bottom:1rem; font-size:1.05rem;">ACCIÓN DE PERSONAL</div>
-                    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 1rem;">
-                        <div><strong>Tipo de Acción:</strong><br>{(selected_action_type.name if selected_action_type else 'Pendiente')}</div>
-                        <div><strong>Autoridad 1:</strong><br>{(selected_authority_1.name if selected_authority_1 else 'Pendiente')}</div>
-                        <div><strong>Autoridad 2:</strong><br>{(selected_authority_2.name if selected_authority_2 else 'Pendiente')}</div>
-                        <div><strong>Revisado Por:</strong><br>{(selected_reviewer.name if selected_reviewer else 'Pendiente')}</div>
-                        <div><strong>Elaborado Por:</strong><br>{(selected_elaboration.name if selected_elaboration else 'Pendiente')}</div>
-                        <div><strong>Registrado Por:</strong><br>{(selected_register.name if selected_register else 'Pendiente')}</div>
-                    </div>
-                    <p style="margin:0; color:#6b7280; font-size:0.9rem;">Esta plantilla se complementa con los datos que se registran en el paso 3 del inicio de gestión.</p>
-                </div>
-                '''
+                action_data = ContractTemplateService.get_action_template_preview_data(template)
+                preview_html = render_to_string(
+                    self.template_name,
+                    {
+                        'is_action_template': True,
+                        'action_data': action_data,
+                    },
+                    request=request,
+                )
                 return JsonResponse({'preview': preview_html})
 
-            period = ManagementPeriod.objects.select_related(
-                'employee__person',
-                'contract_type__labor_regime',
-                'administrative_unit',
-                'schedule',
-                'budget_line__position_item',
-            ).filter(contract_type=template.contract_type).order_by('-created_at').first()
+            period = (
+                ManagementPeriod.objects.select_related(
+                    'employee__person',
+                    'contract_type__labor_regime',
+                    'administrative_unit',
+                    'schedule',
+                    'budget_line__position_item',
+                )
+                .filter(contract_type=template.contract_type)
+                .order_by('-created_at')
+                .first()
+            )
 
             if not period:
                 replacements = {
                     '[DOC_NUMBER]': 'PENDIENTE',
-                    '[today]': _get_contract_today_date().strftime('%d/%m/%Y'),
+                    '[TODAY]': today_str,
+                    '[today]': today_str,
                 }
             else:
-                replacements = _build_contract_replacements(period)
+                replacements = ContractTemplateService.build_replacements(period)
 
-            sections_html = _render_contract_sections_html(template, replacements)
-            doc_number = replacements.get('[DOC_NUMBER]', 'PENDIENTE')
-
-            if not sections_html:
-                sections_html = '<p style="text-align:justify; margin-bottom:0.6rem; line-height:1.42; font-size:0.95rem;">Agregue párrafos en el editor para visualizar el cuerpo del contrato.</p>'
-
-            preview_html = f'''
-            <div style="max-width: 800px; margin: 1rem auto; padding: 2.4rem 2rem 1.4rem; border: 1px solid #ddd; background: white;">
-                <div style="text-align:center; font-weight:bold; margin-bottom:1.2rem; font-size:1.08rem;">CONTRATO NRO. {doc_number}</div>
-                <div style="text-align:left; margin-bottom:1.1rem; font-size:0.92rem;">Loja, {replacements.get('[today]', '')}</div>
-                <div class="template-sections">{sections_html}</div>
-            </div>
-            '''
-
+            sections_html = ContractTemplateService.render_template_body(template, replacements)
+            preview_html = render_to_string(
+                self.template_name,
+                {
+                    'is_action_template': False,
+                    'doc_number': replacements.get('[DOC_NUMBER]', 'PENDIENTE'),
+                    'today_str': replacements.get('[TODAY]', today_str),
+                    'sections_html': sections_html,
+                },
+                request=request,
+            )
             return JsonResponse({'preview': preview_html})
         except Exception:
-            fallback_html = f'''
-            <div style="max-width: 800px; margin: 1rem auto; padding: 2.4rem 2rem 1.4rem; border: 1px solid #ddd; background: white;">
-                <div style="text-align:center; font-weight:bold; margin-bottom:1.2rem; font-size:1.08rem;">CONTRATO NRO. PENDIENTE</div>
-                <div style="text-align:left; margin-bottom:1.1rem; font-size:0.92rem;">Loja, {_get_contract_today_date().strftime('%d/%m/%Y')}</div>
-                <div class="template-sections">
-                    <p style="text-align:justify; margin-bottom:0.6rem; line-height:1.42; font-size:0.95rem;">No fue posible cargar todos los datos de la vista previa. Puede continuar editando la plantilla.</p>
-                </div>
-            </div>
-            '''
+            fallback_html = render_to_string(
+                self.template_name,
+                {
+                    'is_action_template': False,
+                    'doc_number': 'PENDIENTE',
+                    'today_str': today_str,
+                    'sections_html': '',
+                    'empty_message': 'No fue posible cargar todos los datos de la vista previa. Puede continuar editando la plantilla.',
+                },
+                request=request,
+            )
             return JsonResponse({'preview': fallback_html})
 
 
@@ -864,28 +632,16 @@ class ManagementPeriodPrintView(LoginRequiredMixin, PermissionRequiredMixin, Vie
             return redirect('personnel_actions:action_pdf', pk=period.personnel_action_id)
 
         template = ContractTemplate.objects.filter(contract_type=period.contract_type, is_active=True).first()
-        replacements = _build_contract_replacements(period)
+        replacements = ContractTemplateService.build_replacements(period)
         is_action_document = period.contract_type.contract_type_category == ContractType.TYPE_ACCION_PERSONAL
         document_label = 'ACCIÓN DE PERSONAL' if is_action_document else 'CONTRATO'
 
-        if template:
-            body_html = _render_contract_sections_html(template, replacements)
-        elif is_action_document:
-            body_html = ''.join([
-                f'<p style="margin-bottom:0.4rem;"><strong>FECHA DE ELABORACIÓN:</strong> {replacements.get("[ACTION_ISSUE_DATE]", "-")}</p>',
-                f'<p style="margin-bottom:0.4rem;"><strong>RIGE DESDE:</strong> {replacements.get("[ACTION_EFFECTIVE_FROM]", "-")} &nbsp;&nbsp; <strong>HASTA:</strong> {replacements.get("[ACTION_EFFECTIVE_TO]", "-")}</p>',
-                '<h4 style="text-align:left; margin-top:0.9rem; margin-bottom:0.35rem; font-size:1rem;">MOTIVACIÓN Y EXPLICACIÓN</h4>',
-                f'<p style="text-align:justify; margin-bottom:0.6rem; line-height:1.42; font-size:0.95rem;"><strong>MOTIVACIÓN:</strong> {replacements.get("[MOTIVATION]", "-")}</p>',
-                f'<p style="text-align:justify; margin-bottom:0.6rem; line-height:1.42; font-size:0.95rem;">{replacements.get("[EXPLANATION]", "-")}</p>',
-            ])
+        if (period.custom_document_body or '').strip():
+            body_html = ContractTemplateService.sanitize_rich_html(period.custom_document_body)
+            for placeholder, value in replacements.items():
+                body_html = body_html.replace(placeholder, str(value))
         else:
-            body_html = _render_contract_inline_formatting(
-                f"Se certifica que {replacements['[FULL_NAME]']} con documento {replacements['[DOCUMENT_NUMBER]']} "
-                f"mantiene un vínculo bajo la modalidad {replacements['[CONTRACT_TYPE]']} "
-                f"en el régimen {replacements['[LABOR_REGIME]']}, desde {replacements['[START_DATE]']} "
-                f"hasta {replacements['[END_DATE]']}."
-            )
-            body_html = f'<p style="text-align:justify; margin-bottom:0.6rem; line-height:1.42; font-size:0.95rem;">{body_html}</p>'
+            body_html = ContractTemplateService.render_template_body(template, replacements) if template else ''
 
         configuration = SystemConfiguration.get_current()
         authority_name = ''
@@ -898,20 +654,21 @@ class ManagementPeriodPrintView(LoginRequiredMixin, PermissionRequiredMixin, Vie
 
         employee_person = getattr(period.employee, 'person', None)
         employee_full_name = (employee_person.full_name or '').strip().upper() if employee_person else ''
-        prepared_by = _build_contract_user_full_name(period.created_by)
 
         context = {
             'document_label': document_label,
             'document_number': replacements.get('[DOC_NUMBER]', '-'),
-            'today': replacements.get('[today]', _get_contract_today_date().strftime('%d/%m/%Y')),
+            'today': replacements.get('[TODAY]', timezone.now().date().strftime('%d/%m/%Y')),
             'city': city,
-            'letterhead_path': _get_contract_letterhead_resource(request),
+            'letterhead_path': ManagementPeriodService.get_letterhead_data_uri(request),
             'authority_name': authority_name,
             'authority_position': authority_position,
             'employee_full_name': employee_full_name,
-            'prepared_by': prepared_by,
+            'prepared_by': build_user_full_name(period.created_by),
             'is_pdf': True,
-            'body_html': mark_safe(body_html),
+            'is_action_document': is_action_document,
+            'replacements': replacements,
+            'body_html': body_html,
         }
 
         try:
@@ -931,6 +688,63 @@ class ManagementPeriodPrintView(LoginRequiredMixin, PermissionRequiredMixin, Vie
             return response
         except Exception:
             return HttpResponse('Error al generar el PDF del contrato', status=500)
+
+
+class ManagementPeriodEditContentView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'contract.change_managementperiod'
+
+    def get(self, request, pk):
+        period = get_object_or_404(
+            ManagementPeriod.objects.select_related(
+                'employee__person',
+                'contract_type__labor_regime',
+                'administrative_unit',
+                'schedule',
+                'budget_line__position_item',
+                'status',
+            ),
+            pk=pk,
+        )
+        if period.status.code != 'SIN_FIRMAR':
+            return redirect('contract:period_list')
+
+        template = ContractTemplate.objects.filter(contract_type=period.contract_type, is_active=True).first()
+        replacements = ContractTemplateService.build_replacements(period)
+
+        if (period.custom_document_body or '').strip():
+            editor_body_html = ContractTemplateService.sanitize_rich_html(period.custom_document_body)
+        elif template:
+            editor_body_html = ContractTemplateService.render_template_body(template, replacements)
+        else:
+            editor_body_html = ''
+
+        return render(request, 'contract/template_editor/period_document_editor.html', {
+            'period': period,
+            'editor_body_html': editor_body_html,
+            'available_mappings': ContractTemplateService.GENERIC_VARIABLES,
+            'doc_number': replacements.get('[DOC_NUMBER]', period.document_number),
+        })
+
+    def post(self, request, pk):
+        period = get_object_or_404(ManagementPeriod, pk=pk)
+        if period.status.code != 'SIN_FIRMAR':
+            return JsonResponse({
+                'success': False,
+                'error': 'No se puede editar un contrato ya firmado o finalizado.'
+            }, status=403)
+
+        try:
+            data = json.loads(request.body) if request.content_type == 'application/json' else request.POST
+            raw_html = data.get('content', '')
+            period.custom_document_body = ContractTemplateService.sanitize_rich_html(raw_html)
+            period.updated_by = request.user
+            period.save(update_fields=['custom_document_body', 'updated_by', 'updated_at'])
+            return JsonResponse({
+                'success': True,
+                'message': f'Contenido del contrato {period.document_number} actualizado.'
+            })
+        except Exception as exc:
+            return JsonResponse({'success': False, 'error': str(exc)}, status=500)
 
 
 class ManagementPeriodNotificationListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
@@ -997,7 +811,9 @@ class ManagementPeriodNotificationListView(LoginRequiredMixin, PermissionRequire
         return context
 
 
-class ValidateEmployeeAPIView(LoginRequiredMixin, View):
+class ValidateEmployeeAPIView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'contract.add_managementperiod'
+
     def get(self, request, doc_number):
         try:
             contract_type_id = request.GET.get('contract_type_id')
@@ -1006,15 +822,10 @@ class ValidateEmployeeAPIView(LoginRequiredMixin, View):
             contract_category = (contract_type.contract_type_category if contract_type else '').upper()
             is_professional_service = contract_code == 'SERVICIOS_PROFESIONALES'
 
-            # 1. Buscar la persona por cédula (incluye ex empleados con persona inactiva)
             person = Person.objects.filter(document_number=doc_number).first()
             if not person:
-                return JsonResponse({
-                    'success': False,
-                    'message': 'Cédula no registrada.'
-                })
+                return JsonResponse({'success': False, 'message': 'Cédula no registrada.'})
 
-            # 2. Si existe un empleado activo relacionado, bloquear (no debe ser empleado activo)
             active_employee = Employee.objects.filter(person=person, is_active=True).first()
             if active_employee:
                 return JsonResponse({
@@ -1022,9 +833,9 @@ class ValidateEmployeeAPIView(LoginRequiredMixin, View):
                     'message': 'Atención: la persona ya es un empleado activo.'
                 })
 
-            # 3. Buscar un registro de Employee vinculado que tenga una partida presupuestaria asignada
             employees = Employee.objects.filter(person=person).select_related('person').prefetch_related(
-                'current_budget_line__position_item')
+                'current_budget_line__position_item'
+            )
             employee_candidate = employees.first()
             employee_with_line = None
             budget_line = None
@@ -1048,9 +859,9 @@ class ValidateEmployeeAPIView(LoginRequiredMixin, View):
                     'message': 'Bloqueo: La persona no tiene una partida presupuestaria asignada. Asigne una partida antes de continuar.'
                 })
 
-            # 4. Verificar si ya tiene contrato formal activo
             has_active = ManagementPeriod.objects.filter(
-                employee=employee_selected, status__code='ACTIVO'
+                employee=employee_selected,
+                status__code='ACTIVO'
             ).exists()
 
             if has_active:
@@ -1071,41 +882,33 @@ class ValidateEmployeeAPIView(LoginRequiredMixin, View):
                                         'position': budget_line.position_item.name if budget_line.position_item else 'SIN CARGO'
                                     } if budget_line else None),
                     'contract_type_category': contract_category or ContractType.TYPE_CONTRATO,
-                    'requires_manual_compensation': is_professional_service
+                    'requires_manual_compensation': is_professional_service,
                 },
             })
-        except Exception as e:
-            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        except Exception as exc:
+            return JsonResponse({'success': False, 'message': str(exc)}, status=500)
 
 
-class GetAvailableBudgetLinesAPIView(LoginRequiredMixin, View):
+class GetAvailableBudgetLinesAPIView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'contract.view_managementperiod'
+
     def get(self, request, unit_id):
-        # Buscamos partidas que estén LIBRES para esa unidad
-        from budget.models import BudgetLine
-
-        # Ajusta este filtro según cómo vinculaste la Unidad con la Partida
         lines = BudgetLine.objects.filter(
-            # Ejemplo: Si la partida tiene relación con la unidad o vía actividad
             status_item__code='LIBRE',
             is_active=True
         ).select_related('position_item')
 
         data = [{
-            'id': l.id,
-            'number_individual': l.number_individual or l.code,
-            'position_name': l.position_item.name if l.position_item else 'SIN CARGO',
-            'remuneration': str(l.remuneration)
-        } for l in lines]
+            'id': line.id,
+            'number_individual': line.number_individual or line.code,
+            'position_name': line.position_item.name if line.position_item else 'SIN CARGO',
+            'remuneration': str(line.remuneration),
+        } for line in lines]
 
         return JsonResponse({'success': True, 'lines': data})
 
 
 class JSONResponseMixin:
-    """
-    Mixin para manejar respuestas AJAX en ListViews (identico a permisos).
-    Si es AJAX, renderiza solo la tabla parcial y la devuelve en JSON.
-    """
-
     def render_to_response(self, context, **response_kwargs):
         if self.request.headers.get('x-requested-with') == 'XMLHttpRequest':
             html = render_to_string(self.partial_template_name, context, request=self.request)
@@ -1124,18 +927,6 @@ class JSONResponseMixin:
         return super().render_to_response(context, **response_kwargs)
 
 
-def _clean_text_accents(text):
-    if not text:
-        return ""
-    return (
-        unicodedata.normalize("NFKD", str(text))
-        .encode("ascii", "ignore")
-        .decode("utf-8")
-        .strip()
-        .lower()
-    )
-
-
 class ManagementPeriodListView(LoginRequiredMixin, PermissionRequiredMixin, JSONResponseMixin, ListView):
     model = ManagementPeriod
     template_name = 'contract/management_period_list.html'
@@ -1146,58 +937,58 @@ class ManagementPeriodListView(LoginRequiredMixin, PermissionRequiredMixin, JSON
     paginate_by = 10
 
     def get_paginate_by(self, queryset):
-        # Desactiva la paginación de 10 registros cuando table-export.js pide todos los datos
         if self.request.GET.get('export') == 'true':
             return None
         return self.paginate_by
 
     def get(self, request, *args, **kwargs):
-        # Si la petición es para el Excel de table-export.js, sirve el partial limpio con los encargos
         if request.GET.get('export') == 'true':
             self.object_list = self.get_queryset()
             context = self.get_context_data()
-            context['export_rows'] = self._get_unified_export_rows()
+            context['export_rows'] = ContractExportService.get_unified_export_rows(
+                self.object_list,
+                context['current_filters']
+            )
             return render(request, self.export_template_name, context)
         return super().get(request, *args, **kwargs)
 
     def get_queryset(self):
         queryset = (
             ManagementPeriod.objects.select_related(
-                "employee__person",
-                "budget_line__position_item",
-                "contract_type__labor_regime",
-                "administrative_unit",
-                "status",
+                'employee__person',
+                'budget_line__position_item',
+                'contract_type__labor_regime',
+                'administrative_unit',
+                'status',
             )
-            .prefetch_related("history_set")
+            .prefetch_related('history_set')
             .annotate(
                 position_sort_name=Lower(
                     Coalesce(
-                        "budget_line__position_item__name",
-                        "manual_position",
+                        'budget_line__position_item__name',
+                        'manual_position',
                         output_field=CharField(),
                     )
                 ),
-                employee_sort_name=Lower("employee__person__last_name"),
+                employee_sort_name=Lower('employee__person__last_name'),
             )
         )
 
-        q = (self.request.GET.get("q") or "").strip()
-        regime_code = (self.request.GET.get("regime_code") or "").strip()
-        unit_id = (self.request.GET.get("unit") or "").strip()
-        status_code = (self.request.GET.get("status_code") or "").strip()
-        date_from = (self.request.GET.get("date_from") or "").strip()
-        date_to = (self.request.GET.get("date_to") or "").strip()
-        raw_document_numbers = (self.request.GET.get("document_numbers") or "").strip()
+        q = (self.request.GET.get('q') or '').strip()
+        regime_code = (self.request.GET.get('regime_code') or '').strip()
+        unit_id = (self.request.GET.get('unit') or '').strip()
+        status_code = (self.request.GET.get('status_code') or '').strip()
+        date_from = (self.request.GET.get('date_from') or '').strip()
+        date_to = (self.request.GET.get('date_to') or '').strip()
+        raw_document_numbers = (self.request.GET.get('document_numbers') or '').strip()
 
         if raw_document_numbers:
-            cedulas = [c.strip() for c in raw_document_numbers.split(",") if c.strip()]
+            cedulas = [c.strip() for c in raw_document_numbers.split(',') if c.strip()]
             if cedulas:
                 queryset = queryset.filter(employee__person__document_number__in=cedulas)
 
         if q:
-            tokens = [t for t in q.split() if t]
-            for token in tokens:
+            for token in [t for t in q.split() if t]:
                 queryset = queryset.filter(
                     Q(employee__person__first_name__icontains=token)
                     | Q(employee__person__last_name__icontains=token)
@@ -1214,12 +1005,11 @@ class ManagementPeriodListView(LoginRequiredMixin, PermissionRequiredMixin, JSON
             try:
                 selected_unit = AdministrativeUnit.objects.filter(pk=unit_id).first()
                 if selected_unit:
-                    clean_target = _clean_text_accents(selected_unit.name)
-                    all_units = AdministrativeUnit.objects.values_list("id", "name")
+                    clean_target = clean_text_accents(selected_unit.name)
+                    all_units = AdministrativeUnit.objects.values_list('id', 'name')
                     equivalent_ids = [
-                        u_id
-                        for u_id, u_name in all_units
-                        if _clean_text_accents(u_name) == clean_target
+                        u_id for u_id, u_name in all_units
+                        if clean_text_accents(u_name) == clean_target
                     ]
                     if int(unit_id) not in equivalent_ids:
                         equivalent_ids.append(int(unit_id))
@@ -1232,29 +1022,23 @@ class ManagementPeriodListView(LoginRequiredMixin, PermissionRequiredMixin, JSON
         if status_code:
             queryset = queryset.filter(status__code=status_code)
 
-        # Lógica de solapamiento temporal exacto
         if date_from and date_to:
             queryset = queryset.filter(start_date__lte=date_to).filter(
                 Q(end_date__gte=date_from) | Q(end_date__isnull=True)
             )
         elif date_from:
-            queryset = queryset.filter(
-                Q(end_date__gte=date_from) | Q(end_date__isnull=True)
-            )
+            queryset = queryset.filter(Q(end_date__gte=date_from) | Q(end_date__isnull=True))
         elif date_to:
             queryset = queryset.filter(start_date__lte=date_to)
 
-        # Orden por último ingreso por defecto
-        sort_field = self.request.GET.get("sort_field")
-        if not sort_field:
-            return queryset.order_by("-start_date", "-pk")
+        if not self.request.GET.get('sort_field'):
+            return queryset.order_by('-start_date', '-pk')
 
-        order_by = _parse_period_sort(self.request)
-        return queryset.order_by(*order_by)
+        return queryset.order_by(*_parse_period_sort(self.request))
 
     def get_context_data(self, **kwargs):
-        # Este método es sagrado: carga las dependencias y regímenes que alimentan al Select2
         context = super().get_context_data(**kwargs)
+        schedules_qs = Schedule.objects.filter(is_active=True)
         context['regimes'] = LaborRegime.objects.filter(is_active=True).prefetch_related(
             Prefetch(
                 'contract_types',
@@ -1262,7 +1046,11 @@ class ManagementPeriodListView(LoginRequiredMixin, PermissionRequiredMixin, JSON
                 to_attr='active_contract_types'
             )
         )
-        context['schedules'] = Schedule.objects.filter(is_active=True)
+        context['schedules'] = schedules_qs
+        context['schedules_json'] = [
+            {'id': s.id, 'name': s.name}
+            for s in schedules_qs
+        ]
         context['units'] = AdministrativeUnit.objects.filter(is_active=True).order_by('name')
 
         context['current_filters'] = {
@@ -1278,518 +1066,137 @@ class ManagementPeriodListView(LoginRequiredMixin, PermissionRequiredMixin, JSON
         }
         return context
 
-    def _get_unified_export_rows(self):
-        """
-        Unifica en memoria los contratos/nombramientos regulares de ManagementPeriod
-        con los encargos/subrogaciones de BudgetAssignmentHistory para el reporte Excel.
-        """
-        from budget.models import BudgetLine, BudgetAssignmentHistory
-
-        unit_id = (self.request.GET.get("unit") or "").strip()
-        date_from = (self.request.GET.get("date_from") or "").strip()
-        date_to = (self.request.GET.get("date_to") or "").strip()
-        q = (self.request.GET.get("q") or "").strip()
-        raw_document_numbers = (self.request.GET.get("document_numbers") or "").strip()
-
-        equivalent_unit_ids = []
-        unit_display_name = "N/A"
-        if unit_id:
-            selected_unit = AdministrativeUnit.objects.filter(pk=unit_id).first()
-            if selected_unit:
-                unit_display_name = selected_unit.name
-                clean_target = _clean_text_accents(selected_unit.name)
-                all_units = AdministrativeUnit.objects.values_list("id", "name")
-                equivalent_unit_ids = [
-                    u_id for u_id, u_name in all_units
-                    if _clean_text_accents(u_name) == clean_target
-                ]
-                if int(unit_id) not in equivalent_unit_ids:
-                    equivalent_unit_ids.append(int(unit_id))
-            else:
-                try:
-                    equivalent_unit_ids = [int(unit_id)]
-                except ValueError:
-                    equivalent_unit_ids = []
-
-        export_rows = []
-
-        # 1. Agregar contratos regulares
-        for p in self.object_list:
-            person = getattr(getattr(p, 'employee', None), 'person', None)
-            regime_name = p.contract_type.labor_regime.name if p.contract_type and p.contract_type.labor_regime else '-'
-            export_rows.append({
-                'cedula': person.document_number if person else '',
-                'apellidos': person.last_name if person else '',
-                'nombres': person.first_name if person else '',
-                'cargo': p.list_display_position or 'SIN CARGO',
-                'remuneracion': f"$ {p.list_display_remuneration}" if p.list_display_remuneration is not None else '-',
-                'dependencia': p.administrative_unit.name if p.administrative_unit else unit_display_name,
-                'modalidad': p.contract_type.name if p.contract_type else '-',
-                'regimen': regime_name,
-                'fecha_desde': p.start_date.strftime('%d/%m/%Y') if p.start_date else '',
-                'fecha_hasta': p.end_date.strftime('%d/%m/%Y') if p.end_date else 'Indefinido',
-                'sort_date': p.start_date or timezone.now().date(),
-            })
-
-        # 2. Agregar encargos/subrogaciones si se filtró una dependencia
-        if equivalent_unit_ids:
-            partidas_unidad_ids = BudgetLine.objects.filter(
-                Q(managementperiod__administrative_unit_id__in=equivalent_unit_ids) |
-                Q(assignments__employee__area_id__in=equivalent_unit_ids)
-            ).distinct().values_list('id', flat=True)
-
-            encargos_qs = BudgetAssignmentHistory.objects.filter(
-                budget_line_id__in=partidas_unidad_ids
-            ).filter(
-                Q(is_acting=True) |
-                Q(observation__icontains='encargo') |
-                Q(observation__icontains='subrog')
-            ).select_related(
-                'employee__person',
-                'budget_line__position_item',
-                'budget_line__regime_item'
-            )
-
-            if date_from and date_to:
-                encargos_qs = encargos_qs.filter(start_date__lte=date_to).filter(
-                    Q(end_date__gte=date_from) | Q(end_date__isnull=True)
-                )
-            elif date_from:
-                encargos_qs = encargos_qs.filter(
-                    Q(end_date__gte=date_from) | Q(end_date__isnull=True)
-                )
-            elif date_to:
-                encargos_qs = encargos_qs.filter(start_date__lte=date_to)
-
-            if raw_document_numbers:
-                cedulas = [c.strip() for c in raw_document_numbers.split(',') if c.strip()]
-                if cedulas:
-                    encargos_qs = encargos_qs.filter(employee__person__document_number__in=cedulas)
-
-            if q:
-                for token in [t for t in q.split() if t]:
-                    encargos_qs = encargos_qs.filter(
-                        Q(employee__person__first_name__icontains=token) |
-                        Q(employee__person__last_name__icontains=token) |
-                        Q(employee__person__document_number__icontains=token) |
-                        Q(budget_line__position_item__name__icontains=token)
-                    )
-
-            for enc in encargos_qs:
-                person = getattr(getattr(enc, 'employee', None), 'person', None)
-                cargo_nombre = enc.budget_line.position_item.name if enc.budget_line and enc.budget_line.position_item else 'SIN CARGO'
-                partida_num = enc.budget_line.number_individual or enc.budget_line.code if enc.budget_line else ''
-                remun = f"$ {enc.budget_line.remuneration}" if enc.budget_line and enc.budget_line.remuneration else '-'
-                regimen_enc = enc.budget_line.regime_item.name if enc.budget_line and enc.budget_line.regime_item else 'LOSEP'
-
-                export_rows.append({
-                    'cedula': person.document_number if person else '',
-                    'apellidos': person.last_name if person else '',
-                    'nombres': person.first_name if person else '',
-                    'cargo': f"{cargo_nombre} ({partida_num})" if partida_num else cargo_nombre,
-                    'remuneracion': remun,
-                    'dependencia': unit_display_name,
-                    'modalidad': 'ENCARGO / SUBROGACIÓN',
-                    'regimen': regimen_enc,
-                    'fecha_desde': enc.start_date.strftime('%d/%m/%Y') if enc.start_date else '',
-                    'fecha_hasta': enc.end_date.strftime('%d/%m/%Y') if enc.end_date else 'Indefinido',
-                    'sort_date': enc.start_date or timezone.now().date(),
-                })
-
-        # Ordenar toda la lista por fecha de inicio descendente
-        export_rows.sort(key=lambda r: r['sort_date'], reverse=True)
-        return export_rows
-
 
 class ManagementPeriodTerminateView(LoginRequiredMixin, PermissionRequiredMixin, View):
     permission_required = 'contract.change_managementperiod'
 
     def post(self, request, pk):
         period = get_object_or_404(ManagementPeriod, pk=pk)
-        reason = request.POST.get('reason', '').strip()
-        end_date_raw = request.POST.get('end_date', '').strip()
+        form = ManagementPeriodTerminateForm(request.POST)
 
-        if not reason:
-            return JsonResponse({'success': False, 'message': 'El motivo de salida es obligatorio.'}, status=400)
-        if not end_date_raw:
-            return JsonResponse({'success': False, 'message': 'La fecha fin de gestión es obligatoria.'}, status=400)
+        if not form.is_valid():
+            first_error = next(iter(form.errors.values()))[0]
+            return JsonResponse({'success': False, 'message': first_error}, status=400)
 
         try:
-            end_date = datetime.strptime(end_date_raw, '%Y-%m-%d').date()
-        except ValueError:
-            return JsonResponse({'success': False, 'message': 'Formato de fecha fin inválido.'}, status=400)
-
-        if period.start_date and end_date < period.start_date:
-            return JsonResponse({'success': False, 'message': 'La fecha fin no puede ser menor al inicio.'}, status=400)
-
-        try:
-            with transaction.atomic():
-                # 1. Obtener catálogos necesarios
-                end_status = CatalogItem.objects.get(catalog__code='STATUS_CONTRACT', code='FINALIZADO')
-                libre_status = CatalogItem.objects.get(catalog__code='BUDGET_STATUS', code='LIBRE')
-
-                # 2. Finalizar el Periodo (Contrato)
-                period.status = end_status
-                period.end_date = end_date
-                period.updated_by = request.user
-                period.save()
-
-                # 3. Cambiar estado del Empleado a Ex-empleado
-                current_status = period.employee.employment_status.code
-                if current_status.startswith('EX'):
-                    exit_status = current_status
-                else:
-                    mapping = {
-                        'EMPLEADO': 'EX_EMPLEADO',
-                        'TRABAJADOR': 'EX_TRABAJADOR',
-                        'CONTRATADO': 'EX_EMPLEADO',
-                        'PROFESIONAL': 'EX_PROFESIONAL'
-                    }
-                    exit_status = mapping.get(current_status, 'PERSONA')
-                period.employee.set_status(exit_status)
-                period.employee.is_active = False
-                period.employee.save()
-
-                # 4. LÓGICA DINÁMICA DE PARTIDA PRESUPUESTARIA
-                # Prioridad 1: La que está vinculada al periodo
-                # Prioridad 2: Buscar en la BD cualquier partida que tenga a este empleado como ocupante
-                budget_line = period.budget_line
-                if not budget_line:
-                    from budget.models import BudgetLine  # Import local para evitar circularidad
-                    budget_line = BudgetLine.objects.filter(current_employee=period.employee).first()
-
-                if budget_line:
-                    # A. Cerrar historial de asignación (si existe)
-                    assignment_history = BudgetAssignmentHistory.objects.filter(
-                        budget_line=budget_line,
-                        employee=period.employee,
-                        is_current=True
-                    ).first()
-
-                    if assignment_history:
-                        assignment_history.end_date = end_date
-                        assignment_history.is_current = False
-                        assignment_history.observation = f"Fin de gestión: {reason}"
-                        assignment_history.save()
-
-                    # B. Liberar la Partida físicamente
-                    budget_line.status_item = libre_status
-                    budget_line.current_employee = None
-                    # Guardar con modified_by para el historial de auditoría de la partida
-                    budget_line.save(modified_by=request.user)
-
-                    # C. Registrar auditoría de modificación de partida
-                    BudgetModificationHistory.objects.create(
-                        budget_line=budget_line,
-                        modified_by=request.user,
-                        modification_type='RELEASE',
-                        field_name='Estado y Ocupante',
-                        old_value=f"Ocupada por {period.employee.person.full_name}",
-                        new_value="LIBRE / VACANTE",
-                        reason=f"Terminación de contrato {period.document_number}: {reason}"
-                    )
-
-                # 5. Registro en historial de contrato
-                History.objects.create(
-                    employee=period.employee,
-                    contract=period,
-                    user_register=request.user.get_full_name() or request.user.username,
-                    type='TERMINACIÓN',
-                    reason=reason,
-                    historical_position=period.display_position,
-                    historical_salary=period.display_remuneration
-                )
-
+            _, released = ManagementPeriodService.terminate_period(period, form, request.user)
+            suffix = ' Partida liberada.' if released else ' (No se detectó partida vinculada)'
             return JsonResponse({
                 'success': True,
-                'message': 'Gestión finalizada correctamente.' + (
-                    ' Partida liberada.' if budget_line else ' (No se detectó partida vinculada)')
+                'message': f'Gestión finalizada correctamente.{suffix}'
             })
-
-        except Exception as e:
-            return JsonResponse({'success': False, 'message': f'Error técnico: {str(e)}'}, status=500)
+        except ValidationError as exc:
+            first_error = next(iter(exc.message_dict.values()))[0]
+            return JsonResponse({'success': False, 'message': first_error}, status=400)
+        except Exception as exc:
+            return JsonResponse({'success': False, 'message': f'Error técnico: {str(exc)}'}, status=500)
 
 
 class ManagementPeriodCreateView(LoginRequiredMixin, PermissionRequiredMixin, View):
     permission_required = 'contract.add_managementperiod'
 
     def post(self, request):
-        data = request.POST
+        form = ManagementPeriodCreateForm(request.POST)
+        if not form.is_valid():
+            return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+
         try:
-            with transaction.atomic():
-                status_initial = CatalogItem.objects.get(
-                    catalog__code='STATUS_CONTRACT', code='SIN_FIRMAR'
-                )
-
-                employee = get_object_or_404(Employee, pk=data.get('employee'))
-                contract_type = get_object_or_404(ContractType, pk=data.get('contract_type'))
-                is_professional_service = (contract_type.code or '').upper() == 'SERVICIOS_PROFESIONALES'
-                is_action_document = contract_type.contract_type_category == ContractType.TYPE_ACCION_PERSONAL
-
-                budget_line = None if is_professional_service else employee.current_budget_line.first()
-
-                if not is_professional_service and not budget_line:
-                    return JsonResponse({
-                        'success': False,
-                        'message': 'La persona no tiene una partida presupuestaria asignada. Debe asignarle una partida antes de pasar al tercer paso.'
-                    }, status=400)
-
-                manual_position = data.get('manual_position', '').strip().upper()
-                manual_remuneration = data.get('manual_remuneration')
-                elaboration_date = data.get('elaboration_date') or None
-                action_motivation = data.get('action_motivation', '').strip().upper()
-                action_explanation = data.get('action_explanation', '').strip()
-
-                # Resolución de fechas según el tipo de documento (soporta nombres diferenciados y fallback)
-                if is_action_document:
-                    start_date = data.get('action_start_date') or data.get('start_date')
-                    end_date = data.get('action_end_date') or data.get('end_date') or None
-                else:
-                    start_date = data.get('start_date')
-                    end_date = data.get('end_date') or None
-
-                if is_action_document and (
-                        not elaboration_date or not start_date or not action_motivation or not action_explanation):
-                    return JsonResponse({
-                        'success': False,
-                        'message': 'Para ACCIÓN DE PERSONAL debe completar fecha de elaboración, rige desde, motivación y explicación.'
-                    }, status=400)
-
-                if is_professional_service and (not manual_position or not manual_remuneration):
-                    return JsonResponse({
-                        'success': False,
-                        'message': 'Para SERVICIOS_PROFESIONALES debe ingresar cargo y remuneración manual.'
-                    }, status=400)
-
-                administrative_unit_id = data.get('administrative_unit')
-                schedule_id = data.get('schedule') if not is_action_document else None
-                workplace = data.get('workplace', '').strip().upper() if not is_action_document else None
-                job_functions = data.get('job_functions', '').strip() if not is_action_document else ''
-                institutional_need_memo = data.get('institutional_need_memo',
-                                                   '').strip().upper() if not is_action_document else None
-                budget_certification = data.get('budget_certification',
-                                                '').strip().upper() if not is_action_document else None
-
-                if is_action_document and not administrative_unit_id:
-                    return JsonResponse({
-                        'success': False,
-                        'message': 'Para ACCIÓN DE PERSONAL debe seleccionar la unidad administrativa de destino.'
-                    }, status=400)
-
-                # Creamos la instancia SIN document_number (el save() lo pondrá)
-                period = ManagementPeriod(
-                    employee=employee,
-                    budget_line=budget_line,
-                    contract_type=contract_type,
-                    administrative_unit_id=administrative_unit_id,
-                    schedule_id=schedule_id,
-                    status=status_initial,
-                    manual_position=manual_position or None,
-                    manual_remuneration=manual_remuneration or None,
-
-                    # Estos campos se mantienen manuales
-                    institutional_need_memo=institutional_need_memo,
-                    budget_certification=budget_certification,
-                    workplace=workplace,
-                    job_functions=job_functions,
-                    elaboration_date=elaboration_date or None,
-                    start_date=start_date,
-                    end_date=end_date,
-                    action_motivation=action_motivation or None,
-                    action_explanation=action_explanation or None,
-                    created_by=request.user
-                )
-
-                period.full_clean()
-                period.save()  # Aquí se dispara la secuencia y el update del Employee
-
-                # Si se solicitó marcar como jefe inmediato, actualizar employee.is_boss y unit.boss
-                try:
-                    is_boss_flag = data.get('is_boss')
-                    is_boss = str(is_boss_flag).lower() in ('1', 'true', 'on', 'yes')
-                    if is_boss:
-                        try:
-                            employee.is_boss = True
-                            employee.save(update_fields=['is_boss'])
-                        except Exception as e:
-                            print(f"No se pudo marcar employee.is_boss=True: {e}")
-
-                        try:
-                            unit = AdministrativeUnit.objects.filter(pk=period.administrative_unit_id).first()
-                            if unit:
-                                unit.boss = employee
-                                unit.save(update_fields=['boss'])
-                        except Exception as e:
-                            print(f"No se pudo actualizar AdministrativeUnit.boss: {e}")
-                except Exception:
-                    pass
-
-                return JsonResponse({
-                    'success': True,
-                    'message': f'Gestión {period.document_number} registrada y área del empleado actualizada.'
-                })
-
-        except ValidationError as e:
-            return JsonResponse({'success': False, 'errors': e.message_dict}, status=400)
-        except Exception as e:
-            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+            period = ManagementPeriodService.create_period(form, request.user)
+            return JsonResponse({
+                'success': True,
+                'message': f'Gestión {period.document_number} registrada y área del empleado actualizada.'
+            })
+        except ValidationError as exc:
+            return JsonResponse({'success': False, 'errors': exc.message_dict}, status=400)
+        except Exception as exc:
+            return JsonResponse({'success': False, 'message': str(exc)}, status=500)
 
 
 class ManagementPeriodSignView(LoginRequiredMixin, PermissionRequiredMixin, View):
-    """Acción para legalizar/firmar el contrato."""
     permission_required = 'contract.change_managementperiod'
 
     def post(self, request, pk):
         period = get_object_or_404(
-            ManagementPeriod.objects.select_related('contract_type', 'personnel_action', 'employee__person'),
-            pk=pk)
+            ManagementPeriod.objects.select_related('contract_type__labor_regime', 'personnel_action',
+                                                    'employee__person'),
+            pk=pk
+        )
         try:
-            with transaction.atomic():
-                status_signed = CatalogItem.objects.get(
-                    catalog__code='STATUS_CONTRACT',
-                    code='FIRMADO'
-                )
-                period.status = status_signed
-                period.updated_by = request.user
-                period.save()
-                regime = period.contract_type.labor_regime.code  # LOSEP, CT, etc.
-                ctype = period.contract_type.code
-                new_status = 'EMPLEADO'
-                if regime == 'CT':
-                    new_status = 'TRABAJADOR'
-                elif regime == 'LOSEP':
-                    if 'OCASIONAL' in ctype:
-                        new_status = 'CONTRATADO'
-                    elif 'PROFESIONAL' in ctype:
-                        new_status = 'PROFESIONAL'
-                    else:
-                        new_status = 'EMPLEADO'
-                period.employee.set_status(new_status)
-                try:
-                    inst_data, _ = InstitutionalData.objects.get_or_create(employee=period.employee)
-                    if not inst_data.original_budget_line and period.budget_line:
-                        inst_data.original_budget_line = period.budget_line
-                        inst_data.save(update_fields=['original_budget_line'])
-                except Exception as e:
-                    print(f"No se pudo fijar partida original para {period.employee}: {e}")
-
-                try:
-                    if not period.employee.is_active:
-                        period.employee.is_active = True
-                        period.employee.save(update_fields=['is_active'])
-                except Exception as e:
-                    print(f"No se pudo activar empleado tras firma (id={getattr(period.employee, 'id', None)}): {e}")
-
-                # --- REGISTRO EN HISTORIAL DE CONTRATO ---
-                is_action_document = period.contract_type.contract_type_category == ContractType.TYPE_ACCION_PERSONAL
-                History.objects.create(
-                    employee=period.employee,
-                    contract=period,
-                    user_register=request.user.get_full_name() or request.user.username,
-                    type='FIRMA',
-                    reason='ACCIÓN LEGALIZADA' if is_action_document else 'CONTRATO FIRMADO',
-                    historical_position=period.display_position,
-                    historical_salary=period.display_remuneration
-                )
-
-                # --- REGISTRO EN HISTORIAL DE HORARIOS ---
-                if period.schedule_id:
-                    from schedule.models import EmployeeScheduleHistory
-                    EmployeeScheduleHistory.objects.create(
-                        employee=period.employee,
-                        schedule=period.schedule,
-                        start_date=period.start_date,
-                        end_date=period.end_date,
-                        reason='Asignación de Horario',
-                        is_current=True,
-                        created_by=request.user
-                    )
-
-                if is_action_document and period.personnel_action_id and not period.personnel_action.is_registered:
-                    period.personnel_action.is_registered = True
-                    period.personnel_action.save(update_fields=['is_registered'])
-
+            ManagementPeriodService.sign_period(period, request.user)
+            is_action = period.contract_type.contract_type_category == ContractType.TYPE_ACCION_PERSONAL
             return JsonResponse({
                 'success': True,
-                'message': 'La acción ha sido legalizada y registrada.' if is_action_document else 'El contrato ha sido legalizado y registrado en el historial.'
+                'message': (
+                    'La acción ha sido legalizada y registrada.'
+                    if is_action
+                    else 'El contrato ha sido legalizado y registrado en el historial.'
+                )
             })
-        except Exception as e:
-            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        except Exception as exc:
+            return JsonResponse({'success': False, 'message': str(exc)}, status=500)
 
 
-class ManagementPeriodDetailAPIView(LoginRequiredMixin, View):
-    """Retorna el JSON con todos los datos para el Expediente"""
+class ManagementPeriodDetailAPIView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'contract.view_managementperiod'
 
-    def get(self, request, pk):  # <--- ASEGÚRATE QUE SEA 'get'
-        # 1. Obtener el periodo/contrato
-        p = get_object_or_404(
+    def get(self, request, pk):
+        period = get_object_or_404(
             ManagementPeriod.objects.select_related(
                 'budget_line__position_item',
                 'employee__person',
                 'administrative_unit',
                 'status',
-                'contract_type'
+                'contract_type',
+                'schedule',
             ),
             pk=pk
         )
 
-        # 2. Buscar en la tabla de Historial (contract_history)
-        # Esto es lo que recupera los datos de los registros migrados (como el 3106)
-        hist_record = History.objects.filter(contract=p).first()
-
-        # 3. Lógica de asignación de datos
-        has_budget_line = p.budget_line is not None
+        hist_record = History.objects.filter(contract=period).first()
+        has_budget_line = period.budget_line is not None
 
         if has_budget_line:
-            # Si tiene partida, mandamos los datos de la partida
-            cargo_final = p.budget_line.position_item.name if p.budget_line.position_item else 'SIN CARGO'
-            sueldo_final = p.budget_line.remuneration
-            codigo_banner = p.budget_line.number_individual or p.budget_line.code
+            cargo_final = period.budget_line.position_item.name if period.budget_line.position_item else 'SIN CARGO'
+            sueldo_final = period.budget_line.remuneration
+            codigo_banner = period.budget_line.number_individual or period.budget_line.code
         elif hist_record:
-            # SI ES MIGRADO (como tu caso), sacamos de la tabla History
             cargo_final = hist_record.historical_position
             sueldo_final = hist_record.historical_salary
-            codigo_banner = "DATOS DE MIGRACIÓN"
+            codigo_banner = 'DATOS DE MIGRACIÓN'
         else:
-            # Si no hay nada, usamos los campos manuales
-            cargo_final = p.manual_position or 'SIN CARGO REGISTRADO'
-            sueldo_final = p.manual_remuneration
-            codigo_banner = "S/P (REGISTRO MANUAL)"
+            cargo_final = period.manual_position or 'SIN CARGO REGISTRADO'
+            sueldo_final = period.manual_remuneration
+            codigo_banner = 'S/P (REGISTRO MANUAL)'
 
         return JsonResponse({
             'success': True,
             'period': {
-                'id': p.id,
+                'id': period.id,
                 'has_budget_line': has_budget_line,
-                'signed_document_url': p.signed_document.url if p.signed_document else None,
-                'document_number': p.document_number,
-                'employee_name': p.employee.person.full_name,
-                'employee_photo': p.employee.person.photo.url if p.employee.person.photo else None,
-                'status_name': p.status.name,
-                'status_code': p.status.code,
-
-                # Datos procesados
+                'signed_document_url': period.signed_document.url if period.signed_document else None,
+                'document_number': period.document_number,
+                'employee_name': period.employee.person.full_name,
+                'employee_photo': period.employee.person.photo.url if period.employee.person.photo else None,
+                'status_name': period.status.name,
+                'status_code': period.status.code,
                 'budget_line_number': codigo_banner,
                 'position_name': cargo_final,
-                'remuneration': f"$ {sueldo_final}" if sueldo_final else "No definida",
-
-                # Otros datos
-                'unit_name': p.administrative_unit.name if p.administrative_unit else 'N/A',
-                'start_date_formatted': p.start_date.strftime('%d/%m/%Y') if p.start_date else '',
-                'end_date_formatted': p.end_date.strftime('%d/%m/%Y') if p.end_date else 'INDEFINIDO',
-                'schedule_name': p.schedule.name if p.schedule else 'SIN HORARIO',
-                'workplace': p.workplace or 'N/A',
-                'contract_type_name': p.contract_type.name,
-                'contract_type_category': p.contract_type.contract_type_category,
-                'job_functions': p.job_functions or '',
-                'action_motivation': p.action_motivation or '',
-                'action_explanation': p.action_explanation or '',
+                'remuneration': f'$ {sueldo_final}' if sueldo_final else 'No definida',
+                'unit_name': period.administrative_unit.name if period.administrative_unit else 'N/A',
+                'start_date_formatted': period.start_date.strftime('%d/%m/%Y') if period.start_date else '',
+                'end_date_formatted': period.end_date.strftime('%d/%m/%Y') if period.end_date else 'INDEFINIDO',
+                'schedule_name': period.schedule.name if period.schedule else 'SIN HORARIO',
+                'workplace': period.workplace or 'N/A',
+                'contract_type_name': period.contract_type.name,
+                'contract_type_category': period.contract_type.contract_type_category,
+                'job_functions': period.job_functions or '',
+                'action_motivation': period.action_motivation or '',
+                'action_explanation': period.action_explanation or '',
             }
         })
 
 
 class ManagementPeriodPartialUpdateView(LoginRequiredMixin, PermissionRequiredMixin, View):
-    """Procesa la actualización de campos específicos desde el SweetAlert del Expediente"""
     permission_required = 'contract.change_managementperiod'
 
     def post(self, request, pk):
@@ -1799,34 +1206,39 @@ class ManagementPeriodPartialUpdateView(LoginRequiredMixin, PermissionRequiredMi
                 'success': False,
                 'message': 'Error de Integridad: No es posible editar un contrato ya firmado o finalizado.'
             }, status=403)
-        data = request.POST
+
+        form = ManagementPeriodPartialUpdateForm(request.POST)
+        if not form.is_valid():
+            return JsonResponse({'success': False, 'message': 'Error de validación: ' + str(form.errors)}, status=400)
+
+        cleaned = form.cleaned_data
         try:
             with transaction.atomic():
-                # Actualización de campos permitidos
-                doc = data.get('doc')
-                if doc is not None and str(doc).strip():
-                    period.document_number = str(doc).strip().upper()
-                period.workplace = data.get('workplace', '').strip().upper()
-                period.institutional_need_memo = data.get('memo', '').strip().upper()
-                period.budget_certification = data.get('cert', '').strip().upper()
-                period.start_date = data.get('start')
-                period.end_date = data.get('end') if data.get('end') else None
-                period.schedule_id = data.get('schedule')
-                period.job_functions = data.get('functions', '').strip()
-
+                if cleaned.get('doc') and cleaned['doc'].strip():
+                    period.document_number = cleaned['doc'].strip().upper()
+                period.workplace = (cleaned.get('workplace') or '').strip().upper()
+                period.institutional_need_memo = (cleaned.get('memo') or '').strip().upper()
+                period.budget_certification = (cleaned.get('cert') or '').strip().upper()
+                period.start_date = cleaned['start']
+                period.end_date = cleaned.get('end')
+                if cleaned.get('schedule'):
+                    period.schedule = cleaned['schedule']
+                period.job_functions = (cleaned.get('functions') or '').strip()
                 period.updated_by = request.user
                 period.full_clean()
                 period.save()
 
-                return JsonResponse({'success': True, 'message': 'Expediente actualizado correctamente.'})
-        except ValidationError as e:
-            return JsonResponse({'success': False, 'message': 'Error de validación: ' + str(e.message_dict)},
+            return JsonResponse({'success': True, 'message': 'Expediente actualizado correctamente.'})
+        except ValidationError as exc:
+            return JsonResponse({'success': False, 'message': 'Error de validación: ' + str(exc.message_dict)},
                                 status=400)
-        except Exception as e:
-            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        except Exception as exc:
+            return JsonResponse({'success': False, 'message': str(exc)}, status=500)
 
 
-class ManagementPeriodUploadDocView(LoginRequiredMixin, View):
+class ManagementPeriodUploadDocView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'contract.change_managementperiod'
+
     def post(self, request, pk):
         period = get_object_or_404(ManagementPeriod, pk=pk)
         file = request.FILES.get('contract_file')
@@ -1834,55 +1246,49 @@ class ManagementPeriodUploadDocView(LoginRequiredMixin, View):
         if not file:
             return JsonResponse({'success': False, 'message': 'No se seleccionó ningún archivo.'}, status=400)
 
-        # 1. Validaciones de Seguridad
         if not file.name.lower().endswith('.pdf'):
             return JsonResponse({'success': False, 'message': 'Solo se permiten archivos PDF.'}, status=400)
 
-        if file.size > 2 * 1024 * 1024:  # 2MB
+        if file.size > 2 * 1024 * 1024:
             return JsonResponse({'success': False, 'message': 'El archivo excede el límite de 2MB.'}, status=400)
 
         try:
-            # 2. Guardar archivo (Django maneja la ruta vía upload_to definido en el modelo)
-            # Si ya existe uno, eliminamos el anterior para no dejar basura en el server
-            if period.signed_document:
-                if os.path.isfile(period.signed_document.path):
-                    os.remove(period.signed_document.path)
+            if period.signed_document and os.path.isfile(period.signed_document.path):
+                os.remove(period.signed_document.path)
 
             period.signed_document = file
             period.updated_by = request.user
-            period.save()
+            period.save(update_fields=['signed_document', 'updated_by', 'updated_at'])
 
             return JsonResponse({
                 'success': True,
                 'message': 'Documento legalizado cargado correctamente.',
-                'file_url': period.signed_document.url
+                'file_url': period.signed_document.url,
             })
-        except Exception as e:
-            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        except Exception as exc:
+            return JsonResponse({'success': False, 'message': str(exc)}, status=500)
 
 
-class ManagementPeriodDeleteDocView(LoginRequiredMixin, View):
+class ManagementPeriodDeleteDocView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'contract.change_managementperiod'
+
     def post(self, request, pk):
         period = get_object_or_404(ManagementPeriod, pk=pk)
         try:
             if period.signed_document:
-                # Eliminación física
                 if os.path.isfile(period.signed_document.path):
                     os.remove(period.signed_document.path)
 
                 period.signed_document = None
-                period.save()
+                period.updated_by = request.user
+                period.save(update_fields=['signed_document', 'updated_by', 'updated_at'])
                 return JsonResponse({'success': True, 'message': 'Documento eliminado del expediente.'})
             return JsonResponse({'success': False, 'message': 'No hay documento para eliminar.'})
-        except Exception as e:
-            return JsonResponse({'success': False, 'message': str(e)}, status=500)
+        except Exception as exc:
+            return JsonResponse({'success': False, 'message': str(exc)}, status=500)
 
 
 class ParseManagementPeriodIdentificationExcelView(LoginRequiredMixin, PermissionRequiredMixin, View):
-    """
-    Lee un archivo Excel con numeros de cedula y retorna una lista unica sanitizada en JSON.
-    Límite estricto de 1 MB.
-    """
     permission_required = 'contract.view_managementperiod'
 
     def post(self, request, *args, **kwargs):
@@ -1890,15 +1296,17 @@ class ParseManagementPeriodIdentificationExcelView(LoginRequiredMixin, Permissio
         if not excel_file:
             return JsonResponse({'success': False, 'message': 'No se proporciono ningun archivo Excel.'}, status=400)
 
-        # Validacion de tamano: maximo 1 MB
-        max_file_size = 1 * 1024 * 1024
-        if excel_file.size > max_file_size:
-            return JsonResponse({'success': False, 'message': 'El archivo supera el limite maximo permitido de 1 MB.'},
-                                status=400)
+        if excel_file.size > 1 * 1024 * 1024:
+            return JsonResponse(
+                {'success': False, 'message': 'El archivo supera el limite maximo permitido de 1 MB.'},
+                status=400,
+            )
 
         if not (excel_file.name.endswith('.xlsx') or excel_file.name.endswith('.xls')):
-            return JsonResponse({'success': False, 'message': 'El archivo debe tener formato .xlsx o .xls.'},
-                                status=400)
+            return JsonResponse(
+                {'success': False, 'message': 'El archivo debe tener formato .xlsx o .xls.'},
+                status=400,
+            )
 
         try:
             workbook = openpyxl.load_workbook(excel_file, read_only=True, data_only=True)
@@ -1920,15 +1328,63 @@ class ParseManagementPeriodIdentificationExcelView(LoginRequiredMixin, Permissio
             if not unique_identifications:
                 return JsonResponse({
                     'success': False,
-                    'message': 'No se encontraron cedulas validas (9 a 13 digitos) en el archivo.'
+                    'message': 'No se encontraron cedulas validas (9 a 13 digitos) en el archivo.',
                 }, status=400)
 
             return JsonResponse({
                 'success': True,
                 'count': len(unique_identifications),
                 'document_numbers': unique_identifications,
-                'message': f'Se cargaron {len(unique_identifications)} cedula(s) correctamente.'
+                'message': f'Se cargaron {len(unique_identifications)} cedula(s) correctamente.',
             })
-
         except Exception as exc:
             return JsonResponse({'success': False, 'message': f'Error al procesar el archivo: {str(exc)}'}, status=500)
+
+
+class HistoricalManagementPeriodCreateView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'contract.add_managementperiod'
+    template_name = 'contract/modals/modal_historical_period_form.html'
+
+    def get(self, request):
+        form = HistoricalManagementPeriodForm()
+        html = render_to_string(self.template_name, {'form': form}, request=request)
+        return JsonResponse({'success': True, 'html': html})
+
+    def post(self, request):
+        form = HistoricalManagementPeriodForm(request.POST, request.FILES)
+        if form.is_valid():
+            try:
+                period = HistoricalContractService.create_historical_period(form, request.user)
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Contrato histórico {period.document_number} registrado correctamente.',
+                })
+            except Exception as exc:
+                return JsonResponse({'success': False, 'message': str(exc)}, status=500)
+
+        return JsonResponse({'success': False, 'errors': form.errors}, status=400)
+
+
+class HistoricalEmployeeSearchAPIView(LoginRequiredMixin, View):
+    def get(self, request, *args, **kwargs):
+        term = (request.GET.get('q') or '').strip()
+        if len(term) < 3:
+            return JsonResponse({'results': []})
+
+        qs = Employee.objects.select_related('person', 'employment_status')
+        for token in term.split():
+            qs = qs.filter(
+                Q(person__document_number__icontains=token)
+                | Q(person__last_name__icontains=token)
+                | Q(person__first_name__icontains=token)
+            )
+
+        results = []
+        for emp in qs.order_by('person__last_name', 'person__first_name')[:25]:
+            person = emp.person
+            status_label = f" ({emp.employment_status.name})" if getattr(emp, 'employment_status', None) else ''
+            results.append({
+                'id': emp.id,
+                'text': f"{person.document_number} - {person.last_name} {person.first_name}{status_label}",
+            })
+        return JsonResponse({'results': results})

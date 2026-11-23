@@ -1,21 +1,20 @@
 {% load static %}
 <div id="contractTypeListModalOverlay" class="modal-overlay hidden" role="dialog" aria-modal="true">
     <div class="modal-container-large shadow-card animate-scale-in">
-        <!-- HEADER ESTANDARIZADO -->
         <div class="modal-header-medium">
             <div class="header-content-group">
                 <div class="header-icon-circle"><i class="fas fa-list-ul"></i></div>
                 <div>
-                    <h3 class="header-title mb-0">Modalidades de Contratación</h3>
-                    <p class="text-white-opacity small mb-0 mt-1">
+                    <h3 class="header-title">Modalidades de Contratación</h3>
+                    <p class="text-white-opacity small">
                         Régimen: <strong id="modal-regime-title-name">-</strong>
                     </p>
                 </div>
             </div>
 
-            <div class="d-flex align-items-center gap-3 ms-auto">
+            <div class="modal-header-actions">
                 <button type="button" class="btn-blue-rectangle" id="btn-create-contract-type-open">
-                    <i class="fas fa-plus me-1"></i> AÑADIR MODALIDAD
+                    <i class="fas fa-plus"></i> AÑADIR MODALIDAD
                 </button>
                 <button type="button" class="btn-close-circle" id="btn-close-contract-modal-top" title="Cerrar">
                     <i class="fas fa-times"></i>
@@ -23,42 +22,26 @@
             </div>
         </div>
 
-        <!-- CUERPO CON SCROLL INTERNO Y CONTENEDORES ESTÁNDAR -->
         <div class="modal-body-content modal-body-custom">
-            <div class="section-card-standard border-left-primary mb-3">
+            <div class="section-card-standard border-left-primary card-spaced">
                 <div class="section-title">
                     <i class="fas fa-file-contract text-primary"></i> MODALIDADES REGISTRADAS
                 </div>
 
-                <div class="table-container">
-                    <table class="table managed-table table-hover" id="contract-types-table">
-                        <thead>
-                        <tr>
-                            <th class="width-20">Código</th>
-                            <th class="width-35">Nombre de la Modalidad</th>
-                            <th class="width-20">Categoría</th>
-                            <th class="width-10 text-center">Estado</th>
-                            <th class="width-15 actions text-center no-sort">Acciones</th>
-                        </tr>
-                        </thead>
-                        <tbody id="contract-types-tbody">
-                        <!-- Inyectado dinámicamente mediante labor_regime.js -->
-                        </tbody>
-                    </table>
+                <div id="contract-types-table-wrapper">
+                    {% include 'contract/partials/partial_contract_type_table.html' %}
                 </div>
             </div>
 
-            <!-- ALERTA INFORMATIVA ESTANDARIZADA -->
-            <div class="alert alert-info mb-0">
+            <div class="alert alert-info card-flush">
                 <i class="fas fa-info-circle"></i>
                 <span>Estas modalidades estarán disponibles al crear nuevos <strong>Inicios de Gestión</strong>.</span>
             </div>
         </div>
 
-        <!-- FOOTER ESTANDARIZADO -->
         <div class="modal-footer-medium modal-footer-spaced">
             <button type="button" id="btn-close-contract-modal-bottom" class="btn-dark-blue-rectangle-outline">
-                <i class="fas fa-chevron-left me-1"></i> REGRESAR
+                <i class="fas fa-chevron-left"></i> REGRESAR
             </button>
         </div>
     </div>

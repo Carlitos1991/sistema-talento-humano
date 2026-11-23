@@ -25,7 +25,7 @@
                                 data-id="{{ regime.id }}"
                                 data-name="{{ regime.name }}"
                                 title="Ver modalidades asociadas">
-                            <i class="fas fa-file-contract me-1"></i> {{ regime.contract_types.count }} modalidad(es)
+                            <i class="fas fa-file-contract"></i> {{ regime.contract_types.count }} modalidad(es)
                         </button>
                     </td>
                     <td class="text-center">
@@ -37,7 +37,6 @@
                     </td>
                     <td class="actions text-center">
                         <div class="actions-wrapper">
-                            <!-- Editar Régimen -->
                             <button type="button" class="btn-blue-circle"
                                     data-action="edit-regime"
                                     data-id="{{ regime.id }}"
@@ -45,7 +44,6 @@
                                 <i class="fas fa-edit"></i>
                             </button>
 
-                            <!-- Alternar Estado -->
                             {% if regime.is_active %}
                                 <button type="button" class="btn-red-circle"
                                         data-action="toggle-status"

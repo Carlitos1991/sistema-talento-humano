@@ -10,13 +10,13 @@
                data-external-search="true">
             <thead>
             <tr>
-                <th data-field="employee" class="width-20">Empleado</th>
-                <th data-field="budget_line" class="width-15">Cargo y Partida</th>
+                <th data-field="last_name" class="width-20">Empleado</th>
+                <th data-field="position" class="width-15">Cargo y Partida</th>
                 <th data-field="unit" class="width-17">Dependencia</th>
                 <th data-field="contract_type" class="width-25">Modalidad</th>
-                <th data-field="start_date" class="width-12">Vigencia</th>
+                <th data-field="start_date" class="width-10">Vigencia</th>
                 <th data-field="status" class="width-10 text-center">Estado</th>
-                <th class="width-13 actions text-center no-sort" data-field="actions">Acciones</th>
+                <th class="width-16 actions text-center no-sort" data-field="actions">Acciones</th>
             </tr>
             </thead>
             <tbody id="management-table-body">
@@ -34,7 +34,7 @@
                             <div class="person-details">
                                 <h4>{{ period.employee.person.full_name }}</h4>
                                 <p>
-                                    <i class="fas fa-id-card me-1"></i> {{ period.employee.person.document_number|default:'' }}
+                                    <i class="fas fa-id-card"></i> {{ period.employee.person.document_number|default:'' }}
                                 </p>
                             </div>
                         </div>
@@ -42,11 +42,11 @@
                     <td>
                         <div class="bold text-blue">{{ period.list_display_position|default:'SIN CARGO' }}</div>
                         {% if period.budget_line %}
-                            <small class="text-muted d-block">
+                            <small class="text-muted block-meta">
                                 Partida: {{ period.budget_line.number_individual|default:period.budget_line.code }}
                             </small>
                         {% endif %}
-                        <small class="text-muted d-block">
+                        <small class="text-muted block-meta">
                             Remuneración: {% if period.list_display_remuneration is not None %}$
                             {{ period.list_display_remuneration }}{% else %}-{% endif %}
                         </small>
@@ -56,14 +56,15 @@
                     </td>
                     <td>
                         <span class="badge badge-blue">{{ period.contract_type.name }}</span>
-                        <div class="small text-muted italic mt-1">{{ period.contract_type.labor_regime.name }}</div>
+                        <div class="small text-muted italic">{{ period.contract_type.labor_regime.name }}</div>
                     </td>
                     <td>
                         <div class="small">
                             <div><strong>Inicio:</strong> {{ period.start_date|date:"d/m/Y" }}</div>
                             <div><strong>Fin:</strong>
                                 {% if period.end_date %}{{ period.end_date|date:"d/m/Y" }}{% else %}
-                                    Indefinido{% endif %}</div>
+                                    Indefinido{% endif %}
+                            </div>
                         </div>
                     </td>
                     <td class="text-center">
@@ -77,28 +78,43 @@
                     </td>
                     <td class="actions text-center">
                         <div class="actions-wrapper">
-                            <button type="button" class="btn-dark-blue-circle" data-id="{{ period.id }}"
-                                    data-action="print" title="Imprimir Documento">
+                            <button type="button" class="btn-dark-blue-circle"
+                                    data-id="{{ period.id }}"
+                                    data-doc="{{ period.document_number }}"
+                                    data-action="print"
+                                    title="Imprimir Documento">
                                 <i class="fas fa-print"></i>
                             </button>
 
                             {% if period.status.code == 'SIN_FIRMAR' %}
-                                <button type="button" class="btn-green-circle" data-id="{{ period.id }}"
+                                {% if period.contract_type.contract_type_category != 'ACCION_PERSONAL' %}
+                                    <a href="{% url 'contract:period_edit_content' period.id %}"
+                                       class="btn-yellow-circle"
+                                       title="Editar Texto del Contrato">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </a>
+                                {% endif %}
+                                <button type="button" class="btn-green-circle"
+                                        data-id="{{ period.id }}"
                                         data-action="sign"
                                         data-contract-category="{{ period.contract_type.contract_type_category }}"
                                         title="Legalizar Documento">
-                                    <i class="fas fa-file-signature"></i>
+                                    <i class="fa-solid fa-file-signature"></i>
                                 </button>
                             {% endif %}
 
-                            <button type="button" class="btn-blue-circle" data-id="{{ period.id }}" data-action="view"
+                            <button type="button" class="btn-blue-circle"
+                                    data-id="{{ period.id }}"
+                                    data-action="view"
                                     title="Ver Expediente">
                                 <i class="fas fa-eye"></i>
                             </button>
 
                             {% if period.status.code == 'FIRMADO' %}
-                                <button type="button" class="btn-red-circle" data-id="{{ period.id }}"
-                                        data-action="terminate" title="Finalizar Gestión">
+                                <button type="button" class="btn-red-circle"
+                                        data-id="{{ period.id }}"
+                                        data-action="terminate"
+                                        title="Finalizar Gestión">
                                     <i class="fas fa-user-slash"></i>
                                 </button>
                             {% endif %}
@@ -124,7 +140,7 @@
     <span class="pagination-info">
         Mostrando {{ page_obj.start_index|default:"0" }}-{{ page_obj.end_index|default:"0" }} de {{ paginator.count|default:"0" }}
     </span>
-    <div class="pagination-controls" {% if paginator.num_pages <= 1 %}style="visibility:hidden;"{% endif %}>
+    <div class="pagination-controls {% if paginator.num_pages <= 1 %}is-invisible{% endif %}">
         <button type="button" class="page-btn page-first" title="Primera"
                 {% if not page_obj.has_previous %}disabled{% endif %}
                 data-page="1">
@@ -144,7 +160,9 @@
         </div>
         <button type="button" class="page-btn page-next" title="Siguiente"
                 {% if not page_obj.has_next %}disabled{% endif %}
-                data-page="{% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages|default:1 }}{% endif %}">
+                data-page="
+
+                        {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages|default:1 }}{% endif %}">
             <i class="fas fa-angle-right"></i>
         </button>
         <button type="button" class="page-btn page-last" title="Última"

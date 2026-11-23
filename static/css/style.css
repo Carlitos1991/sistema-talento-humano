@@ -303,10 +303,10 @@ body.swal2-height-auto {
 }
 
 #app-content {
-        flex: 1 1 auto;
+    flex: 1 1 auto;
     width: 100%;
     max-width: min(100%, 1400px);
-        margin: 0 auto;
+    margin: 0 auto;
     box-sizing: border-box;
     overflow: visible !important;
     padding: 1.5rem 1.5rem 3.5rem 1.5rem;
@@ -3490,7 +3490,7 @@ th.sorted-desc .sort-arrow {
    12. ESTADÍSTICAS
    ===================================================================== */
 .stats-row {
-            gap: 1rem;
+    gap: 1rem;
     margin-bottom: 0.5rem;
     display: flex;
     flex-wrap: nowrap;
@@ -3652,6 +3652,31 @@ th.sorted-desc .sort-arrow {
     max-height: min(42vh, 380px) !important; /* Altura calculada según el tamaño de pantalla */
     height: auto !important;
     overflow-y: auto !important;
+}
+
+.modal-overlay .table-container {
+    min-height: 160px !important;
+    max-height: min(45vh, 400px) !important;
+    height: auto !important;
+    overflow-x: auto !important;
+    overflow-y: auto !important;
+}
+
+.modal-overlay .table-container table {
+    width: 100% !important;
+    min-width: 100% !important;
+    table-layout: fixed;
+}
+
+.modal-overlay .table-container thead th.actions,
+.modal-overlay .table-container thead th:last-child {
+    min-width: 110px;
+}
+
+.modal-overlay .table-container tbody td.actions,
+.modal-overlay .table-container tbody td:last-child {
+    min-width: 110px;
+    width: auto;
 }
 
 
@@ -6205,6 +6230,7 @@ html {
     html {
         font-size: 13.5px;
     }
+
     :root {
         --sidebar-width: 210px;
     }
@@ -7182,19 +7208,23 @@ body.swal2-shown:not(.swal2-no-backdrop):not(.swal2-toast-column) {
     vertical-align: middle;
     margin-left: 4px;
 }
+
 /* Ajustes visuales extra Dashboard */
 .top-departments-list .list-group-item {
     gap: 0.85rem;
 }
+
 .top-departments-list .personnel-count {
     padding: 0.25rem 0.75rem;
     background-color: #f1f5f9;
     border-radius: 9999px;
     font-weight: bold;
 }
+
 .dashboard-charts-grid {
     margin-bottom: 2.5rem;
 }
+
 .dashboard-chart-container canvas,
 .chart-container canvas {
     max-height: 100%;

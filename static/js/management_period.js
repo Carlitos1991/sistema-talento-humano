@@ -8,56 +8,30 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         initSelect2Filters();
+        initFilterEvents();
         initSearchDebounce();
         initIdentificationExcelUpload();
         initTableActions();
         initWizardEvents();
         initDetailEvents();
         initPeriodPagination();
+        initHistoricalModalAjaxForm();
     });
+
+    function getSchedulesData() {
+        const node = document.getElementById('periodSchedulesData');
+        if (!node) return [];
+        try {
+            const parsed = JSON.parse(node.textContent || '[]');
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (error) {
+            return [];
+        }
+    }
 
     // =========================================================================
     // 1. SELECT2 & FILTER MANAGEMENT
     // =========================================================================
-
-    function stripAccents(term) {
-        if (!term) return '';
-        return String(term).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
-    }
-
-    function customSelect2Matcher(params, data) {
-        if (!params.term || $.trim(params.term) === '') {
-            return data;
-        }
-
-        if (!data.text && (!data.children || data.children.length === 0)) {
-            return null;
-        }
-
-        const term = stripAccents(params.term);
-        const text = stripAccents(data.text || '');
-
-        if (text.indexOf(term) > -1) {
-            return data;
-        }
-
-        if (data.children && data.children.length > 0) {
-            const matchedChildren = [];
-            for (let i = 0; i < data.children.length; i++) {
-                const child = data.children[i];
-                if (stripAccents(child.text || '').indexOf(term) > -1) {
-                    matchedChildren.push(child);
-                }
-            }
-            if (matchedChildren.length > 0) {
-                const modifiedData = $.extend({}, data, true);
-                modifiedData.children = matchedChildren;
-                return modifiedData;
-            }
-        }
-
-        return null;
-    }
 
     function initSelect2Filters() {
         if (!window.jQuery || !window.jQuery.fn.select2) return;
@@ -67,12 +41,36 @@
         });
     }
 
+    function initFilterEvents() {
+        const form = document.getElementById('filtersForm');
+        const btnClear = document.getElementById('btn-clear-period-filters');
+        const btnClearExcel = document.getElementById('btn-clear-identifications');
+
+        if (form) {
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                applyPeriodFilters(1);
+            });
+        }
+
+        if (btnClear) {
+            btnClear.addEventListener('click', () => clearPeriodFilters());
+        }
+
+        if (btnClearExcel) {
+            btnClearExcel.addEventListener('click', () => {
+                clearLoadedIdentifications();
+                applyPeriodFilters(1);
+            });
+        }
+    }
+
     function collectFilters() {
         const form = document.getElementById('filtersForm');
         const params = {};
         if (form) {
             const formData = new FormData(form);
-            for (let [key, val] of formData.entries()) {
+            for (const [key, val] of formData.entries()) {
                 if (val && String(val).trim() !== '') {
                     params[key] = String(val).trim();
                 }
@@ -144,12 +142,7 @@
         });
     }
 
-    window.handlePeriodSearch = function (e) {
-        if (e) e.preventDefault();
-        applyPeriodFilters(1);
-    };
-
-    window.clearPeriodFilters = function () {
+    function clearPeriodFilters() {
         const form = document.getElementById('filtersForm');
         if (form) {
             form.reset();
@@ -157,13 +150,10 @@
                 $(form).find('select.select2').val('').trigger('change');
             }
         }
-        if (typeof window.clearLoadedIdentifications === 'function') {
-            window.clearLoadedIdentifications();
-        }
-
+        clearLoadedIdentifications();
         window.history.pushState(null, '', window.location.pathname);
         applyPeriodFilters(1);
-    };
+    }
 
     function initSearchDebounce() {
         const searchInput = document.getElementById('table-search-input');
@@ -212,7 +202,9 @@
 
             const iconBox = document.getElementById('permit-excel-icon-box');
             const originalIcon = iconBox ? iconBox.innerHTML : '';
-            if (iconBox) iconBox.innerHTML = '<i class="fas fa-spinner fa-spin" style="font-size: 32px; color: #10b981;"></i>';
+            if (iconBox) {
+                iconBox.innerHTML = '<i class="fas fa-spinner fa-spin permit-excel-main-icon"></i>';
+            }
 
             fetch('/contract/periods/parse-identifications/', {
                 method: 'POST',
@@ -234,7 +226,7 @@
 
                         if (badgeBox && countText) {
                             countText.innerText = `${data.count} cédula(s)`;
-                            badgeBox.style.display = 'inline-flex';
+                            badgeBox.classList.remove('hidden');
                         }
                         if (dropzone) dropzone.classList.add('file-selected');
 
@@ -259,22 +251,127 @@
         });
     }
 
-    window.clearLoadedIdentifications = function () {
+    function clearLoadedIdentifications() {
         const hiddenInput = document.getElementById('filter_document_numbers');
         if (hiddenInput) hiddenInput.value = '';
 
         const badgeBox = document.getElementById('identification-badge-container');
-        if (badgeBox) badgeBox.style.display = 'none';
+        if (badgeBox) badgeBox.classList.add('hidden');
 
         const dropzone = document.getElementById('permit-excel-dropzone-label');
         if (dropzone) dropzone.classList.remove('file-selected');
 
         const fileInput = document.getElementById('identification_excel_input');
         if (fileInput) fileInput.value = '';
-    };
+    }
 
     // =========================================================================
-    // 3. TABLE ACTIONS (SIGN, TERMINATE, PRINT)
+    // 3. HISTORICAL PERIOD MODAL FORM (AJAX)
+    // =========================================================================
+
+    function initHistoricalModalSelect2(modalEl) {
+        if (!modalEl || !window.jQuery || !window.jQuery.fn.select2) return;
+        const $modal = $(modalEl);
+        const form = modalEl.querySelector('#historicalPeriodForm');
+        const searchUrl = form?.dataset.employeeSearchUrl || '/contract/periods/historical/search-employees/';
+
+        const $empSelect = $modal.find('.select2-employee-ajax');
+        if ($empSelect.length && !$empSelect.data('select2')) {
+            $empSelect.select2({
+                width: '100%',
+                dropdownParent: $modal,
+                minimumInputLength: 3,
+                placeholder: 'Escriba 3 o más letras o cédula...',
+                allowClear: true,
+                language: {
+                    inputTooShort: () => 'Escriba 3 o más caracteres para buscar...',
+                    searching: () => 'Buscando servidores...',
+                    noResults: () => 'No se encontraron servidores'
+                },
+                ajax: {
+                    url: searchUrl,
+                    dataType: 'json',
+                    delay: 250,
+                    data: (params) => ({q: params.term || ''}),
+                    processResults: (data) => ({results: data.results || []}),
+                    cache: true
+                }
+            });
+        }
+
+        $modal.find('select.select2-field').each(function () {
+            const $sel = $(this);
+            if (!$sel.data('select2')) {
+                $sel.select2({
+                    width: '100%',
+                    dropdownParent: $modal,
+                    allowClear: true
+                });
+            }
+        });
+    }
+
+    function initHistoricalModalAjaxForm() {
+        const existingModal = document.getElementById('historicalPeriodModal');
+        if (existingModal) initHistoricalModalSelect2(existingModal);
+
+        const observer = new MutationObserver((mutations) => {
+            for (const mutation of mutations) {
+                for (const node of mutation.addedNodes) {
+                    if (node.nodeType !== 1) continue;
+                    const modal = node.id === 'historicalPeriodModal'
+                        ? node
+                        : node.querySelector?.('#historicalPeriodModal');
+                    if (modal) initHistoricalModalSelect2(modal);
+                }
+            }
+        });
+        observer.observe(document.body, {childList: true, subtree: true});
+
+        document.addEventListener('submit', async (e) => {
+            const form = e.target.closest('#historicalPeriodForm');
+            if (!form) return;
+            e.preventDefault();
+
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) submitBtn.disabled = true;
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    body: new FormData(form),
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': typeof getCSRF === 'function' ? getCSRF() : ''
+                    }
+                });
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    showToast(data.message || 'Contrato histórico registrado.', 'success');
+                    const modal = document.getElementById('historicalPeriodModal');
+                    if (modal) modal.remove();
+                    if (typeof window.refreshCurrentTable === 'function') {
+                        window.refreshCurrentTable();
+                    }
+                } else if (data.errors) {
+                    const errorMsg = Object.entries(data.errors)
+                        .map(([field, errs]) => `• <b>${field}:</b> ${errs.join(', ')}`)
+                        .join('<br>');
+                    Swal.fire({title: 'Error de Validación', html: errorMsg, icon: 'warning'});
+                } else {
+                    Swal.fire('Error', data.message || 'No se pudo guardar el registro histórico.', 'error');
+                }
+            } catch (error) {
+                showToast('Error de red al guardar el contrato histórico', 'error');
+            } finally {
+                if (submitBtn) submitBtn.disabled = false;
+            }
+        });
+    }
+
+    // =========================================================================
+    // 4. TABLE ACTIONS (SIGN, TERMINATE, PRINT, VIEW)
     // =========================================================================
 
     function initTableActions() {
@@ -325,7 +422,7 @@
                     const data = await response.json();
                     if (data.success) {
                         showToast(data.message || `${label} legalizado correctamente.`, 'success');
-                        refreshCurrentTable();
+                        if (typeof window.refreshCurrentTable === 'function') window.refreshCurrentTable();
                     } else {
                         Swal.fire('Atención', data.message || 'No se pudo firmar.', 'warning');
                     }
@@ -340,7 +437,7 @@
         const {value: formValues, isConfirmed} = await Swal.fire({
             title: 'Finalizar Gestión Laboral',
             html: `
-                <div style="text-align: left; display: grid; gap: 12px; font-family: 'Inter', sans-serif;">
+                <div class="swal-form-grid">
                     <div>
                         <label class="form-label">Motivo de salida *</label>
                         <textarea id="swal-terminate-reason" class="input-field" rows="3" placeholder="Detalle el motivo"></textarea>
@@ -386,7 +483,7 @@
                 const data = await response.json();
                 if (data.success) {
                     showToast(data.message || 'Gestión finalizada con éxito.', 'success');
-                    refreshCurrentTable();
+                    if (typeof window.refreshCurrentTable === 'function') window.refreshCurrentTable();
                 } else {
                     Swal.fire('Error', data.message || 'No se pudo finalizar la gestión.', 'error');
                 }
@@ -397,7 +494,7 @@
     }
 
     // =========================================================================
-    // 4. WIZARD CREATION FLOW
+    // 5. WIZARD CREATION FLOW
     // =========================================================================
 
     let wizardStep = 1;
@@ -521,7 +618,7 @@
         }
 
         try {
-            const res = await fetch(`/contract/api/validate-employee/${docNumber}/?contract_type_id=${selectedContractType.id}`);
+            const res = await fetch(`/contract/periods/validate-employee/${encodeURIComponent(docNumber)}/?contract_type_id=${selectedContractType.id}`);
             const data = await res.json();
 
             if (data.success && data.employee) {
@@ -571,7 +668,7 @@
     function setupStepThree() {
         document.getElementById('wizard_employee_id').value = selectedEmployee.id || '';
         document.getElementById('wizard_contract_type_id').value = selectedContractType.id || '';
-        document.getElementById('wizard_budget_line_id').value = (selectedEmployee.budgetLine ? selectedEmployee.budgetLine.id : '');
+        document.getElementById('wizard_budget_line_id').value = selectedEmployee.budgetLine ? selectedEmployee.budgetLine.id : '';
 
         document.getElementById('wizard-display-employee-name').textContent = selectedEmployee.fullName || '-';
         document.getElementById('wizard-display-contract-name').textContent = selectedContractType.name || '-';
@@ -582,15 +679,15 @@
         const container = document.getElementById('wizard-budget-inherited-container');
         if (selectedEmployee.budgetLine) {
             container.innerHTML = `
-                <small class="text-white-opacity">PARTIDA HEREDADA</small>
-                <strong class="text-accent">${selectedEmployee.budgetLine.number}</strong>
-                <span class="d-block small text-white-opacity">${selectedEmployee.budgetLine.position}</span>
+                <small class="text-white-opacity block-meta">PARTIDA HEREDADA</small>
+                <strong class="text-accent block-meta">${selectedEmployee.budgetLine.number}</strong>
+                <span class="block-meta small text-white-opacity">${selectedEmployee.budgetLine.position}</span>
             `;
         } else {
             container.innerHTML = `
-                <small class="text-white-opacity">MODO MANUAL</small>
-                <strong class="text-accent">SIN PARTIDA</strong>
-                <span class="d-block small text-white-opacity">SERVICIOS PROFESIONALES</span>
+                <small class="text-white-opacity block-meta">MODO MANUAL</small>
+                <strong class="text-accent block-meta">SIN PARTIDA</strong>
+                <span class="block-meta small text-white-opacity">SERVICIOS PROFESIONALES</span>
             `;
         }
 
@@ -637,7 +734,7 @@
 
     async function handleUnitChange(index, selectedId) {
         unitLevels = unitLevels.slice(0, index + 1);
-        unitLevels[index].selectedId = selectedId ? parseInt(selectedId) : null;
+        unitLevels[index].selectedId = selectedId ? parseInt(selectedId, 10) : null;
 
         document.getElementById('wizard_administrative_unit_id').value = selectedId || '';
 
@@ -727,7 +824,7 @@
             if (response.ok && result.success) {
                 showToast(result.message || 'Gestión registrada correctamente', 'success');
                 closeWizard();
-                refreshCurrentTable();
+                if (typeof window.refreshCurrentTable === 'function') window.refreshCurrentTable();
             } else {
                 let errorMsg = result.message || 'Existen errores en el formulario.';
                 if (result.errors) {
@@ -751,7 +848,7 @@
     }
 
     // =========================================================================
-    // 5. DETAIL MODAL & EDIT
+    // 6. DETAIL MODAL, PDF UPLOAD & EDIT
     // =========================================================================
 
     let activePeriodDetail = null;
@@ -760,10 +857,32 @@
         const closeTop = document.getElementById('btn-close-detail-top');
         const closeBottom = document.getElementById('btn-close-detail-bottom');
         const editBtn = document.getElementById('btn-detail-edit');
+        const uploadBtn = document.getElementById('btn-upload-doc');
+        const deleteDocBtn = document.getElementById('btn-delete-doc');
 
         if (closeTop) closeTop.addEventListener('click', closePeriodDetail);
         if (closeBottom) closeBottom.addEventListener('click', closePeriodDetail);
         if (editBtn) editBtn.addEventListener('click', openDetailEditSwal);
+        if (uploadBtn) uploadBtn.addEventListener('click', uploadPeriodDocument);
+        if (deleteDocBtn) deleteDocBtn.addEventListener('click', deletePeriodDocument);
+    }
+
+    function toggleDocumentState(signedUrl) {
+        const uploadBox = document.getElementById('detail-doc-upload-box');
+        const viewBox = document.getElementById('detail-doc-view-box');
+        const docLink = document.getElementById('detail-doc-link');
+
+        if (!uploadBox || !viewBox) return;
+
+        if (signedUrl) {
+            uploadBox.classList.add('hidden');
+            viewBox.classList.remove('hidden');
+            if (docLink) docLink.href = signedUrl;
+        } else {
+            uploadBox.classList.remove('hidden');
+            viewBox.classList.add('hidden');
+            if (docLink) docLink.href = '#';
+        }
     }
 
     async function openPeriodDetail(periodId) {
@@ -790,6 +909,23 @@
                 document.getElementById('detail-end-date').textContent = p.end_date_formatted || 'INDEFINIDO';
                 document.getElementById('detail-schedule').textContent = p.schedule_name || 'SIN HORARIO';
 
+                const isAction = p.contract_type_category === 'ACCION_PERSONAL';
+                const funcSection = document.getElementById('detail-functions-section');
+                const actionSection = document.getElementById('detail-action-section');
+
+                if (funcSection) funcSection.classList.toggle('hidden', isAction);
+                if (actionSection) actionSection.classList.toggle('hidden', !isAction);
+
+                const funcText = document.getElementById('detail-job-functions');
+                if (funcText) funcText.textContent = p.job_functions || 'Sin funciones registradas.';
+
+                const motText = document.getElementById('detail-action-motivation');
+                const expText = document.getElementById('detail-action-explanation');
+                if (motText) motText.textContent = p.action_motivation || '-';
+                if (expText) expText.textContent = p.action_explanation || '-';
+
+                toggleDocumentState(p.signed_document_url);
+
                 if (p.employee_photo) {
                     document.getElementById('detail-employee-photo').src = p.employee_photo;
                 }
@@ -815,58 +951,113 @@
         activePeriodDetail = null;
     }
 
+    async function uploadPeriodDocument() {
+        if (!activePeriodDetail) return;
+        const fileInput = document.getElementById('detail-doc-file-input');
+        const file = fileInput?.files?.[0];
+        if (!file) {
+            showToast('Seleccione un archivo PDF primero.', 'warning');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('contract_file', file);
+
+        try {
+            const res = await fetch(`/contract/periods/upload-doc/${activePeriodDetail.id}/`, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': typeof getCSRF === 'function' ? getCSRF() : ''
+                }
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast(data.message || 'Documento cargado.', 'success');
+                activePeriodDetail.signed_document_url = data.file_url;
+                toggleDocumentState(data.file_url);
+                fileInput.value = '';
+            } else {
+                Swal.fire('Error', data.message || 'No se pudo cargar el PDF.', 'error');
+            }
+        } catch (error) {
+            showToast('Error al subir el documento', 'error');
+        }
+    }
+
+    async function deletePeriodDocument() {
+        if (!activePeriodDetail) return;
+        try {
+            const res = await fetch(`/contract/periods/delete-doc/${activePeriodDetail.id}/`, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': typeof getCSRF === 'function' ? getCSRF() : ''
+                }
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast(data.message || 'Documento eliminado.', 'success');
+                activePeriodDetail.signed_document_url = null;
+                toggleDocumentState(null);
+            } else {
+                Swal.fire('Atención', data.message || 'No se pudo eliminar.', 'warning');
+            }
+        } catch (error) {
+            showToast('Error al eliminar el documento', 'error');
+        }
+    }
+
     async function openDetailEditSwal() {
         const p = activePeriodDetail;
         if (!p) return;
 
+        const schedules = getSchedulesData();
         let scheduleOptions = '<option value="">Seleccione un horario...</option>';
-        if (window.allSchedules) {
-            window.allSchedules.forEach(s => {
-                scheduleOptions += `<option value="${s.id}" ${s.name === p.schedule_name ? 'selected' : ''}>${s.name}</option>`;
-            });
-        }
+        schedules.forEach(s => {
+            scheduleOptions += `<option value="${s.id}" ${s.name === p.schedule_name ? 'selected' : ''}>${s.name}</option>`;
+        });
 
         const {value: formValues} = await Swal.fire({
             title: 'Modificar Datos Administrativos',
             width: '800px',
             padding: '2rem',
             html: `
-                <div style="text-align: left; font-family: 'Inter', sans-serif;">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-                        <div class="form-group">
-                            <label class="form-label">Número de Documento</label>
-                            <input id="swal-doc" type="text" class="input-field readonly-styled" value="${p.document_number || ''}" readonly>
-                            <small class="form-hint">Secuencial asignado por el sistema.</small>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Lugar de Trabajo</label>
-                            <input id="swal-workplace" class="form-control" value="${p.workplace === 'N/A' ? '' : p.workplace || ''}">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Memo Necesidad</label>
-                            <input id="swal-memo" class="form-control" value="${p.institutional_need_memo || ''}">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Cert. Presupuestaria</label>
-                            <input id="swal-cert" class="form-control" value="${p.budget_certification || ''}">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Fecha Inicio</label>
-                            <input type="date" id="swal-start" class="form-control" value="${p.start_date || ''}">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Fecha Fin</label>
-                            <input type="date" id="swal-end" class="form-control" value="${p.end_date || ''}">
-                        </div>
+                <div class="swal-form-grid-2">
+                    <div class="form-group">
+                        <label class="form-label">Número de Documento</label>
+                        <input id="swal-doc" type="text" class="input-field readonly-styled" value="${p.document_number || ''}" readonly>
+                        <small class="form-hint">Secuencial asignado por el sistema.</small>
                     </div>
-                    <div class="form-group" style="margin-top: 1.25rem;">
-                        <label class="form-label">Horario Laboral</label>
-                        <select id="swal-schedule" class="form-control">${scheduleOptions}</select>
+                    <div class="form-group">
+                        <label class="form-label">Lugar de Trabajo</label>
+                        <input id="swal-workplace" class="form-control" value="${p.workplace === 'N/A' ? '' : p.workplace || ''}">
                     </div>
-                    <div class="form-group" style="margin-top: 1.25rem;">
-                        <label class="form-label">Funciones del Puesto</label>
-                        <textarea id="swal-functions" class="form-control" rows="3">${p.job_functions || ''}</textarea>
+                    <div class="form-group">
+                        <label class="form-label">Memo Necesidad</label>
+                        <input id="swal-memo" class="form-control" value="${p.institutional_need_memo || ''}">
                     </div>
+                    <div class="form-group">
+                        <label class="form-label">Cert. Presupuestaria</label>
+                        <input id="swal-cert" class="form-control" value="${p.budget_certification || ''}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Fecha Inicio</label>
+                        <input type="date" id="swal-start" class="form-control" value="${p.start_date || ''}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Fecha Fin</label>
+                        <input type="date" id="swal-end" class="form-control" value="${p.end_date || ''}">
+                    </div>
+                </div>
+                <div class="form-group swal-form-spacer">
+                    <label class="form-label">Horario Laboral</label>
+                    <select id="swal-schedule" class="form-control">${scheduleOptions}</select>
+                </div>
+                <div class="form-group swal-form-spacer">
+                    <label class="form-label">Funciones del Puesto</label>
+                    <textarea id="swal-functions" class="form-control" rows="3">${p.job_functions || ''}</textarea>
                 </div>
             `,
             showCancelButton: true,
@@ -908,7 +1099,7 @@
                 if (result.success) {
                     showToast(result.message || 'Expediente actualizado', 'success');
                     openPeriodDetail(p.id);
-                    refreshCurrentTable();
+                    if (typeof window.refreshCurrentTable === 'function') window.refreshCurrentTable();
                 } else {
                     Swal.fire('Error', result.message || 'No se pudo actualizar.', 'error');
                 }
@@ -917,5 +1108,4 @@
             }
         }
     }
-
 })();

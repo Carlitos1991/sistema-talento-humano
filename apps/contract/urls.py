@@ -1,5 +1,5 @@
 from django.urls import path
-from . import views
+from contract import views
 
 app_name = 'contract'
 
@@ -23,6 +23,8 @@ urlpatterns = [
     path('templates/create/<int:contract_type_id>/', views.ContractTemplateEditorCreateView.as_view(),
          name='template_editor_create'),
     path('templates/editor/<int:pk>/', views.ContractTemplateEditorDetailView.as_view(), name='template_editor_detail'),
+    path('templates/<int:template_id>/save-body/', views.ContractTemplateSaveBodyAjaxView.as_view(),
+         name='template_save_body'),
     path('templates/<int:template_id>/sections/create/', views.ContractTemplateSectionCreateAjaxView.as_view(),
          name='template_section_create'),
     path('templates/sections/<int:section_id>/update/', views.ContractTemplateSectionUpdateAjaxView.as_view(),
@@ -36,16 +38,18 @@ urlpatterns = [
     path('templates/action-editor/options/', views.ContractTemplateEditorOptionsAPIView.as_view(),
          name='template_action_editor_options'),
 
-    # --- Inicios de Gestión (Patrón Híbrido Permisos) ---
+    # --- Inicios de Gestión ---
     path('periods/', views.ManagementPeriodListView.as_view(), name='period_list'),
     path('periods/partial-table/', views.ManagementPeriodListView.as_view(), name='period_partial_table'),
     path('periods/notifications/', views.ManagementPeriodNotificationListView.as_view(),
          name='period_notification_list'),
     path('periods/create/', views.ManagementPeriodCreateView.as_view(), name='period_create'),
 
-    # --- Uploader Masivo de Cédulas (Excel) ---
+    # --- Uploader Masivo de Cédulas (Excel) e Históricos ---
     path('periods/parse-identifications/', views.ParseManagementPeriodIdentificationExcelView.as_view(),
          name='period_parse_identifications'),
+    path('periods/historical/create/', views.HistoricalManagementPeriodCreateView.as_view(),
+         name='period_historical_create'),
 
     # --- Operaciones de Gestión Laboral ---
     path('periods/detail/<int:pk>/', views.ManagementPeriodDetailAPIView.as_view(), name='period_detail_api'),
@@ -58,7 +62,12 @@ urlpatterns = [
     path('periods/print/<int:pk>/', views.ManagementPeriodPrintView.as_view(), name='period_print'),
 
     # --- APIs de Validación ---
-    path('api/validate-employee/<str:doc_number>/', views.ValidateEmployeeAPIView.as_view(),
-         name='api_validate_employee'),
-    path('api/budget-lines/<int:unit_id>/', views.GetAvailableBudgetLinesAPIView.as_view(), name='api_budget_lines'),
+    path('periods/validate-employee/<str:doc_number>/', views.ValidateEmployeeAPIView.as_view(),
+         name='validate_employee'),
+    path('periods/budget-lines/<int:unit_id>/', views.GetAvailableBudgetLinesAPIView.as_view(),
+         name='available_budget_lines'),
+    path('periods/historical/search-employees/', views.HistoricalEmployeeSearchAPIView.as_view(),
+         name='period_historical_employee_search'),
+    path('periods/edit-content/<int:pk>/', views.ManagementPeriodEditContentView.as_view(),
+         name='period_edit_content'),
 ]

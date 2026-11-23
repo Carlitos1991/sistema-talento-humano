@@ -1,12 +1,16 @@
 {% extends 'base.html' %}
 {% load static %}
 
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/management_period.css' %}">
+{% endblock %}
+
 {% block title %}Notificaciones de Contratos | SIGETH{% endblock %}
 
 {% block content %}
     <div class="header-card">
         <div>
-            <h1><i class="fa-solid fa-bell me-2"></i> Notificaciones de Contratos por Vencer</h1>
+            <h1><i class="fa-solid fa-bell"></i> Notificaciones de Contratos por Vencer</h1>
             <p>Contratos con fecha de finalización entre {{ window_start|date:'d/m/Y' }} y {{ window_end|date:'d/m/Y' }}
                 (20 días de anticipación).</p>
         </div>
@@ -14,12 +18,10 @@
 
     <div id="table-app">
         <div class="content-table">
-            <!-- Barra de controles estandarizada idéntica a employee_action_list -->
             <div class="table-controls toolbar-row">
-                <div class="toolbar-center">
-                </div>
+                <div class="toolbar-center"></div>
                 <div class="toolbar-right">
-                    <form method="get" class="d-flex w-100 justify-content-end">
+                    <form method="get" class="notification-search-form">
                         <input type="text"
                                class="table-search-input table-search-input--large"
                                id="table-search"
@@ -57,7 +59,7 @@
                         <tbody>
                         {% for period in periods %}
                             <tr>
-                                <td class="text-center bold text-muted">{{ periods.start_index|add:forloop.counter0 }}</td>
+                                <td class="text-center bold">{{ forloop.counter }}</td>
                                 <td>
                                     <strong class="text-blue">{{ period.employee.person.full_name }}</strong>
                                 </td>
@@ -90,8 +92,7 @@
                 <span class="pagination-info">
                     Mostrando {{ periods.start_index }} a {{ periods.end_index }} de {{ periods.paginator.count }} registros
                 </span>
-                <div class="pagination-controls"
-                     {% if periods.paginator.num_pages <= 1 %}style="visibility:hidden;"{% endif %}>
+                <div class="pagination-controls {% if periods.paginator.num_pages <= 1 %}is-invisible{% endif %}">
                     <button type="button" class="page-btn page-first" title="Primera"
                             {% if not periods.has_previous %}disabled{% endif %}
                             data-page="1">
@@ -105,10 +106,9 @@
                     </button>
 
                     <div class="page-input-wrapper">
-                        <input type="number" class="page-input"
+                        <input type="number" class="page-input js-page-jump"
                                value="{{ periods.number }}"
-                               min="1" max="{{ periods.paginator.num_pages }}"
-                               onchange="window.location.search = new URLSearchParams({...Object.fromEntries(new URLSearchParams(window.location.search)), page: this.value}).toString()">
+                               min="1" max="{{ periods.paginator.num_pages }}">
                         <span class="total-pages-badge">de {{ periods.paginator.num_pages }}</span>
                     </div>
 

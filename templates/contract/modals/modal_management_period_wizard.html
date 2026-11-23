@@ -1,17 +1,13 @@
 {% load static %}
 <div id="wizardModalOverlay" class="modal-overlay hidden" role="dialog" aria-modal="true">
     <div class="modal-container-xl animate-scale-in">
-        <!-- HEADER ESTANDARIZADO -->
         <div class="modal-header-medium">
             <div class="header-content-group">
                 <div class="header-icon-circle"><i class="fas fa-file-signature"></i></div>
-                <h3 class="header-title" id="wizard-modal-title">
-                    Nuevo Inicio de Gestión
-                </h3>
+                <h3 class="header-title" id="wizard-modal-title">Nuevo Inicio de Gestión</h3>
             </div>
 
-            <!-- STEPPER NATIVO -->
-            <div class="wizard-stepper-container ms-auto me-4">
+            <div class="wizard-stepper-container wizard-stepper-right">
                 <div class="wizard-step active" id="step-indicator-1">
                     <div class="step-number">1</div>
                     <span class="step-label">MODALIDAD</span>
@@ -26,7 +22,6 @@
                 </div>
             </div>
 
-            <!-- BOTÓN CERRAR IDÉNTICO AL ESTÁNDAR GLOBAL -->
             <button type="button" class="btn-close-circle" id="btn-close-wizard-top" title="Cerrar">
                 <i class="fas fa-times"></i>
             </button>
@@ -40,12 +35,11 @@
             <input type="hidden" id="wizard_administrative_unit_id" name="administrative_unit" value="">
 
             <div class="modal-body-content modal-body-custom">
-
                 <!-- PASO 1: MODALIDAD -->
                 <div id="wizard-step-1" class="wizard-step-pane">
                     <div class="period-regime-scroll-box">
                         {% for regime in regimes %}
-                            <div class="form-section-card mb-3">
+                            <div class="form-section-card card-spaced">
                                 <h6 class="section-title"><i class="fas fa-briefcase"></i> Régimen: {{ regime.name }}
                                 </h6>
                                 <div class="contract-cards-grid">
@@ -68,15 +62,14 @@
                 <!-- PASO 2: BUSCADOR DE CÉDULA -->
                 <div id="wizard-step-2" class="wizard-step-pane hidden">
                     <div class="form-section-card wizard-step-centered-card">
-                        <div class="avatar-placeholder-md mb-3">
+                        <div class="avatar-placeholder-md">
                             <i class="fas fa-id-card-alt fa-2x"></i>
                         </div>
-                        <h4 class="font-weight-800 mb-2">Validación de Identidad</h4>
-                        <p class="text-muted mb-4" id="wizard-identity-prompt-text">
+                        <h4 class="font-weight-800">Validación de Identidad</h4>
+                        <p class="text-muted" id="wizard-identity-prompt-text">
                             Ingrese la cédula para validar al empleado y heredar su partida.
                         </p>
 
-                        <!-- CAJA DE BÚSQUEDA INTEGRADA CON BOTÓN A LA PAR -->
                         <div class="wizard-identity-search-wrapper">
                             <div class="wizard-search-input-group">
                                 <input type="text" id="wizard-search-doc-input" class="wizard-search-field"
@@ -92,27 +85,26 @@
 
                 <!-- PASO 3: DATOS FINALES -->
                 <div id="wizard-step-3" class="wizard-step-pane hidden">
-
-                    <!-- BANNER EMPLEADO + PARTIDA -->
                     <div class="inherited-info-card">
-                        <div class="d-flex align-items-center w-100">
+                        <div class="banner-row">
                             <img id="wizard-display-photo" src="{% static 'img/avatar-placeholder.png' %}"
-                                 class="person-avatar me-3" alt="Foto">
+                                 class="person-avatar" alt="Foto">
                             <div class="employee-main-data">
-                                <h4 class="mb-1 text-white font-weight-800" id="wizard-display-employee-name">-</h4>
+                                <h4 class="text-white font-weight-800" id="wizard-display-employee-name">-</h4>
                                 <span class="status-badge general" id="wizard-display-contract-name">-</span>
                             </div>
-                            <div class="budget-inherited-box ms-auto" id="wizard-budget-inherited-container">
-                                <small class="text-white-opacity">PARTIDA HEREDADA</small>
-                                <strong class="text-accent" id="wizard-display-budget-number">-</strong>
-                                <span class="d-block small text-white-opacity"
+                            <div class="budget-inherited-box banner-budget-right"
+                                 id="wizard-budget-inherited-container">
+                                <small class="text-white-opacity block-meta">PARTIDA HEREDADA</small>
+                                <strong class="text-accent block-meta" id="wizard-display-budget-number">-</strong>
+                                <span class="block-meta small text-white-opacity"
                                       id="wizard-display-budget-position">-</span>
                             </div>
                         </div>
                     </div>
 
                     <!-- SECCIÓN MANUAL PARA SERVICIOS PROFESIONALES -->
-                    <div class="form-section-card mt-4 hidden" id="wizard-manual-compensation-section">
+                    <div class="form-section-card card-top-spaced hidden" id="wizard-manual-compensation-section">
                         <h6 class="section-title"><i class="fas fa-pen"></i> Cargo y Remuneración (Manual)</h6>
                         <div class="grid-2-cols">
                             <div class="form-group">
@@ -130,13 +122,13 @@
 
                     <!-- CAMPOS EXCLUSIVOS DE ACCIÓN DE PERSONAL -->
                     <div id="wizard-action-specific-fields" class="hidden">
-                        <div class="form-section-card mt-4">
+                        <div class="form-section-card card-top-spaced">
                             <h6 class="section-title"><i class="fas fa-sitemap"></i> Unidad Administrativa de Destino
                             </h6>
                             <div class="unit-dynamic-grid" id="wizard-action-unit-levels-container"></div>
                         </div>
 
-                        <div class="form-section-card mt-4">
+                        <div class="form-section-card card-top-spaced">
                             <h6 class="section-title"><i class="fas fa-calendar-alt"></i> Fechas de la Acción</h6>
                             <div class="grid-3-cols">
                                 <div class="form-group">
@@ -157,7 +149,7 @@
                             </div>
                         </div>
 
-                        <div class="form-section-card mt-3">
+                        <div class="form-section-card card-top-spaced">
                             <h5 class="section-title"><i class="fa-solid fa-comment-dots"></i> MOTIVACIÓN Y EXPLICACIÓN
                             </h5>
                             <div class="form-group">
@@ -166,7 +158,7 @@
                                        class="input-field uppercase-input" placeholder="Ej: NOMBRA A...">
                                 <p class="form-hint">Breve motivo de la acción de personal.</p>
                             </div>
-                            <div class="form-group mt-3">
+                            <div class="form-group">
                                 <label class="form-label">Explicación</label>
                                 <textarea id="wizard_action_explanation" name="action_explanation" class="input-field"
                                           rows="5"
@@ -178,18 +170,18 @@
 
                     <!-- CAMPOS ESTÁNDAR PARA CONTRATOS -->
                     <div id="wizard-contract-specific-fields">
-                        <div class="form-section-card mt-4">
+                        <div class="form-section-card card-top-spaced">
                             <h6 class="section-title"><i class="fas fa-sitemap"></i> Estructura Organizacional</h6>
                             <div class="unit-dynamic-grid" id="wizard-contract-unit-levels-container"></div>
-                            <div class="form-group mt-3">
-                                <label class="form-label d-flex align-items-center">
-                                    <input type="checkbox" id="wizard_is_boss" name="is_boss" value="1" class="me-2">
-                                    Marcar como jefe inmediato de la unidad seleccionada
+                            <div class="form-group">
+                                <label class="form-label checkbox-label-row">
+                                    <input type="checkbox" id="wizard_is_boss" name="is_boss" value="1">
+                                    <span>Marcar como jefe inmediato de la unidad seleccionada</span>
                                 </label>
                                 <small class="form-hint">Si marca esto, el empleado será asignado como jefe inmediato de
                                     la unidad seleccionada.</small>
                             </div>
-                            <div class="grid-2-cols mt-4">
+                            <div class="grid-2-cols">
                                 <div class="form-group">
                                     <label class="form-label">Memo Necesidad</label>
                                     <input type="text" id="wizard_institutional_need_memo"
@@ -224,7 +216,7 @@
                                     </select>
                                 </div>
                             </div>
-                            <div class="grid-2-cols mt-3">
+                            <div class="grid-2-cols">
                                 <div class="form-group">
                                     <label class="form-label">Lugar de Trabajo</label>
                                     <input type="text" id="wizard_workplace" name="workplace"
@@ -232,29 +224,26 @@
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label">Número de Documento / Acción</label>
-                                    <input type="text" value="ML-DTH-AAAA-00012026" class="input-field bg-readonly"
-                                           readonly>
+                                    <input type="text" value="ML-DTH-00012026" class="input-field bg-readonly" readonly>
                                     <small class="form-hint">El código secuencial se generará al guardar.</small>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="form-section-card">
+                        <div class="form-section-card card-flush">
                             <h6 class="section-title"><i class="fas fa-tasks"></i> Funciones</h6>
                             <textarea id="wizard_job_functions" name="job_functions" class="input-field" rows="2"
                                       placeholder="Describa las actividades..."></textarea>
                         </div>
                     </div>
-
                 </div>
             </div>
 
-            <!-- FOOTER CON BOTONES ESTANDARIZADOS DE STYLE.CSS -->
             <div class="modal-footer-medium wizard-footer-actions">
                 <button type="button" class="btn-dark-blue-rectangle-outline" id="btn-wizard-prev">ANTERIOR</button>
                 <button type="button" class="btn-dark-blue-rectangle-outline" id="btn-wizard-cancel">CANCELAR</button>
                 <button type="submit" class="btn-blue-rectangle hidden" id="btn-wizard-submit">
-                    <i class="fas fa-check-double me-1"></i> FINALIZAR GESTIÓN
+                    <i class="fas fa-check-double"></i> FINALIZAR GESTIÓN
                 </button>
             </div>
         </form>

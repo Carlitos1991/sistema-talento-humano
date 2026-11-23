@@ -1,169 +1,111 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Plantilla - {{ template.contract_type.name }}{% endblock %}
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/management_period.css' %}">
+{% endblock %}
+
+{% block title %}Plantilla - {{ template.contract_type.name }} | SIGETH{% endblock %}
 
 {% block content %}
-    <div class="content-wrapper template-editor-page">
-        <div class="header-card mb-4">
+    <div class="content-wrapper template-editor-page"
+         id="contract-template-editor-app"
+         data-template-id="{{ template.id }}"
+         data-save-url="{% url 'contract:template_save_body' template.id %}"
+         data-preview-url="{% url 'contract:template_preview' template.id %}">
+
+        <div class="header-card">
             <div>
-                <h1><i class="fas fa-file-signature me-2"></i> {{ template.contract_type.name }}</h1>
+                <h1><i class="fas fa-file-signature"></i> {{ template.contract_type.name }}</h1>
                 <p>
                     Régimen: <strong>{{ template.contract_type.labor_regime.name }}</strong>
-                    <span class="badge badge-gray ms-2">{{ template.contract_type.labor_regime.code }}</span>
+                    <span class="badge badge-gray">{{ template.contract_type.labor_regime.code }}</span>
                 </p>
-                {% if template.contract_type.contract_type_category == 'ACCION_PERSONAL' %}
-                    <p class="text-white-opacity small mt-1 mb-0">
-                        Esta plantilla usa campos predefinidos de Acción de Personal y no permite crear párrafos libres.
-                    </p>
-                {% endif %}
             </div>
-            <div class="d-flex align-items-center gap-3">
-                {% if template.contract_type.contract_type_category != 'ACCION_PERSONAL' %}
-                    <button type="button" class="btn-blue-rectangle" id="btn-open-add-section-modal">
-                        <i class="fas fa-plus me-1"></i> Agregar Nuevo Párrafo
-                    </button>
-                {% endif %}
+            <div class="header-actions-group">
+                <button type="button" class="btn-blue-rectangle" id="btn-save-template-body">
+                    <i class="fas fa-save"></i> Guardar Plantilla
+                </button>
                 <a href="{% url 'contract:regime_list' %}" class="btn-dark-blue-rectangle-outline">
-                    <i class="fas fa-arrow-left me-1"></i> Volver
+                    <i class="fas fa-arrow-left"></i> Volver
                 </a>
             </div>
         </div>
 
+        <!-- Barra de Variables Genéricas -->
+        <div class="section-card-standard border-left-primary card-spaced">
+            <h6 class="section-title">
+                <i class="fas fa-code text-primary"></i> Variables Genéricas Disponibles (Clic para insertar en el
+                texto)
+            </h6>
+            <div class="template-variables-bar" id="template-variables-bar">
+                {% for item in available_mappings %}
+                    <button type="button"
+                            class="btn-variable-chip js-insert-variable"
+                            data-placeholder="{{ item.placeholder }}"
+                            title="{{ item.label }}">
+                        {{ item.placeholder }}
+                    </button>
+                {% endfor %}
+            </div>
+        </div>
+
         <div class="grid-2-cols">
-            <!-- Columna Izquierda: Secciones de la Plantilla -->
+            <!-- Columna Izquierda: Editor Visual Enriquecido -->
             <div class="section-card-standard border-left-primary">
                 <h6 class="section-title">
-                    <i class="fas fa-file-lines text-primary"></i>
-                    {% if template.contract_type.contract_type_category == 'ACCION_PERSONAL' %}
-                        Campos de la Acción de Personal
-                    {% else %}
-                        Secciones de la Plantilla
-                    {% endif %}
+                    <i class="fas fa-pen-to-square text-primary"></i> Cuerpo del Documento
                 </h6>
 
-                <div id="sectionsList" class="sortable-list template-section-list mt-3">
-                    {% for section in template.sections.all %}
-                        <div class="form-section-card mb-3 section-item" data-section-id="{{ section.id }}"
-                             data-section-type="{{ section.section_type }}"
-                             data-section-content="{{ section.content|escapejs }}" draggable="true">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <div>
-                                    <span class="badge badge-blue">{{ section.get_section_type_display }}</span>
-                                    <span class="small text-muted ms-2 js-section-order">Orden: {{ section.order }}</span>
-                                </div>
-                                <div class="actions-wrapper">
-                                    <button type="button" class="btn-blue-circle btn-edit"
-                                            data-section-id="{{ section.id }}" title="Editar">
-                                        <i class="fas fa-pencil"></i>
-                                    </button>
-                                    <button type="button" class="btn-red-circle btn-delete"
-                                            data-section-id="{{ section.id }}" title="Eliminar">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <p class="small text-muted mb-0 text-break">{{ section.content }}</p>
-                        </div>
-                    {% endfor %}
+                <div class="wysiwyg-toolbar" id="wysiwyg-toolbar" role="toolbar" aria-label="Formato de texto">
+                    <button type="button" class="wysiwyg-btn" data-cmd="bold" title="Negrita"><i
+                            class="fas fa-bold"></i></button>
+                    <button type="button" class="wysiwyg-btn" data-cmd="italic" title="Cursiva"><i
+                            class="fas fa-italic"></i></button>
+                    <button type="button" class="wysiwyg-btn" data-cmd="underline" title="Subrayado"><i
+                            class="fas fa-underline"></i></button>
+                    <span class="wysiwyg-divider"></span>
+                    <button type="button" class="wysiwyg-btn" data-cmd="justifyLeft" title="Alinear izquierda"><i
+                            class="fas fa-align-left"></i></button>
+                    <button type="button" class="wysiwyg-btn" data-cmd="justifyCenter" title="Centrar"><i
+                            class="fas fa-align-center"></i></button>
+                    <button type="button" class="wysiwyg-btn" data-cmd="justifyRight" title="Alinear derecha"><i
+                            class="fas fa-align-right"></i></button>
+                    <button type="button" class="wysiwyg-btn" data-cmd="justifyFull" title="Justificar"><i
+                            class="fas fa-align-justify"></i></button>
+                    <span class="wysiwyg-divider"></span>
+                    <button type="button" class="wysiwyg-btn" data-cmd="insertUnorderedList" title="Lista con viñetas">
+                        <i class="fas fa-list-ul"></i></button>
+                    <button type="button" class="wysiwyg-btn" data-cmd="insertOrderedList" title="Lista numerada"><i
+                            class="fas fa-list-ol"></i></button>
+                    <span class="wysiwyg-divider"></span>
+                    <button type="button" class="wysiwyg-btn" data-cmd="removeFormat" title="Limpiar formato"><i
+                            class="fas fa-eraser"></i></button>
                 </div>
+
+                <div id="contractTemplateRichEditor"
+                     class="wysiwyg-editor-surface"
+                     contenteditable="true"
+                     data-placeholder="Redacte aquí el cuerpo del contrato o inserte variables genéricas desde la barra superior...">{{ editor_body_html|safe }}</div>
             </div>
 
-            <!-- Columna Derecha: Vista Previa -->
+            <!-- Columna Derecha: Vista Previa en Vivo -->
             <div class="section-card-standard">
-                <h6 class="section-title"><i class="fas fa-eye text-primary"></i> Vista Previa en Vivo</h6>
-                <div class="template-preview-wrapper mt-3">
+                <h6 class="section-title">
+                    <i class="fas fa-eye text-primary"></i> Vista Previa en Vivo
+                </h6>
+                <div class="template-preview-wrapper">
                     <div id="preview" class="template-preview-box">
-                        <p class="text-muted text-center py-5">
-                            <i class="fas fa-spinner fa-spin me-2"></i> Cargando vista previa...
+                        <p class="text-muted text-center">
+                            <i class="fas fa-spinner fa-spin"></i> Cargando vista previa...
                         </p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- Modal para Agregar/Editar Párrafo -->
-    <div id="sectionEditorModal" class="modal-overlay hidden" role="dialog" aria-modal="true">
-        <div class="modal-container-large shadow-card animate-scale-in">
-            <div class="modal-header-medium">
-                <div class="header-content-group">
-                    <div class="header-icon-circle"><i class="fas fa-pen-to-square"></i></div>
-                    <h3 class="header-title mb-0" id="sectionEditorTitle">Agregar Nuevo Párrafo</h3>
-                </div>
-                <button type="button" class="btn-close-circle js-close-section-editor-modal" title="Cerrar">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-
-            <div class="modal-body-content modal-body-custom">
-                <div class="form-section-card mb-0">
-                    <label for="sectionEditorContent" class="form-label font-weight-700">Contenido del Párrafo</label>
-                    <div class="btn-toolbar mb-2 gap-1 d-flex flex-wrap" role="toolbar"
-                         aria-label="Herramientas de formato">
-                        <button type="button" class="btn-dark-blue-rectangle-outline js-format-action"
-                                data-target="sectionEditorContent" data-prefix="**" data-suffix="**" title="Negrita"><i
-                                class="fas fa-bold"></i></button>
-                        <button type="button" class="btn-dark-blue-rectangle-outline js-format-action"
-                                data-target="sectionEditorContent" data-prefix="*" data-suffix="*" title="Cursiva"><i
-                                class="fas fa-italic"></i></button>
-                        <button type="button" class="btn-dark-blue-rectangle-outline js-format-action"
-                                data-target="sectionEditorContent" data-prefix="__" data-suffix="__" title="Subrayado">
-                            <i class="fas fa-underline"></i></button>
-                        <button type="button" class="btn-dark-blue-rectangle-outline js-format-action"
-                                data-target="sectionEditorContent" data-prefix="[SIZE_DOWN]" data-suffix="[/SIZE_DOWN]"
-                                title="Disminuir tamaño">A-
-                        </button>
-                        <button type="button" class="btn-dark-blue-rectangle-outline js-format-action"
-                                data-target="sectionEditorContent" data-prefix="[SIZE_UP]" data-suffix="[/SIZE_UP]"
-                                title="Aumentar tamaño">A+
-                        </button>
-                        <button type="button" class="btn-dark-blue-rectangle-outline js-format-action"
-                                data-target="sectionEditorContent" data-prefix="[ALIGN_LEFT]"
-                                data-suffix="[/ALIGN_LEFT]" title="Alinear izquierda"><i class="fas fa-align-left"></i>
-                        </button>
-                        <button type="button" class="btn-dark-blue-rectangle-outline js-format-action"
-                                data-target="sectionEditorContent" data-prefix="[ALIGN_CENTER]"
-                                data-suffix="[/ALIGN_CENTER]" title="Alinear centrado"><i
-                                class="fas fa-align-center"></i></button>
-                        <button type="button" class="btn-dark-blue-rectangle-outline js-format-action"
-                                data-target="sectionEditorContent" data-prefix="[ALIGN_RIGHT]"
-                                data-suffix="[/ALIGN_RIGHT]" title="Alinear derecha"><i class="fas fa-align-right"></i>
-                        </button>
-                    </div>
-                    <textarea id="sectionEditorContent" class="input-field" rows="12"
-                              placeholder="Ingresa el contenido del párrafo..."></textarea>
-                    <small class="form-hint mt-2">Puedes usar etiquetas de formato: **negrita**, *cursiva*,
-                        __subrayado__ y alineaciones de bloque.</small>
-                </div>
-            </div>
-
-            <div class="modal-footer-medium modal-footer-spaced">
-                <button type="button" class="btn-dark-blue-rectangle-outline js-close-section-editor-modal">
-                    <i class="fas fa-times me-1"></i> Cancelar
-                </button>
-                <button type="button" class="btn-dark-blue-rectangle-outline" id="btn-open-variables-swal">
-                    <i class="fas fa-code me-1"></i> Ver Variables
-                </button>
-                <button type="button" class="btn-blue-rectangle" id="saveSectionBtn">
-                    <i class="fas fa-save me-1"></i> Guardar Párrafo
-                </button>
-            </div>
-        </div>
-    </div>
-
-    {{ available_mappings|json_script:"contractTemplateEditorMappingsData" }}
 {% endblock %}
 
 {% block extra_js %}
     <script src="{% static 'js/contract/template_editor.js' %}"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const templateId = Number('{{ template.id }}');
-            if (typeof ContractTemplateEditor === 'function') {
-                const editor = new ContractTemplateEditor(templateId);
-                editor.init();
-            }
-        });
-    </script>
 {% endblock %}

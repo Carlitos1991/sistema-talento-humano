@@ -13,47 +13,50 @@
             <h1><i class="fa-solid fa-file-signature"></i> Inicios de Gestión</h1>
             <p>Control de contratos y acciones de personal del talento humano institucional.</p>
         </div>
-        <button type="button" class="btn-blue-rectangle" id="btn-open-wizard">
-            <i class="fas fa-plus"></i> NUEVO INICIO
-        </button>
+        <div class="header-actions-group">
+            {% if perms.contract.add_managementperiod or request.user.is_staff %}
+                <button type="button"
+                        class="btn-warning-outline"
+                        data-modal-url="{% url 'contract:period_historical_create' %}">
+                    <i class="fas fa-history"></i> Nuevo Histórico
+                </button>
+            {% endif %}
+            <button type="button" class="btn-blue-rectangle" id="btn-open-wizard">
+                <i class="fas fa-plus"></i> NUEVO INICIO
+            </button>
+        </div>
     </div>
 
     <div id="table-app">
         <div class="content-table">
-
-            <form id="filtersForm" onsubmit="handlePeriodSearch(event)" class="mb-3">
+            <form id="filtersForm" class="period-filters-form">
                 <input type="hidden" id="filter_document_numbers" name="document_numbers"
                        value="{{ current_filters.document_numbers|default:'' }}">
 
                 <div class="search-panel">
                     <div class="permit-integrated-search-grid">
-
                         <div class="permit-excel-uploader-column">
-                            <div id="identification-badge-container" class="permit-excel-left-badge"
-                                 style="display: none;">
+                            <div id="identification-badge-container" class="permit-excel-left-badge hidden">
                                 <span class="badge badge-green" id="identification-count-badge">
-                                    <i class="fa-solid fa-users me-1"></i>
+                                    <i class="fa-solid fa-users"></i>
                                     <span id="identification-count-text">0 cédula(s)</span>
                                 </span>
                                 <button type="button" class="btn-clear-identification-tag"
-                                        onclick="clearLoadedIdentifications()" title="Eliminar filtro">
+                                        id="btn-clear-identifications" title="Eliminar filtro">
                                     <i class="fa-solid fa-xmark"></i>
                                 </button>
                             </div>
 
                             <label class="form-label text-center">EXCEL CÉDULAS</label>
-
                             <input type="file" id="identification_excel_input" accept=".xlsx, .xls" class="hidden">
-
                             <label for="identification_excel_input" class="permit-excel-dropzone"
                                    id="permit-excel-dropzone-label">
                                 <span id="permit-excel-icon-box">
                                     <i class="fa-solid fa-file-excel permit-excel-main-icon"></i>
                                 </span>
                             </label>
-
                             <span class="permit-file-helper-text">
-                                <i class="fa-solid fa-paperclip me-1"></i> Max: 1 MB
+                                <i class="fa-solid fa-paperclip"></i> Max: 1 MB
                             </span>
                         </div>
 
@@ -115,7 +118,6 @@
                                 </option>
                             </select>
                         </div>
-
                     </div>
                 </div>
 
@@ -123,10 +125,10 @@
                     <div class="table-controls person-filter-controls rubric-export-controls"></div>
                     <div class="search-filter-actions">
                         <button type="submit" class="btn-blue-rectangle">
-                            <i class="fas fa-search me-1"></i> BUSCAR
+                            <i class="fas fa-search"></i> BUSCAR
                         </button>
-                        <button type="button" class="btn-blue-rectangle-outline" onclick="clearPeriodFilters()">
-                            <i class="fas fa-eraser me-1"></i> LIMPIAR
+                        <button type="button" class="btn-blue-rectangle-outline" id="btn-clear-period-filters">
+                            <i class="fas fa-eraser"></i> LIMPIAR
                         </button>
                     </div>
                     <div></div>
@@ -136,21 +138,14 @@
             <div id="table-content-wrapper">
                 {% include 'contract/partials/partial_management_period_table.html' %}
             </div>
-
         </div>
     </div>
 
     {% include 'contract/modals/modal_management_period_wizard.html' %}
     {% include 'contract/modals/modal_management_period_detail.html' %}
+    {{ schedules_json|json_script:"periodSchedulesData" }}
 {% endblock %}
 
 {% block extra_js %}
-    <script>
-        window.allSchedules = [
-            {% for s in schedules %}
-                {id: {{ s.id }}, name: "{{ s.name }}"},
-            {% endfor %}
-        ];
-    </script>
     <script src="{% static 'js/management_period.js' %}"></script>
 {% endblock %}

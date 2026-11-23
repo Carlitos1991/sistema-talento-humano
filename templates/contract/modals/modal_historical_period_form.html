@@ -1,0 +1,102 @@
+<div class="modal-overlay" id="historicalPeriodModal">
+    <div class="modal-container-medium">
+        <div class="modal-header">
+            <div class="header-content-group">
+                <div class="header-icon-circle">
+                    <i class="fas fa-history"></i>
+                </div>
+                <h2 class="header-title">Nuevo Contrato Histórico</h2>
+            </div>
+            <button type="button" class="btn-close-circle" data-close-modal aria-label="Cerrar">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <form method="post"
+              id="historicalPeriodForm"
+              action="{% url 'contract:period_historical_create' %}"
+              data-employee-search-url="{% url 'contract:period_historical_employee_search' %}"
+              enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="modal-body-custom">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Este registro alimenta el historial contractual y rol de pagos sin afectar la partida ni el estado laboral actual del servidor.</span>
+                </div>
+
+                <div class="grid-2-cols">
+                    <div class="form-group">
+                        <label class="form-label" for="{{ form.employee.id_for_label }}">Servidor / Ex-Servidor
+                            *</label>
+                        {{ form.employee }}
+                        <span class="form-hint">Escriba 3 o más letras o número de cédula</span>
+                        <div class="invalid-feedback"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="{{ form.contract_type.id_for_label }}">Modalidad Contractual
+                            *</label>
+                        {{ form.contract_type }}
+                        <div class="invalid-feedback"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="{{ form.document_number_input.id_for_label }}">Nro. Contrato /
+                            Documento</label>
+                        {{ form.document_number_input }}
+                        <div class="invalid-feedback"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="{{ form.administrative_unit.id_for_label }}">Unidad
+                            Administrativa</label>
+                        {{ form.administrative_unit }}
+                        <div class="invalid-feedback"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="{{ form.manual_position.id_for_label }}">Cargo Desempeñado
+                            *</label>
+                        {{ form.manual_position }}
+                        <div class="invalid-feedback"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="{{ form.manual_remuneration.id_for_label }}">Remuneración (RMU)
+                            *</label>
+                        {{ form.manual_remuneration }}
+                        <div class="invalid-feedback"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="{{ form.start_date.id_for_label }}">Fecha de Inicio *</label>
+                        {{ form.start_date }}
+                        <div class="invalid-feedback"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="{{ form.end_date.id_for_label }}">Fecha de Finalización *</label>
+                        {{ form.end_date }}
+                        <div class="invalid-feedback"></div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="{{ form.signed_document.id_for_label }}">Respaldo PDF (Opcional, máx.
+                        2MB)</label>
+                    {{ form.signed_document }}
+                    <div class="invalid-feedback"></div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-white-rectangle" data-close-modal>
+                    Cancelar
+                </button>
+                <button type="submit" class="btn-success">
+                    <i class="fas fa-save"></i> Guardar Histórico
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

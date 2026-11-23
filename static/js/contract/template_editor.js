@@ -1,477 +1,173 @@
-class ContractTemplateEditor {
-    constructor(templateId) {
-        this.templateId = templateId;
-        this.csrfToken = this.getCsrfToken();
-        this.sectionsList = document.getElementById('sectionsList');
-        this.emptyState = document.getElementById('emptyState');
-        this.sectionEditorModal = document.getElementById('sectionEditorModal');
-        this.btnOpenVariablesSwal = document.getElementById('btn-open-variables-swal');
-        this.btnOpenAddSectionModal = document.getElementById('btn-open-add-section-modal');
-        this.saveSectionBtn = document.getElementById('saveSectionBtn');
-        this.sectionEditorTitle = document.getElementById('sectionEditorTitle');
-        this.sectionEditorContent = document.getElementById('sectionEditorContent');
-        this.availableMappings = this.getAvailableMappings();
-        this.sectionEditorMode = 'create';
-        this.currentEditSectionId = null;
-    }
+/**
+ * SIGETH - Editor Enriquecido de Plantillas Contractuales
+ */
+(function () {
+    'use strict';
 
-    getAvailableMappings() {
-        const dataNode = document.getElementById('contractTemplateEditorMappingsData');
-        if (!dataNode) return [];
-        try {
-            const parsed = JSON.parse(dataNode.textContent || '[]');
-            return Array.isArray(parsed) ? parsed : [];
-        } catch (error) {
-            console.error('Error leyendo variables disponibles:', error);
-            return [];
-        }
-    }
+    document.addEventListener('DOMContentLoaded', () => {
+        const app = document.getElementById('contract-template-editor-app');
+        if (!app) return;
 
-    getCsrfToken() {
-        const hidden = document.querySelector('[name=csrfmiddlewaretoken]');
-        if (hidden && hidden.value) return hidden.value;
-        const match = document.cookie.match(/(?:^|; )csrftoken=([^;]+)/);
-        return match ? decodeURIComponent(match[1]) : '';
-    }
+        const saveUrl = app.dataset.saveUrl;
+        const previewUrl = app.dataset.previewUrl;
+        const editor = document.getElementById('contractTemplateRichEditor');
+        const btnSave = document.getElementById('btn-save-template-body');
+        const toolbar = document.getElementById('wysiwyg-toolbar');
+        const variablesBar = document.getElementById('template-variables-bar');
+        const previewBox = document.getElementById('preview');
 
-    async fetchJson(url, options = {}) {
-        const response = await fetch(url, options);
-        const contentType = (response.headers.get('content-type') || '').toLowerCase();
+        let savedRange = null;
+        let previewTimer = null;
 
-        if (!contentType.includes('application/json')) {
-            if (response.status === 403) throw new Error('No tiene permisos para realizar esta acción.');
-            if (response.status === 500) throw new Error('Error interno del servidor.');
-            throw new Error(`Respuesta inválida del servidor (HTTP ${response.status}).`);
+        function getCsrfToken() {
+            if (typeof window.getCSRF === 'function') return window.getCSRF();
+            const hidden = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (hidden && hidden.value) return hidden.value;
+            const match = document.cookie.match(/(?:^|; )csrftoken=([^;]+)/);
+            return match ? decodeURIComponent(match[1]) : '';
         }
 
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || data.message || `HTTP ${response.status}`);
-        return data;
-    }
-
-    init() {
-        this.attachEventListeners();
-        this.updatePreview();
-    }
-
-    attachEventListeners() {
-        if (this.btnOpenVariablesSwal) {
-            this.btnOpenVariablesSwal.addEventListener('click', () => this.openVariablesAlert());
-        }
-
-        if (this.btnOpenAddSectionModal) {
-            this.btnOpenAddSectionModal.addEventListener('click', () => this.openSectionEditorModal('create'));
-        }
-
-        if (this.saveSectionBtn) {
-            this.saveSectionBtn.addEventListener('click', () => this.handleSaveSection());
-        }
-
-        document.addEventListener('click', (e) => {
-            if (e.target.closest('.btn-delete')) {
-                const sectionId = e.target.closest('.btn-delete').dataset.sectionId;
-                this.handleDeleteSection(sectionId);
-                return;
+        function notify(message, icon = 'success') {
+            if (typeof window.showToast === 'function') {
+                window.showToast(message, icon);
             }
-
-            if (e.target.closest('.btn-edit')) {
-                const sectionId = e.target.closest('.btn-edit').dataset.sectionId;
-                this.handleEditSection(sectionId);
-                return;
-            }
-
-            if (e.target.closest('.js-close-section-editor-modal')) {
-                this.closeModal(this.sectionEditorModal);
-                return;
-            }
-
-            const formatBtn = e.target.closest('.js-format-action');
-            if (!formatBtn) return;
-
-            const targetId = formatBtn.dataset.target;
-            const textarea = document.getElementById(targetId);
-            if (textarea) {
-                this.wrapSelection(textarea, formatBtn.dataset.prefix || '', formatBtn.dataset.suffix || '');
-            }
-        });
-
-        this.sectionEditorModal?.addEventListener('click', (e) => {
-            if (e.target === this.sectionEditorModal) e.preventDefault();
-        });
-
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                this.closeModal(this.sectionEditorModal);
-                return;
-            }
-            if (e.key !== 'Tab') return;
-            if (!e.target || e.target.id !== 'sectionEditorContent') return;
-            e.preventDefault();
-            this.wrapSelection(e.target, '\t', '');
-        });
-
-        this.initDragDrop();
-    }
-
-    openModal(modal) {
-        if (!modal) return;
-        modal.classList.remove('hidden');
-        document.body.classList.add('modal-open');
-    }
-
-    closeModal(modal) {
-        if (!modal) return;
-        modal.classList.add('hidden');
-        const anyOpen = Array.from(document.querySelectorAll('.modal-overlay')).some((m) => !m.classList.contains('hidden'));
-        if (!anyOpen) document.body.classList.remove('modal-open');
-    }
-
-    openVariablesAlert() {
-        const mappings = this.availableMappings || [];
-        if (typeof Swal === 'undefined') return;
-
-        const rows = mappings.map((item) => {
-            const placeholder = this.escapeHtml(item.placeholder || '');
-            const label = this.escapeHtml(item.label || '');
-            return `<div class="template-editor-var-item"><code>${placeholder}</code><span>${label}</span></div>`;
-        }).join('');
-
-        const content = rows || '<div class="template-editor-var-empty">No hay variables configuradas.</div>';
-
-        Swal.fire({
-            title: 'Variables disponibles',
-            html: `<div class="template-editor-var-grid">${content}</div>`,
-            icon: 'info',
-            width: 705,
-            confirmButtonText: 'Cerrar',
-            customClass: {
-                popup: 'template-editor-vars-swal',
-                confirmButton: 'btn btn-primary template-editor-swal-confirm-btn',
-            },
-            buttonsStyling: false,
-        });
-    }
-
-    openSectionEditorModal(mode, sectionId = null) {
-        this.sectionEditorMode = mode;
-        this.currentEditSectionId = sectionId;
-
-        if (mode === 'edit' && sectionId) {
-            const item = document.querySelector(`.section-item[data-section-id="${sectionId}"]`);
-            const content = item ? this.decodeEscapedContent(item.dataset.sectionContent || '') : '';
-            this.sectionEditorTitle.textContent = 'Editar Párrafo';
-            this.sectionEditorContent.value = content;
-            if (this.saveSectionBtn) this.saveSectionBtn.innerHTML = '<i class="fa-solid fa-save"></i> Guardar';
-        } else {
-            this.sectionEditorTitle.textContent = 'Agregar Nuevo Párrafo';
-            this.sectionEditorContent.value = '';
-            if (this.saveSectionBtn) this.saveSectionBtn.innerHTML = '<i class="fas fa-plus"></i> Agregar Párrafo';
         }
 
-        this.openModal(this.sectionEditorModal);
-        window.setTimeout(() => this.sectionEditorContent.focus(), 30);
-    }
-
-    wrapSelection(textarea, prefix, suffix) {
-        const start = textarea.selectionStart || 0;
-        const end = textarea.selectionEnd || 0;
-        const selectedText = textarea.value.slice(start, end);
-        const replacement = `${prefix}${selectedText || 'texto'}${suffix}`;
-        textarea.setRangeText(replacement, start, end, 'end');
-        textarea.focus();
-    }
-
-    handleSaveSection() {
-        const content = this.decodeEscapedContent((this.sectionEditorContent?.value || '').trim());
-        if (!content) {
-            this.showNotification('El contenido no puede estar vacío', 'warning');
-            return;
-        }
-
-        if (this.sectionEditorMode === 'edit' && this.currentEditSectionId) {
-            this.updateSection(this.currentEditSectionId, content);
-            return;
-        }
-
-        this.createSection(content);
-    }
-
-    createSection(content) {
-        const maxOrder = document.querySelectorAll('.section-item').length;
-
-        this.fetchJson(`/contract/templates/${this.templateId}/sections/create/`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRFToken': this.csrfToken},
-            body: JSON.stringify({section_type: 'PARAGRAPH', content: content, order: maxOrder}),
-        }).then((data) => {
-            if (data.success) {
-                this.appendSection(data.section);
-                this.updateOrderLabels();
-                this.toggleEmptyState();
-                this.updatePreview();
-                this.closeModal(this.sectionEditorModal);
-                this.showNotification('Párrafo agregado exitosamente', 'success');
-            }
-        }).catch((err) => {
-            console.error(err);
-            this.showNotification(err.message || 'Error de red', 'danger');
-        });
-    }
-
-    updateSection(sectionId, content) {
-        this.fetchJson(`/contract/templates/sections/${sectionId}/update/`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRFToken': this.csrfToken},
-            body: JSON.stringify({section_type: 'PARAGRAPH', content: content}),
-        }).then((data) => {
-            if (data.success) {
-                this.updateSectionItem(data.section);
-                this.updateOrderLabels();
-                this.updatePreview();
-                this.closeModal(this.sectionEditorModal);
-                this.showNotification('Párrafo actualizado', 'success');
-            }
-        }).catch((err) => {
-            console.error(err);
-            this.showNotification(err.message || 'Error de red', 'danger');
-        });
-    }
-
-    handleEditSection(sectionId) {
-        this.openSectionEditorModal('edit', sectionId);
-    }
-
-    handleDeleteSection(sectionId) {
-        const executeDelete = () => {
-            this.fetchJson(`/contract/templates/sections/${sectionId}/delete/`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json', 'X-CSRFToken': this.csrfToken},
-            }).then((data) => {
-                if (data.success) {
-                    const item = document.querySelector(`.section-item[data-section-id="${sectionId}"]`);
-                    if (item) item.remove();
-                    this.updateOrderLabels();
-                    this.toggleEmptyState();
-                    this.updatePreview();
-                    this.showNotification('Párrafo eliminado', 'success');
+        function saveSelection() {
+            const sel = window.getSelection();
+            if (sel && sel.rangeCount > 0) {
+                const range = sel.getRangeAt(0);
+                if (editor && editor.contains(range.commonAncestorContainer)) {
+                    savedRange = range.cloneRange();
                 }
-            }).catch((err) => {
-                console.error(err);
-                this.showNotification(err.message || 'Error de red', 'danger');
-            });
-        };
-
-        if (typeof Swal !== 'undefined') {
-            Swal.fire({
-                title: '¿Eliminar párrafo?',
-                text: 'Esta acción no se puede deshacer.',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: 'Sí, eliminar',
-                cancelButtonText: 'Cancelar',
-                confirmButtonColor: '#d33',
-            }).then((result) => {
-                if (result.isConfirmed) executeDelete();
-            });
-            return;
+            }
         }
 
-        if (confirm('¿Eliminar este párrafo?')) executeDelete();
-    }
-
-    initDragDrop() {
-        if (!this.sectionsList) return;
-
-        let draggedElement = null;
-        document.addEventListener('dragstart', (e) => {
-            if (e.target.closest('.section-item')) {
-                draggedElement = e.target.closest('.section-item');
-                draggedElement.style.opacity = '0.5';
+        function insertTextAtCursor(text) {
+            if (!editor) return;
+            editor.focus();
+            const sel = window.getSelection();
+            if (savedRange && sel) {
+                sel.removeAllRanges();
+                sel.addRange(savedRange);
             }
-        });
 
-        document.addEventListener('dragend', () => {
-            if (draggedElement) draggedElement.style.opacity = '1';
-        });
+            if (sel && sel.rangeCount > 0) {
+                const range = sel.getRangeAt(0);
+                range.deleteContents();
+                const textNode = document.createTextNode(text);
+                range.insertNode(textNode);
+                range.setStartAfter(textNode);
+                range.setEndAfter(textNode);
+                sel.removeAllRanges();
+                sel.addRange(range);
+                savedRange = range.cloneRange();
+            } else {
+                editor.appendChild(document.createTextNode(text));
+            }
+        }
 
-        document.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            const item = e.target.closest('.section-item');
-            if (item && item !== draggedElement) {
-                const rect = item.getBoundingClientRect();
-                if (e.clientY < rect.top + rect.height / 2) {
-                    item.parentNode.insertBefore(draggedElement, item);
+        async function refreshPreview() {
+            if (!previewBox || !previewUrl) return;
+            try {
+                const response = await fetch(previewUrl, {
+                    headers: {'X-Requested-With': 'XMLHttpRequest'}
+                });
+                const data = await response.json();
+                if (data.preview) {
+                    previewBox.innerHTML = data.preview;
+                }
+            } catch (error) {
+                console.error('Error cargando vista previa:', error);
+            }
+        }
+
+        async function saveTemplateBody(silent = false) {
+            if (!editor || !saveUrl) return;
+            const htmlContent = editor.innerHTML.trim();
+            const originalBtnHtml = btnSave ? btnSave.innerHTML : '';
+
+            if (btnSave) {
+                btnSave.disabled = true;
+                btnSave.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+            }
+
+            try {
+                const response = await fetch(saveUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCsrfToken(),
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({content: htmlContent})
+                });
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    if (!silent) {
+                        notify(data.message || 'Guardado correctamente.', 'success');
+                    }
+                    await refreshPreview();
                 } else {
-                    item.parentNode.insertBefore(draggedElement, item.nextSibling);
+                    notify(data.error || 'No se pudo guardar.', 'error');
+                }
+            } catch (error) {
+                notify('Error de comunicación con el servidor.', 'error');
+            } finally {
+                if (btnSave) {
+                    btnSave.disabled = false;
+                    btnSave.innerHTML = originalBtnHtml;
                 }
             }
-        });
-
-        document.addEventListener('drop', (e) => {
-            e.preventDefault();
-            if (draggedElement) this.saveReorder();
-        });
-    }
-
-    saveReorder() {
-        const items = document.querySelectorAll('.section-item');
-        const sections = [];
-
-        items.forEach((item, index) => {
-            sections.push({id: parseInt(item.dataset.sectionId, 10), order: index});
-        });
-
-        this.fetchJson(`/contract/templates/${this.templateId}/sections/reorder/`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRFToken': this.csrfToken},
-            body: JSON.stringify({sections: sections}),
-        }).then((data) => {
-            if (data.success) {
-                this.updateOrderLabels();
-                this.updatePreview();
-                this.showNotification('Orden actualizado', 'success');
-            }
-        }).catch((err) => {
-            console.error(err);
-            this.showNotification(err.message || 'Error al guardar el orden', 'danger');
-        });
-    }
-
-    updatePreview() {
-        this.fetchJson(`/contract/templates/${this.templateId}/preview/`).then((data) => {
-            const preview = document.getElementById('preview');
-            if (!preview) return;
-            if (data.preview) preview.innerHTML = data.preview;
-            else if (data.error) preview.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
-        }).catch((err) => {
-            console.error(err);
-            const preview = document.getElementById('preview');
-            if (preview) {
-                preview.innerHTML = this.buildLocalPreviewHtml(err);
-            }
-        });
-    }
-
-    buildLocalPreviewHtml(error = null) {
-        const sections = this.collectLocalSectionsForPreview();
-        const body = sections.length
-            ? sections.join('')
-            : '<p style="text-align:justify; margin-bottom:0.6rem; line-height:1.42; font-size:0.95rem;">Agregue párrafos en el editor para visualizar el cuerpo del contrato.</p>';
-
-        return `
-            <div style="max-width: 800px; margin: 1rem auto; padding: 2.4rem 2rem 1.4rem; border: 1px solid #ddd; background: white;">
-                <div style="text-align:center; font-weight:bold; margin-bottom:1.2rem; font-size:1.08rem;">CONTRATO NRO. PENDIENTE</div>
-                <div style="text-align:left; margin-bottom:1.1rem; font-size:0.92rem;">Loja, ${new Date().toLocaleDateString('es-EC')}</div>
-                <div class="template-sections">
-                    ${body}
-                    ${error ? `<p class="text-muted small mt-3">${this.escapeHtml(error.message || 'Error interno del servidor')}</p>` : ''}
-                </div>
-            </div>
-        `;
-    }
-
-    collectLocalSectionsForPreview() {
-        const items = Array.from(document.querySelectorAll('.section-item'));
-        return items.map((item) => {
-            const rawType = item.dataset.sectionType || 'PARAGRAPH';
-            const content = this.escapeHtml(this.decodeEscapedContent(item.dataset.sectionContent || ''));
-            if (rawType === 'TITLE') {
-                return `<h4 style="text-align:left; margin-top:0.9rem; margin-bottom:0.35rem; font-size:1rem;">${content}</h4>`;
-            }
-            return `<p style="text-align:justify; margin-bottom:0.6rem; line-height:1.42; font-size:0.95rem;">${content}</p>`;
-        });
-    }
-
-    showNotification(message, type = 'info') {
-        const iconByType = {success: 'success', danger: 'error', warning: 'warning', info: 'info'};
-        if (typeof Swal !== 'undefined') {
-            const toast = Swal.mixin({toast: true, position: 'top-end', showConfirmButton: false, timer: 2500, timerProgressBar: true});
-            toast.fire({icon: iconByType[type] || 'info', title: message});
-            return;
         }
-    }
 
-    escapeHtml(value) {
-        return String(value)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/\"/g, '&quot;')
-            .replace(/'/g, '&#039;');
-    }
+        if (editor) {
+            editor.addEventListener('keyup', saveSelection);
+            editor.addEventListener('mouseup', saveSelection);
+            editor.addEventListener('blur', saveSelection);
+            editor.addEventListener('input', () => {
+                const bodyPreview = previewBox?.querySelector('.contract-preview-body');
+                if (bodyPreview) {
+                    bodyPreview.innerHTML = editor.innerHTML;
+                }
+                clearTimeout(previewTimer);
+                previewTimer = setTimeout(() => {
+                    saveTemplateBody(true);
+                }, 4000);
+            });
+        }
 
-    decodeEscapedContent(value) {
-        if (!value) return '';
-        return String(value)
-            .replace(/\\r\\n/g, '\n')
-            .replace(/\\n/g, '\n')
-            .replace(/\\r/g, '\n')
-            .replace(/\\t/g, '\t')
-            .replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
-    }
+        if (toolbar) {
+            toolbar.addEventListener('click', (e) => {
+                const btn = e.target.closest('.wysiwyg-btn');
+                if (!btn || !editor) return;
+                e.preventDefault();
+                editor.focus();
+                document.execCommand(btn.dataset.cmd, false, null);
+                saveSelection();
+            });
+        }
 
-    appendSection(section) {
-        if (!this.sectionsList || !section) return;
-        const rawType = section.section_type_code || 'PARAGRAPH';
-        const displayType = section.section_type || (rawType === 'TITLE' ? 'Título' : 'Párrafo');
-        const normalizedContent = this.decodeEscapedContent(section.content || '');
-        const safeContent = this.escapeHtml(normalizedContent);
+        if (variablesBar) {
+            variablesBar.addEventListener('click', (e) => {
+                const chip = e.target.closest('.js-insert-variable');
+                if (!chip) return;
+                const placeholder = chip.dataset.placeholder || '';
+                if (placeholder) {
+                    insertTextAtCursor(placeholder);
+                }
+            });
+        }
 
-        const wrapper = document.createElement('div');
-        wrapper.className = 'section-item card mb-2';
-        wrapper.setAttribute('draggable', 'true');
-        wrapper.dataset.sectionId = section.id;
-        wrapper.dataset.sectionType = rawType;
-        wrapper.dataset.sectionContent = normalizedContent;
-        wrapper.innerHTML = `
-            <div class="card-body p-3">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <div class="flex-grow-1">
-                        <span class="badge bg-info mb-2">${displayType}</span>
-                        <p class="mb-0 small text-muted"><small class="js-section-order">Orden: ${section.order ?? 0}</small></p>
-                    </div>
-                    <div class="btn-group btn-group-sm" role="group">
-                        <button type="button" class="btn btn-outline-primary btn-edit" data-section-id="${section.id}" title="Editar"><i class="fas fa-pencil"></i></button>
-                        <button type="button" class="btn btn-outline-danger btn-delete" data-section-id="${section.id}" title="Eliminar"><i class="fas fa-trash"></i></button>
-                    </div>
-                </div>
-                <p class="mb-0 small text-break">${safeContent.replace(/\n/g, '<br>')}</p>
-            </div>
-        `;
-        this.sectionsList.appendChild(wrapper);
-        this.toggleEmptyState();
-    }
+        if (btnSave) {
+            btnSave.addEventListener('click', (e) => {
+                e.preventDefault();
+                clearTimeout(previewTimer);
+                saveTemplateBody();
+            });
+        }
 
-    updateSectionItem(section) {
-        if (!section) return;
-        const item = document.querySelector(`.section-item[data-section-id="${section.id}"]`);
-        if (!item) return;
-
-        const rawType = section.section_type_code || 'PARAGRAPH';
-        const displayType = section.section_type || (rawType === 'TITLE' ? 'Título' : 'Párrafo');
-        const normalizedContent = this.decodeEscapedContent(section.content || '');
-
-        item.dataset.sectionType = rawType;
-        item.dataset.sectionContent = normalizedContent;
-
-        const badge = item.querySelector('.badge');
-        if (badge) badge.textContent = displayType;
-
-        const contentNode = item.querySelector('p.text-break');
-        if (contentNode) contentNode.innerHTML = this.escapeHtml(normalizedContent).replace(/\n/g, '<br>');
-    }
-
-    updateOrderLabels() {
-        const items = document.querySelectorAll('.section-item');
-        items.forEach((item, index) => {
-            const orderNode = item.querySelector('.js-section-order');
-            if (orderNode) orderNode.textContent = `Orden: ${index}`;
-        });
-    }
-
-    toggleEmptyState() {
-        if (!this.emptyState) return;
-        const count = document.querySelectorAll('.section-item').length;
-        this.emptyState.classList.toggle('d-none', count > 0);
-    }
-}
+        refreshPreview();
+    });
+})();

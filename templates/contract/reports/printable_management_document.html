@@ -44,7 +44,6 @@
             width: 210mm;
             height: 297mm;
             z-index: 0;
-            opacity: 1;
         }
 
         .letterhead img {
@@ -67,15 +66,28 @@
             text-transform: uppercase;
         }
 
-        .meta {
-            text-align: right;
+        .meta-date {
+            text-align: left;
             font-size: 12px;
-            margin-bottom: 0.9cm;
+            margin-bottom: 0.7cm;
         }
 
         .content {
             font-size: 12px;
             text-align: justify;
+        }
+
+        .content p {
+            margin-bottom: 0.55rem;
+            line-height: 1.42;
+        }
+
+        .section-subtitle {
+            text-align: left;
+            margin-top: 0.9rem;
+            margin-bottom: 0.35rem;
+            font-size: 12px;
+            font-weight: 700;
         }
 
         .signatures {
@@ -93,7 +105,6 @@
         .sign-line {
             border-top: 1px solid #1f2937;
             margin-top: 48px;
-            padding-top: 0;
         }
 
         .sign-name {
@@ -134,10 +145,6 @@
             cursor: pointer;
         }
 
-        .print-tools button:hover {
-            background: #e2e8f0;
-        }
-
         @media print {
             .print-tools {
                 display: none !important;
@@ -152,10 +159,6 @@
                 min-height: 297mm;
                 margin: 0;
                 box-shadow: none;
-            }
-
-            .document-content {
-                padding: 3.1cm 2.2cm 1.8cm 2.2cm;
             }
         }
     </style>
@@ -177,8 +180,27 @@
 
     <div class="document-content">
         <div class="title">{{ document_label|default:'CONTRATO' }} NRO. {{ document_number }}</div>
+        <div class="meta-date">{{ city|default:'Loja' }}, {{ today }}</div>
 
-        <div class="content">{{ body_html }}</div>
+        <div class="content">
+            {% if body_html %}
+                {{ body_html|safe }}
+            {% elif is_action_document %}
+                <p><strong>FECHA DE ELABORACIÓN:</strong> {{ replacements.ACTION_ISSUE_DATE|default:'-' }}</p>
+                <p><strong>RIGE DESDE:</strong> {{ replacements.ACTION_EFFECTIVE_FROM|default:'-' }} &nbsp;&nbsp;
+                    <strong>HASTA:</strong> {{ replacements.ACTION_EFFECTIVE_TO|default:'-' }}</p>
+                <div class="section-subtitle">MOTIVACIÓN Y EXPLICACIÓN</div>
+                <p><strong>MOTIVACIÓN:</strong> {{ replacements.MOTIVATION|default:'-' }}</p>
+                <p>{{ replacements.EXPLANATION|default:'-' }}</p>
+            {% else %}
+                <p>
+                    Se certifica que <strong>{{ employee_full_name }}</strong> mantiene un vínculo laboral bajo la
+                    modalidad
+                    <strong>{{ replacements|default:'' }}</strong> debidamente registrado en la Dirección de Talento
+                    Humano.
+                </p>
+            {% endif %}
+        </div>
 
         <div class="signatures">
             <div class="sign-box">
@@ -198,6 +220,5 @@
         </div>
     </div>
 </div>
-
 </body>
 </html>

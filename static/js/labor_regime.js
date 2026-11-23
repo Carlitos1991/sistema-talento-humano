@@ -1,531 +1,491 @@
 /**
  * SIGETH - Labor Regime & Contract Types Module
- * Vanilla JS standard using global functions from main.js and style.css
  */
+(function () {
+    'use strict';
 
-class LaborRegimeController {
-    constructor() {
-        this.activeFilterStatus = '';
-        this.currentRegime = {id: null, name: ''};
-        this.contractTypes = [];
-        this.searchDebounceTimer = null;
+    let currentStatusFilter = '';
+    let currentSearchQuery = '';
+    let activeRegimeId = null;
+    let activeRegimeName = '';
 
-        this.initDOMElements();
-        this.bindEvents();
-        this.initTableManager();
+    document.addEventListener('DOMContentLoaded', () => {
+        initStatCardFilters();
+        initSearchInput();
+        initRegimeModalEvents();
+        initTableDelegation();
+        initContractTypeModalEvents();
+    });
+
+    function getCsrfToken() {
+        if (typeof window.getCSRF === 'function') return window.getCSRF();
+        const hidden = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (hidden && hidden.value) return hidden.value;
+        const match = document.cookie.match(/(?:^|; )csrftoken=([^;]+)/);
+        return match ? decodeURIComponent(match[1]) : '';
     }
 
-    initDOMElements() {
-        // Contenedores y Buscador
-        this.tableWrapper = document.getElementById('table-content-wrapper');
-        this.searchInput = document.getElementById('regime-search-input');
-
-        // Tarjetas Estadísticas
-        this.statCards = {
-            all: document.getElementById('stat-card-total'),
-            active: document.getElementById('stat-card-active'),
-            inactive: document.getElementById('stat-card-inactive')
-        };
-        this.statValues = {
-            total: document.getElementById('stat-val-total'),
-            active: document.getElementById('stat-val-active'),
-            inactive: document.getElementById('stat-val-inactive')
-        };
-
-        // Modal Formulario Régimen
-        this.regimeModal = document.getElementById('regimeFormModalOverlay');
-        this.regimeForm = document.getElementById('regimeForm');
-        this.regimeModalTitle = document.getElementById('regime-modal-title');
-        this.regimeSubmitText = document.getElementById('regime-submit-text');
-        this.regimeCodeInput = document.getElementById('regime_code');
-        this.regimeCodeHint = document.getElementById('regime-code-hint');
-        this.btnCreateRegime = document.getElementById('btn-create-regime');
-        this.btnCloseRegimeTop = document.getElementById('btn-close-regime-modal-top');
-        this.btnCancelRegime = document.getElementById('btn-cancel-regime-form');
-
-        // Modal Lista de Tipos de Contrato
-        this.contractModal = document.getElementById('contractTypeListModalOverlay');
-        this.contractRegimeTitle = document.getElementById('modal-regime-title-name');
-        this.contractTypesTbody = document.getElementById('contract-types-tbody');
-        this.btnCreateContractType = document.getElementById('btn-create-contract-type-open');
-        this.btnCloseContractTop = document.getElementById('btn-close-contract-modal-top');
-        this.btnCloseContractBottom = document.getElementById('btn-close-contract-modal-bottom');
-    }
-
-    bindEvents() {
-        // Búsqueda en tiempo real
-        if (this.searchInput) {
-            this.searchInput.addEventListener('input', () => {
-                clearTimeout(this.searchDebounceTimer);
-                this.searchDebounceTimer = setTimeout(() => this.fetchRegimesTable(), 350);
+    function notify(message, icon = 'success') {
+        if (typeof window.showToast === 'function') {
+            window.showToast(message, icon === 'error' ? 'error' : icon);
+            return;
+        }
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: icon,
+                title: message,
+                showConfirmButton: false,
+                timer: 2500,
+                timerProgressBar: true
             });
         }
+    }
 
-        // Filtro por Estado en Stat Cards
-        Object.values(this.statCards).forEach(card => {
-            if (!card) return;
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    // =========================================================================
+    // 1. FILTROS Y ACTUALIZACIÓN PARCIAL DE TABLA
+    // =========================================================================
+
+    function initStatCardFilters() {
+        const cards = document.querySelectorAll('.stats-row .stat-card');
+        if (!cards.length) return;
+
+        cards[0].classList.add('active-filter');
+
+        cards.forEach((card) => {
             card.addEventListener('click', () => {
-                const status = card.dataset.status;
-                this.filterByStatus(status);
+                cards.forEach((c) => c.classList.remove('active-filter'));
+                card.classList.add('active-filter');
+                currentStatusFilter = card.dataset.status || '';
+                refreshRegimeTable();
             });
         });
-
-        // Apertura y Cierre de Modal Régimen
-        if (this.btnCreateRegime) this.btnCreateRegime.addEventListener('click', () => this.openCreateRegimeModal());
-        if (this.btnCloseRegimeTop) this.btnCloseRegimeTop.addEventListener('click', () => this.closeRegimeModal());
-        if (this.btnCancelRegime) this.btnCancelRegime.addEventListener('click', () => this.closeRegimeModal());
-        if (this.regimeForm) this.regimeForm.addEventListener('submit', (e) => this.submitRegimeForm(e));
-
-        // Acciones delegadas en la tabla principal de regímenes
-        if (this.tableWrapper) {
-            this.tableWrapper.addEventListener('click', (e) => {
-                const btn = e.target.closest('button');
-                if (!btn) return;
-
-                const action = btn.dataset.action;
-                const id = btn.dataset.id;
-                const name = btn.dataset.name;
-                const status = btn.dataset.status;
-
-                if (action === 'edit-regime') this.openEditRegimeModal(id);
-                if (action === 'toggle-status') this.toggleRegimeStatus(id, status);
-                if (action === 'view-contract-types') this.openContractTypesModal(id, name);
-            });
-        }
-
-        // Modal Modalidades de Contratación
-        if (this.btnCreateContractType) this.btnCreateContractType.addEventListener('click', () => this.promptCreateContractType());
-        if (this.btnCloseContractTop) this.btnCloseContractTop.addEventListener('click', () => this.closeContractTypesModal());
-        if (this.btnCloseContractBottom) this.btnCloseContractBottom.addEventListener('click', () => this.closeContractTypesModal());
-
-        // Acciones delegadas en la tabla de modalidades (modal)
-        if (this.contractTypesTbody) {
-            this.contractTypesTbody.addEventListener('click', (e) => {
-                const btn = e.target.closest('button');
-                if (!btn) return;
-
-                const action = btn.dataset.action;
-                const id = btn.dataset.id;
-
-                if (action === 'edit-contract-type') {
-                    const item = this.contractTypes.find(c => String(c.id) === String(id));
-                    if (item) this.promptEditContractType(item);
-                }
-                if (action === 'toggle-contract-type') this.toggleContractTypeStatus(id);
-                if (action === 'open-template-editor') {
-                    window.open(`/contract/templates/create/${id}/`, '_blank');
-                }
-            });
-        }
     }
 
-    initTableManager() {
-        const table = this.tableWrapper ? this.tableWrapper.querySelector('.managed-table') : null;
-        if (table && typeof TableManager === 'function') {
-            new TableManager(table);
-        }
-    }
+    function initSearchInput() {
+        const input = document.getElementById('regime-search-input');
+        if (!input) return;
 
-    // =========================================================================
-    // 1. GESTIÓN DE REGÍMENES LABORALES
-    // =========================================================================
-
-    filterByStatus(status) {
-        if (this.activeFilterStatus === status) {
-            this.activeFilterStatus = '';
-        } else {
-            this.activeFilterStatus = status;
-        }
-
-        // Actualizar opacidad visual de las tarjetas
-        Object.values(this.statCards).forEach(card => {
-            if (!card) return;
-            const cardStatus = card.dataset.status;
-            card.classList.toggle('opacity-low', this.activeFilterStatus !== '' && this.activeFilterStatus !== cardStatus);
+        let debounceTimer = null;
+        input.addEventListener('input', () => {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                currentSearchQuery = input.value.trim();
+                refreshRegimeTable();
+            }, 300);
         });
 
-        this.fetchRegimesTable();
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                clearTimeout(debounceTimer);
+                currentSearchQuery = input.value.trim();
+                refreshRegimeTable();
+            }
+        });
     }
 
-    async fetchRegimesTable() {
+    async function refreshRegimeTable() {
         const params = new URLSearchParams();
-        const searchVal = (this.searchInput?.value || '').trim();
-        if (searchVal) params.set('name', searchVal);
-        if (this.activeFilterStatus) params.set('is_active', this.activeFilterStatus);
+        if (currentSearchQuery) params.set('name', currentSearchQuery);
+        if (currentStatusFilter) params.set('is_active', currentStatusFilter);
 
         try {
-            const res = await fetch(`/contract/regimes/partial-table/?${params.toString()}`, {
+            const response = await fetch(`/contract/regimes/partial-table/?${params.toString()}`, {
                 headers: {'X-Requested-With': 'XMLHttpRequest'}
             });
-            const data = await res.json();
+            const data = await response.json();
 
-            if (this.tableWrapper) {
-                this.tableWrapper.innerHTML = data.table_html;
-                this.initTableManager();
+            const wrapper = document.getElementById('table-content-wrapper');
+            if (wrapper && data.table_html) {
+                wrapper.innerHTML = data.table_html;
             }
 
             if (data.stats) {
-                if (this.statValues.total) this.statValues.total.textContent = data.stats.total;
-                if (this.statValues.active) this.statValues.active.textContent = data.stats.active;
-                if (this.statValues.inactive) this.statValues.inactive.textContent = data.stats.inactive;
+                const totalEl = document.getElementById('stat-val-total');
+                const activeEl = document.getElementById('stat-val-active');
+                const inactiveEl = document.getElementById('stat-val-inactive');
+                if (totalEl) totalEl.textContent = data.stats.total ?? 0;
+                if (activeEl) activeEl.textContent = data.stats.active ?? 0;
+                if (inactiveEl) inactiveEl.textContent = data.stats.inactive ?? 0;
             }
         } catch (error) {
-            console.error('Error fetching regimes table:', error);
-            showToast('Error al actualizar la tabla de regímenes', 'error');
+            notify('Error al actualizar el listado de regímenes.', 'error');
         }
     }
 
-    openCreateRegimeModal() {
-        this.regimeForm.reset();
-        document.getElementById('regime_id').value = '';
-        this.regimeModalTitle.textContent = 'Nuevo Régimen Laboral';
-        this.regimeSubmitText.textContent = 'GUARDAR';
+    // =========================================================================
+    // 2. MODAL DE RÉGIMEN LABORAL (CREAR / EDITAR / ESTADO)
+    // =========================================================================
 
-        this.regimeCodeInput.removeAttribute('readonly');
-        this.regimeCodeInput.classList.remove('bg-readonly');
-        this.regimeCodeHint.classList.add('hidden');
+    function initRegimeModalEvents() {
+        const btnCreate = document.getElementById('btn-create-regime');
+        const btnCloseTop = document.getElementById('btn-close-regime-modal-top');
+        const btnCancel = document.getElementById('btn-cancel-regime-form');
+        const form = document.getElementById('regimeForm');
 
-        this.regimeModal.classList.remove('hidden');
+        if (btnCreate) btnCreate.addEventListener('click', () => openRegimeModal());
+        if (btnCloseTop) btnCloseTop.addEventListener('click', closeRegimeModal);
+        if (btnCancel) btnCancel.addEventListener('click', closeRegimeModal);
+        if (form) form.addEventListener('submit', submitRegimeForm);
+    }
+
+    function openRegimeModal(regime = null) {
+        const overlay = document.getElementById('regimeFormModalOverlay');
+        const form = document.getElementById('regimeForm');
+        const idInput = document.getElementById('regime_id');
+        const codeInput = document.getElementById('regime_code');
+        const nameInput = document.getElementById('regime_name');
+        const descInput = document.getElementById('regime_description');
+        const titleEl = document.getElementById('regime-modal-title');
+        const submitText = document.getElementById('regime-submit-text');
+        const codeHint = document.getElementById('regime-code-hint');
+
+        if (form) form.reset();
+
+        if (regime) {
+            if (idInput) idInput.value = regime.id;
+            if (codeInput) {
+                codeInput.value = regime.code || '';
+                codeInput.readOnly = true;
+            }
+            if (nameInput) nameInput.value = regime.name || '';
+            if (descInput) descInput.value = regime.description || '';
+            if (titleEl) titleEl.textContent = 'Editar Régimen Laboral';
+            if (submitText) submitText.textContent = 'ACTUALIZAR';
+            if (codeHint) codeHint.classList.remove('hidden');
+        } else {
+            if (idInput) idInput.value = '';
+            if (codeInput) {
+                codeInput.value = '';
+                codeInput.readOnly = false;
+            }
+            if (titleEl) titleEl.textContent = 'Nuevo Régimen Laboral';
+            if (submitText) submitText.textContent = 'GUARDAR';
+            if (codeHint) codeHint.classList.add('hidden');
+        }
+
+        if (overlay) overlay.classList.remove('hidden');
         document.body.classList.add('no-scroll');
     }
 
-    async openEditRegimeModal(id) {
-        try {
-            const res = await fetch(`/contract/regimes/detail/${id}/`);
-            const data = await res.json();
+    function closeRegimeModal() {
+        const overlay = document.getElementById('regimeFormModalOverlay');
+        if (overlay) overlay.classList.add('hidden');
+        document.body.classList.remove('no-scroll');
+    }
 
+    async function loadRegimeForEdit(regimeId) {
+        try {
+            const response = await fetch(`/contract/regimes/detail/${regimeId}/`, {
+                headers: {'X-Requested-With': 'XMLHttpRequest'}
+            });
+            const data = await response.json();
             if (data.success && data.regime) {
-                const r = data.regime;
-                document.getElementById('regime_id').value = r.id;
-                this.regimeCodeInput.value = r.code;
-                document.getElementById('regime_name').value = r.name;
-                document.getElementById('regime_description').value = r.description || '';
-
-                this.regimeModalTitle.textContent = 'Editar Régimen Laboral';
-                this.regimeSubmitText.textContent = 'ACTUALIZAR';
-
-                this.regimeCodeInput.setAttribute('readonly', 'true');
-                this.regimeCodeInput.classList.add('bg-readonly');
-                this.regimeCodeHint.classList.remove('hidden');
-
-                this.regimeModal.classList.remove('hidden');
-                document.body.classList.add('no-scroll');
-            }
-        } catch (error) {
-            showToast('Error al consultar datos del régimen', 'error');
-        }
-    }
-
-    closeRegimeModal() {
-        this.regimeModal.classList.add('hidden');
-        document.body.classList.remove('no-scroll');
-        this.regimeForm.reset();
-    }
-
-    async submitRegimeForm(e) {
-        e.preventDefault();
-        const regimeId = document.getElementById('regime_id').value;
-        const url = regimeId ? `/contract/regimes/update/${regimeId}/` : '/contract/regimes/create/';
-
-        const formData = new FormData(this.regimeForm);
-        formData.set('code', this.regimeCodeInput.value.toUpperCase().trim());
-        formData.set('name', document.getElementById('regime_name').value.toUpperCase().trim());
-
-        const btnSubmit = document.getElementById('btn-submit-regime-form');
-        btnSubmit.disabled = true;
-
-        try {
-            const res = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': typeof getCSRF === 'function' ? getCSRF() : '',
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: formData
-            });
-            const data = await res.json();
-
-            if (res.ok && data.success) {
-                showToast(data.message || 'Régimen guardado con éxito', 'success');
-                this.closeRegimeModal();
-                this.fetchRegimesTable();
+                openRegimeModal(data.regime);
             } else {
-                let errorMsg = data.message || 'Existen errores en el formulario.';
-                if (data.errors) {
-                    errorMsg = Object.entries(data.errors).map(([f, err]) => `• <b>${f}:</b> ${err}`).join('<br>');
-                }
-                Swal.fire({
-                    title: 'Atención',
-                    html: errorMsg,
-                    icon: 'warning',
-                    confirmButtonText: 'Entendido'
-                });
+                notify('No se pudo obtener el detalle del régimen.', 'error');
             }
         } catch (error) {
-            showToast('Error al guardar el régimen laboral', 'error');
-        } finally {
-            btnSubmit.disabled = false;
+            notify('Error de conexión con el servidor.', 'error');
         }
     }
 
-    toggleRegimeStatus(id, currentStatus) {
-        const isActive = String(currentStatus) === 'true';
-        const url = `/contract/regimes/toggle-status/${id}/`;
-        const itemName = 'este régimen laboral';
+    async function submitRegimeForm(e) {
+        e.preventDefault();
+        const form = e.target;
+        const regimeId = (document.getElementById('regime_id')?.value || '').trim();
+        const url = regimeId
+            ? `/contract/regimes/update/${regimeId}/`
+            : '/contract/regimes/create/';
 
-        toggleStatusAjax(url, itemName, isActive, () => {
-            this.fetchRegimesTable();
-        });
-    }
-
-    // =========================================================================
-    // 2. GESTIÓN DE MODALIDADES DE CONTRATACIÓN (MODAL)
-    // =========================================================================
-
-    openContractTypesModal(regimeId, regimeName) {
-        this.currentRegime = {id: regimeId, name: regimeName};
-        if (this.contractRegimeTitle) this.contractRegimeTitle.textContent = regimeName;
-
-        this.contractModal.classList.remove('hidden');
-        document.body.classList.add('no-scroll');
-        this.fetchContractTypes();
-    }
-
-    closeContractTypesModal() {
-        this.contractModal.classList.add('hidden');
-        document.body.classList.remove('no-scroll');
-        this.currentRegime = {id: null, name: ''};
-        this.contractTypes = [];
-    }
-
-    async fetchContractTypes() {
-        if (!this.currentRegime.id) return;
-        this.contractTypesTbody.innerHTML = `
-            <tr>
-                <td colspan="5" class="text-center py-4">
-                    <i class="fas fa-spinner fa-spin text-primary fa-2x"></i>
-                    <p class="text-muted small mt-2 mb-0">Cargando modalidades...</p>
-                </td>
-            </tr>`;
+        const submitBtn = document.getElementById('btn-submit-regime-form');
+        if (submitBtn) submitBtn.disabled = true;
 
         try {
-            const res = await fetch(`/contract/regimes/${this.currentRegime.id}/contract-types/`);
-            const data = await res.json();
-
-            if (data.success) {
-                this.contractTypes = data.contract_types || [];
-                this.renderContractTypesTable();
-            }
-        } catch (error) {
-            showToast('Error al cargar modalidades de contratación', 'error');
-            this.contractTypesTbody.innerHTML = '';
-        }
-    }
-
-    renderContractTypesTable() {
-        if (!this.contractTypes.length) {
-            this.contractTypesTbody.innerHTML = `
-                <tr>
-                    <td colspan="5">
-                        <div class="empty-state-container py-4">
-                            <i class="fas fa-folder-open empty-state-icon"></i>
-                            <p class="empty-state-text">No existen modalidades registradas para este régimen.</p>
-                        </div>
-                    </td>
-                </tr>`;
-            return;
-        }
-
-        this.contractTypesTbody.innerHTML = this.contractTypes.map(type => {
-            const isContrato = type.category === 'CONTRATO';
-            const categoryBadge = isContrato
-                ? '<span class="badge badge-blue"><i class="fas fa-file-contract me-1"></i> Contrato</span>'
-                : '<span class="badge badge-purple"><i class="fas fa-user-check me-1"></i> Acción de Personal</span>';
-
-            const statusBadge = type.is_active
-                ? '<span class="badge badge-green">Activo</span>'
-                : '<span class="badge badge-gray">Inactivo</span>';
-
-            const toggleBtn = type.is_active
-                ? `<button type="button" class="btn-red-circle" data-action="toggle-contract-type" data-id="${type.id}" title="Desactivar Modalidad"><i class="fas fa-toggle-on"></i></button>`
-                : `<button type="button" class="btn-green-circle" data-action="toggle-contract-type" data-id="${type.id}" title="Activar Modalidad"><i class="fas fa-toggle-off"></i></button>`;
-
-            return `
-                <tr>
-                    <td><code class="text-blue bold">${type.code}</code></td>
-                    <td class="bold">${type.name}</td>
-                    <td>${categoryBadge}</td>
-                    <td class="text-center">${statusBadge}</td>
-                    <td class="actions text-center">
-                        <div class="actions-wrapper">
-                            <button type="button" class="btn-dark-blue-circle" data-action="open-template-editor" data-id="${type.id}" title="Editor de Plantilla">
-                                <i class="fas fa-file-signature"></i>
-                            </button>
-                            <button type="button" class="btn-blue-circle" data-action="edit-contract-type" data-id="${type.id}" title="Editar">
-                                <i class="fas fa-pen-to-square"></i>
-                            </button>
-                            ${toggleBtn}
-                        </div>
-                    </td>
-                </tr>`;
-        }).join('');
-    }
-
-    async promptCreateContractType() {
-        const {value: formValues} = await Swal.fire({
-            title: 'Nueva Modalidad Laboral',
-            html: `
-                <div style="text-align: left; padding: 0.5rem; font-family: 'Inter', sans-serif;">
-                    <div class="form-group mb-3">
-                        <label class="form-label font-weight-700">Código Único *</label>
-                        <input id="swal-contract-code" class="form-control uppercase-input" placeholder="EJ: CT_OCASIONAL">
-                    </div>
-                    <div class="form-group mb-3">
-                        <label class="form-label font-weight-700">Nombre de la Modalidad *</label>
-                        <input id="swal-contract-name" class="form-control uppercase-input" placeholder="EJ: CONTRATO OCASIONAL">
-                    </div>
-                    <div class="form-group mb-0">
-                        <label class="form-label font-weight-700">Categoría de Documento</label>
-                        <select id="swal-contract-category" class="input-field">
-                            <option value="CONTRATO">Contrato</option>
-                            <option value="ACCION_PERSONAL">Acción de Personal</option>
-                        </select>
-                    </div>
-                </div>`,
-            showCancelButton: true,
-            confirmButtonText: 'Guardar Modalidad',
-            cancelButtonText: 'Cancelar',
-            preConfirm: () => {
-                const code = document.getElementById('swal-contract-code').value.trim().toUpperCase();
-                const name = document.getElementById('swal-contract-name').value.trim().toUpperCase();
-                if (!code || !name) {
-                    Swal.showValidationMessage('El código y el nombre son obligatorios.');
-                    return false;
-                }
-                return {
-                    code: code,
-                    name: name,
-                    contract_type_category: document.getElementById('swal-contract-category').value,
-                    labor_regime: this.currentRegime.id
-                };
-            }
-        });
-
-        if (formValues) {
-            const formData = new FormData();
-            Object.keys(formValues).forEach(k => formData.append(k, formValues[k]));
-
-            try {
-                const res = await fetch('/contract/contract-types/create/', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': typeof getCSRF === 'function' ? getCSRF() : '',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    body: formData
-                });
-                const data = await res.json();
-
-                if (res.ok && data.success) {
-                    showToast(data.message || 'Modalidad registrada', 'success');
-                    this.fetchContractTypes();
-                    this.fetchRegimesTable();
-                } else {
-                    Swal.fire('Atención', data.errors?.code?.[0] || data.message || 'No se pudo crear la modalidad', 'warning');
-                }
-            } catch (error) {
-                showToast('Error al registrar la modalidad', 'error');
-            }
-        }
-    }
-
-    async promptEditContractType(type) {
-        const {value: formValues} = await Swal.fire({
-            title: 'Editar Modalidad Laboral',
-            html: `
-                <div style="text-align: left; padding: 0.5rem; font-family: 'Inter', sans-serif;">
-                    <div class="form-group mb-3">
-                        <label class="form-label font-weight-700">Código Único (Solo Lectura)</label>
-                        <input id="swal-edit-code" class="form-control bg-readonly" readonly value="${type.code}">
-                    </div>
-                    <div class="form-group mb-3">
-                        <label class="form-label font-weight-700">Nombre de la Modalidad *</label>
-                        <input id="swal-edit-name" class="form-control uppercase-input" value="${type.name}">
-                    </div>
-                    <div class="form-group mb-0">
-                        <label class="form-label font-weight-700">Categoría de Documento</label>
-                        <select id="swal-edit-category" class="input-field">
-                            <option value="CONTRATO" ${type.category === 'CONTRATO' ? 'selected' : ''}>Contrato</option>
-                            <option value="ACCION_PERSONAL" ${type.category === 'ACCION_PERSONAL' ? 'selected' : ''}>Acción de Personal</option>
-                        </select>
-                    </div>
-                </div>`,
-            showCancelButton: true,
-            confirmButtonText: 'Guardar Cambios',
-            cancelButtonText: 'Cancelar',
-            preConfirm: () => {
-                const name = document.getElementById('swal-edit-name').value.trim().toUpperCase();
-                if (!name) {
-                    Swal.showValidationMessage('El nombre es obligatorio.');
-                    return false;
-                }
-                return {
-                    code: type.code,
-                    name: name,
-                    contract_type_category: document.getElementById('swal-edit-category').value,
-                    labor_regime: this.currentRegime.id
-                };
-            }
-        });
-
-        if (formValues) {
-            const formData = new FormData();
-            Object.keys(formValues).forEach(k => formData.append(k, formValues[k]));
-
-            try {
-                const res = await fetch(`/contract/contract-types/update/${type.id}/`, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': typeof getCSRF === 'function' ? getCSRF() : '',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    body: formData
-                });
-                const data = await res.json();
-
-                if (res.ok && data.success) {
-                    showToast(data.message || 'Modalidad actualizada', 'success');
-                    this.fetchContractTypes();
-                } else {
-                    Swal.fire('Atención', data.message || 'No se pudo actualizar la modalidad', 'warning');
-                }
-            } catch (error) {
-                showToast('Error al actualizar la modalidad', 'error');
-            }
-        }
-    }
-
-    async toggleContractTypeStatus(typeId) {
-        try {
-            const res = await fetch(`/contract/contract-types/toggle-status/${typeId}/`, {
+            const response = await fetch(url, {
                 method: 'POST',
+                body: new FormData(form),
                 headers: {
-                    'X-CSRFToken': typeof getCSRF === 'function' ? getCSRF() : '',
-                    'X-Requested-With': 'XMLHttpRequest'
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': getCsrfToken()
                 }
             });
-            const data = await res.json();
-            if (data.success) {
-                showToast(data.message || 'Estado actualizado', 'success');
-                this.fetchContractTypes();
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                notify(data.message || 'Régimen guardado correctamente.', 'success');
+                closeRegimeModal();
+                await refreshRegimeTable();
+            } else if (data.errors) {
+                const msg = Object.entries(data.errors)
+                    .map(([field, errs]) => `• <b>${escapeHtml(field)}:</b> ${escapeHtml(errs.join(', '))}`)
+                    .join('<br>');
+                Swal.fire({title: 'Error de Validación', html: msg, icon: 'warning'});
+            } else {
+                Swal.fire('Error', data.message || 'No se pudo guardar el régimen.', 'error');
             }
         } catch (error) {
-            showToast('Error al cambiar el estado de la modalidad', 'error');
+            notify('Error técnico al guardar el régimen.', 'error');
+        } finally {
+            if (submitBtn) submitBtn.disabled = false;
         }
     }
-}
 
-// Inicialización limpia
-document.addEventListener('DOMContentLoaded', () => {
-    window.laborRegimeController = new LaborRegimeController();
-});
+    function toggleRegimeStatus(regimeId, isCurrentlyActive) {
+        const actionLabel = isCurrentlyActive ? 'dar de baja' : 'activar';
+
+        Swal.fire({
+            title: `¿Desea ${actionLabel} este régimen?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, continuar',
+            cancelButtonText: 'Cancelar'
+        }).then(async (result) => {
+            if (!result.isConfirmed) return;
+
+            try {
+                const response = await fetch(`/contract/regimes/toggle-status/${regimeId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': getCsrfToken()
+                    }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    notify(data.message || 'Estado actualizado.', 'success');
+                    await refreshRegimeTable();
+                } else {
+                    Swal.fire('Atención', data.message || 'No se pudo cambiar el estado.', 'warning');
+                }
+            } catch (error) {
+                notify('Error de red al cambiar estado.', 'error');
+            }
+        });
+    }
+
+    // =========================================================================
+    // 3. DELEGACIÓN DE EVENTOS EN TABLA PRINCIPAL
+    // =========================================================================
+
+    function initTableDelegation() {
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest('#laborRegimeTable button[data-action]');
+            if (!btn) return;
+
+            const action = btn.dataset.action;
+            const id = btn.dataset.id;
+
+            if (action === 'edit-regime') {
+                loadRegimeForEdit(id);
+            } else if (action === 'toggle-status') {
+                toggleRegimeStatus(id, btn.dataset.status === 'true');
+            } else if (action === 'view-contract-types') {
+                openContractTypesModal(id, btn.dataset.name || '');
+            }
+        });
+    }
+
+    // =========================================================================
+    // 4. MODAL DE MODALIDADES CONTRACTUALES (CONTRACT TYPES)
+    // =========================================================================
+
+    function initContractTypeModalEvents() {
+        const btnCloseTop = document.getElementById('btn-close-contract-modal-top');
+        const btnCloseBottom = document.getElementById('btn-close-contract-modal-bottom');
+        const btnAdd = document.getElementById('btn-create-contract-type-open');
+        const wrapper = document.getElementById('contract-types-table-wrapper');
+
+        if (btnCloseTop) btnCloseTop.addEventListener('click', closeContractTypesModal);
+        if (btnCloseBottom) btnCloseBottom.addEventListener('click', closeContractTypesModal);
+        if (btnAdd) btnAdd.addEventListener('click', () => openContractTypeFormSwal());
+
+        if (wrapper) {
+            wrapper.addEventListener('click', (e) => {
+                const btn = e.target.closest('button[data-ct-action]');
+                if (!btn) return;
+
+                const action = btn.dataset.ctAction;
+                const ctId = btn.dataset.id;
+
+                if (action === 'edit') {
+                    openContractTypeFormSwal({
+                        id: ctId,
+                        code: btn.dataset.code || '',
+                        name: btn.dataset.name || '',
+                        category: btn.dataset.category || 'CONTRATO'
+                    });
+                } else if (action === 'toggle') {
+                    toggleContractTypeStatus(ctId);
+                }
+            });
+        }
+    }
+
+    async function loadContractTypesList() {
+        if (!activeRegimeId) return;
+        const wrapper = document.getElementById('contract-types-table-wrapper');
+        if (!wrapper) return;
+
+        try {
+            const response = await fetch(`/contract/regimes/${activeRegimeId}/contract-types/`, {
+                headers: {'X-Requested-With': 'XMLHttpRequest'}
+            });
+            if (!response.ok) {
+                notify(`Error ${response.status} al consultar las modalidades.`, 'error');
+                return;
+            }
+            const data = await response.json();
+            if (data.success && typeof data.table_html === 'string') {
+                wrapper.innerHTML = data.table_html;
+            }
+        } catch (error) {
+            notify('Error al cargar las modalidades contractuales.', 'error');
+        }
+    }
+
+    async function openContractTypesModal(regimeId, regimeName) {
+        activeRegimeId = regimeId;
+        activeRegimeName = regimeName;
+
+        const titleEl = document.getElementById('modal-regime-title-name');
+        if (titleEl) titleEl.textContent = regimeName || '-';
+
+        const overlay = document.getElementById('contractTypeListModalOverlay');
+        if (overlay) overlay.classList.remove('hidden');
+        document.body.classList.add('no-scroll');
+
+        await loadContractTypesList();
+    }
+
+    function closeContractTypesModal() {
+        const overlay = document.getElementById('contractTypeListModalOverlay');
+        if (overlay) overlay.classList.add('hidden');
+        document.body.classList.remove('no-scroll');
+        activeRegimeId = null;
+        activeRegimeName = '';
+    }
+
+    async function openContractTypeFormSwal(contractType = null) {
+        if (!activeRegimeId) return;
+        const isEdit = Boolean(contractType && contractType.id);
+
+        const {value: formValues} = await Swal.fire({
+            title: isEdit ? 'Editar Modalidad Contractual' : 'Nueva Modalidad Contractual',
+            html: `
+                <div class="contract-type-swal-form">
+                    <div class="form-group">
+                        <label class="form-label">Código *</label>
+                        <input id="swal-ct-code" type="text" class="form-control uppercase-input"
+                               value="${escapeHtml(contractType?.code || '')}"
+                               ${isEdit ? 'readonly' : ''}
+                               placeholder="EJ: CONTRATO_OCASIONAL">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Nombre de la Modalidad *</label>
+                        <input id="swal-ct-name" type="text" class="form-control"
+                               value="${escapeHtml(contractType?.name || '')}"
+                               placeholder="Ej: Contrato de Servicios Ocasionales">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Categoría *</label>
+                        <select id="swal-ct-category" class="input-field">
+                            <option value="CONTRATO" ${(contractType?.category || 'CONTRATO') === 'CONTRATO' ? 'selected' : ''}>Contrato</option>
+                            <option value="ACCION_PERSONAL" ${contractType?.category === 'ACCION_PERSONAL' ? 'selected' : ''}>Acción de Personal / Nombramiento</option>
+                        </select>
+                    </div>
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: isEdit ? 'Actualizar' : 'Guardar',
+            cancelButtonText: 'Cancelar',
+            preConfirm: () => {
+                const code = document.getElementById('swal-ct-code').value.trim().toUpperCase();
+                const name = document.getElementById('swal-ct-name').value.trim();
+                const category = document.getElementById('swal-ct-category').value;
+
+                if (!code) {
+                    Swal.showValidationMessage('El código es obligatorio.');
+                    return false;
+                }
+                if (!name) {
+                    Swal.showValidationMessage('El nombre de la modalidad es obligatorio.');
+                    return false;
+                }
+                return {code, name, contract_type_category: category};
+            }
+        });
+
+        if (!formValues) return;
+
+        const formData = new FormData();
+        formData.append('labor_regime', activeRegimeId);
+        formData.append('code', formValues.code);
+        formData.append('name', formValues.name);
+        formData.append('contract_type_category', formValues.contract_type_category);
+
+        const url = isEdit
+            ? `/contract/contract-types/update/${contractType.id}/`
+            : '/contract/contract-types/create/';
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': getCsrfToken()
+                }
+            });
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                notify(data.message || 'Modalidad guardada correctamente.', 'success');
+                await loadContractTypesList();
+                await refreshRegimeTable();
+            } else if (data.errors) {
+                const msg = Object.entries(data.errors)
+                    .map(([field, errs]) => `• <b>${escapeHtml(field)}:</b> ${escapeHtml(errs.join(', '))}`)
+                    .join('<br>');
+                Swal.fire({title: 'Error de Validación', html: msg, icon: 'warning'});
+            } else {
+                Swal.fire('Error', data.message || 'No se pudo guardar la modalidad.', 'error');
+            }
+        } catch (error) {
+            notify('Error técnico al guardar la modalidad.', 'error');
+        }
+    }
+
+    async function toggleContractTypeStatus(contractTypeId) {
+        try {
+            const response = await fetch(`/contract/contract-types/toggle-status/${contractTypeId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': getCsrfToken()
+                }
+            });
+            const data = await response.json();
+            if (data.success) {
+                notify(data.message || 'Estado actualizado.', 'success');
+                await loadContractTypesList();
+                await refreshRegimeTable();
+            } else {
+                Swal.fire('Atención', data.message || 'No se pudo actualizar el estado.', 'warning');
+            }
+        } catch (error) {
+            notify('Error de red al actualizar la modalidad.', 'error');
+        }
+    }
+})();

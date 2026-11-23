@@ -5,14 +5,14 @@
             <div class="header-content-group">
                 <div class="header-icon-circle"><i class="fas fa-folder-open"></i></div>
                 <div>
-                    <h3 class="header-title mb-1">Expediente de Gestión Laboral</h3>
-                    <p class="text-white-opacity small mb-0">
+                    <h3 class="header-title">Expediente de Gestión Laboral</h3>
+                    <p class="text-white-opacity small">
                         Documento: <strong id="detail-document-number">-</strong>
                     </p>
                 </div>
             </div>
 
-            <div class="d-flex align-items-center gap-3 ms-auto">
+            <div class="modal-header-actions">
                 <button type="button" id="btn-detail-edit" class="btn-views-action hidden" title="Modificar Expediente">
                     <i class="fas fa-edit"></i>
                 </button>
@@ -23,27 +23,26 @@
         </div>
 
         <div class="modal-body-scrolled">
-            <!-- Banner Superior del Empleado -->
-            <div class="inherited-info-card mb-4" id="detail-banner-card">
-                <div class="d-flex align-items-center w-100">
+            <div class="inherited-info-card card-spaced" id="detail-banner-card">
+                <div class="banner-row">
                     <img id="detail-employee-photo" src="{% static 'img/avatar-placeholder.png' %}"
-                         class="person-avatar me-3" alt="Foto">
+                         class="person-avatar" alt="Foto">
                     <div class="employee-main-data">
-                        <h4 class="mb-1 text-white font-weight-800" id="detail-employee-name">-</h4>
+                        <h4 class="text-white font-weight-800" id="detail-employee-name">-</h4>
                         <span class="status-badge general" id="detail-status-badge">-</span>
                     </div>
 
-                    <div class="budget-inherited-box ms-auto text-end">
-                        <small class="text-white-opacity d-block mb-1" id="detail-budget-title">PARTIDA
+                    <div class="budget-inherited-box banner-budget-right">
+                        <small class="text-white-opacity block-meta" id="detail-budget-title">PARTIDA
                             PRESUPUESTARIA</small>
-                        <strong class="text-accent d-block period-budget-code-text" id="detail-budget-number">-</strong>
-                        <span class="d-block text-white font-weight-600" id="detail-position-name">-</span>
+                        <strong class="text-accent block-meta period-budget-code-text"
+                                id="detail-budget-number">-</strong>
+                        <span class="block-meta text-white font-weight-600" id="detail-position-name">-</span>
                     </div>
                 </div>
             </div>
 
             <div class="grid-2-cols">
-                <!-- Columna 1: Información Administrativa -->
                 <div class="section-card-standard border-left-primary">
                     <h6 class="section-title"><i class="fas fa-file-invoice text-primary"></i> Información de Respaldo
                     </h6>
@@ -55,7 +54,6 @@
                     </div>
                 </div>
 
-                <!-- Columna 2: Vigencia y Remuneración -->
                 <div class="section-card-standard">
                     <h6 class="section-title"><i class="fas fa-calendar-alt text-primary"></i> Vigencia y Jornada</h6>
                     <div class="audit-data-row"><span>Tipo Contrato:</span> <strong id="detail-contract-type">-</strong>
@@ -70,9 +68,46 @@
                 </div>
             </div>
 
+            <!-- Funciones del puesto (Contratos) -->
+            <div class="section-card-standard card-spaced" id="detail-functions-section">
+                <h6 class="section-title"><i class="fas fa-tasks text-primary"></i> Funciones del Puesto</h6>
+                <p class="small text-muted" id="detail-job-functions">-</p>
+            </div>
+
+            <!-- Motivación y Explicación (Acciones de Personal) -->
+            <div class="section-card-standard card-spaced hidden" id="detail-action-section">
+                <h6 class="section-title"><i class="fas fa-comment-dots text-primary"></i> Motivación y Explicación</h6>
+                <div class="audit-data-row"><span>Motivación:</span> <strong id="detail-action-motivation">-</strong>
+                </div>
+                <p class="small text-muted" id="detail-action-explanation">-</p>
+            </div>
+
+            <!-- Documento Legalizado PDF -->
+            <div class="section-card-standard card-spaced">
+                <h6 class="section-title"><i class="fas fa-file-pdf text-danger"></i> Documento Legalizado (PDF)</h6>
+                <div id="detail-doc-upload-box" class="doc-upload-bar">
+                    <input type="file" id="detail-doc-file-input" accept=".pdf" class="form-control">
+                    <button type="button" class="btn-blue-rectangle" id="btn-upload-doc">
+                        <i class="fas fa-upload"></i> Subir PDF
+                    </button>
+                </div>
+                <div id="detail-doc-view-box" class="doc-upload-bar hidden">
+                    <span class="badge badge-green"><i
+                            class="fas fa-check-circle"></i> Archivo legalizado cargado</span>
+                    <div class="doc-actions-row">
+                        <a href="#" target="_blank" id="detail-doc-link" class="btn-blue-rectangle">
+                            <i class="fas fa-eye"></i> Ver PDF
+                        </a>
+                        <button type="button" id="btn-delete-doc" class="btn-red-circle" title="Eliminar PDF">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <div class="modal-footer-medium modal-footer-spaced">
-                <button type="button" id="btn-close-detail-bottom" class="btn-dark-blue-rectangle-outline">CERRAR
-                    EXPEDIENTE
+                <button type="button" id="btn-close-detail-bottom" class="btn-dark-blue-rectangle-outline">
+                    CERRAR EXPEDIENTE
                 </button>
             </div>
         </div>

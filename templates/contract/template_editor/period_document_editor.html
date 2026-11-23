@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/management_period.css' %}">
+{% endblock %}
+
+{% block title %}Editar Contrato {{ period.document_number }} | SIGETH{% endblock %}
+
+{% block content %}
+    <div class="content-wrapper template-editor-page"
+         id="contract-template-editor-app"
+         data-save-url="{% url 'contract:period_edit_content' period.id %}">
+
+        <div class="header-card">
+            <div>
+                <h1><i class="fas fa-file-pen"></i> CONTRATO NRO. {{ doc_number }}</h1>
+                <p>
+                    Servidor: <strong>{{ period.employee.person.full_name }}</strong>
+                    <span class="badge badge-amber">{{ period.status.name }}</span>
+                </p>
+            </div>
+            <div class="header-actions-group">
+                <button type="button" class="btn-blue-rectangle" id="btn-save-template-body">
+                    <i class="fas fa-save"></i> Guardar Contrato
+                </button>
+                <a href="{% url 'contract:period_list' %}" class="btn-dark-blue-rectangle-outline">
+                    <i class="fas fa-arrow-left"></i> Volver
+                </a>
+            </div>
+        </div>
+
+        <div class="section-card-standard border-left-primary card-spaced">
+            <h6 class="section-title">
+                <i class="fas fa-code text-primary"></i> Variables Genéricas Disponibles (Clic para insertar en el
+                texto)
+            </h6>
+            <div class="template-variables-bar" id="template-variables-bar">
+                {% for item in available_mappings %}
+                    <button type="button"
+                            class="btn-variable-chip js-insert-variable"
+                            data-placeholder="{{ item.placeholder }}"
+                            title="{{ item.label }}">
+                        {{ item.placeholder }}
+                    </button>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="grid-2-cols">
+            <div class="section-card-standard border-left-primary">
+                <h6 class="section-title">
+                    <i class="fas fa-pen-to-square text-primary"></i> Redacción del Contrato Individual
+                </h6>
+
+                <div class="wysiwyg-toolbar" id="wysiwyg-toolbar" role="toolbar">
+                    <button type="button" class="wysiwyg-btn" data-cmd="bold" title="Negrita"><i
+                            class="fas fa-bold"></i></button>
+                    <button type="button" class="wysiwyg-btn" data-cmd="italic" title="Cursiva"><i
+                            class="fas fa-italic"></i></button>
+                    <button type="button" class="wysiwyg-btn" data-cmd="underline" title="Subrayado"><i
+                            class="fas fa-underline"></i></button>
+                    <span class="wysiwyg-divider"></span>
+                    <button type="button" class="wysiwyg-btn" data-cmd="justifyLeft" title="Alinear izquierda"><i
+                            class="fas fa-align-left"></i></button>
+                    <button type="button" class="wysiwyg-btn" data-cmd="justifyCenter" title="Centrar"><i
+                            class="fas fa-align-center"></i></button>
+                    <button type="button" class="wysiwyg-btn" data-cmd="justifyRight" title="Alinear derecha"><i
+                            class="fas fa-align-right"></i></button>
+                    <button type="button" class="wysiwyg-btn" data-cmd="justifyFull" title="Justificar"><i
+                            class="fas fa-align-justify"></i></button>
+                    <span class="wysiwyg-divider"></span>
+                    <button type="button" class="wysiwyg-btn" data-cmd="insertUnorderedList" title="Lista con viñetas">
+                        <i class="fas fa-list-ul"></i></button>
+                    <button type="button" class="wysiwyg-btn" data-cmd="insertOrderedList" title="Lista numerada"><i
+                            class="fas fa-list-ol"></i></button>
+                    <span class="wysiwyg-divider"></span>
+                    <button type="button" class="wysiwyg-btn" data-cmd="removeFormat" title="Limpiar formato"><i
+                            class="fas fa-eraser"></i></button>
+                </div>
+
+                <div id="contractTemplateRichEditor"
+                     class="wysiwyg-editor-surface"
+                     contenteditable="true"
+                     data-placeholder="Edite o agregue párrafos adicionales para este contrato...">{{ editor_body_html|safe }}</div>
+            </div>
+
+            <div class="section-card-standard">
+                <h6 class="section-title">
+                    <i class="fas fa-eye text-primary"></i> Vista Previa del Contrato
+                </h6>
+                <div class="template-preview-wrapper">
+                    <div id="preview" class="template-preview-box">
+                        <div class="contract-preview-sheet">
+                            <div class="contract-preview-title contract-preview-title--contract">
+                                CONTRATO NRO. {{ doc_number }}
+                            </div>
+                            <div class="contract-preview-body">{{ editor_body_html|safe }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/contract/template_editor.js' %}"></script>
+{% endblock %}

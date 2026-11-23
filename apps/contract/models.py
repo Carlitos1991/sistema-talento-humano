@@ -1,14 +1,13 @@
-from django.db import IntegrityError, models, transaction
-from django.db.models import Q
-from django.core.exceptions import ValidationError
-from django.utils import timezone
 import re
-from core.models import BaseModel, CatalogItem, User
-from employee.models import Employee
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError, models, transaction
+from django.utils import timezone
+
 from budget.models import BudgetLine
+from core.models import BaseModel, CatalogItem
+from employee.models import Employee
 from institution.models import AdministrativeUnit
 from schedule.models import Schedule
-from personnel_actions.models import ActionMovement, ActionType, PersonnelAction
 
 
 class LaborRegime(BaseModel):
@@ -47,8 +46,10 @@ class ContractType(BaseModel):
     ]
 
     labor_regime = models.ForeignKey(
-        LaborRegime, on_delete=models.PROTECT,
-        related_name='contract_types', verbose_name='Régimen Laboral'
+        LaborRegime,
+        on_delete=models.PROTECT,
+        related_name='contract_types',
+        verbose_name='Régimen Laboral'
     )
     code = models.CharField(verbose_name="Código", max_length=50)
     name = models.CharField(verbose_name="Nombre del Tipo de Contrato", max_length=255)
@@ -137,28 +138,26 @@ class ManagementPeriod(BaseModel):
     Período de Gestión / Contrato Activo
     Representa el vínculo formal entre el Empleado, la Partida y la Institución.
     """
-    # Identificador único del contrato (Ej: MUN-TTHH-2024-001-CT)
     document_number = models.CharField(
         verbose_name='Número de Documento',
-        max_length=100, unique=True, db_index=True, blank=True
+        max_length=100,
+        unique=True,
+        db_index=True,
+        blank=True
     )
-
     employee = models.ForeignKey(
-        Employee, on_delete=models.PROTECT,
-        related_name='management_periods', verbose_name='Empleado'
+        Employee,
+        on_delete=models.PROTECT,
+        related_name='management_periods',
+        verbose_name='Empleado'
     )
     budget_line = models.ForeignKey(
-        'budget.BudgetLine',
+        BudgetLine,
         on_delete=models.PROTECT,
         null=True,
         blank=True
     )
-    manual_position = models.CharField(
-        verbose_name='Cargo Manual',
-        max_length=255,
-        blank=True,
-        null=True
-    )
+    manual_position = models.CharField(verbose_name='Cargo Manual', max_length=255, blank=True, null=True)
     manual_remuneration = models.DecimalField(
         verbose_name='Remuneración Manual',
         max_digits=12,
@@ -167,26 +166,40 @@ class ManagementPeriod(BaseModel):
         null=True
     )
     contract_type = models.ForeignKey(
-        ContractType, on_delete=models.PROTECT,
-        related_name='management_periods', verbose_name='Tipo de Contrato'
+        ContractType,
+        on_delete=models.PROTECT,
+        related_name='management_periods',
+        verbose_name='Tipo de Contrato'
     )
     status = models.ForeignKey(
-        CatalogItem, on_delete=models.PROTECT,
+        CatalogItem,
+        on_delete=models.PROTECT,
         limit_choices_to={'catalog__code': 'STATUS_CONTRACT'},
-        related_name='periods_by_status', verbose_name='Estado'
+        related_name='periods_by_status',
+        verbose_name='Estado'
     )
     administrative_unit = models.ForeignKey(
-        AdministrativeUnit, on_delete=models.PROTECT,
+        AdministrativeUnit,
+        on_delete=models.PROTECT,
         null=True,
         blank=True,
-        related_name='management_periods', verbose_name='Unidad Administrativa'
+        related_name='management_periods',
+        verbose_name='Unidad Administrativa'
     )
     schedule = models.ForeignKey(
-        Schedule, on_delete=models.PROTECT,
+        Schedule,
+        on_delete=models.PROTECT,
         null=True,
         blank=True,
-        related_name='management_periods', verbose_name='Horario'
+        related_name='management_periods',
+        verbose_name='Horario'
     )
+    custom_document_body = models.TextField(
+        verbose_name='Cuerpo Personalizado del Documento',
+        blank=True,
+        default='',
+    )
+    is_historical = models.BooleanField(verbose_name='Registro Histórico', default=False, db_index=True)
 
     # Detalles del Puesto
     job_functions = models.TextField(verbose_name='Funciones del Puesto', blank=True, null=True)
@@ -208,7 +221,9 @@ class ManagementPeriod(BaseModel):
     # Archivos
     signed_document = models.FileField(
         verbose_name='Documento Firmado',
-        upload_to='contracts/%Y/%m/', blank=True, null=True
+        upload_to='contracts/%Y/%m/',
+        blank=True,
+        null=True
     )
     personnel_action = models.OneToOneField(
         'personnel_actions.PersonnelAction',
@@ -230,8 +245,27 @@ class ManagementPeriod(BaseModel):
 
     def clean(self):
         super().clean()
-        if self.end_date and self.start_date > self.end_date:
+        if self.start_date and self.end_date and self.end_date < self.start_date:
+            raise ValidationError({'end_date': 'La fecha de finalización no puede ser anterior a la fecha de inicio.'})
+        if self.is_historical:
+            return
+        if self.end_date and self.start_date and self.start_date > self.end_date:
             raise ValidationError({'end_date': 'La fecha de fin no puede ser anterior al inicio.'})
+
+        if self.is_historical:
+            errors = {}
+            if not self.manual_position:
+                errors['manual_position'] = 'El cargo histórico es obligatorio.'
+            if self.manual_remuneration in (None, ''):
+                errors['manual_remuneration'] = 'La remuneración histórica es obligatoria.'
+            if not self.start_date:
+                errors['start_date'] = 'La fecha de inicio es obligatoria.'
+            if not self.end_date:
+                errors['end_date'] = 'La fecha de finalización es obligatoria para un contrato histórico.'
+            if errors:
+                raise ValidationError(errors)
+            return
+
         contract_code = (getattr(self.contract_type, 'code', '') or '').upper()
         contract_category = (getattr(self.contract_type, 'contract_type_category', '') or '').upper()
         is_professional_service = contract_code == 'SERVICIOS_PROFESIONALES'
@@ -279,8 +313,6 @@ class ManagementPeriod(BaseModel):
                 errors['budget_line'] = 'La partida presupuestaria es obligatoria para este tipo de contrato.'
             if errors:
                 raise ValidationError(errors)
-        # Nota: validación de ocupación de partida removida.
-        # La validación de integridad sobre asignaciones se gestiona desde el módulo de presupuesto.
 
     @property
     def display_position(self):
@@ -290,16 +322,13 @@ class ManagementPeriod(BaseModel):
 
     @property
     def get_dynamic_position(self):
-        # 1. Intentar por Partida
         if self.budget_line and self.budget_line.position_item:
             return self.budget_line.position_item.name
 
-        # 2. Intentar por Historial (Tabla contract_history)
         hist = self.history_set.first()
         if hist and hist.historical_position:
             return hist.historical_position
 
-        # 3. Fallback: Manual o Número de documento
         return self.manual_position or self.document_number
 
     @property
@@ -322,7 +351,6 @@ class ManagementPeriod(BaseModel):
         if self.budget_line and self.budget_line.position_item:
             return self.budget_line.position_item.name
 
-        # Accedemos al historial vinculado (reverse relation de ForeignKey)
         hist = self.history_set.first()
         if hist and hist.historical_position:
             return hist.historical_position
@@ -340,133 +368,6 @@ class ManagementPeriod(BaseModel):
             return hist.historical_salary
 
         return self.manual_remuneration
-
-    def _normalized_contract_type_code(self):
-        raw_code = (getattr(self.contract_type, 'code', '') or '').upper().strip()
-        normalized = re.sub(r'[^A-Z0-9]+', '_', raw_code).strip('_')
-        return (normalized or 'SIN_TIPO')[:20]
-
-    def _resolve_personnel_action_type(self):
-        contract_code = (getattr(self.contract_type, 'code', '') or '').upper().strip()
-        contract_name = (getattr(self.contract_type, 'name', '') or '').upper().strip()
-        return (
-            ActionType.objects.filter(is_active=True).filter(
-                Q(code__iexact=contract_code) |
-                Q(name__iexact=contract_name) |
-                Q(code__iexact=self._normalized_contract_type_code())
-            ).first()
-        )
-
-    def _generate_personnel_action_number(self):
-        year = (self.elaboration_date.year if self.elaboration_date else (
-            self.start_date.year if self.start_date else timezone.now().year))
-        max_sequence = 0
-        existing_numbers = PersonnelAction.objects.filter(number__endswith=f'-{year}').values_list('number', flat=True)
-
-        for number in existing_numbers:
-            sequence_str = (number or '').split('-')[0]
-            if sequence_str.isdigit():
-                max_sequence = max(max_sequence, int(sequence_str))
-
-        return f'{max_sequence + 1:04d}-{year}'
-
-    def _get_personnel_action_authorities(self):
-        users = list(User.objects.filter(is_active=True).order_by('username')[:2])
-        if not users:
-            raise ValidationError(
-                {'personnel_action': 'Debe existir al menos un usuario activo para generar la acción de personal.'})
-        primary = users[0]
-        secondary = users[1] if len(users) > 1 else None
-        return primary, secondary
-
-    def _get_action_template_sections(self):
-        template = ContractTemplate.objects.filter(contract_type=self.contract_type, is_active=True).first()
-        if not template:
-            return []
-        return list(template.sections.filter(is_active=True).order_by('order')[:6])
-
-    def _resolve_authority_from_template(self, sections, index, fallback):
-        if len(sections) <= index:
-            return fallback
-        raw_value = (sections[index].content or '').strip()
-        if not raw_value:
-            return fallback
-        signer = User.objects.filter(pk=raw_value, is_active=True).first()
-        return signer or fallback
-
-    def _create_linked_personnel_action(self):
-        if self.personnel_action_id:
-            return
-
-        if not self._should_auto_create_personnel_action():
-            return
-
-        action_type = self._resolve_personnel_action_type()
-        template_sections = self._get_action_template_sections()
-
-        if template_sections:
-            template_action_type = ActionType.objects.filter(
-                pk=(template_sections[0].content or '').strip(),
-                is_active=True,
-            ).first()
-            action_type = template_action_type or action_type
-
-        if not action_type:
-            raise ValidationError(
-                {'contract_type': 'No existe un tipo de acción activo que coincida con esta modalidad.'})
-
-        authority_1, authority_2 = self._get_personnel_action_authorities()
-        authority_1 = self._resolve_authority_from_template(template_sections, 1, authority_1)
-        authority_2 = self._resolve_authority_from_template(template_sections, 2, authority_2)
-        reviewer = self._resolve_authority_from_template(template_sections, 3, authority_2 or authority_1)
-        elaboration = self._resolve_authority_from_template(template_sections, 4, authority_1)
-        register = self._resolve_authority_from_template(template_sections, 5, authority_1)
-        action = PersonnelAction.objects.create(
-            employee=self.employee,
-            action_type=action_type,
-            number=self._generate_personnel_action_number(),
-            motivation=self.action_motivation or self.contract_type.name,
-            date_issue=self.elaboration_date or self.start_date,
-            date_effective=self.start_date,
-            explanation=self.action_explanation or self.job_functions or '',
-            authority_1=authority_1,
-            authority_2=authority_2,
-            reviewer=reviewer,
-            elaboration=elaboration,
-            register=register,
-            created_by=self.created_by,
-        )
-
-        ActionMovement.objects.create(
-            personnel_action=action,
-            previous_unit=None,
-            previous_position=None,
-            previous_remuneration=0,
-            previous_budget_line=None,
-            new_unit=self.administrative_unit,
-            new_position=self.budget_line.position_item if self.budget_line and self.budget_line.position_item else None,
-            new_remuneration=self.display_remuneration or 0,
-            new_budget_line=self.budget_line if self.budget_line else None,
-            location_text=self.workplace or '',
-        )
-
-        self.personnel_action = action
-
-    def _should_auto_create_personnel_action(self):
-        contract_type = self.contract_type
-        if not contract_type:
-            return False
-
-        contract_category = (contract_type.contract_type_category or '').upper()
-        if contract_category == ContractType.TYPE_ACCION_PERSONAL:
-            return False
-
-        contract_code = (contract_type.code or '').upper()
-        contract_name = (contract_type.name or '').upper()
-        if 'NOMBRAMIENTO' in contract_code or 'NOMBRAMIENTO' in contract_name:
-            return False
-
-        return True
 
     def _generate_document_number(self):
         year = self.start_date.year if self.start_date else timezone.now().year
@@ -499,23 +400,16 @@ class ManagementPeriod(BaseModel):
                 self.document_number = self._generate_document_number()
 
             try:
-                # Usamos transaction.atomic por seguridad si se llama fuera de una vista transaccional
                 with transaction.atomic():
                     super().save(*args, **kwargs)
 
-                    # Actualizar el área del empleado automáticamente
-                    if self.employee and self.administrative_unit:
+                    # Actualizar el área actual del empleado solo en registros vigentes (no históricos)
+                    if not self.is_historical and self.employee and self.administrative_unit:
                         if self.employee.area != self.administrative_unit:
                             self.employee.area = self.administrative_unit
-                            self.employee.save()
-
-                    if self.personnel_action_id is None and (getattr(self.contract_type, 'contract_type_category',
-                                                                     '') or '').upper() == ContractType.TYPE_ACCION_PERSONAL:
-                        self._create_linked_personnel_action()
-                        super().save(update_fields=['personnel_action'])
+                            self.employee.save(update_fields=['area'])
                 return
             except IntegrityError as error:
-                # Reintento solo cuando el número fue autogenerado y colisiona por concurrencia.
                 if auto_generate_document_number and attempt < 4 and 'document_number' in str(error):
                     continue
                 raise
@@ -525,8 +419,13 @@ class History(models.Model):
     """Historial de cambios en contratos"""
     employee = models.ForeignKey(Employee, verbose_name='Employee', blank=True, null=True, on_delete=models.PROTECT)
     type = models.CharField(verbose_name='Tipo de Movimiento', max_length=50, blank=True, null=True)
-    contract = models.ForeignKey('ManagementPeriod', verbose_name='Contrato', blank=True, null=True,
-                                 on_delete=models.PROTECT)
+    contract = models.ForeignKey(
+        'ManagementPeriod',
+        verbose_name='Contrato',
+        blank=True,
+        null=True,
+        on_delete=models.PROTECT
+    )
     user_register = models.CharField(
         verbose_name='Registro por:',
         max_length=100,
