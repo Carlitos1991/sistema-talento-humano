@@ -696,10 +696,27 @@ class PayrollCalculatorService:
                             ) * Decimal(str(valid_dependents_count))
 
                         elif code_clean == 'ANTIGUEDAD':
-                            if regime_code == 'CT' and years_of_last_contract >= 1:
-                                if years_of_service >= 1:
-                                    val = salary * (Decimal('0.25') / Decimal('100.0')) * Decimal(
-                                        str(int(years_of_last_contract)))
+                            if regime_code == 'CT':
+                                inst_data = getattr(slip.employee, 'institutional_data', None)
+                                entry_date = getattr(inst_data, 'entry_date', None) if inst_data else None
+                                if entry_date and entry_date <= self.period.end_date:
+                                    effective_days = max(
+                                        total_days_service,
+                                        (self.period.end_date - entry_date).days + 1
+                                    )
+                                else:
+                                    effective_days = total_days_service
+                                seniority_years = int(effective_days / 365.25)
+                                if seniority_years >= 1 and self.period.working_days:
+                                    sbu_val = Decimal(str(self.config.get('SBU', '460.00')))
+                                    proportional_sbu = sbu_val * (
+                                            Decimal(str(slip.worked_days)) / Decimal(str(self.period.working_days))
+                                    )
+                                    val = (
+                                            proportional_sbu
+                                            * (Decimal('0.25') / Decimal('100.0'))
+                                            * Decimal(str(seniority_years))
+                                    ).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
                         if val > 0:
                             items_buffer.append(
