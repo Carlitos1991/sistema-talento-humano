@@ -104,14 +104,6 @@
 
                     <div class="grid-2-cols grid-compact">
                         <div class="form-group">
-                            <label class="form-label">Fecha Ingreso a Roles</label>
-                            {{ form.roles_entry_date }}
-                            {% if form.roles_entry_date.errors %}
-                                <span class="text-red small">{{ form.roles_entry_date.errors.0 }}</span>
-                            {% endif %}
-                        </div>
-
-                        <div class="form-group">
                             <label class="form-label">Número de Roles</label>
                             {{ form.roles_count }}
                             {% if form.roles_count.errors %}

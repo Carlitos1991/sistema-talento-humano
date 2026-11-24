@@ -152,8 +152,7 @@ class PayrollInfoForm(forms.ModelForm):
         model = PayrollInfo
         fields = [
             'monthly_payment', 'reserve_funds', 'immediate_reserve_funds',
-            'family_dependents', 'education_dependents',
-            'roles_entry_date', 'roles_count'
+            'family_dependents', 'education_dependents', 'roles_count'
         ]
         widgets = {
             'monthly_payment': forms.CheckboxInput(attrs={'class': 'checkbox-lg'}),
@@ -161,10 +160,5 @@ class PayrollInfoForm(forms.ModelForm):
             'immediate_reserve_funds': forms.CheckboxInput(attrs={'class': 'checkbox-lg'}),
             'family_dependents': forms.NumberInput(attrs={'class': 'input-field', 'min': '0', 'max': '20'}),
             'education_dependents': forms.NumberInput(attrs={'class': 'input-field', 'min': '0', 'max': '20'}),
-            'roles_entry_date': forms.DateInput(format='%Y-%m-%d', attrs={'class': 'input-field', 'type': 'date'}),
             'roles_count': forms.NumberInput(attrs={'class': 'input-field', 'min': '0'}),
         }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['roles_entry_date'].input_formats = ['%Y-%m-%d']
