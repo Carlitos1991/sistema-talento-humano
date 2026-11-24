@@ -38,12 +38,11 @@
                     </td>
                     <td class="text-center font-monospace">{{ item.employee.person.document_number|default:"--" }}</td>
 
-                    <!-- Columna Bitácoras -->
                     <td class="actions text-center">
                         <div class="actions-wrapper">
                             {% if perms.permitrequest.add_permitrequest %}
                                 <button type="button" class="btn-green-circle"
-                                        onclick="openAjaxModal('{% url 'permissions:bitacora_register' item.employee.pk %}')"
+                                        data-modal-url="{% url 'permissions:bitacora_register' item.employee.pk %}"
                                         title="Ingresar Bitácora">
                                     <i class="fa-solid fa-file-circle-plus"></i>
                                 </button>
@@ -51,12 +50,12 @@
 
                             {% if perms.permitrequest.view_permitrequest %}
                                 <button type="button" class="btn-blue-circle"
-                                        onclick="openAjaxModal('{% url 'permissions:bitacora_list' item.employee.pk %}')"
+                                        data-modal-url="{% url 'permissions:bitacora_list' item.employee.pk %}"
                                         title="Listar Bitácoras Pendientes">
                                     <i class="fas fa-list-ul"></i>
                                 </button>
                                 <button type="button" class="btn-dark-blue-circle"
-                                        onclick="openAjaxModal('{% url 'permissions:bitacora_history' item.employee.pk %}')"
+                                        data-modal-url="{% url 'permissions:bitacora_history' item.employee.pk %}"
                                         title="Historial de Bitácoras Aprobadas">
                                     <i class="fas fa-history"></i>
                                 </button>
@@ -64,13 +63,12 @@
                         </div>
                     </td>
 
-                    <!-- Columna Acciones / Permisos -->
                     {% if perms.permitrequest.change_permitrequest %}
                         <td class="actions text-center">
                             <div class="actions-wrapper">
                                 {% if perms.permitrequest.add_permitrequest %}
                                     <button type="button" class="btn-blue-circle"
-                                            onclick="openAjaxModal('{% url 'permissions:generate_permit_form' %}?employee={{ item.employee.pk }}')"
+                                            data-modal-url="{% url 'permissions:generate_permit_form' %}?employee={{ item.employee.pk }}"
                                             title="Generar Permiso">
                                         <i class="fa-solid fa-plus"></i>
                                     </button>
@@ -78,7 +76,7 @@
 
                                 {% if perms.permitrequest.view_permitrequest %}
                                     <button type="button" class="btn-yellow-circle"
-                                            onclick="openAjaxModal('{% url 'permissions:permit_employee_history' item.employee.pk %}')"
+                                            data-modal-url="{% url 'permissions:permit_employee_history' item.employee.pk %}"
                                             title="Historial de Permisos">
                                         <i class="fa-solid fa-list"></i>
                                     </button>

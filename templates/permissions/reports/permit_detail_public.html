@@ -1,0 +1,135 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Validación de Permiso - {{ permit.employee.person.full_name }} | SIGETH</title>
+    <link rel="stylesheet" href="{% static 'vendor/fontawesome/css/all.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/permissions.css' %}">
+</head>
+<body class="public-validation-body">
+
+<div class="sheet">
+    <div class="sheet-header">
+        <div class="header-top">
+            <div class="header-ident">
+                <i class="fa-solid fa-shield-halved"></i>
+                <div>
+                    <h1>MUNICIPIO DE LOJA</h1>
+                    <p>Validación Oficial de Permiso - SIGETH</p>
+                </div>
+            </div>
+            <div class="doc-meta">
+                <div><strong>Permiso ID:</strong> #{{ permit.id }}</div>
+                <div><strong>Verificado:</strong> {% now "d/m/Y H:i" %}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="sheet-body">
+        <div class="status-row">
+            <div>
+                {% if permit.status == 'APPROVED' %}
+                    <span class="public-badge-status badge-approved"><i class="fas fa-check-circle"></i> Permiso Aprobado</span>
+                {% elif permit.status == 'REQUESTED' %}
+                    <span class="public-badge-status badge-requested"><i class="fas fa-clock"></i> Pendiente de Aprobación</span>
+                {% elif permit.status == 'REJECTED' %}
+                    <span class="public-badge-status badge-rejected"><i
+                            class="fas fa-ban"></i> Solicitud Rechazada</span>
+                {% else %}
+                    <span class="public-badge-status badge-canceled"><i class="fas fa-times-circle"></i> Permiso Anulado</span>
+                {% endif %}
+            </div>
+            <div class="cell-label">Token QR Validado</div>
+        </div>
+
+        <div class="section-box">
+            <div class="section-title"><i class="fas fa-user"></i> Servidor Público</div>
+            <div class="grid-two">
+                <div class="cell">
+                    <div class="cell-label">Nombres Completos</div>
+                    <div class="cell-value">{{ permit.employee.person.full_name }}</div>
+                </div>
+                <div class="cell">
+                    <div class="cell-label">Número de Cédula</div>
+                    <div class="cell-value">{{ permit.employee.person.document_number|default:'--' }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-box">
+            <div class="section-title"><i class="fas fa-file-lines"></i> Parámetros de la Solicitud</div>
+            <div class="grid-two">
+                <div class="cell">
+                    <div class="cell-label">Tipo de Permiso</div>
+                    <div class="cell-value">{{ permit.permit_type.name|default:'No especificado' }}</div>
+                </div>
+                <div class="cell">
+                    <div class="cell-label">Descuento a Vacaciones</div>
+                    <div class="cell-value">{% if permit.permit_type.affects_vacation %}Sí aplica descuento{% else %}No
+                        descuenta{% endif %}</div>
+                </div>
+                <div class="cell">
+                    <div class="cell-label">Fecha y Hora de Inicio</div>
+                    <div class="cell-value">
+                        {{ permit.start_date|date:"d/m/Y" }}
+                        {% if permit.start_time %} - {{ permit.start_time|time:"H:i" }}{% endif %}
+                    </div>
+                </div>
+                <div class="cell">
+                    <div class="cell-label">Fecha y Hora de Fin</div>
+                    <div class="cell-value">
+                        {% if permit.end_date %}
+                            {{ permit.end_date|date:"d/m/Y" }}
+                            {% if permit.end_time %} - {{ permit.end_time|time:"H:i" }}{% endif %}
+                        {% else %}
+                            --:--
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="cell full">
+                    <div class="cell-label">Duración Total</div>
+                    <div class="cell-value">
+                        {% if permit.days > 0 %}{{ permit.days }} día(s){% endif %}
+                        {% if permit.hours > 0 %} {{ permit.hours }} hora(s){% endif %}
+                        {% if permit.minutes > 0 %} {{ permit.minutes }} minuto(s){% endif %}
+                        {% if permit.days == 0 and permit.hours == 0 and permit.minutes == 0 %}Intradía{% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if permit.status != 'REQUESTED' and permit.response_by %}
+            <div class="section-box">
+                <div class="section-title"><i class="fas fa-check-double"></i> Resolución</div>
+                <div class="grid-two">
+                    <div class="cell">
+                        <div class="cell-label">Procesado Por</div>
+                        <div class="cell-value">{{ permit.response_by.get_full_name|default:permit.response_by.username }}</div>
+                    </div>
+                    <div class="cell">
+                        <div class="cell-label">Fecha de Procesamiento</div>
+                        <div class="cell-value">{{ permit.response_date|date:"d/m/Y H:i" }}</div>
+                    </div>
+                    {% if permit.response_note %}
+                        <div class="cell full">
+                            <div class="cell-label">Observaciones / Notas</div>
+                            <div class="cell-value note-text-normal">
+                                {{ permit.response_note|safe }}
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="sheet-footer">
+        <p>Documento consultado electrónicamente mediante Código QR oficial de SIGETH.</p>
+        <p class="footer-institution">GAD Municipal de Loja</p>
+    </div>
+</div>
+
+</body>
+</html>

@@ -1,12 +1,13 @@
 {% extends 'base.html' %}
 {% load static %}
-{% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/permission.css' %}">
-{% endblock %}
+
 {% block title %}Administrar Permisos | SIGETH{% endblock %}
 
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/permissions.css' %}">
+{% endblock %}
+
 {% block content %}
-    <!-- 1. Encabezado Oficial -->
     <div class="header-card">
         <div>
             <h1>Gestión de Permisos</h1>
@@ -14,37 +15,31 @@
         </div>
     </div>
 
-    <!-- 2. Contenedor Continuo-->
     <div id="table-app">
         <div class="content-table">
-
-            <form id="filtersForm" onsubmit="handlePermitSearch(event)" class="mb-3">
+            <form id="filtersForm" class="mb-3" data-permit-filter-form>
                 <input type="hidden" id="filter_document_numbers" name="document_numbers"
                        value="{{ current_filters.document_numbers|default:'' }}">
 
-                <!-- Panel con Grid Integrado (Uploader de 2 filas a la izquierda + Filtros) -->
                 <div class="search-panel">
                     <div class="permit-integrated-search-grid">
-
-                        <!-- Columna Uploader Excel (2 filas) con Badge a la izquierda -->
                         <div class="permit-excel-uploader-column">
-                            <!-- Badge ubicado a la izquierda sin alterar la grilla -->
-                            <div id="identification-badge-container" class="permit-excel-left-badge"
-                                 style="display: none;">
+                            <div id="identification-badge-container" class="permit-excel-left-badge hidden">
                                 <span class="badge badge-green" id="identification-count-badge">
                                     <i class="fa-solid fa-users me-1"></i>
                                     <span id="identification-count-text">0 cédula(s)</span>
                                 </span>
                                 <button type="button" class="btn-clear-identification-tag"
-                                        onclick="clearLoadedIdentifications()" title="Eliminar filtro">
+                                        data-action="clear-identifications" title="Eliminar filtro">
                                     <i class="fa-solid fa-xmark"></i>
                                 </button>
                             </div>
 
-                            <label class="form-label text-center">EXCEL CÉDULAS</label>
+                            <label class="form-label text-center" for="identification_excel_input">EXCEL CÉDULAS</label>
 
                             <input type="file" id="identification_excel_input" accept=".xlsx, .xls"
-                                   class="file-input-hidden">
+                                   class="file-input-hidden"
+                                   data-upload-url="{% url 'permissions:parse_permit_identifications' %}">
 
                             <label for="identification_excel_input" class="file-upload-label permit-excel-dropzone"
                                    id="permit-excel-dropzone-label">
@@ -68,14 +63,12 @@
                         <div class="permit-filter-input-cell">
                             <input type="date" id="filter_date_from" name="date_from"
                                    class="form-control"
-                                   value="{{ current_filters.date_from|default:'' }}"
-                                   placeholder="Vigencia Desde">
+                                   value="{{ current_filters.date_from|default:'' }}">
                         </div>
                         <div class="permit-filter-input-cell">
                             <input type="date" id="filter_date_to" name="date_to"
                                    class="form-control"
-                                   value="{{ current_filters.date_to|default:'' }}"
-                                   placeholder="Vigencia Hasta">
+                                   value="{{ current_filters.date_to|default:'' }}">
                         </div>
 
                         <!-- Fila 2 -->
@@ -112,36 +105,33 @@
                                 {% endfor %}
                             </select>
                         </div>
-
                     </div>
                 </div>
 
-                <!-- Barra de Acciones: BUSCAR / LIMPIAR centrados -->
-                <div class="search-toolbar">
-                    <div class="table-controls person-filter-controls rubric-export-controls"></div>
-                    <div class="search-filter-actions">
-                        <button type="submit" class="btn-blue-rectangle">
-                            <i class="fas fa-search me-1"></i> BUSCAR
-                        </button>
-                        <button type="button" class="btn-blue-rectangle-outline" onclick="clearPermitFilters()">
-                            <i class="fas fa-eraser me-1"></i> LIMPIAR
-                        </button>
-                    </div>
-                    <div></div>
+                <div class="search-filter-actions permit-filter-actions">
+                    <button type="submit" class="btn-blue-rectangle">
+                        <i class="fas fa-search me-1"></i> BUSCAR
+                    </button>
+                    <button type="button" class="btn-blue-rectangle-outline" data-action="clear-permit-filters">
+                        <i class="fas fa-eraser me-1"></i> LIMPIAR
+                    </button>
+                    <button type="button" class="btn-dark-blue-rectangle"
+                            data-action="open-permit-summary"
+                            data-summary-url="{% url 'permissions:permit_approved_summary' %}">
+                        <i class="fas fa-chart-pie me-1"></i> VER RESUMEN
+                    </button>
                 </div>
             </form>
 
-            <!-- Contenedor donde se inyecta la tabla parcial -->
             <div id="table-content-wrapper">
                 {% include 'permissions/partials/partial_permit_table.html' %}
             </div>
 
-            <!-- Paginación Global -->
             <div class="pagination-container">
                 <span class="pagination-info">
                     Mostrando {{ page_obj.start_index|default:"0" }}-{{ page_obj.end_index|default:"0" }} de {{ paginator.count|default:"0" }}
                 </span>
-                <div class="pagination-controls" {% if paginator.num_pages <= 1 %}style="visibility:hidden;"{% endif %}>
+                <div class="pagination-controls {% if paginator.num_pages <= 1 %}invisible{% endif %}">
                     <button type="button" class="page-btn page-first" title="Primera"
                             {% if not page_obj.has_previous %}disabled{% endif %}
                             data-page="1">
@@ -150,9 +140,6 @@
                     <button type="button" class="page-btn page-prev" title="Anterior"
                             {% if not page_obj.has_previous %}disabled{% endif %}
                             data-page="
-
-
-
 
 
 
@@ -171,9 +158,6 @@
 
 
 
-
-
-
                                     {% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ paginator.num_pages|default:1 }}{% endif %}">
                         <i class="fas fa-angle-right"></i>
                     </button>
@@ -184,12 +168,10 @@
                     </button>
                 </div>
             </div>
-
         </div>
     </div>
-
 {% endblock %}
 
 {% block extra_js %}
-    <script src="{% static 'js/permissions/permit.js' %}"></script>
+    <script src="{% static 'js/permissions/permissions.js' %}"></script>
 {% endblock %}

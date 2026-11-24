@@ -1,0 +1,1194 @@
+/* ==========================================================================
+   MÓDULO DE PERMISOS Y BITÁCORAS - ESTILOS MODULARES (SIN BOOTSTRAP)
+   ========================================================================== */
+
+.file-input-hidden {
+    position: absolute !important;
+    left: -9999px !important;
+    width: 1px !important;
+    height: 1px !important;
+    overflow: hidden !important;
+}
+
+.file-upload-label {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 96px;
+    height: 96px;
+    border-radius: 10px;
+    background: #f3f4f6;
+    cursor: pointer;
+    border: 1px dashed transparent;
+    box-shadow: 0 2px 6px rgba(2, 6, 23, 0.04);
+}
+
+.file-upload-label:hover {
+    border-color: #d1d5db;
+}
+
+.file-upload-label.file-selected {
+    background: #ecfdf5;
+    border-color: #bbf7d0;
+}
+
+/* --- BUSCADOR: UPLOADER EXCEL + FILTROS --- */
+.permit-integrated-search-grid {
+    display: grid;
+    grid-template-columns: 105px repeat(3, minmax(0, 1fr));
+    grid-template-rows: auto auto;
+    gap: 10px 12px;
+    align-items: center;
+    width: min(100%, 860px);
+    margin: 0 auto;
+    position: relative;
+}
+
+@media (max-width: 900px) {
+    .permit-integrated-search-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+    }
+}
+
+.permit-excel-uploader-column {
+    grid-row: span 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.permit-excel-uploader-column .form-label {
+    text-align: center;
+    justify-content: center;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 4px;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+}
+
+.permit-excel-dropzone {
+    width: 92px;
+    height: 84px;
+    background-color: #f1f5f9;
+    border: 1px dashed #cbd5e1;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin: 0;
+}
+
+.permit-excel-dropzone:hover {
+    background-color: #f0fdf4;
+    border-color: #10b981;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(16, 185, 129, 0.12);
+}
+
+.permit-excel-dropzone.file-selected {
+    background-color: #ecfdf5;
+    border-color: #86efac;
+}
+
+.permit-excel-main-icon {
+    font-size: 38px;
+    color: #10b981;
+    line-height: 1;
+}
+
+.permit-excel-spinner {
+    font-size: 32px;
+    color: #10b981;
+}
+
+.permit-file-helper-text {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #64748b;
+    margin-top: 4px;
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+}
+
+.permit-excel-left-badge {
+    position: absolute;
+    right: calc(100% + 14px);
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background-color: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 20px;
+    padding: 6px 12px;
+    white-space: nowrap;
+    box-shadow: 0 2px 5px rgba(16, 185, 129, 0.12);
+    z-index: 10;
+}
+
+.permit-excel-left-badge .badge {
+    font-size: 0.78rem;
+    padding: 0;
+    background: transparent;
+    border: none;
+    color: #166534;
+    font-weight: 700;
+}
+
+.btn-clear-identification-tag {
+    background: none;
+    border: none;
+    color: #ef4444;
+    cursor: pointer;
+    font-size: 0.85rem;
+    padding: 0 2px;
+    display: inline-flex;
+    align-items: center;
+    line-height: 1;
+    transition: color 0.15s ease;
+}
+
+.btn-clear-identification-tag:hover {
+    color: #b91c1c;
+}
+
+.permit-filter-input-cell {
+    width: 100%;
+}
+
+/* ==========================================================================
+   UTILIDADES MODULARES Y MODALES
+   ========================================================================== */
+.hidden {
+    display: none !important;
+}
+
+.invisible {
+    visibility: hidden !important;
+}
+
+.value-bold {
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.text-md {
+    font-size: 0.95rem;
+}
+
+.text-xs {
+    font-size: 0.72rem;
+}
+
+.no-resize {
+    resize: none;
+}
+
+.block-hint {
+    display: block;
+}
+
+.italic-muted {
+    font-style: italic;
+}
+
+.avatar-sm {
+    width: 48px;
+    height: 48px;
+}
+
+.avatar-md {
+    width: 50px;
+    height: 50px;
+}
+
+.modal-header-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.header-employee-subtitle {
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.85rem;
+}
+
+.icon-warning-tint {
+    background: rgba(245, 158, 11, 0.2);
+    color: #f59e0b;
+}
+
+.icon-primary-subtle {
+    background: #e0f2fe;
+    color: #0369a1;
+}
+
+.switch-card-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    width: 100%;
+}
+
+.switch-card-box {
+    width: 100%;
+    justify-content: space-between;
+    padding: 8px 12px;
+}
+
+.modal-table-scroll-48 {
+    max-height: 48vh;
+    overflow-y: auto;
+}
+
+.modal-table-scroll-50 {
+    max-height: 50vh;
+    overflow-y: auto;
+}
+
+.modal-table-scroll-52 {
+    max-height: 52vh;
+    overflow-y: auto;
+}
+
+.sticky-thead-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+.subtype-search-input {
+    width: 260px;
+}
+
+.status-check-icon {
+    font-size: 1.15rem;
+}
+
+.status-check-icon.is-muted {
+    opacity: 0.5;
+}
+
+.subtype-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.subtype-banner-title {
+    font-weight: 700;
+    color: #1e3a8a;
+}
+
+.btn-compact-link {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    font-size: 0.8rem;
+}
+
+.btn-toolbar-sm {
+    height: 34px;
+    font-size: 0.8rem;
+}
+
+.btn-review-xs {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+}
+
+.btn-circle-xs {
+    width: 30px;
+    height: 30px;
+    font-size: 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+}
+
+.btn-circle-xxs {
+    width: 28px;
+    height: 28px;
+    font-size: 0.7rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Registro de Bitácora */
+.midnight-check-box {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 8px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    margin-top: 8px;
+}
+
+.midnight-check-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    cursor: pointer;
+    font-size: 0.82rem;
+}
+
+.binnacle-justification-grid {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+}
+
+.binnacle-justification-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.binnacle-justification-textarea {
+    height: 120px;
+    resize: none;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    padding: 10px 12px;
+}
+
+.binnacle-pdf-column {
+    width: 140px;
+    flex-shrink: 0;
+    text-align: center;
+}
+
+.binnacle-pdf-dropzone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 120px;
+    width: 100%;
+    background: #f1f5f9;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    margin: 0;
+}
+
+.binnacle-pdf-dropzone:hover {
+    background: #e2e8f0;
+}
+
+.binnacle-pdf-icon {
+    font-size: 2.8rem;
+    color: #dc2626;
+}
+
+.binnacle-pdf-filename {
+    font-size: 0.72rem;
+    color: #64748b;
+    margin-top: 6px;
+    font-weight: 600;
+    padding: 0 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 130px;
+}
+
+.binnacle-pdf-helper {
+    display: block;
+    font-size: 0.78rem;
+    color: #64748b;
+    font-weight: 500;
+    margin-top: 8px;
+}
+
+.binnacle-info-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 16px;
+}
+
+.binnacle-info-icon {
+    font-size: 1.3rem;
+    margin-top: 2px;
+}
+
+.binnacle-info-title {
+    display: block;
+    margin-bottom: 4px;
+    color: #1e3a8a;
+}
+
+/* Listado e Historial de Bitácoras */
+.modal-body-compact {
+    padding: 14px;
+}
+
+.binnacle-filter-wrapper {
+    padding: 0;
+    border: 0;
+    box-shadow: none;
+    background: transparent;
+}
+
+.binnacle-search-grid {
+    grid-template-columns: 2fr 1.2fr 1.2fr;
+}
+
+.binnacle-bulk-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    min-width: 0;
+}
+
+.binnacle-counter-badge {
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    padding: 0 12px;
+    font-size: 0.8rem;
+}
+
+.modal-binnacle-container {
+    width: min(1050px, calc(100vw - 24px));
+    max-width: 1050px;
+}
+
+.binnacle-bulk-btn {
+    align-items: center;
+    border: 0;
+    border-radius: 6px;
+    color: #fff;
+    cursor: pointer;
+    display: inline-flex;
+    font-size: 0.78rem;
+    font-weight: 700;
+    gap: 5px;
+    height: 34px;
+    padding: 0 12px;
+    transition: filter 0.2s ease, transform 0.2s ease;
+}
+
+.binnacle-bulk-btn:hover {
+    filter: brightness(0.94);
+    transform: translateY(-1px);
+}
+
+.binnacle-bulk-btn-approve {
+    background: #059669;
+}
+
+.binnacle-bulk-btn-reject {
+    background: #d97706;
+}
+
+.binnacle-bulk-btn-delete {
+    background: #dc2626;
+}
+
+.binnacle-table-scroll {
+    max-height: 52vh;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+.binnacle-toolbar {
+    align-items: center;
+    display: grid;
+    gap: 10px;
+    grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.binnacle-toolbar .search-filter-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+    margin: 0;
+    position: static;
+    transform: none;
+    width: auto;
+}
+
+.col-w-40 {
+    width: 40px;
+}
+
+.col-w-50 {
+    width: 50px;
+}
+
+.col-w-70 {
+    width: 70px;
+}
+
+.col-w-110 {
+    width: 110px;
+}
+
+.col-w-140 {
+    width: 140px;
+}
+
+.col-w-220 {
+    width: 220px;
+}
+
+#binnacle-pending-table {
+    min-width: 0;
+    table-layout: fixed;
+    width: 100%;
+}
+
+#binnacle-pending-table th,
+#binnacle-pending-table td {
+    font-size: 0.72rem;
+    padding: 5px 6px;
+}
+
+#binnacle-pending-table .binnacle-registered-column {
+    width: 17%;
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    line-height: 1.2;
+}
+
+#binnacle-pending-table .binnacle-actions-column {
+    width: 11%;
+    min-width: 82px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.binnacle-schedule-cell {
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+.binnacle-justification-cell {
+    display: block;
+    max-width: 210px;
+    white-space: normal;
+    word-break: break-word;
+    line-height: 1.3;
+}
+
+.binnacle-row-actions {
+    display: inline-flex;
+    justify-content: center;
+    gap: 4px;
+}
+
+.history-date-filters {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.history-date-input {
+    width: 145px;
+    height: 36px;
+}
+
+/* SweetAlert2 Edición de Bitácora */
+.swal-bitacora-time-grid {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+}
+
+.swal-bitacora-time-col {
+    flex: 1;
+}
+
+.swal-bitacora-time-input {
+    height: 42px;
+    font-size: 1rem;
+}
+
+.swal-bitacora-field {
+    text-align: left;
+    margin-bottom: 14px;
+}
+
+.swal-bitacora-label {
+    font-weight: 600;
+    color: #1e293b;
+    font-size: 0.88rem;
+    margin-bottom: 6px;
+    display: block;
+}
+
+.swal-bitacora-dropzone {
+    border: 1px dashed #cbd5e1;
+    border-radius: 8px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    background: #f8fafc;
+    margin: 0;
+}
+
+.swal-bitacora-pdf-icon {
+    font-size: 2rem;
+    color: #dc2626;
+}
+
+.swal-bitacora-file-meta {
+    display: flex;
+    flex-direction: column;
+}
+
+.swal-bitacora-file-title {
+    font-weight: 700;
+    color: #0f172a;
+    font-size: 0.9rem;
+}
+
+.swal-bitacora-file-subtitle {
+    font-size: 0.78rem;
+    color: #64748b;
+}
+
+/* ==========================================================================
+   REPORTES DE PERMISOS (COMPROBANTE IMPRIMIBLE Y VALIDACIÓN QR PÚBLICA)
+   ========================================================================== */
+body.report-body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+    background-color: #e2e8f0;
+    color: #1e293b;
+    padding: 24px;
+    font-size: 13px;
+    line-height: 1.4;
+    margin: 0;
+}
+
+.document-container {
+    width: 100%;
+    max-width: 840px;
+    margin: 0 auto;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+    padding: 32px 36px;
+    position: relative;
+}
+
+.institution-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 2px solid #1e3a8a;
+    padding-bottom: 16px;
+    margin-bottom: 20px;
+}
+
+.institution-branding {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.institution-logo {
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
+}
+
+.institution-titles h1 {
+    font-size: 17px;
+    font-weight: 800;
+    color: #0f172a;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin: 0 0 2px;
+}
+
+.institution-titles h2 {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e3a8a;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    margin: 0;
+}
+
+.institution-titles p {
+    font-size: 11px;
+    color: #64748b;
+    margin: 0;
+}
+
+.document-id-box {
+    text-align: right;
+    border-left: 2px solid #e2e8f0;
+    padding-left: 14px;
+}
+
+.document-id-box .doc-type {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #64748b;
+}
+
+.document-id-box .doc-number {
+    font-size: 17px;
+    font-weight: 800;
+    font-family: monospace;
+    color: #1e3a8a;
+    margin: 2px 0;
+}
+
+.document-id-box .doc-date {
+    font-size: 11px;
+    color: #64748b;
+}
+
+.section-block {
+    margin-bottom: 18px;
+}
+
+.section-block.no-margin-bottom {
+    margin-bottom: 0;
+}
+
+.section-header {
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: #1e3a8a;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-bottom: none;
+    padding: 6px 12px;
+    letter-spacing: 0.05em;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid #cbd5e1;
+}
+
+.data-table.full-section-table {
+    height: calc(100% - 30px);
+}
+
+.data-table td,
+.data-table th {
+    padding: 8px 12px;
+    border: 1px solid #cbd5e1;
+    vertical-align: middle;
+}
+
+.data-table .label {
+    width: 25%;
+    background-color: #f8fafc;
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.data-table .label.label-wide {
+    width: 32%;
+}
+
+.data-table .value {
+    font-size: 12px;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.report-muted-note {
+    color: #64748b;
+    font-size: 11px;
+}
+
+.badge-status {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    background-color: #dcfce7;
+    color: #166534;
+    border: 1px solid #86efac;
+}
+
+.bottom-distribution-grid {
+    display: grid;
+    grid-template-columns: 1fr 180px;
+    gap: 16px;
+    align-items: stretch;
+    margin-bottom: 24px;
+}
+
+.verification-panel {
+    border: 1px solid #cbd5e1;
+    background-color: #f8fafc;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.qr-frame {
+    background: #ffffff;
+    padding: 6px;
+    border: 1px solid #cbd5e1;
+    display: inline-block;
+    margin-bottom: 8px;
+}
+
+.qr-frame img {
+    width: 110px;
+    height: 110px;
+    display: block;
+}
+
+.verification-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: #1e3a8a;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+}
+
+.verification-desc {
+    font-size: 9px;
+    color: #64748b;
+    line-height: 1.3;
+}
+
+.signatures-section {
+    margin-top: 24px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    padding: 0 20px;
+}
+
+.signature-box {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.signature-space {
+    height: 85px;
+    width: 100%;
+}
+
+.signature-line {
+    width: 100%;
+    max-width: 250px;
+    border-top: 1.5px solid #1e293b;
+    margin-bottom: 6px;
+}
+
+.signature-name {
+    font-size: 11px;
+    font-weight: 700;
+    color: #1e293b;
+    text-transform: uppercase;
+}
+
+.signature-role {
+    font-size: 10px;
+    color: #64748b;
+    text-transform: uppercase;
+}
+
+.document-footer {
+    border-top: 1px solid #cbd5e1;
+    margin-top: 28px;
+    padding-top: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 10px;
+    color: #64748b;
+}
+
+.validation-hash {
+    font-family: monospace;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.floating-print-btn {
+    position: fixed;
+    right: 28px;
+    bottom: 28px;
+    background-color: #1e3a8a;
+    color: #ffffff;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 50px;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(30, 58, 138, 0.35);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+}
+
+.floating-print-btn:hover {
+    background-color: #172554;
+    transform: translateY(-2px);
+}
+
+@media print {
+    body.report-body {
+        background: #ffffff !important;
+        padding: 0 !important;
+    }
+
+    .document-container {
+        border: none !important;
+        box-shadow: none !important;
+        padding: 10mm 12mm !important;
+        max-width: 100% !important;
+    }
+
+    .floating-print-btn {
+        display: none !important;
+    }
+
+    @page {
+        size: A4 portrait;
+        margin: 6mm;
+    }
+}
+
+/* Validación QR Pública */
+body.public-validation-body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: linear-gradient(180deg, #e2e8f0 0%, #cbd5e1 100%);
+    color: #0f172a;
+    padding: 20px 12px;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0;
+}
+
+.sheet {
+    width: min(850px, 100%);
+    background: #ffffff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e2e8f0;
+}
+
+.sheet-header {
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+    color: #ffffff;
+    padding: 20px 24px;
+}
+
+.header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+}
+
+.header-ident {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.header-ident i {
+    font-size: 2.2rem;
+    color: #38bdf8;
+}
+
+.sheet-header h1 {
+    font-size: 1.15rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    margin: 0;
+}
+
+.sheet-header p {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    margin: 0;
+}
+
+.doc-meta {
+    text-align: right;
+    font-size: 0.78rem;
+    color: #e2e8f0;
+    line-height: 1.4;
+}
+
+.sheet-body {
+    padding: 20px 24px;
+}
+
+.status-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+    padding-bottom: 12px;
+    border-bottom: 1px dashed #e2e8f0;
+}
+
+.public-badge-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 9999px;
+    letter-spacing: 0.05em;
+}
+
+.badge-approved {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.badge-requested {
+    background: #fef3c7;
+    color: #b45309;
+}
+
+.badge-rejected,
+.badge-canceled {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.section-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 14px;
+    margin-bottom: 14px;
+}
+
+.grid-two {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.cell {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 10px 12px;
+}
+
+.cell.full {
+    grid-column: 1 / -1;
+}
+
+.cell-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+}
+
+.cell-value {
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: #0f172a;
+    word-break: break-word;
+}
+
+.note-text-normal {
+    font-size: 0.85rem;
+    font-weight: normal;
+}
+
+.sheet-footer {
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    padding: 14px;
+    text-align: center;
+    font-size: 0.75rem;
+    color: #64748b;
+}
+
+.footer-institution {
+    margin-top: 4px;
+    font-weight: 600;
+}
+
+@media (max-width: 640px) {
+    .header-top {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .doc-meta {
+        text-align: left;
+    }
+
+    .grid-two {
+        grid-template-columns: 1fr;
+    }
+}
+
+.permit-filter-actions {
+    position: static !important;
+    transform: none !important;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 14px;
+    margin-bottom: 16px;
+}
+
+.permit-summary-stats-grid {
+    margin-bottom: 20px;
+}

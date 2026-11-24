@@ -1233,6 +1233,7 @@ function getExternalPaginationHandler() {
         ['documentFiltersForm', window.applyDocumentFilters],
         ['personFiltersForm', window.applyPersonFilters],
         ['budget-filter-form', window.applyBudgetFilters],
+        ['filtersForm', window.applyPermitFilters],
     ];
     return pageHandlers.find(([formId, handler]) =>
         document.getElementById(formId) && typeof handler === 'function'

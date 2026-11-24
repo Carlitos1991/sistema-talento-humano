@@ -1,33 +1,29 @@
 {% load static %}
-
 <div class="modal-overlay hidden">
     <div class="modal-container-medium">
         <form method="POST" id="insistPermitForm" action="{% url 'permissions:permit_insist' permit.id %}"
-              onsubmit="submitAjaxForm(event)">
+              data-ajax-form>
             {% csrf_token %}
 
-            <!-- HEADER -->
             <div class="modal-header-medium">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="header-icon-circle" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b;">
+                <div class="modal-header-group">
+                    <div class="header-icon-circle icon-warning-tint">
                         <i class="fas fa-rotate-right"></i>
                     </div>
                     <h3 class="header-title">Insistir Solicitud de Permiso</h3>
                 </div>
-                <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
+                <button type="button" class="btn-close-circle" data-modal-close title="Cerrar">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
 
-            <!-- BODY -->
             <div class="modal-body-content modal-body-custom">
-                <!-- Resumen de Solicitud -->
                 <div class="form-section-card mb-3">
                     <h6 class="section-title"><i class="fas fa-id-card-clip"></i> Datos del Permiso</h6>
                     <div class="grid-2-cols">
                         <div class="form-group mb-2">
                             <label class="form-label text-muted small">Empleado</label>
-                            <div class="fw-bold">{{ permit.employee.person.full_name }}</div>
+                            <div class="value-bold">{{ permit.employee.person.full_name }}</div>
                         </div>
                         <div class="form-group mb-2">
                             <label class="form-label text-muted small">Tipo de Permiso</label>
@@ -44,7 +40,6 @@
                     </div>
                 </div>
 
-                <!-- Campo de Mensaje de Insistencia -->
                 <div class="form-section-card mb-0">
                     <h6 class="section-title"><i class="fas fa-comment-dots"></i> Motivo de Insistencia</h6>
                     <div class="form-group mb-0">
@@ -53,13 +48,12 @@
                         </label>
                         <textarea name="insist_message"
                                   id="id_insist_message"
-                                  class="form-control"
+                                  class="form-control no-resize"
                                   rows="4"
                                   required
                                   maxlength="1000"
-                                  style="resize: none;"
                                   placeholder="Explique por qué solicita una nueva revisión del permiso..."></textarea>
-                        <small class="form-hint mt-2 d-block">
+                        <small class="form-hint mt-2 block-hint">
                             <i class="fas fa-info-circle me-1"></i> Este mensaje se anexará a las observaciones de
                             auditoría y será visible para la autoridad correspondiente.
                         </small>
@@ -67,9 +61,8 @@
                 </div>
             </div>
 
-            <!-- FOOTER -->
             <div class="modal-footer-medium modal-footer-spaced">
-                <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">
+                <button type="button" class="btn-dark-blue-rectangle-outline" data-modal-close>
                     <i class="fas fa-times me-1"></i> Cancelar
                 </button>
                 <button type="submit" class="btn-yellow-rectangle">

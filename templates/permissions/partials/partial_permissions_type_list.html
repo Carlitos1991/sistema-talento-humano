@@ -1,12 +1,11 @@
 {% load static %}
-
 <div class="table-container">
     {% if current_parent %}
-        <div class="d-flex align-items-center justify-content-between p-3 bg-light border-bottom">
-            <span class="fw-bold text-primary">
+        <div class="subtype-banner">
+            <span class="subtype-banner-title">
                 <i class="fa-solid fa-folder-open me-2"></i> Subtipos de: {{ current_parent.name }}
             </span>
-            <button type="button" class="btn-white-rectangle" onclick="refreshCurrentTable({ parent: '' })">
+            <button type="button" class="btn-white-rectangle" data-action="reset-parent-filter">
                 <i class="fa-solid fa-arrow-up me-1"></i> Subir Nivel
             </button>
         </div>
@@ -42,27 +41,22 @@
                         {% endif %}
                     </td>
 
-                    <!-- Justificación Requerida -->
                     <td class="text-center">
                         {% if type.needs_justification %}
-                            <i class="fa-solid fa-circle-check text-green" style="font-size: 1.15rem;"></i>
+                            <i class="fa-solid fa-circle-check text-green status-check-icon"></i>
                         {% else %}
-                            <i class="fa-solid fa-circle-xmark text-muted"
-                               style="font-size: 1.15rem; opacity: 0.5;"></i>
+                            <i class="fa-solid fa-circle-xmark text-muted status-check-icon is-muted"></i>
                         {% endif %}
                     </td>
 
-                    <!-- Descuento de Vacaciones -->
                     <td class="text-center">
                         {% if type.affects_vacation %}
-                            <i class="fa-solid fa-circle-check text-green" style="font-size: 1.15rem;"></i>
+                            <i class="fa-solid fa-circle-check text-green status-check-icon"></i>
                         {% else %}
-                            <i class="fa-solid fa-circle-xmark text-muted"
-                               style="font-size: 1.15rem; opacity: 0.5;"></i>
+                            <i class="fa-solid fa-circle-xmark text-muted status-check-icon is-muted"></i>
                         {% endif %}
                     </td>
 
-                    <!-- Estado -->
                     <td class="text-center">
                         {% if type.is_active %}
                             <span class="badge badge-green">Activo</span>
@@ -71,36 +65,34 @@
                         {% endif %}
                     </td>
 
-                    <!-- Acciones -->
                     {% if perms.permitrequest.change_permittype %}
                         <td class="actions text-center">
                             <div class="actions-wrapper">
-                                <!-- Editar Tipo -->
                                 <button type="button" class="btn-yellow-circle"
-                                        onclick="openAjaxModal('{% url 'permissions:permit_type_update' type.pk %}')"
+                                        data-modal-url="{% url 'permissions:permit_type_update' type.pk %}"
                                         title="Editar">
                                     <i class="fa-solid fa-pen"></i>
                                 </button>
 
-                                <!-- Activar / Desactivar -->
                                 <button type="button" class="btn-red-circle"
-                                        onclick="toggleStatusAjax('{% url 'permissions:permit_type_toggle' type.pk %}', '{{ type.name }}', {{ type.is_active|yesno:'true,false' }})"
+                                        data-action="toggle-permit-type"
+                                        data-toggle-url="{% url 'permissions:permit_type_toggle' type.pk %}"
+                                        data-item-name="{{ type.name }}"
+                                        data-is-active="{{ type.is_active|yesno:'true,false' }}"
                                         title="{% if type.is_active %}Dar de Baja{% else %}Dar de Alta{% endif %}">
                                     <i class="fa-solid fa-power-off"></i>
                                 </button>
 
-                                <!-- Agregar Subtipo -->
                                 {% if perms.permitrequest.add_permittype %}
                                     <button type="button" class="btn-green-circle"
-                                            onclick="openAjaxModal('{% url 'permissions:permit_type_create' %}?parent={{ type.pk }}')"
+                                            data-modal-url="{% url 'permissions:permit_type_create' %}?parent={{ type.pk }}"
                                             title="Agregar Subtipo">
                                         <i class="fa-solid fa-plus"></i>
                                     </button>
                                 {% endif %}
 
-                                <!-- Ver Subtipos (modal) -->
                                 <button type="button" class="btn-dark-blue-circle"
-                                        onclick="openAjaxModal('{% url 'permissions:permit_type_subitems' type.pk %}')"
+                                        data-modal-url="{% url 'permissions:permit_type_subitems' type.pk %}"
                                         title="Ver Subtipos">
                                     <i class="fa-solid fa-list-ul"></i>
                                 </button>

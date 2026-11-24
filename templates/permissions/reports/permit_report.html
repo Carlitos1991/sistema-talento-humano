@@ -1,0 +1,173 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comprobante de Permiso - {{ permit.employee.person.full_name }}</title>
+    <link rel="stylesheet" href="{% static 'css/permissions.css' %}">
+</head>
+<body class="report-body">
+
+<div class="document-container">
+    <header class="institution-header">
+        <div class="institution-branding">
+            <img src="{% static 'img/logo.png' %}" alt="Logo Institucional" class="institution-logo">
+            <div class="institution-titles">
+                <h1>Municipio de Loja</h1>
+                <h2>Dirección de Talento Humano</h2>
+                <p>Sistema Integrado de Gestión de Talento Humano (SIGETH)</p>
+            </div>
+        </div>
+        <div class="document-id-box">
+            <div class="doc-type">Solicitud Aprobada</div>
+            <div class="doc-number"># {{ permit.id|stringformat:"06d" }}</div>
+            <div class="doc-date">Emisión: {% now "d/m/Y H:i" %}</div>
+        </div>
+    </header>
+
+    <section class="section-block">
+        <div class="section-header">1. Información del Servidor Público</div>
+        <table class="data-table">
+            <tr>
+                <td class="label">Nombres y Apellidos:</td>
+                <td class="value" colspan="3">{{ permit.employee.person.full_name }}</td>
+            </tr>
+            <tr>
+                <td class="label">Cédula de Identidad:</td>
+                <td class="value font-monospace">{{ permit.employee.person.document_number|default:'N/A' }}</td>
+                <td class="label">Dependencia / Área:</td>
+                <td class="value">{{ permit.employee.area.name|default:'No asignada' }}</td>
+            </tr>
+        </table>
+    </section>
+
+    <section class="section-block">
+        <div class="section-header">2. Condiciones del Permiso Concedido</div>
+        <table class="data-table">
+            <tr>
+                <td class="label">Tipo de Permiso:</td>
+                <td class="value">{{ permit.permit_type.name }}</td>
+                <td class="label">Estado Actual:</td>
+                <td class="value">
+                    <span class="badge-status">Aprobado</span>
+                </td>
+            </tr>
+            <tr>
+                <td class="label">Fecha y Hora Desde:</td>
+                <td class="value">
+                    {{ permit.start_date|date:"d/m/Y" }}
+                    {% if permit.start_time %} a las {{ permit.start_time|time:"H:i" }}{% endif %}
+                </td>
+                <td class="label">Fecha y Hora Hasta:</td>
+                <td class="value">
+                    {% if permit.end_date %}
+                        {{ permit.end_date|date:"d/m/Y" }}
+                        {% if permit.end_time %} a las {{ permit.end_time|time:"H:i" }}{% endif %}
+                    {% else %}
+                        {{ permit.start_date|date:"d/m/Y" }}
+                        {% if permit.end_time %} a las {{ permit.end_time|time:"H:i" }}{% endif %}
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td class="label">Tiempo Concedido:</td>
+                <td class="value">
+                    {% if permit.days > 0 and permit.hours == 0 and permit.minutes == 0 %}
+                        <strong>{{ permit.days }} día(s) completo(s)</strong>
+                    {% elif permit.hours > 0 or permit.minutes > 0 %}
+                        <strong>
+                            {% if permit.days > 0 %}{{ permit.days }} d {% endif %}
+                            {% if permit.hours > 0 %}{{ permit.hours }} hora(s) {% endif %}
+                            {% if permit.minutes > 0 %}{{ permit.minutes }} min{% endif %}
+                        </strong>
+                        <span class="report-muted-note">(Permiso por horas)</span>
+                    {% else %}
+                        <strong>Desde {{ permit.start_date|date:"d/m/Y" }}
+                            hasta {{ permit.end_date|default:permit.start_date|date:"d/m/Y" }}</strong>
+                    {% endif %}
+                </td>
+                <td class="label">Descuento Vacaciones:</td>
+                <td class="value">{% if permit.permit_type.affects_vacation %}Sí aplica cargo a vacaciones{% else %}No
+                    imputable a vacaciones{% endif %}</td>
+            </tr>
+        </table>
+    </section>
+
+    <div class="bottom-distribution-grid">
+        <div class="section-block no-margin-bottom">
+            <div class="section-header">3. Resolución Administrativa</div>
+            <table class="data-table full-section-table">
+                <tr>
+                    <td class="label label-wide">Autorizado Por:</td>
+                    <td class="value">
+                        {% if permit.response_by %}
+                            {{ permit.response_by.get_full_name|default:permit.response_by.username }}
+                        {% else %}
+                            Autorización del Sistema
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label">Fecha Aprobación:</td>
+                    <td class="value">{{ permit.response_date|date:"d/m/Y H:i"|default:"N/A" }}</td>
+                </tr>
+                <tr>
+                    <td class="label">Observación / Base:</td>
+                    <td class="value">
+                        {{ permit.response_note|safe|default:"Permiso concedido de conformidad con la normativa institucional vigente." }}
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="verification-panel">
+            <div class="verification-label">Validación Electrónica</div>
+            <div class="qr-frame">
+                <img src="data:image/png;base64,{{ qr_code }}" alt="Código QR Oficial">
+            </div>
+            <div class="verification-desc">Escanee para certificar la vigencia y originalidad del permiso.</div>
+        </div>
+    </div>
+
+    <div class="signatures-section">
+        <div class="signature-box">
+            <div class="signature-space"></div>
+            <div class="signature-line"></div>
+            <div class="signature-name">{{ permit.employee.person.full_name }}</div>
+            <div class="signature-role">Servidor Público Solicitante</div>
+        </div>
+        <div class="signature-box">
+            <div class="signature-space"></div>
+            <div class="signature-line"></div>
+            <div class="signature-name">
+                {% if permit.response_by %}
+                    {{ permit.response_by.get_full_name }}
+                {% else %}
+                    Jefatura / Dirección
+                {% endif %}
+            </div>
+            <div class="signature-role">Jefatura Inmediata / Talento Humano</div>
+        </div>
+    </div>
+
+    <footer class="document-footer">
+        <div>SIGETH - Sistema Integrado de Talento Humano</div>
+        <div>Código de Verificación: <span class="validation-hash">{{ validation_code }}</span></div>
+        <div>Página 1 de 1</div>
+    </footer>
+</div>
+
+<button type="button" class="floating-print-btn" data-action="window-print">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="6 9 6 2 18 2 18 9"></polyline>
+        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+        <rect x="6" y="14" width="12" height="8"></rect>
+    </svg>
+    Imprimir Reporte
+</button>
+
+<script src="{% static 'js/permissions/permissions.js' %}"></script>
+</body>
+</html>

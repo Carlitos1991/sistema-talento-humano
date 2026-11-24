@@ -2,23 +2,20 @@
 <div class="modal-overlay hidden">
     <div class="modal-container-medium">
         <form method="POST" action="{% url 'permissions:permit_create' %}" id="generatePermitForm"
-              enctype="multipart/form-data" onsubmit="submitAjaxForm(event)">
+              enctype="multipart/form-data" data-ajax-form>
             {% csrf_token %}
             <input type="hidden" name="employee" value="{{ employee.id }}">
 
-            <!-- HEADER -->
             <div class="modal-header-medium">
                 <h3 class="header-title">
                     <i class="fas fa-file-signature me-2"></i> Generar Permiso
                 </h3>
-                <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
+                <button type="button" class="btn-close-circle" data-modal-close title="Cerrar">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
 
-            <!-- BODY -->
             <div class="modal-body-content modal-body-custom">
-                <!-- Empleado -->
                 <div class="employee-card-badge mb-3">
                     <div class="employee-avatar-wrapper">
                         {% if employee.person.photo %}
@@ -33,13 +30,13 @@
                     </div>
                 </div>
 
-                <!-- Tipo de Permiso -->
                 <div class="form-section-card mb-3">
                     <h6 class="section-title"><i class="fas fa-list-check"></i> Clasificación del Permiso</h6>
                     <div class="grid-2-cols">
                         <div class="form-group mb-0">
                             <label class="form-label" for="id_permit_type_parent">Tipo Principal <span class="text-red">*</span></label>
                             <select name="permit_type_parent" id="id_permit_type_parent" class="input-field select2"
+                                    data-subtypes-url-template="{% url 'permissions:permit_type_subtypes_json' 0 %}"
                                     required>
                                 <option value="">-- Seleccione --</option>
                                 {% for permit_type in parent_types %}
@@ -52,7 +49,7 @@
                             </select>
                             <div class="invalid-feedback"></div>
                         </div>
-                        <div class="form-group mb-0" id="subtype-container" style="display: none;">
+                        <div class="form-group mb-0 hidden" id="subtype-container">
                             <label class="form-label" for="id_permit_type">Subtipo <span
                                     class="text-red">*</span></label>
                             <select name="permit_type" id="id_permit_type" class="input-field select2">
@@ -63,7 +60,6 @@
                     </div>
                 </div>
 
-                <!-- Fecha y Horas -->
                 <div class="form-section-card mb-3">
                     <h6 class="section-title"><i class="fas fa-calendar-day"></i> Vigencia y Duración</h6>
                     <div class="grid-2-cols">
@@ -107,15 +103,14 @@
                     <input type="hidden" name="end_time" id="id_end_time">
                 </div>
 
-                <!-- Motivo y Adjunto -->
                 <div class="form-section-card mb-0">
-                    <div class="form-group" id="reason-section" style="display: none;">
+                    <div class="form-group hidden" id="reason-section">
                         <label class="form-label" for="id_reason">Descripción del Motivo</label>
                         <textarea name="reason" id="id_reason" class="form-control" rows="2"
                                   placeholder="Describa el motivo del permiso..."></textarea>
                     </div>
 
-                    <div class="form-group mb-0" id="attachment-section" style="display: none;">
+                    <div class="form-group mb-0 hidden" id="attachment-section">
                         <label class="form-label" for="id_justification_file">Documento PDF (Adjunto)</label>
                         <input type="file" name="justification_file" id="id_justification_file" class="form-control"
                                accept=".pdf">
@@ -124,9 +119,8 @@
                 </div>
             </div>
 
-            <!-- FOOTER -->
             <div class="modal-footer-medium modal-footer-spaced">
-                <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">Cancelar</button>
+                <button type="button" class="btn-dark-blue-rectangle-outline" data-modal-close>Cancelar</button>
                 <button type="submit" class="btn-dark-blue-rectangle">
                     <i class="fas fa-check-circle me-1"></i> Generar Permiso
                 </button>

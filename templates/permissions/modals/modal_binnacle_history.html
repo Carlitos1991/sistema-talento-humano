@@ -1,39 +1,31 @@
 {% load static %}
-
 <div class="modal-overlay hidden">
     <div class="modal-container-large">
-        <!-- HEADER -->
         <div class="modal-header-medium">
             <h3 class="header-title">
                 <i class="fa-solid fa-clipboard-check me-2"></i> Historial de Bitácoras Aprobadas: {{ employee_name }}
             </h3>
-            <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
+            <button type="button" class="btn-close-circle" data-modal-close title="Cerrar">
                 <i class="fas fa-times"></i>
             </button>
         </div>
 
-        <!-- BODY -->
         <div class="modal-body-content modal-body-custom">
-            <!-- Controles de fecha -->
             <div class="toolbar-row mb-3">
-                <div class="toolbar-left d-flex align-items-center gap-2">
-                    <label class="label-muted m-0">Desde:</label>
-                    <input type="date" id="history-filter-from" class="form-control" style="width: 145px; height: 36px;"
-                           onchange="filterBinnacleHistoryRows()">
-                    <label class="label-muted m-0 ms-1">Hasta:</label>
-                    <input type="date" id="history-filter-to" class="form-control" style="width: 145px; height: 36px;"
-                           onchange="filterBinnacleHistoryRows()">
-                    <button type="button" class="btn-white-rectangle py-1 px-3 ms-1"
-                            style="height: 36px; font-size: 0.75rem;" onclick="clearHistoryDates()">
+                <div class="toolbar-left history-date-filters">
+                    <label class="label-muted" for="history-filter-from">Desde:</label>
+                    <input type="date" id="history-filter-from" class="form-control history-date-input">
+                    <label class="label-muted" for="history-filter-to">Hasta:</label>
+                    <input type="date" id="history-filter-to" class="form-control history-date-input">
+                    <button type="button" class="btn-white-rectangle btn-toolbar-sm" data-action="clear-history-dates">
                         <i class="fas fa-eraser me-1"></i> Limpiar
                     </button>
                 </div>
             </div>
 
-            <!-- TABLA -->
-            <div class="table-container" style="max-height: 50vh; overflow-y: auto;">
-                <table class="managed-table m-0" id="binnacle-history-table">
-                    <thead style="position: sticky; top: 0; z-index: 2;">
+            <div class="table-container modal-table-scroll-50">
+                <table class="managed-table m-0 sticky-thead-table" id="binnacle-history-table">
+                    <thead>
                     <tr>
                         <th class="width-5 text-center">N°</th>
                         <th class="width-12">Fecha Bitácora</th>
@@ -53,7 +45,7 @@
                     {% for b in bitacoras %}
                         <tr data-date="{{ b.start_date|date:'Y-m-d' }}" data-id="{{ b.id }}">
                             <td class="text-center">{{ forloop.counter }}</td>
-                            <td class="font-monospace bold">{{ b.start_date|date:"d/m/Y" }}</td>
+                            <td class="font-monospace value-bold">{{ b.start_date|date:"d/m/Y" }}</td>
                             <td class="text-center font-monospace">{{ b.start_time|time:"H:i"|default:"--:--" }}</td>
                             <td class="text-center font-monospace">
                                 <div>{{ b.end_time|time:"H:i"|default:"--:--" }}</div>
@@ -70,9 +62,9 @@
                             <td class="text-center small font-monospace">{{ b.response_date|date:"d/m/Y H:i"|default:"--" }}</td>
                             {% if can_edit %}
                                 <td class="actions text-center">
-                                    <button type="button" class="btn-blue-rectangle-outline py-1 px-2"
-                                            style="font-size: 0.75rem;"
-                                            onclick="reviewBinnacleModal({{ b.id }})"
+                                    <button type="button" class="btn-blue-rectangle-outline btn-review-xs"
+                                            data-action="review-binnacle"
+                                            data-binnacle-id="{{ b.id }}"
                                             title="Reabrir bitácora para modificación">
                                         <i class="fas fa-redo me-1"></i> Revisar
                                     </button>
@@ -95,9 +87,8 @@
             </div>
         </div>
 
-        <!-- FOOTER -->
         <div class="modal-footer-medium">
-            <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">Cerrar</button>
+            <button type="button" class="btn-dark-blue-rectangle-outline" data-modal-close>Cerrar</button>
         </div>
     </div>
 </div>

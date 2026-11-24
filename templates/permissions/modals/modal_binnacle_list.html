@@ -1,11 +1,9 @@
 {% load static %}
-
 <div class="modal-overlay hidden" id="modalBinnacleListOverlay">
     <div class="modal-container-large modal-binnacle-container">
-        <!-- 1. HEADER DEL MODAL -->
         <div class="modal-header-medium">
-            <div class="d-flex align-items-center gap-2">
-                <div class="header-icon-circle bg-primary-subtle text-primary">
+            <div class="modal-header-group">
+                <div class="header-icon-circle icon-primary-subtle">
                     <i class="fa-solid fa-clock-rotate-left"></i>
                 </div>
                 <div>
@@ -13,19 +11,16 @@
                     <span class="text-muted small">Servidor: <strong>{{ employee_name }}</strong></span>
                 </div>
             </div>
-            <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
+            <button type="button" class="btn-close-circle" data-modal-close title="Cerrar">
                 <i class="fas fa-times"></i>
             </button>
         </div>
 
-        <!-- 2. BODY CON FILTROS Y TABLA -->
-        <div class="modal-body-content modal-body-custom p-3">
-
-            <!-- PANEL DE FILTROS -->
-            <div class="content-table p-0 border-0 shadow-none bg-transparent">
-                <form id="binnacleFiltersForm" onsubmit="return false;">
+        <div class="modal-body-content modal-body-custom modal-body-compact">
+            <div class="content-table binnacle-filter-wrapper">
+                <form id="binnacleFiltersForm" data-prevent-submit>
                     <div class="search-panel mb-2">
-                        <div class="search-grid" style="grid-template-columns: 2fr 1.2fr 1.2fr;">
+                        <div class="search-grid binnacle-search-grid">
                             <input type="text" id="binnacleSearchInput" class="input-field"
                                    placeholder="Buscar por justificación o creador..." autocomplete="off">
                             <input type="date" id="binnacle-filter-from" class="input-field" title="Fecha Desde">
@@ -34,68 +29,60 @@
                     </div>
                 </form>
 
-                <!-- TOOLBAR Y ACCIONES MASIVAS -->
                 <div class="search-toolbar binnacle-toolbar mb-3">
-                    <div class="d-flex align-items-center gap-2 flex-wrap" id="binnacle-bulk-actions">
-                        <span class="badge badge-gray px-3" id="binnacle-total-counter"
-                              style="height: 34px; display: inline-flex; align-items: center; font-size: 0.8rem;">
+                    <div class="binnacle-bulk-group" id="binnacle-bulk-actions">
+                        <span class="badge badge-gray binnacle-counter-badge" id="binnacle-total-counter">
                             Total: <strong>{{ bitacoras|length }}</strong>
                         </span>
 
                         {% if perms.permitrequest.change_permitrequest %}
                             <button type="button" id="btn-approve-selected-binnacles"
-                                    class="binnacle-bulk-btn binnacle-bulk-btn-approve"
-                                    onclick="approveSelectedBinnacles()"
-                                    style="display: none;">
+                                    class="binnacle-bulk-btn binnacle-bulk-btn-approve hidden"
+                                    data-action="approve-selected-binnacles">
                                 <i class="fas fa-check me-1"></i> Aprobar (<span class="selected-count">0</span>)
                             </button>
                             <button type="button" id="btn-reject-selected-binnacles"
-                                    class="binnacle-bulk-btn binnacle-bulk-btn-reject"
-                                    onclick="rejectSelectedBinnacles()"
-                                    style="display: none;">
+                                    class="binnacle-bulk-btn binnacle-bulk-btn-reject hidden"
+                                    data-action="reject-selected-binnacles">
                                 <i class="fas fa-ban me-1"></i> Rechazar
                             </button>
                         {% endif %}
                         {% if perms.permitrequest.delete_permitrequest %}
                             <button type="button" id="btn-delete-selected-binnacles"
-                                    class="binnacle-bulk-btn binnacle-bulk-btn-delete"
-                                    onclick="deleteSelectedBinnacles()"
-                                    style="display: none;">
+                                    class="binnacle-bulk-btn binnacle-bulk-btn-delete hidden"
+                                    data-action="delete-selected-binnacles">
                                 <i class="fas fa-trash me-1"></i> Eliminar
                             </button>
                         {% endif %}
                     </div>
 
                     <div class="search-filter-actions">
-                        <button type="button" class="btn-blue-rectangle" onclick="filterBinnacles()"
-                                style="height: 34px; font-size: 0.8rem;">
+                        <button type="button" class="btn-blue-rectangle btn-toolbar-sm" data-action="filter-binnacles">
                             <i class="fas fa-search me-1"></i> Filtrar
                         </button>
-                        <button type="button" class="btn-blue-rectangle-outline" onclick="clearBinnacleDates()"
-                                style="height: 34px; font-size: 0.8rem;">
+                        <button type="button" class="btn-blue-rectangle-outline btn-toolbar-sm"
+                                data-action="clear-binnacle-dates">
                             <i class="fas fa-eraser me-1"></i> Limpiar
                         </button>
                     </div>
                 </div>
             </div>
 
-            <!-- TABLA CON ESTILOS EN LÍNEA PARA FORZAR EL CENTRADO -->
             <div class="table-container binnacle-table-scroll">
-                <table class="managed-table m-0" id="binnacle-pending-table">
-                    <thead style="position: sticky; top: 0; z-index: 2;">
+                <table class="managed-table m-0 sticky-thead-table" id="binnacle-pending-table">
+                    <thead>
                     <tr>
                         {% if perms.permitrequest.change_permitrequest %}
-                            <th style="width: 40px; text-align: center !important;" class="no-sort">
-                                <input type="checkbox" id="check-all-binnacles" class="custom-checkbox"
-                                       onchange="toggleAllBinnacles(this.checked)">
+                            <th class="col-w-40 text-center no-sort">
+                                <input type="checkbox" id="check-all-binnacles" class="custom-checkbox">
                             </th>
                         {% endif %}
-                        <th style="width: 50px; text-align: center !important;">N°</th>
-                        <th style="width: 110px; text-align: center !important;">FECHA</th>
-                        <th style="width: 140px; text-align: center !important;">HORARIO</th>
-                        <th style="width: 110px; text-align: center !important;">ESTADO</th>
-                        <th style="width: 220px; text-align: left !important;">JUSTIFICACIÓN</th>
-                        <th style="width: 70px; text-align: center !important;">PDF</th>
+                        <th class="col-w-50 text-center">N°</th>
+                        <th class="col-w-110 text-center">FECHA</th>
+                        <th class="col-w-140 text-center">HORARIO</th>
+                        <th class="col-w-110 text-center">ESTADO</th>
+                        <th class="col-w-220 text-left">JUSTIFICACIÓN</th>
+                        <th class="col-w-70 text-center">PDF</th>
                         <th class="binnacle-registered-column">REGISTRADO POR</th>
                         <th class="no-sort binnacle-actions-column">ACCIONES</th>
                     </tr>
@@ -104,29 +91,23 @@
                     {% for b in bitacoras %}
                         <tr data-date="{{ b.start_date|date:'Y-m-d' }}" data-id="{{ b.id }}" class="binnacle-row">
                             {% if perms.permitrequest.change_permitrequest %}
-                                <td style="text-align: center !important;">
+                                <td class="text-center">
                                     <input type="checkbox" class="binnacle-check-item custom-checkbox"
-                                           value="{{ b.id }}" onchange="updateBinnacleSelectionState()">
+                                           value="{{ b.id }}">
                                 </td>
                             {% endif %}
-                            <td style="text-align: center !important;"
-                                class="font-monospace text-muted">{{ forloop.counter }}</td>
-                            <td style="text-align: center !important;"
-                                class="font-monospace fw-bold text-dark">{{ b.start_date|date:"d/m/Y" }}</td>
+                            <td class="text-center font-monospace text-muted">{{ forloop.counter }}</td>
+                            <td class="text-center font-monospace value-bold">{{ b.start_date|date:"d/m/Y" }}</td>
 
-                            <!-- HORARIO -->
-                            <td style="text-align: center !important; font-size: 0.8rem; white-space: nowrap;"
-                                class="font-monospace">
-                                <span class="text-success fw-bold">De: {{ b.start_time|time:"H:i"|default:"--:--" }}</span><br>
-                                <span class="text-danger fw-bold">A: {{ b.end_time|time:"H:i"|default:"--:--" }}</span>
+                            <td class="text-center font-monospace binnacle-schedule-cell">
+                                <span class="text-success value-bold">De: {{ b.start_time|time:"H:i"|default:"--:--" }}</span><br>
+                                <span class="text-danger value-bold">A: {{ b.end_time|time:"H:i"|default:"--:--" }}</span>
                                 {% if b.end_date and b.end_date != b.start_date %}
-                                    <div class="text-muted" style="font-size: 0.7rem;">({{ b.end_date|date:"d/m/Y" }})
-                                    </div>
+                                    <div class="text-muted text-xs">({{ b.end_date|date:"d/m/Y" }})</div>
                                 {% endif %}
                             </td>
 
-                            <!-- ESTADO -->
-                            <td style="text-align: center !important;">
+                            <td class="text-center">
                                 {% if b.status == 'REQUESTED' %}
                                     <span class="badge badge-amber">PENDIENTE</span>
                                 {% elif b.status == 'REJECTED' %}
@@ -136,23 +117,20 @@
                                 {% endif %}
                             </td>
 
-                            <!-- JUSTIFICACIÓN -->
-                            <td style="text-align: left !important;" class="small">
-                                <span style="display:block; max-width:210px; white-space:normal; word-break:break-word; line-height:1.3;">
+                            <td class="text-left small">
+                                <span class="binnacle-justification-cell">
                                     {% if b.response_note %}
                                         {{ b.response_note|safe }}
                                     {% else %}
-                                        <span class="text-muted fst-italic">Sin justificación</span>
+                                        <span class="text-muted italic-muted">Sin justificación</span>
                                     {% endif %}
                                 </span>
                             </td>
 
-                            <!-- PDF -->
-                            <td style="text-align: center !important;">
+                            <td class="text-center">
                                 {% if b.justification_file %}
                                     <a href="{{ b.justification_file.url }}" target="_blank"
-                                       class="btn-red-circle mx-auto" title="Ver PDF adjunto"
-                                       style="width: 30px; height: 30px; font-size: 0.75rem; display: inline-flex; align-items: center; justify-content: center; margin: 0 auto;">
+                                       class="btn-red-circle btn-circle-xs" title="Ver PDF adjunto">
                                         <i class="fa-solid fa-file-pdf"></i>
                                     </a>
                                 {% else %}
@@ -160,7 +138,7 @@
                                 {% endif %}
                             </td>
 
-                            <td class="binnacle-registered-column small text-secondary">
+                            <td class="binnacle-registered-column small">
                                 {% if b.created_by %}
                                     {{ b.created_by.get_full_name|default:b.created_by.username }}
                                 {% else %}
@@ -168,19 +146,20 @@
                                 {% endif %}
                             </td>
 
-                            <!-- ACCIONES -->
                             <td class="actions binnacle-actions-column">
                                 <div class="actions-wrapper binnacle-row-actions">
-                                    <button type="button" class="btn-yellow-circle"
-                                            onclick="openEditBitacoraModal({{ b.id }}, '{{ b.start_time|time:'H:i'|default:'' }}', '{{ b.end_time|time:'H:i'|default:'' }}')"
-                                            title="Editar"
-                                            style="width: 28px; height: 28px; font-size: 0.7rem; display: inline-flex; align-items: center; justify-content: center;">
+                                    <button type="button" class="btn-yellow-circle btn-circle-xxs"
+                                            data-action="edit-binnacle"
+                                            data-binnacle-id="{{ b.id }}"
+                                            data-start-time="{{ b.start_time|time:'H:i'|default:'' }}"
+                                            data-end-time="{{ b.end_time|time:'H:i'|default:'' }}"
+                                            title="Editar">
                                         <i class="fa-solid fa-pen-to-square"></i>
                                     </button>
-                                    <button type="button" class="btn-red-circle"
-                                            onclick="deleteBinnacleSingle({{ b.id }})"
-                                            title="Eliminar"
-                                            style="width: 28px; height: 28px; font-size: 0.7rem; display: inline-flex; align-items: center; justify-content: center;">
+                                    <button type="button" class="btn-red-circle btn-circle-xxs"
+                                            data-action="delete-binnacle-single"
+                                            data-binnacle-id="{{ b.id }}"
+                                            title="Eliminar">
                                         <i class="fa-solid fa-trash-can"></i>
                                     </button>
                                 </div>
@@ -188,11 +167,10 @@
                         </tr>
                     {% empty %}
                         <tr id="binnacle-empty-tr">
-                            <td colspan="10" style="text-align: center !important;">
-                                <div class="empty-state-container py-5 text-center">
-                                    <i class="fa-solid fa-calendar-xmark empty-state-icon fa-2x text-muted opacity-50 mb-2"></i>
-                                    <p class="empty-state-text text-muted mb-0">No existen bitácoras pendientes
-                                        registradas.</p>
+                            <td colspan="9" class="text-center">
+                                <div class="empty-state-container">
+                                    <i class="fa-solid fa-calendar-xmark empty-state-icon"></i>
+                                    <p class="empty-state-text">No existen bitácoras pendientes registradas.</p>
                                 </div>
                             </td>
                         </tr>
@@ -202,211 +180,10 @@
             </div>
         </div>
 
-        <!-- 3. FOOTER DEL MODAL -->
         <div class="modal-footer-medium">
-            <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">
+            <button type="button" class="btn-dark-blue-rectangle-outline" data-modal-close>
                 <i class="fa-solid fa-xmark me-1"></i> Cerrar
             </button>
         </div>
     </div>
 </div>
-
-<script>
-    (function () {
-        const searchInput = document.getElementById('binnacleSearchInput');
-        const fromInput = document.getElementById('binnacle-filter-from');
-        const toInput = document.getElementById('binnacle-filter-to');
-        const rows = document.querySelectorAll('.binnacle-row');
-
-        window.filterBinnacles = function () {
-            const query = (searchInput.value || '').toLowerCase().trim();
-            const fromDate = fromInput.value;
-            const toDate = toInput.value;
-            let visibleCount = 0;
-
-            rows.forEach(row => {
-                const rowDate = row.getAttribute('data-date');
-                const rowText = row.innerText.toLowerCase();
-
-                let matchText = !query || rowText.includes(query);
-                let matchDate = true;
-
-                if (fromDate && rowDate && rowDate < fromDate) matchDate = false;
-                if (toDate && rowDate && rowDate > toDate) matchDate = false;
-
-                if (matchText && matchDate) {
-                    row.style.display = '';
-                    visibleCount++;
-                } else {
-                    row.style.display = 'none';
-                }
-            });
-
-            const counter = document.getElementById('binnacle-total-counter');
-            if (counter) counter.innerHTML = `Mostrando: <strong>${visibleCount}</strong>`;
-        };
-
-        window.clearBinnacleDates = function () {
-            if (searchInput) searchInput.value = '';
-            if (fromInput) fromInput.value = '';
-            if (toInput) toInput.value = '';
-            window.filterBinnacles();
-        };
-
-        if (searchInput) searchInput.addEventListener('input', window.filterBinnacles);
-        if (fromInput) fromInput.addEventListener('change', window.filterBinnacles);
-        if (toInput) toInput.addEventListener('change', window.filterBinnacles);
-    })();
-</script>
-
-<style>
-    body.no-scroll .main-content {
-        position: relative;
-        z-index: 1001;
-    }
-
-    .modal-binnacle-container {
-        width: min(1050px, calc(100vw - 24px));
-        max-width: 1050px;
-    }
-
-    .binnacle-bulk-btn {
-        align-items: center;
-        border: 0;
-        border-radius: 6px;
-        color: #fff;
-        cursor: pointer;
-        display: inline-flex;
-        font-size: 0.78rem;
-        font-weight: 700;
-        gap: 5px;
-        height: 34px;
-        padding: 0 12px;
-        transition: filter 0.2s ease, transform 0.2s ease;
-    }
-
-    .binnacle-bulk-btn:hover {
-        filter: brightness(0.94);
-        transform: translateY(-1px);
-    }
-
-    .binnacle-bulk-btn-approve {
-        background: #059669;
-    }
-
-    .binnacle-bulk-btn-reject {
-        background: #d97706;
-    }
-
-    .binnacle-bulk-btn-delete {
-        background: #dc2626;
-    }
-
-    .binnacle-table-scroll {
-        max-height: 52vh;
-        overflow-x: hidden;
-        overflow-y: auto;
-    }
-
-    .binnacle-toolbar {
-        align-items: center;
-        display: grid;
-        gap: 10px;
-        grid-template-columns: minmax(0, 1fr) auto;
-    }
-
-    #binnacle-bulk-actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        min-width: 0;
-    }
-
-    .binnacle-toolbar .search-filter-actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        justify-content: flex-end;
-        left: auto;
-        margin: 0;
-        position: static;
-        transform: none;
-        width: auto;
-    }
-
-    #binnacle-pending-table {
-        min-width: 0 !important;
-        table-layout: fixed !important;
-        width: 100% !important;
-    }
-
-    #binnacle-pending-table .binnacle-registered-column {
-        width: 17% !important;
-        white-space: normal !important;
-        word-break: break-word !important;
-        overflow-wrap: anywhere;
-        line-height: 1.15;
-    }
-
-    #binnacle-pending-table .binnacle-actions-column {
-        background: #fff !important;
-        position: static !important;
-        width: 11% !important;
-        min-width: 82px !important;
-        text-align: center !important;
-        white-space: nowrap !important;
-        z-index: auto !important;
-    }
-
-    #binnacle-pending-table tbody td.binnacle-actions-column {
-        background: #fff !important;
-    }
-
-    #binnacle-pending-table thead th.binnacle-actions-column {
-        background: #11628f !important;
-        color: #fff !important;
-        display: table-cell !important;
-        font-size: 0.7rem !important;
-        position: static !important;
-        text-align: center !important;
-        vertical-align: middle !important;
-        white-space: nowrap !important;
-        width: 11% !important;
-        min-width: 82px !important;
-    }
-
-    #binnacle-pending-table th,
-    #binnacle-pending-table td {
-        font-size: 0.72rem !important;
-        padding: 4px 5px !important;
-    }
-
-    #binnacle-pending-table .binnacle-row-actions {
-        gap: 3px;
-        justify-content: center;
-    }
-
-    #binnacle-pending-table thead th.binnacle-registered-column {
-        white-space: normal !important;
-    }
-
-    .binnacle-row-actions {
-        display: inline-flex;
-        justify-content: center;
-        gap: 4px;
-    }
-
-    @media (max-width: 700px) {
-        .modal-binnacle-container {
-            width: calc(100vw - 12px);
-        }
-
-        .binnacle-toolbar {
-            grid-template-columns: 1fr;
-        }
-
-        .binnacle-toolbar .search-filter-actions {
-            justify-content: flex-start;
-        }
-    }
-</style>

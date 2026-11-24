@@ -1,0 +1,68 @@
+<div class="modal-overlay">
+    <div class="modal-container-large">
+        <div class="modal-header">
+            <div class="header-content-group">
+                <div class="header-icon-circle">
+                    <i class="fas fa-chart-pie"></i>
+                </div>
+                <div>
+                    <h3 class="header-title">Resumen de Permisos Aprobados</h3>
+                    <span class="header-employee-subtitle">Cálculo basado en jornada de 8 horas = 1 día</span>
+                </div>
+            </div>
+            <button type="button" class="btn-close-circle" data-close-modal>
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div class="modal-body-custom">
+            <div class="grid-2-cols permit-summary-stats-grid">
+                <div class="stat-card readonly color-two">
+                    <h3>Total Permisos Aprobados</h3>
+                    <span class="number">{{ summary.total_approved_count|default:0 }}</span>
+                </div>
+                <div class="stat-card readonly color-two">
+                    <h3>Tiempo Total Acumulado</h3>
+                    <span class="number">{{ summary.grand_total.formatted|default:"0d 0h 0m" }}</span>
+                </div>
+            </div>
+
+            <div class="table-container modal-table-scroll-50">
+                <table class="table sticky-thead-table">
+                    <thead>
+                    <tr>
+                        <th>Cédula</th>
+                        <th>Servidor / Empleado</th>
+                        <th>Tipo de Permiso</th>
+                        <th class="text-center">Cant. Aprobados</th>
+                        <th class="text-center">Tiempo Acumulado</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for item in summary.items %}
+                        <tr>
+                            <td class="text-nowrap">{{ item.document_number }}</td>
+                            <td><strong>{{ item.employee_name }}</strong></td>
+                            <td><span class="badge badge-cyan">{{ item.permit_type }}</span></td>
+                            <td class="text-center">{{ item.approved_count }}</td>
+                            <td class="text-center text-nowrap"><strong>{{ item.formatted }}</strong></td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center italic-muted">
+                                No existen permisos aprobados con los filtros actuales.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button type="button" class="btn-secondary-outline" data-close-modal>
+                <i class="fas fa-times"></i> Cerrar
+            </button>
+        </div>
+    </div>
+</div>

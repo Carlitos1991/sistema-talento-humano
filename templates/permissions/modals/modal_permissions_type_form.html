@@ -1,26 +1,23 @@
 {% load static %}
-
 <div class="modal-overlay hidden">
     <div class="modal-container-medium">
-        <form method="POST" action="
-                {% if form.instance.pk %}{% url 'permissions:permit_type_update' form.instance.pk %}{% else %}{% url 'permissions:permit_type_create' %}{% endif %}"
-              onsubmit="submitAjaxForm(event)">
+        <form method="POST"
+              action="
+                      {% if form.instance.pk %}{% url 'permissions:permit_type_update' form.instance.pk %}{% else %}{% url 'permissions:permit_type_create' %}{% endif %}"
+              data-ajax-form>
             {% csrf_token %}
 
-            <!-- HEADER -->
             <div class="modal-header-medium">
                 <h3 class="header-title">
                     <i class="fa-solid fa-file-signature me-2"></i>
                     {% if form.instance.pk %}Editar Tipo de Permiso{% else %}Nuevo Tipo de Permiso{% endif %}
                 </h3>
-                <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
+                <button type="button" class="btn-close-circle" data-modal-close title="Cerrar">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
 
-            <!-- BODY -->
             <div class="modal-body-content modal-body-custom">
-                <!-- Nombre del Tipo -->
                 <div class="form-section-card mb-3">
                     <div class="form-group mb-0">
                         <label class="form-label" for="{{ form.name.id_for_label }}">
@@ -32,7 +29,6 @@
                     </div>
                 </div>
 
-                <!-- Campo Padre (Oculto) -->
                 {% if request.GET.parent %}
                     <input type="hidden" name="parent" value="{{ request.GET.parent }}">
                 {% else %}
@@ -40,60 +36,55 @@
                            value="{% if form.instance.parent %}{{ form.instance.parent.pk }}{% endif %}">
                 {% endif %}
 
-                <!-- Configuración con Switches Oficiales -->
                 <div class="form-section-card mb-0">
                     <h6 class="section-title"><i class="fa-solid fa-sliders"></i> Reglas de Configuración</h6>
 
                     <div class="grid-2-cols">
-                        <!-- Toggle Vacaciones -->
                         <div class="form-group mb-2">
-                            <label class="d-inline-flex align-items-center gap-2 cursor-pointer w-100">
+                            <label class="switch-card-label">
                                 <input type="checkbox" name="affects_vacation"
                                        id="{{ form.affects_vacation.id_for_label }}"
                                        class="switch-input switch-blue"
                                        {% if form.affects_vacation.value %}checked{% endif %}>
-                                <span class="switch-wrapper w-100 justify-content-between px-3 py-2">
+                                <span class="switch-wrapper switch-card-box">
                                     <span class="switch-text">¿Descuenta Vacaciones?</span>
                                     <span class="switch-circle"></span>
                                 </span>
                             </label>
                         </div>
 
-                        <!-- Toggle PDF -->
                         <div class="form-group mb-2">
-                            <label class="d-inline-flex align-items-center gap-2 cursor-pointer w-100">
+                            <label class="switch-card-label">
                                 <input type="checkbox" name="requires_attachment"
                                        id="{{ form.requires_attachment.id_for_label }}"
                                        class="switch-input switch-blue"
                                        {% if form.requires_attachment.value %}checked{% endif %}>
-                                <span class="switch-wrapper w-100 justify-content-between px-3 py-2">
+                                <span class="switch-wrapper switch-card-box">
                                     <span class="switch-text">¿Adjuntar PDF?</span>
                                     <span class="switch-circle"></span>
                                 </span>
                             </label>
                         </div>
 
-                        <!-- Toggle Justificación -->
                         <div class="form-group mb-2">
-                            <label class="d-inline-flex align-items-center gap-2 cursor-pointer w-100">
+                            <label class="switch-card-label">
                                 <input type="checkbox" name="needs_justification"
                                        id="{{ form.needs_justification.id_for_label }}"
                                        class="switch-input switch-blue"
                                        {% if form.needs_justification.value %}checked{% endif %}>
-                                <span class="switch-wrapper w-100 justify-content-between px-3 py-2">
+                                <span class="switch-wrapper switch-card-box">
                                     <span class="switch-text">¿Necesita Justificar?</span>
                                     <span class="switch-circle"></span>
                                 </span>
                             </label>
                         </div>
 
-                        <!-- Toggle Activo -->
                         <div class="form-group mb-2">
-                            <label class="d-inline-flex align-items-center gap-2 cursor-pointer w-100">
+                            <label class="switch-card-label">
                                 <input type="checkbox" name="is_active" id="{{ form.is_active.id_for_label }}"
                                        class="switch-input switch-green"
                                        {% if form.is_active.value or form.instance.pk is None %}checked{% endif %}>
-                                <span class="switch-wrapper w-100 justify-content-between px-3 py-2">
+                                <span class="switch-wrapper switch-card-box">
                                     <span class="switch-text">Estado Activo</span>
                                     <span class="switch-circle"></span>
                                 </span>
@@ -101,12 +92,10 @@
                         </div>
                     </div>
                 </div>
-
             </div>
 
-            <!-- FOOTER -->
             <div class="modal-footer-medium modal-footer-spaced">
-                <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">
+                <button type="button" class="btn-dark-blue-rectangle-outline" data-modal-close>
                     <i class="fa-solid fa-times me-1"></i> Cancelar
                 </button>
                 <button type="submit" class="btn-dark-blue-rectangle">

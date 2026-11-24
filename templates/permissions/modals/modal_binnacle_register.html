@@ -1,37 +1,30 @@
 {% load static %}
-
 <div class="modal-overlay hidden">
     <div class="modal-container-large">
         <form method="POST" action="{% url 'permissions:bitacora_register' employee_id %}" enctype="multipart/form-data"
-              onsubmit="submitAjaxForm(event)">
+              data-ajax-form>
             {% csrf_token %}
 
-            <!-- HEADER CORPORATIVO -->
             <div class="modal-header-medium">
-                <div class="d-flex align-items-center gap-3">
+                <div class="modal-header-group">
                     <div class="header-icon-circle">
                         <i class="fa-solid fa-clipboard-list text-white"></i>
                     </div>
                     <h3 class="header-title">Registro de Bitácora</h3>
                 </div>
-                <div class="d-flex align-items-center gap-3">
-                    <span class="text-white-opacity small d-none d-md-inline">
+                <div class="modal-header-group">
+                    <span class="header-employee-subtitle">
                         <i class="fas fa-user me-1"></i> {{ employee_name }}
                     </span>
-                    <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
+                    <button type="button" class="btn-close-circle" data-modal-close title="Cerrar">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
             </div>
 
-            <!-- BODY -->
             <div class="modal-body-content modal-body-custom">
-
-                <!-- SECCIÓN 1: PERIODO Y DURACIÓN -->
                 <div class="form-section-card mb-3">
-                    <h6 class="section-title">
-                        <i class="fas fa-calendar-day"></i> PERIODO Y DURACIÓN
-                    </h6>
+                    <h6 class="section-title"><i class="fas fa-calendar-day"></i> PERIODO Y DURACIÓN</h6>
                     <div class="grid-2-cols">
                         <div class="form-group mb-0">
                             <label class="form-label">FECHA INICIO <span class="text-red">*</span></label>
@@ -51,14 +44,9 @@
                     </div>
                 </div>
 
-                <!-- SECCIÓN 2: ESTRUCTURA DE JORNADAS -->
                 <div class="form-section-card mb-3">
-                    <h6 class="section-title">
-                        <i class="fas fa-briefcase"></i> ESTRUCTURA DE JORNADAS
-                    </h6>
+                    <h6 class="section-title"><i class="fas fa-briefcase"></i> ESTRUCTURA DE JORNADAS</h6>
                     <div class="grid-2-cols">
-
-                        <!-- TARJETA: PRIMERA JORNADA (AZUL) -->
                         <div class="shift-card morning">
                             <div class="shift-header">
                                 <i class="fa-solid fa-gear"></i> PRIMERA JORNADA
@@ -75,17 +63,15 @@
                                         <input type="time" name="first_end" class="form-control" value="13:00" required>
                                     </div>
                                 </div>
-                                <div class="d-flex justify-content-center align-items-center p-2 bg-light rounded mt-2 border">
-                                    <label class="d-flex align-items-center gap-2 m-0 cursor-pointer small">
-                                        <input type="checkbox" name="first_crosses_midnight"
-                                               class="form-check-input m-0">
+                                <div class="midnight-check-box">
+                                    <label class="midnight-check-label">
+                                        <input type="checkbox" name="first_crosses_midnight" class="form-check-input">
                                         <span>Cruza medianoche</span>
                                     </label>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- TARJETA: SEGUNDA JORNADA (VERDE) -->
                         <div class="shift-card afternoon">
                             <div class="shift-header">
                                 <i class="fa-solid fa-moon"></i> SEGUNDA JORNADA
@@ -101,85 +87,66 @@
                                         <input type="time" name="second_end" class="form-control">
                                     </div>
                                 </div>
-                                <div class="d-flex justify-content-center align-items-center p-2 bg-light rounded mt-2 border">
-                                    <label class="d-flex align-items-center gap-2 m-0 cursor-pointer small">
-                                        <input type="checkbox" name="second_crosses_midnight"
-                                               class="form-check-input m-0">
+                                <div class="midnight-check-box">
+                                    <label class="midnight-check-label">
+                                        <input type="checkbox" name="second_crosses_midnight" class="form-check-input">
                                         <span>Cruza medianoche</span>
                                     </label>
                                 </div>
                             </div>
                         </div>
-
                     </div>
                 </div>
 
-                <!-- SECCIÓN 3: JUSTIFICACIÓN Y DOCUMENTACIÓN -->
                 <div class="form-section-card mb-3">
-                    <h6 class="section-title">
-                        <i class="fas fa-file-lines"></i> JUSTIFICACIÓN Y DOCUMENTACIÓN
-                    </h6>
-
-                    <div style="display: flex; gap: 24px; align-items: flex-start;">
-                        <!-- Columna Izquierda: Motivo / Justificación -->
-                        <div style="flex: 1; min-width: 0;">
-                            <label class="form-label" style="font-weight: 700; color: #1e293b; margin-bottom: 6px;">
+                    <h6 class="section-title"><i class="fas fa-file-lines"></i> JUSTIFICACIÓN Y DOCUMENTACIÓN</h6>
+                    <div class="binnacle-justification-grid">
+                        <div class="binnacle-justification-main">
+                            <label class="form-label" for="id_binnacle_justification">
                                 MOTIVO / JUSTIFICACIÓN <span class="text-red">*</span>
                             </label>
                             <textarea name="justification"
-                                      class="form-control"
-                                      style="height: 120px; resize: none; border-radius: 8px; border: 1px solid #cbd5e1; padding: 10px 12px;"
+                                      id="id_binnacle_justification"
+                                      class="form-control binnacle-justification-textarea"
                                       placeholder="Describa el motivo de la bitácora..."
                                       required></textarea>
-                            <span class="small text-muted mt-2 d-block" style="font-size: 0.8rem; color: #64748b;">
-                <i class="fas fa-info-circle me-1"></i> Especifique la razón por la cual se registra esta bitácora y adjunte el PDF, de la disposición.
-            </span>
+                            <span class="form-hint mt-2 block-hint">
+                                <i class="fas fa-info-circle me-1"></i> Especifique la razón por la cual se registra esta bitácora y adjunte el PDF de la disposición.
+                            </span>
                         </div>
 
-                        <!-- Columna Derecha: Tarjeta Documento PDF -->
-                        <div style="width: 140px; flex-shrink: 0; text-align: center;">
-                            <label class="form-label"
-                                   style="font-weight: 700; color: #1e293b; margin-bottom: 6px; display: block; text-align: center;">
-                                DOCUMENTO PDF
-                            </label>
-
-                            <label for="id_attachment"
-                                   style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 120px; width: 100%; background: #f1f5f9; border-radius: 14px; cursor: pointer; transition: background 0.2s; border: none; margin: 0;">
-                                <i class="fas fa-file-pdf" style="font-size: 2.8rem; color: #dc2626;"></i>
-                                <span id="label-attachment-file"
-                                      style="font-size: 0.72rem; color: #64748b; margin-top: 6px; font-weight: 600; padding: 0 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 130px;"></span>
+                        <div class="binnacle-pdf-column">
+                            <label class="form-label text-center" for="id_attachment">DOCUMENTO PDF</label>
+                            <label for="id_attachment" class="binnacle-pdf-dropzone">
+                                <i class="fas fa-file-pdf binnacle-pdf-icon"></i>
+                                <span id="label-attachment-file" class="binnacle-pdf-filename"></span>
                                 <input type="file"
                                        name="attachment"
                                        id="id_attachment"
-                                       style="display: none;"
+                                       class="file-input-hidden"
                                        accept=".pdf"
-                                       onchange="const fn = this.files[0] ? this.files[0].name : ''; document.getElementById('label-attachment-file').innerText = fn ? (fn.length > 14 ? fn.slice(0, 11) + '...' : fn) : '';">
+                                       data-filename-target="label-attachment-file">
                             </label>
-
-                            <span class="small text-muted mt-2 d-block"
-                                  style="font-size: 0.78rem; color: #64748b; font-weight: 500;">
-                <i class="fas fa-paperclip me-1"></i> Max: 500 KB
-            </span>
+                            <span class="binnacle-pdf-helper">
+                                <i class="fas fa-paperclip me-1"></i> Max: 500 KB
+                            </span>
                         </div>
                     </div>
                 </div>
 
-                <!-- BANNER AZUL INFORMATIVO -->
-                <div class="alert alert-info border-left-primary mb-0 d-flex align-items-start gap-3 p-3">
-                    <i class="fas fa-info-circle text-primary mt-1" style="font-size: 1.3rem;"></i>
+                <div class="alert alert-info border-left-primary mb-0 binnacle-info-banner">
+                    <i class="fas fa-info-circle text-primary binnacle-info-icon"></i>
                     <div>
-                        <strong class="d-block mb-1 text-primary">¿Qué son las bitácoras?</strong>
+                        <strong class="binnacle-info-title">¿Qué son las bitácoras?</strong>
                         <span class="small text-dark">
                             Se crearán <strong>permisos de tipo Bitácora</strong> para cada día del período especificado, con los horarios configurados. Todos quedarán en estado <strong>PENDIENTE</strong> hasta su aprobación.
                         </span>
                     </div>
                 </div>
-
             </div>
 
-            <!-- FOOTER -->
             <div class="modal-footer-medium modal-footer-spaced">
-                <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">
+                <button type="button" class="btn-dark-blue-rectangle-outline" data-modal-close>
                     <i class="fas fa-times-circle me-1"></i> CANCELAR
                 </button>
                 <button type="submit" class="btn-dark-blue-rectangle">

@@ -1,19 +1,16 @@
 {% load static %}
 <div class="modal-overlay hidden">
     <div class="modal-container-medium">
-        <!-- HEADER -->
         <div class="modal-header-medium">
             <h3 class="header-title">
                 <i class="fas fa-file-alt me-2"></i> Detalle del Permiso
             </h3>
-            <button type="button" class="btn-close-circle" onclick="closeModal()" title="Cerrar">
+            <button type="button" class="btn-close-circle" data-modal-close title="Cerrar">
                 <i class="fas fa-times"></i>
             </button>
         </div>
 
-        <!-- BODY -->
         <div class="modal-body-content modal-body-custom">
-            <!-- Empleado -->
             <div class="employee-card-badge mb-3">
                 <div class="employee-avatar-wrapper">
                     {% if permit.employee.person.photo %}
@@ -28,7 +25,6 @@
                 </div>
             </div>
 
-            <!-- Datos del Permiso -->
             <div class="form-section-card mb-3">
                 <h6 class="section-title"><i class="fas fa-list-check"></i> Datos del Permiso</h6>
                 <div class="grid-2-cols">
@@ -86,14 +82,13 @@
                     <div class="mt-2">
                         <span class="label-muted">Documento Adjunto</span>
                         <a href="{{ permit.justification_file.url }}" target="_blank"
-                           class="btn-blue-rectangle-outline py-1 px-3 mt-1" style="font-size: 0.8rem;">
+                           class="btn-blue-rectangle-outline btn-compact-link mt-1">
                             <i class="fas fa-file-pdf me-1"></i> Ver Documento Adjunto
                         </a>
                     </div>
                 {% endif %}
             </div>
 
-            <!-- Observación o Respuesta -->
             {% if permit.response_note %}
                 <div class="form-section-card mb-3">
                     <h6 class="section-title"><i class="fas fa-comment-dots"></i> Observaciones / Historial</h6>
@@ -110,7 +105,6 @@
                 </div>
             {% endif %}
 
-            <!-- Auditoría -->
             <div class="form-section-card mb-0">
                 <h6 class="section-title"><i class="fas fa-history"></i> Auditoría</h6>
                 <div class="grid-2-cols small">
@@ -126,9 +120,8 @@
             </div>
         </div>
 
-        <!-- FOOTER -->
         <div class="modal-footer-medium">
-            <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">Cerrar</button>
+            <button type="button" class="btn-dark-blue-rectangle-outline" data-modal-close>Cerrar</button>
         </div>
     </div>
 </div>
