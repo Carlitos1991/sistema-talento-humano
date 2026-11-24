@@ -548,13 +548,25 @@ class PayrollCalculatorService:
                         if mp and mp.contract_type and mp.contract_type.labor_regime
                         else ''
                     )
-                    years_of_last_contract = 0.0
-                    if mp and mp.start_date <= self.period.end_date:
-                        c_start = mp.start_date
-                        c_end = min(mp.end_date, self.period.end_date) if mp.end_date else self.period.end_date
-                        if c_start <= c_end:
-                            last_contract_days = (c_end - c_start).days + 1
-                            years_of_last_contract = last_contract_days / 365.25
+                    inst_data = getattr(slip.employee, 'institutional_data', None)
+                    entry_date = getattr(inst_data, 'entry_date', None) if inst_data else None
+                    art22_cutoff = date(2004, 1, 1)  # Art. 22: valores hasta 31/12/2003 unificados en RMU
+
+                    if entry_date and entry_date <= self.period.end_date:
+                        ref_date = max(entry_date, art22_cutoff)
+                        effective_service_days = (self.period.end_date - ref_date).days + 1
+                    else:
+                        emp_mps = [
+                            m for m in management_periods
+                            if m.employee_id == slip.employee_id and m.start_date <= self.period.end_date
+                        ]
+                        if emp_mps:
+                            earliest_start = max(min(m.start_date for m in emp_mps), art22_cutoff)
+                            effective_service_days = (self.period.end_date - earliest_start).days + 1
+                        else:
+                            effective_service_days = total_days_service
+
+                    years_of_last_contract = effective_service_days / 365.25
 
                     emp_novelties = novelties_map.get(
                         slip.employee_id, {'incomes': [], 'deductions': []}
@@ -695,28 +707,11 @@ class PayrollCalculatorService:
                                     Decimal('1.00') / Decimal('100.0')
                             ) * Decimal(str(valid_dependents_count))
 
+
                         elif code_clean == 'ANTIGUEDAD':
-                            if regime_code == 'CT':
-                                inst_data = getattr(slip.employee, 'institutional_data', None)
-                                entry_date = getattr(inst_data, 'entry_date', None) if inst_data else None
-                                if entry_date and entry_date <= self.period.end_date:
-                                    effective_days = max(
-                                        total_days_service,
-                                        (self.period.end_date - entry_date).days + 1
-                                    )
-                                else:
-                                    effective_days = total_days_service
-                                seniority_years = int(effective_days / 365.25)
-                                if seniority_years >= 1 and self.period.working_days:
-                                    sbu_val = Decimal(str(self.config.get('SBU', '460.00')))
-                                    proportional_sbu = sbu_val * (
-                                            Decimal(str(slip.worked_days)) / Decimal(str(self.period.working_days))
-                                    )
-                                    val = (
-                                            proportional_sbu
-                                            * (Decimal('0.25') / Decimal('100.0'))
-                                            * Decimal(str(seniority_years))
-                                    ).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                            if regime_code == 'CT' and int(years_of_last_contract) >= 1:
+                                val = (salary * (Decimal('0.25') / Decimal('100.0')) * Decimal(
+                                    str(int(years_of_last_contract)))).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
                         if val > 0:
                             items_buffer.append(
