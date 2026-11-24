@@ -1748,7 +1748,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 });
 document.addEventListener('click', (event) => {
-    if (event.target.closest('[data-close-modal]')) {
+    if (event.target.closest('[data-close-modal], [data-modal-close]')) {
         event.preventDefault();
         window.App.Modal.closeModal();
         return;
