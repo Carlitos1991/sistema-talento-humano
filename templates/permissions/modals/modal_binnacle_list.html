@@ -97,11 +97,12 @@
                                 </td>
                             {% endif %}
                             <td class="text-center font-monospace text-muted">{{ forloop.counter }}</td>
-                            <td class="text-center font-monospace value-bold">{{ b.start_date|date:"d/m/Y" }}</td>
+                            <td class="text-center font-monospace">{{ b.start_date|date:"d/m/Y" }}</td>
 
                             <td class="text-center font-monospace binnacle-schedule-cell">
-                                <span class="text-success value-bold">De: {{ b.start_time|time:"H:i"|default:"--:--" }}</span><br>
-                                <span class="text-danger value-bold">A: {{ b.end_time|time:"H:i"|default:"--:--" }}</span>
+                                <div class="text-success fw-bold">
+                                    De: {{ b.start_time|time:"H:i"|default:"--:--" }}</div>
+                                <div class="text-danger fw-bold">A: {{ b.end_time|time:"H:i"|default:"--:--" }}</div>
                                 {% if b.end_date and b.end_date != b.start_date %}
                                     <div class="text-muted text-xs">({{ b.end_date|date:"d/m/Y" }})</div>
                                 {% endif %}
