@@ -585,7 +585,7 @@ def api_unit_deliverables(request, unit_id):
 # 4. ENDPOINTS DE SOPORTE AJAX (SELECT2 Y CÓDIGOS CORRELATIVOS)
 # ==============================================================================
 
-class ParentOptionsJsonView(LoginRequiredMixin, PermissionRequiredMixin, View):
+class ParentOptionsJsonView(LoginRequiredMixin, View):
     """Provee la lista de unidades candidatas a ser padre según el estrato jerárquico."""
     permission_required = 'institution.view_administrativeunit'
 
@@ -658,7 +658,6 @@ class EmployeeSearchJsonView(LoginRequiredMixin, PermissionRequiredMixin, View):
 
 
 @login_required
-@permission_required('institution.view_administrativeunit', raise_exception=True)
 def api_get_administrative_children(request):
     """Retorna subunidades directas o unidades raíz activas (formato dual array y Select2)."""
     parent_id = request.GET.get('parent_id')
