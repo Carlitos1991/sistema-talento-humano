@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
+{% block title %}{{ unit.name }} | SIGETH{% endblock %}
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'css/institution_detail.css' %}">
     <link rel="stylesheet" href="{% static 'css/institution.css' %}">
 {% endblock %}
 {% block content %}
@@ -11,17 +11,17 @@
         <div class="header-card institution-header-card">
             <div class="header-left">
                 <span class="icon icon-circle-large"><i class="fa-solid fa-building"></i></span>
-                <button type="button" class="btn-white-rectangle" onclick="window.history.back()">
+                <button type="button" class="btn-white-rectangle btn-header-back" onclick="window.history.back()">
                     <i class="fa-solid fa-arrow-left"></i> Regresar
                 </button>
             </div>
             <div class="header-center">
-                <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
-                    <span class="title title-wide m-0">{{ unit.name }}</span>
+                <div class="unit-title-wrapper">
+                    <span class="title title-wide">{{ unit.name }}</span>
                     {% if unit.is_main_unit %}
                         <span class="badge-main-unit"
                               title="Dependencia Principal Cabecera (Agrupa Cronograma y Reportes)">
-                            Principal
+                            <i class="fa-solid fa-crown"></i> Principal
                         </span>
                     {% endif %}
                 </div>
@@ -32,9 +32,9 @@
                         <div><b>Ubicación:</b> <span>{{ unit.address|default:'Sin asignar' }}</span></div>
                         <div><b>Teléfono:</b> <span>{{ unit.phone|default:'Sin asignar' }}</span></div>
                         {% if perms.institution.change_administrativeunit %}
-                            <div class="unit-actions {% if unit.level.level_order <= 1 %}unit-actions-single{% endif %}">
+                            <div class="unit-actions">
                                 <button type="button" class="btn-warning" title="Editar Unidad"
-                                        onclick="openAjaxModal('{% url 'institution:unit_update' unit.id %}')">
+                                        onclick="openAjaxModal('{% url 'institution:unit_update' unit.id %}', window.initUnitModal)">
                                     <i class="fas fa-pencil"></i> Editar
                                 </button>
                                 {% if unit.level.level_order > 1 %}
@@ -51,7 +51,7 @@
             </div>
             <div class="header-right">
                 {% if unit.boss %}
-                    <div class="boss-section boss-section-header boss-section-green-light header-boss-card">
+                    <div class="boss-section header-boss-card">
                         {% if unit.boss.person.photo %}
                             <img src="{{ unit.boss.person.photo.url }}" class="boss-photo boss-photo-xl"
                                  alt="Foto Jefe">
@@ -62,7 +62,7 @@
                         {% endif %}
                         <div class="boss-info">
                             <span class="boss-name">{{ unit.boss.person.first_name }} {{ unit.boss.person.last_name }}</span>
-                            <span class="boss-role boss-role-gray"><i class="fa-solid fa-user-tie"></i>
+                            <span class="boss-role-gray"><i class="fa-solid fa-user-tie"></i>
                                 {% if unit.boss.current_budget_line.first and unit.boss.current_budget_line.first.position_item %}
                                     {{ unit.boss.current_budget_line.first.position_item.name }}
                                 {% else %}
@@ -71,12 +71,12 @@
                             </span>
                             <div class="nomina-actions">
                                 <a href="{% url 'employee:employee_detail' unit.boss.person.id %}"
-                                   class="btn btn-profile-custom btn-profile-green mt-2 btn-boss-profile"
+                                   class="btn-boss-profile"
                                    title="Ver Detalle Completo">
                                     <i class="fa-solid fa-user"></i> Ver perfil
                                 </a>
                                 <button type="button"
-                                        class="btn btn-profile-custom btn-profile-green mt-2 btn-boss-profile"
+                                        class="btn-boss-profile"
                                         onclick="openAjaxModal('{% url 'institution:unit_assign_boss' unit.id %}')"
                                         title="Asignar Jefe Inmediato">
                                     <i class="fa-solid fa-retweet"></i> Cambiar
@@ -85,7 +85,7 @@
                         </div>
                     </div>
                 {% else %}
-                    <div class="boss-section boss-section-header boss-section-green-light header-boss-card boss-card-empty">
+                    <div class="boss-section header-boss-card boss-card-empty">
                         <div class="boss-empty-content">
                             <h2 class="boss-name boss-empty-title">
                                 <i class="fa-solid fa-user-tie"></i> ASIGNAR JEFE INMEDIATO
@@ -153,7 +153,7 @@
             {% endif %}
 
             {% if unit_stats.propios > 0 %}
-                <button type="button" class="stat-btn stat-btn-total stat-btn-propios"
+                <button type="button" class="stat-btn stat-btn-total"
                         onclick="exportUnitEmployees('{{ unit.id }}', 'PROPIOS')"
                         title="Empleados originarios - Clic para exportar a Excel">
                     <i class="fas fa-building-user"></i>
@@ -177,18 +177,20 @@
             {% endif %}
         </div>
 
-        <!-- Entregable Acordeón -->
+        <!-- Entregables Acordeón -->
         <div class="card-section">
             <div class="card-section-header accordion-header" onclick="toggleDeliverablesAccordion(this)">
                 <span><i class="fa-solid fa-box"></i> Entregables</span>
                 <i class="fa-solid fa-chevron-down accordion-indicator"></i>
-                <button type="button" class="btn btn-nuevo-entregable btn-cta-action"
+                <button type="button" class="btn-nuevo-entregable"
                         onclick="event.stopPropagation(); openAjaxModal('{% url 'institution:api_deliverable_create' unit.id %}', () => bindDeliverableForm('{{ unit.id }}'))">
                     <i class="fa-solid fa-plus"></i> Nuevo Entregable
                 </button>
             </div>
-            <div id="deliverables-table-wrapper" class="card-section-content" style="display: none;">
-                {% include 'institution/partials/partial_deliverables_table.html' %}
+            <div id="deliverables-table-wrapper" class="card-section-content hidden">
+                <div class="deliverables-table-container">
+                    {% include 'institution/partials/partial_deliverables_table.html' %}
+                </div>
             </div>
         </div>
 
@@ -250,7 +252,7 @@
 
         <!-- Subdependencias -->
         <div class="sub-units-section">
-            <div class="institution-section-title section-title-row">
+            <div class="nomina-title section-title-row">
                 <span><i class="fa-solid fa-sitemap"></i> Sub-dependencias / Áreas</span>
 
                 {% if perms.institution.add_administrativeunit %}
@@ -263,12 +265,12 @@
             <div id="subunits-list-wrapper" class="sub-units-list">
                 {% if children and children|length > 0 %}
                     {% for sub in children %}
+                        <!-- DESPUÉS -->
                         <div class="sub-units-card-blue"
-                             onclick="window.location.href='/institution/units/detail/{{ sub.id }}/view/'">
+                             onclick="window.location.href='{% url 'institution:unit_detail' sub.id %}'">
                             <i class="fa-solid fa-users"></i>
                             <span class="sub-name">{{ sub.name }}</span>
 
-                            <!-- BADGE CENTRADO SOBRIO DEBAJO DEL NOMBRE -->
                             {% if sub.is_main_unit %}
                                 <span class="sub-unit-center-badge">Principal</span>
                             {% endif %}

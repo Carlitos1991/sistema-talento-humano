@@ -85,7 +85,7 @@
                                             onclick="openAjaxModal('{% url 'institution:unit_update' unit.pk %}', window.initUnitModal)">
                                         <i class="fas fa-edit"></i>
                                     </button>
-                                    <a href="{% url 'institution:unit_detail_view' unit.id %}" class="btn-blue-circle"
+                                    <a href="{% url 'institution:unit_detail' unit.id %}" class="btn-blue-circle"
                                        title="Ver Detalle"> <i class="fas fa-eye"></i>
                                     </a>
                                     {% if unit.is_active %}

@@ -421,7 +421,7 @@ window.refreshDeliverablesTable = function (unitId) {
         .then(res => res.text())
         .then(html => {
             wrapper.innerHTML = html;
-            wrapper.style.display = 'block';
+            wrapper.classList.remove('hidden');
         })
         .catch(err => console.error('Error actualizando entregables:', err));
 };
@@ -445,12 +445,11 @@ window.toggleDeliverablesAccordion = function (headerElement) {
     const indicatorIcon = headerElement.querySelector('.accordion-indicator');
     if (!contentElement) return;
 
-    const isHidden = contentElement.style.display === 'none';
-    contentElement.style.display = isHidden ? 'block' : 'none';
+    const isHidden = contentElement.classList.toggle('hidden');
 
     if (indicatorIcon) {
-        indicatorIcon.classList.toggle('fa-chevron-up', isHidden);
-        indicatorIcon.classList.toggle('fa-chevron-down', !isHidden);
+        indicatorIcon.classList.toggle('fa-chevron-up', !isHidden);
+        indicatorIcon.classList.toggle('fa-chevron-down', isHidden);
     }
 };
 

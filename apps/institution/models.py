@@ -129,13 +129,6 @@ class AdministrativeUnit(BaseModel):
             current = current.parent
         return self
 
-    def get_descendant_ids(self):
-        """Retorna una lista con el ID actual y todos los IDs de sus subdependencias recursivamente."""
-        descendants = [self.id]
-        children = AdministrativeUnit.objects.filter(parent=self, is_active=True)
-        for child in children:
-            descendants.extend(child.get_descendant_ids())
-        return descendants
 
     class Meta:
         verbose_name = "Unidad Administrativa"

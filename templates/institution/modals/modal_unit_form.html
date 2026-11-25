@@ -4,7 +4,7 @@
             {% csrf_token %}
 
             <!-- CAMPOS OCULTOS DE CONTEXTO -->
-            <div style="display: none;">
+            <div class="hidden">
                 {{ form.level }}
                 {{ form.parent }}
                 {{ form.boss }}
@@ -13,7 +13,7 @@
 
             <div class="modal-header-medium">
                 <h3 class="header-title">
-                    <i class="fa-solid fa-building me-2"></i>
+                    <i class="fa-solid fa-building"></i>
                     <span>{% if form.instance.pk %}Editar Unidad{% else %}Nueva Unidad{% endif %}</span>
                 </h3>
                 <button type="button" class="btn-close-circle" onclick="closeModal()">
@@ -23,7 +23,7 @@
 
             <div class="modal-body-content modal-body-custom">
                 {% if form.non_field_errors %}
-                    <div class="alert alert-danger mb-3">
+                    <div class="alert alert-danger">
                         {% for error in form.non_field_errors %}
                             <span>{{ error }}</span><br>
                         {% endfor %}
@@ -31,9 +31,9 @@
                 {% endif %}
 
                 <!-- DATOS PRINCIPALES -->
-                <div class="form-section-card mb-3">
-                    <div class="row g-3">
-                        <div class="col-md-6 form-group">
+                <div class="form-section-card">
+                    <div class="form-grid-2">
+                        <div class="form-group">
                             <label class="form-label">
                                 Código <span class="text-red">*</span>
                             </label>
@@ -42,7 +42,7 @@
                                 <div class="text-error">{{ form.code.errors.0 }}</div>
                             {% endif %}
                         </div>
-                        <div class="col-md-6 form-group">
+                        <div class="form-group">
                             <label class="form-label">Nombre de la Unidad <span class="text-red">*</span></label>
                             {{ form.name }}
                             {% if form.name.errors %}
@@ -50,12 +50,12 @@
                             {% endif %}
                         </div>
                     </div>
-                    <div class="row g-3">
-                        <div class="col-md-6 form-group">
+                    <div class="form-grid-2">
+                        <div class="form-group">
                             <label class="form-label">Ubicación</label>
                             {{ form.address }}
                         </div>
-                        <div class="col-md-6 form-group">
+                        <div class="form-group">
                             <label class="form-label">Teléfono</label>
                             {{ form.phone }}
                         </div>
@@ -63,20 +63,17 @@
                 </div>
 
                 <!-- 3 SWITCHES EN UNA MISMA FILA CON ESTILO INSTITUCIONAL -->
-                <div class="form-section-card py-3 px-3">
-                    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: stretch;">
+                <div class="form-section-card">
+                    <div class="unit-switches-grid">
 
                         <!-- 1. ESTADO ACTIVO -->
-                        <div class="d-flex flex-column justify-content-between align-items-center p-2 rounded border bg-light"
-                             style="min-height: 90px; text-align: center;">
-                            <label for="id_is_active"
-                                   class="form-label font-bold text-dark mb-2 cursor-pointer d-flex align-items-center justify-content-center gap-1">
+                        <div class="unit-switch-box">
+                            <label for="id_is_active" class="unit-switch-title">
                                 <i class="fa-solid fa-power-off text-green"></i> Estado
                             </label>
-                            <div class="d-flex align-items-center justify-content-center w-100">
+                            <div class="unit-switch-control">
                                 {{ form.is_active }}
-                                <label class="switch-wrapper" for="id_is_active"
-                                       style="min-width: 110px; padding: 4px 10px;">
+                                <label class="switch-wrapper unit-switch-pill" for="id_is_active">
                                     <div class="switch-circle"></div>
                                     <span class="switch-text">Activa</span>
                                 </label>
@@ -84,17 +81,14 @@
                         </div>
 
                         <!-- 2. DEPENDENCIA PRINCIPAL -->
-                        <div class="d-flex flex-column justify-content-between align-items-center p-2 rounded border bg-light"
-                             style="min-height: 90px; text-align: center;">
-                            <label for="id_is_main_unit"
-                                   class="form-label font-bold text-dark mb-2 cursor-pointer d-flex align-items-center justify-content-center gap-1"
+                        <div class="unit-switch-box">
+                            <label for="id_is_main_unit" class="unit-switch-title"
                                    title="Dependencia Principal Cabecera">
                                 <i class="fa-solid fa-sitemap text-blue"></i> Cabecera
                             </label>
-                            <div class="d-flex align-items-center justify-content-center w-100">
+                            <div class="unit-switch-control">
                                 {{ form.is_main_unit }}
-                                <label class="switch-wrapper" for="id_is_main_unit"
-                                       style="min-width: 110px; padding: 4px 10px;">
+                                <label class="switch-wrapper unit-switch-pill" for="id_is_main_unit">
                                     <div class="switch-circle"></div>
                                     <span class="switch-text">Principal</span>
                                 </label>
@@ -102,17 +96,14 @@
                         </div>
 
                         <!-- 3. UNIDAD DE TALENTO HUMANO -->
-                        <div class="d-flex flex-column justify-content-between align-items-center p-2 rounded border bg-light"
-                             style="min-height: 90px; text-align: center;">
-                            <label for="id_is_human_resources"
-                                   class="form-label font-bold text-dark mb-2 cursor-pointer d-flex align-items-center justify-content-center gap-1"
+                        <div class="unit-switch-box">
+                            <label for="id_is_human_resources" class="unit-switch-title"
                                    title="Unidad de Talento Humano y sus dependencias">
-                                <i class="fa-solid fa-users-gear" style="color: #d97706;"></i> Es TTHH?
+                                <i class="fa-solid fa-users-gear text-amber"></i> ¿Es TTHH?
                             </label>
-                            <div class="d-flex align-items-center justify-content-center w-100">
+                            <div class="unit-switch-control">
                                 {{ form.is_human_resources }}
-                                <label class="switch-wrapper" for="id_is_human_resources"
-                                       style="min-width: 110px; padding: 4px 10px;">
+                                <label class="switch-wrapper unit-switch-pill" for="id_is_human_resources">
                                     <div class="switch-circle"></div>
                                     <span class="switch-text">Área TH</span>
                                 </label>
@@ -127,7 +118,7 @@
             <div class="modal-footer-medium modal-footer-spaced">
                 <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">Cancelar</button>
                 <button type="submit" class="btn-dark-blue-rectangle">
-                    <i class="fas fa-save me-1"></i> {% if form.instance.pk %}Actualizar{% else %}Guardar{% endif %}
+                    <i class="fas fa-save"></i> {% if form.instance.pk %}Actualizar{% else %}Guardar{% endif %}
                 </button>
             </div>
         </form>

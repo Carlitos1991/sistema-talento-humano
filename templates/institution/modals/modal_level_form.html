@@ -4,7 +4,7 @@
             {% csrf_token %}
             <div class="modal-header-medium">
                 <h3 class="header-title">
-                    <i class="fa-solid fa-layer-group me-2"></i>
+                    <i class="fa-solid fa-layer-group"></i>
                     <span>{% if form.instance.pk %}Editar Nivel{% else %}Nuevo Nivel{% endif %}</span>
                 </h3>
                 <button type="button" class="btn-close-circle" onclick="closeModal()">
@@ -12,35 +12,34 @@
                 </button>
             </div>
 
-            <div class="modal-body">
+            <div class="modal-body-content modal-body-custom">
                 {% if form.non_field_errors %}
-                    <div class="alert alert-danger mb-3">
+                    <div class="alert alert-danger">
                         {% for error in form.non_field_errors %}
-                            {{ error }}
+                            <span>{{ error }}</span><br>
                         {% endfor %}
                     </div>
                 {% endif %}
 
                 <div class="form-section-card">
-                    <div class="form-group mb-3">
-                        <label class="form-label">Nombre del Nivel <span class="text-danger">*</span></label>
+                    <div class="form-group">
+                        <label class="form-label">Nombre del Nivel <span class="text-red">*</span></label>
                         {{ form.name }}
                         {% if form.name.errors %}
                             <div class="text-error">{{ form.name.errors.0 }}</div>
                         {% endif %}
                     </div>
-                    <!-- Mensaje informativo -->
                     <div class="alert alert-info">
-                        <i class="fa-solid fa-circle-info me-2"></i>
+                        <i class="fa-solid fa-circle-info"></i>
                         El orden jerárquico se asignará automáticamente.
                     </div>
                 </div>
             </div>
 
-            <div class="modal-footer-medium">
+            <div class="modal-footer-medium modal-footer-spaced">
                 <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">Cancelar</button>
                 <button type="submit" class="btn-dark-blue-rectangle">
-                    <i class="fas fa-save me-1"></i> {% if form.instance.pk %}Actualizar{% else %}Guardar{% endif %}
+                    <i class="fas fa-save"></i> {% if form.instance.pk %}Actualizar{% else %}Guardar{% endif %}
                 </button>
             </div>
         </form>

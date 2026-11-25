@@ -1,16 +1,14 @@
 <div class="modal-overlay hidden" id="modalAssignBoss">
     <div class="modal-container-medium">
-        <!-- FORMULARIO CON CALLBACK DE RECARGA AUTOMÁTICA -->
         <form action="{{ request.path }}"
-              method="POST" 
-              id="assignBossForm" 
+              method="POST"
+              id="assignBossForm"
               onsubmit="submitAjaxForm(event, reloadInstitutionPageAtPosition)">
             {% csrf_token %}
 
-            <!-- HEADER -->
             <div class="modal-header-medium">
                 <h3 class="header-title">
-                    <i class="fa-solid fa-user-tie me-2"></i>
+                    <i class="fa-solid fa-user-tie"></i>
                     <span>Asignar Jefe Inmediato</span>
                 </h3>
                 <button type="button" class="btn-close-circle" onclick="closeModal()" aria-label="Cerrar">
@@ -18,36 +16,36 @@
                 </button>
             </div>
 
-            <!-- BODY CON SELECT2 -->
             <div class="modal-body-content modal-body-custom">
                 <div class="form-section-card">
                     <div class="form-group form-group-compact">
                         <label class="form-label" for="id_boss_assign">
-                            Funcionario Responsable <span class="text-danger">*</span>
+                            Funcionario Responsable <span class="text-red">*</span>
                         </label>
                         {{ form.boss }}
                         {% if form.boss.errors %}
-                            <div class="text-error small mt-1">{{ form.boss.errors.0 }}</div>
+                            <div class="text-error">{{ form.boss.errors.0 }}</div>
                         {% endif %}
                     </div>
 
-                    <div class="form-check mt-3">
+                    <div class="modal-check-group">
                         {{ form.keep_previous_assignment }}
-                        <label class="form-check-label" for="{{ form.keep_previous_assignment.id_for_label }}">
+                        <label class="modal-check-label" for="{{ form.keep_previous_assignment.id_for_label }}">
                             {{ form.keep_previous_assignment.label }}
                         </label>
-                        <div class="form-text">{{ form.keep_previous_assignment.help_text }}</div>
+                        {% if form.keep_previous_assignment.help_text %}
+                            <div class="modal-help-text">{{ form.keep_previous_assignment.help_text }}</div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
 
-            <!-- FOOTER -->
             <div class="modal-footer-medium modal-footer-spaced">
                 <button type="button" class="btn-dark-blue-rectangle-outline" onclick="closeModal()">
                     Cancelar
                 </button>
                 <button type="submit" class="btn-dark-blue-rectangle">
-                    <i class="fas fa-save me-1"></i> Guardar Asignación
+                    <i class="fas fa-save"></i> Guardar Asignación
                 </button>
             </div>
         </form>

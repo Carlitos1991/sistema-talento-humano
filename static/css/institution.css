@@ -1,12 +1,17 @@
-/* --- ESTADO VACÍO DE TABLA (EMPTY STATE) --- */
+/* =========================================================================
+   SIGETH - ESTILOS ESPECÍFICOS DEL MÓDULO INSTITUCIÓN
+   (Unificación de institution.css e institution_detail.css)
+   ========================================================================= */
+
+/* --- 1. ESTADO VACÍO DE TABLA (EMPTY STATE) --- */
 .empty-state-row {
-    background-color: transparent !important; /* Evita hovers extraños */
+    background-color: transparent !important;
 }
 
 .empty-state-cell {
     padding: 3rem 1rem;
     text-align: center;
-    background-color: #f9fafb; /* Fondo sutil para distinguir de las filas normales */
+    background-color: #f9fafb;
     border-bottom: 1px solid #e5e7eb;
 }
 
@@ -17,25 +22,20 @@
     color: #6b7280;
 }
 
-.empty-state-icon {
+.empty-state-cell .empty-state-icon {
     font-size: 2.5rem;
     margin-bottom: 1rem;
     opacity: 0.5;
     color: #9ca3af;
 }
 
-.empty-state-text {
+.empty-state-cell .empty-state-text {
     font-size: 1.1rem;
     font-weight: 500;
     margin: 0;
     color: #4b5563;
 }
 
-.hidden {
-    display: none !important;
-}
-
-/* Botón sutil de reseteo */
 .btn-empty-reset {
     margin-top: 15px;
     background: transparent;
@@ -55,10 +55,7 @@
     background-color: #f3f4f6;
 }
 
-/* =========================================
-   ESTILOS DEL ORGANIGRAMA POSICIONAL
-   ========================================= */
-
+/* --- 2. ORGANIGRAMA POSICIONAL --- */
 .organigram-container {
     padding: 1.5rem;
     height: calc(100vh - 100px);
@@ -70,7 +67,6 @@
     margin-bottom: 1rem;
 }
 
-/* --- NUEVO BOTÓN TEMPORAL CENTRADO --- */
 .org-title-wrapper {
     display: flex;
     justify-content: center;
@@ -87,7 +83,7 @@
     border-radius: 50px;
     letter-spacing: 0.05em;
     box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
-    cursor: pointer; /* Se programará luego */
+    cursor: pointer;
     transition: transform 0.2s, box-shadow 0.2s;
     text-transform: uppercase;
 }
@@ -101,7 +97,6 @@
     transform: translateY(0);
 }
 
-/* --- VISOR OSCURO (CANVAS) --- */
 .image-viewer-box {
     background-color: #1e293b;
     background-image: radial-gradient(#334155 1px, transparent 1px);
@@ -117,7 +112,6 @@
     border: 1px solid #475569;
 }
 
-/* --- IMAGEN --- */
 .organigram-img {
     max-width: 90%;
     max-height: 85%;
@@ -131,7 +125,6 @@
     cursor: grabbing;
 }
 
-/* --- ZONA DE CARGA --- */
 .upload-zone {
     text-align: center;
     color: #94a3b8;
@@ -173,13 +166,10 @@
     transform: translateY(-2px);
 }
 
-/* --- INPUT FILE OCULTO --- */
-/* Importante: Ocultamos el input pero lo dejamos accesible al DOM */
 #uploadForm input[type="file"] {
     display: none;
 }
 
-/* --- TOOLBAR --- */
 .viewer-toolbar {
     position: absolute;
     bottom: 30px;
@@ -195,19 +185,7 @@
     border: 1px solid rgba(255, 255, 255, 0.1);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
     z-index: 20;
-    opacity: 0;
     animation: slideUp 0.5s forwards;
-}
-
-@keyframes slideUp {
-    to {
-        opacity: 1;
-        bottom: 30px;
-    }
-    from {
-        opacity: 0;
-        bottom: -20px;
-    }
 }
 
 .tool-btn {
@@ -238,7 +216,6 @@
     background: rgba(255, 255, 255, 0.2);
 }
 
-/* --- BOTÓN GUARDAR FLOTANTE --- */
 .btn-save-float {
     position: absolute;
     top: 20px;
@@ -255,22 +232,18 @@
     z-index: 30;
 }
 
-/* =========================================
-   LISTADO NIVEL RAÍZ (ROOT LIST)
-   ========================================= */
-
+/* --- 3. LISTADO NIVEL RAÍZ (ROOT LIST) --- */
 .root-list-container {
     padding: 1.5rem;
     max-width: 1400px;
     margin: 0 auto;
 }
 
-/* --- HEADER MUNICIPIO --- */
 .root-header-card {
     background: white;
     padding: 1rem 1.5rem;
     border-radius: 8px;
-    border: 1px solid #e5e7eb; /* Borde sutil */
+    border: 1px solid #e5e7eb;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
     display: flex;
     justify-content: space-between;
@@ -286,13 +259,13 @@
 
 .brand-icon {
     font-size: 2rem;
-    color: #2563eb; /* Azul corporativo */
+    color: #2563eb;
 }
 
 .brand-text {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; /* Fuente limpia */
+    font-family: var(--font-heading), sans-serif;
     font-size: 1.8rem;
-    font-weight: 400; /* Letra fina como en la imagen */
+    font-weight: 400;
     color: #1e293b;
     margin: 0;
     text-transform: uppercase;
@@ -310,7 +283,6 @@
     color: #1e293b;
 }
 
-/* --- SECCIÓN TÍTULO --- */
 .section-divider {
     display: flex;
     align-items: center;
@@ -331,15 +303,18 @@
     background: #e2e8f0;
 }
 
-/* --- GRID DE TARJETAS --- */
 .cards-grid-layout {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
     gap: 1.5rem;
 }
 
-/* --- TARJETA INDIVIDUAL (Estilo Imagen 1) --- */
-
+.grid-dynamic {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
 
 .card-badges {
     display: flex;
@@ -347,19 +322,8 @@
     margin-bottom: 1.2rem;
 }
 
-.badge-gray {
-    background-color: #94a3b8;
-    color: white;
-    padding: 0.3rem 1rem;
-    border-radius: 50px;
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
 .badge-gray-dark {
-    background-color: #6b7280; /* Gris más oscuro */
+    background-color: #6b7280;
     color: white;
     padding: 0.25rem 0.8rem;
     border-radius: 50px;
@@ -369,18 +333,17 @@
 }
 
 .card-unit-title {
-    font-size: 0.95rem; /* Un poco más pequeño pero legible */
-    font-weight: 800; /* Negrita fuerte (Bold) */
-    color: #374151; /* Gris oscuro casi negro */
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #111827;
     text-align: left;
     margin: 0;
     text-transform: uppercase;
-    letter-spacing: 0.01em;
-    line-height: 1.3;
+    letter-spacing: 0.02em;
 }
 
 .card-details {
-    margin-top: auto; /* Empuja hacia abajo si sobra espacio */
+    margin-top: auto;
 }
 
 .detail-row {
@@ -423,29 +386,76 @@
     color: #94a3b8;
 }
 
-.grid-dynamic {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 1.5rem;
-    margin-bottom: 2rem;
+/* --- 4. TARJETA ESTILO DEPENDENCIA & BOTONES PILL --- */
+.dependency-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
 }
 
-/* --- BOTONES PILL (Pastilla) --- */
+.dependency-card:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+    border-color: #d1d5db;
+}
+
+.card-header-section {
+    padding: 1rem 1.2rem;
+    border-bottom: 1px solid #e5e7eb;
+    background-color: #f9fafb;
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.card-body-section {
+    padding: 1rem 1.2rem;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.card-info-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #6b7280;
+    font-size: 0.75rem;
+    margin-top: 0.2rem;
+}
+
+.card-info-row i {
+    color: #9ca3af;
+    width: 14px;
+    text-align: center;
+    font-size: 0.7rem;
+}
+
+.card-footer-section {
+    padding: 0 1.2rem 1.2rem 1.2rem;
+    margin-top: auto;
+}
+
 .btn-pill-group {
     display: flex;
-    flex-wrap: wrap; /* CLAVE: Si no caben, bajan de línea */
+    flex-wrap: wrap;
     gap: 0.8rem;
     justify-content: center;
-    margin-top: auto; /* Empuja al fondo */
+    margin-top: auto;
 }
 
 .btn-pill {
-    /* Flex: Crece para llenar espacio, pero mantiene base */
     flex: 1 1 auto;
-    min-width: 100px; /* Ancho mínimo decente */
-
-    padding: 0.6rem 0.5rem; /* Padding lateral reducido */
-    border-radius: 8px; /* Menos redondeado para ahorrar espacio */
+    min-width: 100px;
+    padding: 0.6rem 0.5rem;
+    border-radius: 8px;
     font-size: 0.75rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -453,12 +463,11 @@
     transition: all 0.2s;
     border: 1px solid transparent;
     cursor: pointer;
-
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
-    white-space: nowrap; /* Evita que el texto del botón se parta */
+    white-space: nowrap;
 }
 
 .btn-pill.outline {
@@ -472,7 +481,7 @@
 }
 
 .btn-pill.solid {
-    background: #2563eb; /* Azul fuerte */
+    background: #2563eb;
     color: white;
     box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
 }
@@ -482,332 +491,7 @@
     box-shadow: 0 6px 10px rgba(37, 99, 235, 0.3);
 }
 
-
-/* --- ESTILO NÓMINA (EMPLEADOS) --- */
-.employees-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 1.5rem;
-    margin-bottom: 3rem;
-}
-
-.employee-card {
-    background: white;
-    border: 1px solid #e5e7eb;
-    border-top: 4px solid #e5e7eb; /* Línea decorativa superior */
-    border-radius: 8px;
-    padding: 1.5rem 1rem;
-    text-align: center;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-    transition: transform 0.2s;
-}
-
-.employee-card:hover {
-    transform: translateY(-3px);
-    border-top-color: #2563eb;
-    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
-}
-
-.photo-wrapper {
-    width: 80px;
-    height: 80px;
-    margin: 0 auto 1rem auto;
-    border-radius: 50%;
-    overflow: hidden;
-    border: 3px solid white;
-    box-shadow: 0 0 0 1px #e5e7eb;
-}
-
-.employee-photo {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.employee-name {
-    font-size: 0.9rem;
-    font-weight: 700;
-    color: #1f2937;
-    margin-bottom: 0.5rem;
-    line-height: 1.3;
-    text-transform: uppercase;
-}
-
-.employee-job {
-    font-size: 0.75rem;
-    color: #6b7280;
-    font-weight: 600;
-    border-top: 1px solid #f3f4f6;
-    padding-top: 0.5rem;
-    display: block;
-}
-
-/* --- DEPENDENCIAS HIJAS (Botones Azules) --- */
-.children-container {
-    background: #f8fafc;
-    padding: 2rem;
-    border-radius: 12px;
-    border: 1px dashed #cbd5e1;
-}
-
-.children-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-
-.child-unit-btn {
-    background: #1e3a8a; /* Azul oscuro */
-    color: white;
-    padding: 0.8rem 1.5rem;
-    font-size: 0.8rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    text-decoration: none;
-    border-radius: 4px; /* Rectangulares como la imagen */
-    flex: 1 1 auto;
-    text-align: center;
-    min-width: 150px;
-    max-width: 300px;
-    transition: background 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-}
-
-.child-unit-btn:hover {
-    background: #1e40af;
-    color: #cbd5e1;
-}
-
-/* =========================================
-   GRID ADAPTABLE (Se mantiene igual)
-   ========================================= */
-.grid-dynamic {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 1.5rem;
-    margin-bottom: 2rem;
-}
-
-/* =========================================
-   TARJETA ESTILO "ALCALDÍA" (NUEVO)
-   ========================================= */
-
-.dependency-card {
-    background: white;
-    border: 1px solid #e5e7eb;
-    border-radius: 6px; /* Bordes sutiles como la imagen */
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-    transition: all 0.3s ease;
-
-    /* Layout */
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    overflow: hidden; /* Para que la línea del header no se salga */
-}
-
-.dependency-card:hover {
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    transform: translateY(-2px);
-    border-color: #d1d5db;
-}
-
-/* --- 1. CABECERA DE LA TARJETA (Badges + Línea) --- */
-.card-header-section {
-    padding: 1rem 1.2rem;
-    border-bottom: 1px solid #e5e7eb; /* La línea divisoria */
-    background-color: #f9fafb; /* Fondo muy sutil opcional, o white */
-    display: flex;
-    gap: 0.5rem;
-    align-items: center;
-}
-
-
-/* --- 2. CUERPO DE LA TARJETA --- */
-.card-body-section {
-    padding: 1rem 1.2rem;
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem; /* Menos espacio entre título y detalles */
-}
-
-/* Título */
-.card-unit-title {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: #111827; /* Negro suave */
-    text-align: left; /* Alineado a la izquierda */
-    margin: 0;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
-}
-
-.card-info-row {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: #6b7280;
-    font-size: 0.75rem; /* Letra pequeña solicitada */
-    margin-top: 0.2rem;
-}
-
-.card-info-row i {
-    color: #9ca3af;
-    width: 14px; /* Ancho fijo para alinear */
-    text-align: center;
-    font-size: 0.7rem; /* Icono pequeño */
-}
-
-/* --- 3. PIE DE TARJETA (Botones) --- */
-.card-footer-section {
-    padding: 0 1.2rem 1.2rem 1.2rem; /* Sin padding top para pegarlo al contenido */
-    margin-top: auto; /* Empuja al fondo */
-}
-
-/* Reutilizamos tus botones Pill, ajustando el contenedor */
-.btn-pill-group {
-    display: flex;
-    gap: 0.8rem;
-    flex-wrap: wrap;
-}
-
-.employee-card-header {
-    position: relative;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin-bottom: 1rem;
-}
-
-/* El botón de la carpeta */
-.btn-folder-detail {
-    position: absolute;
-    left: 10px; /* Ajusta según prefieras */
-    top: 50%; /* Centrado verticalmente respecto a la foto */
-    transform: translateY(-50%);
-
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-
-    background-color: transparent;
-    border: 2px solid #374151; /* Gris oscuro tipo borde */
-    color: #374151;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-decoration: none;
-    font-size: 1rem;
-    transition: all 0.2s ease;
-    z-index: 5; /* Asegura que esté sobre otros elementos */
-}
-
-.btn-folder-detail:hover {
-    background-color: #374151;
-    color: white;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-/* Ajuste para que la foto no se mueva */
-.photo-wrapper {
-    position: relative;
-    z-index: 1;
-}
-
-#assign-boss-modal-container.modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 1050; /* Por encima de todo */
-    overflow: hidden;
-    outline: 0;
-    overflow-x: hidden;
-    overflow-y: auto;
-}
-
-#assign-boss-modal-container.modal.show .modal-dialog {
-    transform: none; /* Resetear transformaciones si existen */
-    margin: 1.75rem auto; /* Centrado básico */
-}
-
-/* Bloquear scroll del body cuando el modal está abierto */
-body.modal-open {
-    overflow: hidden;
-}
-
-/* =========================================
-   MODAL PERSONALIZADO (SIN BOOTSTRAP JS)
-   ========================================= */
-
-/* Fondo oscuro (Overlay) */
-.custom-modal-overlay {
-    display: none; /* Oculto por defecto, JS lo cambia a flex */
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5); /* Fondo semitransparente */
-    z-index: 9999;
-    justify-content: center;
-    align-items: center;
-    backdrop-filter: blur(2px);
-}
-
-/* Caja del Modal (Dialog) */
-.custom-modal-dialog {
-    background-color: white;
-    width: 95%;
-    max-width: 500px;
-    border-radius: 12px;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    overflow: hidden;
-    animation: modalFadeIn 0.2s ease-out;
-    display: flex;
-    flex-direction: column;
-}
-
-@keyframes modalFadeIn {
-    from {
-        opacity: 0;
-        transform: scale(0.95);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
-}
-
-.modal-header {
-    padding: 1rem 1.5rem;
-    border-bottom: 1px solid #e5e7eb;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background-color: #f8fafc;
-}
-
-.modal-footer {
-    padding: 1rem 1.5rem;
-    background-color: #f8fafc;
-    border-top: 1px solid #e5e7eb;
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-}
-
-/* =========================================
-
-   ========================================= */
-
-/* --- 1. Mini Perfil en Tabla (Unidades) --- */
+/* --- 5. PERFIL MINI EN TABLA DE UNIDADES --- */
 .boss-mini-profile {
     display: flex;
     align-items: center;
@@ -844,11 +528,7 @@ body.modal-open {
     text-transform: uppercase;
 }
 
-/* =========================================
-   DISTINTIVO DEPENDENCIAS PRINCIPALES
-   ========================================= */
-
-/* Badge sutil para cabecera de detalle */
+/* --- 6. DISTINTIVOS DE DEPENDENCIAS PRINCIPALES --- */
 .badge-main-unit {
     display: inline-flex;
     align-items: center;
@@ -863,18 +543,6 @@ body.modal-open {
     border-radius: 20px;
 }
 
-/* Tarjeta azul: Flex centrado vertical para alinear icono, nombre y badge */
-.sub-units-card-blue {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    gap: 6px;
-    position: relative;
-}
-
-/* Badge 'PRINCIPAL' centrado y contenido debajo del nombre */
 .sub-unit-center-badge {
     display: inline-block;
     background-color: rgba(254, 243, 199, 0.15);
@@ -888,4 +556,927 @@ body.modal-open {
     border-radius: 10px;
     line-height: 1.2;
     margin-top: 4px;
+}
+
+/* --- 7. DETALLE DE INSTITUCIÓN (CONTENEDOR Y HEADER) --- */
+.institution-detail-container {
+    background: linear-gradient(180deg, #f7fbff 0%, #f8fafc 35%, #f8fafc 100%);
+    border: 1px solid #dbe7f5;
+    border-radius: 18px;
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.07);
+    padding: 32px 24px;
+    margin-bottom: 32px;
+}
+
+.institution-header-card {
+    align-items: stretch;
+    background: linear-gradient(135deg, #123764 0%, #0f2e56 100%);
+    border: 1px solid rgba(59, 130, 246, 0.25);
+    box-shadow: 0 12px 20px -8px rgba(15, 23, 42, 0.45);
+}
+
+.institution-header-card .header-left {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    min-width: 130px;
+}
+
+.institution-header-card .header-center {
+    display: flex;
+    flex: 1;
+    min-width: 300px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.institution-header-card .header-right {
+    display: flex;
+    justify-content: center;
+    align-items: stretch;
+    min-width: 280px;
+    max-width: 360px;
+}
+
+.institution-header-card .title-wide {
+    text-align: center;
+    display: block;
+    font-size: clamp(1.1rem, 2vw, 1.45rem);
+    font-weight: 700;
+    max-width: 900px;
+    width: 100%;
+    overflow-wrap: break-word;
+    color: #f8fafc;
+    margin-bottom: 0;
+}
+
+.institution-header-card .btn-header-back {
+    background: #f3f4f6 !important;
+    color: #0f2e56 !important;
+    border: none;
+    font-weight: 600;
+    border-radius: 10px;
+    box-shadow: 0 1px 4px rgba(25, 135, 84, 0.07);
+    transition: background 0.2s, color 0.2s;
+    margin: 0;
+}
+
+.institution-header-card .btn-header-back:hover {
+    background: #0f2e56 !important;
+    color: #fff !important;
+}
+
+.institution-header-card .unit-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+
+.institution-header-card .icon-circle-large {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    font-size: 2.8rem;
+    background: #eaf1ff;
+    color: #0f2e56;
+    border: 1px solid #cddcf4;
+    box-shadow: 0 1px 6px rgba(25, 135, 84, 0.07);
+}
+
+.institution-header-card .header-data-card {
+    margin: 6px 0 0 0 !important;
+}
+
+.institution-header-card .info-card-compact {
+    width: 100%;
+    max-width: 620px !important;
+    min-width: 320px !important;
+    margin: 0 auto !important;
+    padding: 14px 18px !important;
+    background: linear-gradient(180deg, #eef4ff 0%, #e7f0ff 100%);
+    border-radius: 10px;
+    border: 1px solid #cfe0f8;
+    box-shadow: 0 1px 4px rgba(15, 46, 86, 0.08);
+    display: flex !important;
+    justify-content: center;
+    align-items: center;
+    flex-direction: row !important;
+}
+
+.institution-header-card .info-green-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 12px;
+    width: 100%;
+}
+
+.institution-header-card .info-green-grid div {
+    color: #0f2e56;
+    font-size: 0.92rem;
+}
+
+.institution-header-card .info-green-grid div b {
+    font-weight: 700;
+    margin-right: 4px;
+}
+
+.institution-header-card .info-green-grid div span {
+    font-weight: 500;
+}
+
+/* Tarjeta Jefe en Header */
+.institution-header-card .header-boss-card {
+    background: linear-gradient(180deg, #eef4ff 0%, #e8f1ff 100%);
+    border-radius: 10px;
+    padding: 12px;
+    width: 100%;
+    max-width: 340px;
+    margin: 0;
+    gap: 10px;
+    border: 1px solid #cfe0f8;
+}
+
+.boss-section {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    background: #e9f7ef;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+}
+
+.boss-photo-xl {
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #fff;
+    font-size: 2rem;
+    box-shadow: 0 1px 6px rgba(25, 135, 84, 0.07);
+}
+
+.institution-header-card .boss-photo-initials {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    color: #0f2e56;
+    font-weight: 700;
+    font-size: 2rem;
+}
+
+.institution-header-card .boss-info {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.institution-header-card .header-boss-card .boss-name {
+    font-weight: 700;
+    color: #198754;
+    font-size: 0.88rem;
+    text-align: center;
+}
+
+.institution-header-card .boss-role-gray {
+    color: #55585c;
+    font-weight: 600;
+    font-size: 0.78rem;
+    letter-spacing: 0.2px;
+    margin-bottom: 2px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    text-align: center;
+}
+
+.institution-header-card .btn-boss-profile {
+    background: #fff;
+    color: #0f2e56;
+    border: 1px solid #2c69a8;
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 6px 12px;
+    box-shadow: 0 1px 4px rgba(25, 135, 84, 0.07);
+    transition: background 0.2s, color 0.2s, border 0.2s;
+    font-size: 0.72rem;
+    text-align: center;
+}
+
+.institution-header-card .btn-boss-profile:hover {
+    background: #0f2e56;
+    color: #fff;
+    border-color: #0f2e56;
+}
+
+.institution-header-card .header-boss-card .nomina-actions {
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    gap: 8px;
+}
+
+.institution-header-card .boss-card-empty {
+    min-height: 168px;
+}
+
+.institution-header-card .boss-empty-content {
+    width: 100%;
+    height: 100%;
+    min-height: 142px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+}
+
+.institution-header-card .boss-empty-title {
+    font-size: 0.82rem;
+    text-align: center;
+    margin: 0;
+    color: #1e293b;
+}
+
+/* --- 8. BOTONES DE ESTADÍSTICAS COMPACTOS --- */
+.stats-buttons-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 20px 0;
+    padding: 16px;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.institution-detail-container .stats-buttons-container {
+    justify-content: center;
+    align-items: center;
+    max-width: none;
+    margin: 18px 0 24px;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+}
+
+.stat-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 18px;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    min-width: 140px;
+}
+
+.institution-detail-container .stat-btn {
+    flex: 0 1 180px;
+    justify-content: center;
+}
+
+.stat-btn i {
+    font-size: 1.8rem;
+    opacity: 0.9;
+}
+
+.stat-btn-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1.3;
+}
+
+.stat-btn-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.85;
+}
+
+.stat-btn-count {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.stat-btn-total {
+    background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+    color: #ffffff;
+}
+
+.stat-btn-total:hover {
+    background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(30, 58, 138, 0.35);
+}
+
+.stat-btn-employee {
+    background: linear-gradient(135deg, #15803d 0%, #16a34a 100%);
+    color: #ffffff;
+}
+
+.stat-btn-employee:hover {
+    background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(21, 128, 61, 0.35);
+}
+
+.stat-btn-worker {
+    background: linear-gradient(135deg, #c2410c 0%, #ea580c 100%);
+    color: #ffffff;
+}
+
+.stat-btn-worker:hover {
+    background: linear-gradient(135deg, #ea580c 0%, #f97316 100%);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(194, 65, 12, 0.35);
+}
+
+.stat-btn-contractor {
+    background: linear-gradient(135deg, #5721a8 0%, #763aed 100%);
+    color: #ffffff;
+}
+
+.stat-btn-contractor:hover {
+    background: linear-gradient(135deg, #6d3aed 0%, #715cf6 100%);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(71, 33, 168, 0.35);
+}
+
+.stat-btn-changes {
+    background: linear-gradient(135deg, #a82121 0%, #ed3a3a 100%);
+    color: #ffffff;
+}
+
+.stat-btn-changes:hover {
+    background: linear-gradient(135deg, #ed3a3a 0%, #f65c5c 100%);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(168, 33, 33, 0.35);
+}
+
+.stat-btn:active {
+    transform: translateY(-1px) scale(0.98);
+}
+
+/* --- 9. SUB-DEPENDENCIAS / ÁREAS HIJAS --- */
+.sub-units-section {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 14px -10px rgba(15, 23, 42, 0.2);
+}
+
+.sub-units-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+    margin-bottom: 24px;
+    align-items: stretch;
+}
+
+.sub-units-card-blue {
+    background: #183a7a;
+    border-radius: 10px;
+    color: #fff;
+    height: 128px;
+    flex: 0 0 calc((100% - 54px) / 4);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 18px 16px 14px 16px;
+    font-weight: 700;
+    font-size: 1.08rem;
+    text-align: center;
+    box-shadow: 0 1px 6px rgba(24, 58, 122, 0.08);
+    cursor: pointer;
+    transition: box-shadow 0.18s, background 0.18s;
+    overflow: hidden;
+    position: relative;
+}
+
+.sub-units-card-blue:hover {
+    box-shadow: 0 4px 16px rgba(24, 58, 122, 0.18);
+    background: #2050b3;
+}
+
+.sub-units-card-blue i {
+    font-size: 1.35rem;
+    margin-bottom: 4px;
+}
+
+.sub-units-card-blue .sub-name {
+    width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    line-height: 1.25;
+}
+
+.sub-units-card-empty {
+    background: #f8fafc;
+    color: #198754;
+    font-weight: 600;
+    border: 2px dashed #e9f7ef;
+    box-shadow: none;
+}
+
+/* --- 10. SECCIÓN ENTREGABLES (ACORDEÓN) --- */
+.card-section {
+    background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
+    border: 1px solid #d5e3f5;
+    border-radius: 14px;
+    box-shadow: 0 10px 18px -14px rgba(15, 46, 86, 0.35);
+    margin-bottom: 24px;
+    padding: 0 0 18px 0;
+}
+
+.card-section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #0f2e56;
+    background: linear-gradient(180deg, #edf4ff 0%, #f8fbff 100%);
+    border-bottom: 1px solid #dde8f8;
+    border-radius: 14px 14px 0 0;
+    padding: 16px 24px 12px 24px;
+    cursor: pointer;
+    user-select: none;
+    transition: box-shadow 0.18s;
+}
+
+.card-section-header:hover {
+    box-shadow: 0 2px 12px rgba(25, 135, 84, 0.08);
+}
+
+.card-section-header .btn-nuevo-entregable,
+.card-section-header .btn {
+    margin-left: auto;
+}
+
+.btn-nuevo-entregable,
+.btn-cta-action {
+    background: linear-gradient(135deg, #1b4f86 0%, #0f2e56 100%);
+    border: 1px solid #2c69a8;
+    color: #fff;
+    font-weight: 700;
+    border-radius: 10px;
+    padding: 8px 16px;
+    font-size: 0.95rem;
+    box-shadow: 0 8px 16px -10px rgba(15, 46, 86, 0.7);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+}
+
+.btn-nuevo-entregable:hover,
+.btn-cta-action:hover {
+    background: linear-gradient(135deg, #2363a5 0%, #124273 100%);
+    color: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 10px 20px -10px rgba(15, 46, 86, 0.8);
+}
+
+.card-section-content {
+    padding: 0 16px 12px;
+}
+
+.deliverables-table-container {
+    min-height: auto;
+    margin-top: 10px;
+    border: 1px solid #d7e2f2;
+}
+
+.deliverables-table-container table {
+    min-width: 100%;
+}
+
+.deliverable-modal-container {
+    max-width: 620px;
+}
+
+.deliverable-modal-body {
+    max-height: calc(90vh - 220px);
+}
+
+/* --- 11. NÓMINA DE PERSONAL Y TARJETAS DE EMPLEADOS --- */
+.nomina-section {
+    background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
+    border: 1px solid #d5e3f5;
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 24px;
+    box-shadow: 0 10px 18px -14px rgba(15, 46, 86, 0.35);
+}
+
+.section-title-row {
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.nomina-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #0f2e56;
+    margin-bottom: 12px;
+}
+
+.nomina-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: stretch;
+}
+
+.nomina-empty-row {
+    width: 100%;
+    min-height: 176px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #ffffff;
+    border: 1px solid #e5edf8;
+    border-radius: 12px;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
+}
+
+.nomina-empty-message {
+    color: #0f2e56;
+    font-weight: 600;
+    font-size: 0.95rem;
+    text-align: center;
+    padding: 0 1rem;
+}
+
+.nomina-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
+    padding: 8px 10px;
+    flex: 0 0 calc((100% - 80px) / 6);
+    min-height: 160px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+}
+
+.nomina-card .nomina-photo {
+    width: 52px;
+    height: 68px;
+    border-radius: 8px;
+    border: 2px solid #000000;
+    box-sizing: border-box;
+    object-fit: cover;
+    object-position: center;
+    background: #e2e8f0;
+    margin-bottom: 4px;
+    position: relative;
+    z-index: 1;
+    cursor: zoom-in;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+}
+
+.nomina-card .nomina-photo.is-zoomed {
+    transform: scale(2.4);
+    z-index: 20;
+    box-shadow: 0 16px 30px -10px rgba(15, 23, 42, 0.45);
+}
+
+.nomina-card .nomina-photo-initials {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    color: #1e3a8a;
+    background: linear-gradient(145deg, #f8fafc, #dbeafe);
+    font-size: 0.92rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    cursor: default;
+}
+
+.nomina-card .nomina-name {
+    font-weight: 600;
+    color: #212529;
+    text-align: center;
+    font-size: 0.75rem;
+    line-height: 1.15;
+}
+
+.nomina-card .nomina-document {
+    color: #0f2e56;
+    font-size: 0.67rem;
+    font-weight: 700;
+    text-align: center;
+    line-height: 1.2;
+}
+
+.nomina-card .nomina-role {
+    color: #6c757d;
+    font-size: 0.64rem;
+    text-align: center;
+    line-height: 1.2;
+}
+
+.nomina-card .badge-info {
+    background-color: #664d03;
+    color: #fff8d6;
+    font-size: 0.62rem;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 12px;
+    text-align: center;
+    line-height: 1.2;
+    display: inline-block;
+    text-transform: uppercase;
+}
+
+/* Reubicados / Dependientes externos */
+.nomina-card.nomina-card-relocated {
+    background: #fefce8 !important;
+    border: 1px solid #fef08a !important;
+    box-shadow: 0 4px 12px rgba(234, 179, 8, 0.12);
+}
+
+.nomina-card-relocated:hover {
+    box-shadow: 0 6px 16px rgba(234, 179, 8, 0.2);
+}
+
+.relocated-badge {
+    background-color: #fef08a;
+    color: #b45309;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+    text-align: center;
+    line-height: 1.1;
+    margin-top: 4px;
+    cursor: help;
+    border: 1px solid #fde047;
+}
+
+.nomina-actions {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 8px;
+    padding-top: 6px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1.5px solid transparent;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    text-decoration: none;
+    font-size: 0.95rem;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+}
+
+.btn-profile-blue {
+    background-color: #e0f2fe;
+    color: #0369a1;
+}
+
+.btn-profile-blue:hover {
+    background-color: #0369a1;
+    color: #ffffff;
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 5px 15px rgba(3, 105, 161, 0.3);
+}
+
+.btn-relocate-green {
+    background-color: #dcfce7;
+    color: #15803d;
+}
+
+.btn-relocate-green:hover {
+    background-color: #15803d;
+    color: #ffffff;
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 5px 15px rgba(21, 128, 61, 0.3);
+}
+
+.action-btn:active {
+    transform: translateY(0) scale(0.95);
+}
+
+/* --- 12. RESPONSIVE --- */
+@media (max-width: 1200px) {
+    .nomina-card {
+        flex-basis: calc((100% - 48px) / 4);
+    }
+}
+
+@media (max-width: 992px) {
+    .institution-header-card {
+        gap: 1rem;
+    }
+
+    .institution-header-card .header-left {
+        min-width: 100%;
+        flex-direction: row;
+        justify-content: space-between;
+    }
+
+    .institution-header-card .header-center,
+    .institution-header-card .header-right {
+        min-width: 100%;
+        max-width: none;
+    }
+
+    .sub-units-card-blue {
+        flex-basis: calc((100% - 18px) / 2);
+    }
+
+    .nomina-card {
+        flex-basis: calc((100% - 32px) / 3);
+    }
+}
+
+@media (max-width: 768px) {
+    .institution-header-card .header-left {
+        flex-direction: column;
+        justify-content: center;
+        gap: 10px;
+    }
+
+    .institution-header-card .info-card-compact {
+        min-width: 100% !important;
+        padding: 12px !important;
+    }
+
+    .institution-header-card .info-green-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .section-title-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .section-title-row .btn-nuevo-entregable {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .stats-buttons-container {
+        gap: 8px;
+    }
+
+    .stat-btn {
+        flex: 1 1 140px;
+        min-width: 120px;
+        padding: 10px 14px;
+        gap: 8px;
+    }
+
+    .stat-btn i {
+        font-size: 1.5rem;
+    }
+
+    .stat-btn-count {
+        font-size: 1.25rem;
+    }
+
+    .nomina-card,
+    .sub-units-card-blue {
+        min-width: 100%;
+        max-width: 100%;
+        flex-basis: 100%;
+    }
+}
+
+.unit-title-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* --- 13. MODALES DEL MÓDULO INSTITUCIÓN --- */
+.form-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.form-grid-2:last-child {
+    margin-bottom: 0;
+}
+
+.unit-switches-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    align-items: stretch;
+}
+
+.unit-switch-box {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    background-color: #f8fafc;
+    min-height: 90px;
+    text-align: center;
+}
+
+.unit-switch-title {
+    font-weight: 700;
+    color: #1e293b;
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.unit-switch-control {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+
+.unit-switch-pill {
+    min-width: 110px;
+    padding: 4px 10px;
+}
+
+.text-amber {
+    color: #d97706;
+}
+
+.modal-check-group {
+    margin-top: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.modal-check-label {
+    font-weight: 600;
+    color: #1e293b;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.modal-help-text {
+    width: 100%;
+    font-size: 0.8rem;
+    color: #64748b;
+    margin-top: 2px;
+}
+
+@media (max-width: 768px) {
+    .form-grid-2,
+    .unit-switches-grid {
+        grid-template-columns: 1fr;
+    }
 }

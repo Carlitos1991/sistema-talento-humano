@@ -1,15 +1,16 @@
 {% load static %}
 <div class="table-container">
     <div class="table-scroll-top">
-        <table class="managed-table exportable-table" data-title="Reporte de Nueva Tabla" data-filename="Reporte_Nuevo"
+        <table class="managed-table exportable-table" data-title="Reporte Niveles Jerárquicos"
+               data-filename="Reporte_Niveles"
                data-page-size="10">
             <thead>
             <tr>
-                <th class="no-sort width-10"> Orden</th>
-                <th class="width-55"> Nombre del Nivel</th>
-                <th class="width-15"> Estado</th>
+                <th class="no-sort width-10">Orden</th>
+                <th class="width-55">Nombre del Nivel</th>
+                <th class="width-15">Estado</th>
                 {% if perms.institution.change_organizationallevel %}
-                    <th class="=no-sort width-25"><i class="fas fa-cogs"></i> Acciones</th>
+                    <th class="no-sort width-25"><i class="fas fa-cogs"></i> Acciones</th>
                 {% endif %}
             </tr>
             </thead>
@@ -28,7 +29,7 @@
                         {% if perms.institution.change_organizationallevel %}
                             <td class="actions text-center">
                                 <div class="actions-wrapper">
-                                    <button class="btn-yellow-circle"
+                                    <button type="button" class="btn-yellow-circle"
                                             onclick="openAjaxModal('{% url 'institution:level_update' lvl.id %}')">
                                         <i class="fas fa-pencil"></i>
                                     </button>
@@ -50,8 +51,6 @@
                         {% endif %}
                     </tr>
                 {% endfor %}
-            {% else %}
-                <!-- Sin filas, el overlay se encarga del mensaje -->
             {% endif %}
             </tbody>
         </table>

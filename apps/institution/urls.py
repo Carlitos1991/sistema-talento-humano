@@ -22,7 +22,6 @@ urlpatterns = [
 
     # Vista integral de detalle de unidad (rutas con y sin sufijo view)
     path('units/detail/<int:pk>/', views.UnitDetailView.as_view(), name='unit_detail'),
-    path('units/detail/<int:pk>/view/', views.UnitDetailView.as_view(), name='unit_detail_view'),
     path('units/detail/<int:pk>/json/', views.UnitDetailJsonView.as_view(), name='unit_detail_json'),
 
     # Recargas parciales y exportación
@@ -49,23 +48,23 @@ urlpatterns = [
     ),
     # Modales CRUD vía AJAX
     path(
-        'api/units/<int:unit_id>/deliverables/save/',
+        'ajax/units/<int:unit_id>/deliverables/save/',
         views.DeliverableCreateUpdateView.as_view(),
         name='api_deliverable_create'
     ),
     path(
-        'api/units/<int:unit_id>/deliverables/save/<int:pk>/',
+        'ajax/units/<int:unit_id>/deliverables/save/<int:pk>/',
         views.DeliverableCreateUpdateView.as_view(),
         name='api_deliverable_update'
     ),
     path(
-        'api/deliverables/delete/<int:pk>/',
+        'ajax/deliverables/delete/<int:pk>/',
         views.DeliverableDeleteView.as_view(),
         name='api_deliverable_delete'
     ),
     # Listado serializado JSON (usado por Wizards y componentes Vue/dinámicos)
     path(
-        'api/units/<int:unit_id>/deliverables/',
+        'ajax/units/<int:unit_id>/deliverables/',
         views.api_unit_deliverables,
         name='api_unit_deliverables'
     ),
@@ -81,8 +80,8 @@ urlpatterns = [
     # ==========================================================================
     # 5. ENDPOINTS DE SOPORTE API (SELECT2, COMBOS Y CÓDIGOS CORRELATIVOS)
     # ==========================================================================
-    path('api/parents/', views.ParentOptionsJsonView.as_view(), name='api_parents'),
-    path('api/employee/search/', views.EmployeeSearchJsonView.as_view(), name='api_employee_search'),
-    path('api/unit-children/', views.api_get_administrative_children, name='api_unit_children'),
-    path('api/next-code/', views.GetNextCodeJsonView.as_view(), name='api_next_code'),
+    path('ajax/parents/', views.ParentOptionsJsonView.as_view(), name='api_parents'),
+    path('ajax/employee/search/', views.EmployeeSearchJsonView.as_view(), name='api_employee_search'),
+    path('ajax/unit-children/', views.api_get_administrative_children, name='api_unit_children'),
+    path('ajax/next-code/', views.GetNextCodeJsonView.as_view(), name='api_next_code'),
 ]

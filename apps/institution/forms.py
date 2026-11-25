@@ -5,6 +5,7 @@ Entregables, Organigrama Institucional y Asignación de Jefes Inmediatos.
 """
 
 from django import forms
+from django.urls import reverse_lazy
 
 from core.forms import BaseFormMixin
 from employee.models import Employee
@@ -16,15 +17,8 @@ from .models import (
 )
 
 
-# ==============================================================================
-# 1. FORMULARIO DE UNIDAD ADMINISTRATIVA
-# ==============================================================================
 class AdministrativeUnitForm(BaseFormMixin, forms.ModelForm):
-    """
-    Formulario para creación y actualización de unidades administrativas.
-    Incluye validación de código único, control de jerarquía, estado,
-    dependencia principal y unidad de talento humano.
-    """
+    """Formulario para creación y actualización de unidades administrativas."""
 
     class Meta:
         model = AdministrativeUnit
@@ -36,16 +30,14 @@ class AdministrativeUnitForm(BaseFormMixin, forms.ModelForm):
             'code',
             'address',
             'phone',
-            'is_active',  # <-- 1. Estado
-            'is_main_unit',  # <-- 2. Dependencia Principal
-            'is_human_resources',  # <-- 3. Talento Humano
+            'is_active',
+            'is_main_unit',
+            'is_human_resources',
         ]
         widgets = {
             'name': forms.TextInput(attrs={
                 'placeholder': 'Ej: DIRECCIÓN GENERAL',
                 'class': 'uppercase-input input-field',
-                'style': 'text-transform: uppercase;',
-                'oninput': 'this.value = this.value.toUpperCase();'
             }),
             'code': forms.TextInput(attrs={
                 'class': 'input-field',
@@ -85,16 +77,19 @@ class AdministrativeUnitForm(BaseFormMixin, forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['boss'].required = False
-        self.fields['parent'].required = False
-        self.fields['level'].required = False
-        self.fields['is_active'].required = False
-        self.fields['is_main_unit'].required = False
-        self.fields['is_human_resources'].required = False
+        optional_fields = [
+            'boss', 'parent', 'level', 'is_active',
+            'is_main_unit', 'is_human_resources'
+        ]
+        for field_name in optional_fields:
+            self.fields[field_name].required = False
 
-        # Si es un registro nuevo, el estado activo viene marcado por defecto
         if not self.instance.pk and 'is_active' in self.fields:
             self.initial['is_active'] = True
+
+    def clean_name(self):
+        name = self.cleaned_data.get('name')
+        return name.strip().upper() if name else name
 
     def clean_code(self):
         """Valida que el código no esté repetido entre unidades activas."""
@@ -112,20 +107,13 @@ class AdministrativeUnitForm(BaseFormMixin, forms.ModelForm):
     def clean(self):
         """Mantiene el nivel jerárquico previo en caso de edición parcial."""
         cleaned_data = super().clean()
-        level = cleaned_data.get('level')
-        if level is None and self.instance.pk:
+        if cleaned_data.get('level') is None and self.instance.pk:
             cleaned_data['level'] = self.instance.level
         return cleaned_data
 
 
-# ==============================================================================
-# 2. FORMULARIO DE NIVEL JERÁRQUICO
-# ==============================================================================
 class OrganizationalLevelForm(BaseFormMixin, forms.ModelForm):
-    """
-    Formulario para creación y edición de niveles organizacionales.
-    Asigna correlativamente el orden jerárquico (level_order) al crear un nuevo nivel.
-    """
+    """Formulario para creación y edición de niveles organizacionales."""
 
     class Meta:
         model = OrganizationalLevel
@@ -134,8 +122,6 @@ class OrganizationalLevelForm(BaseFormMixin, forms.ModelForm):
             'name': forms.TextInput(attrs={
                 'placeholder': 'Ej: DIRECCIÓN GENERAL',
                 'class': 'uppercase-input input-field',
-                'style': 'text-transform: uppercase;',
-                'oninput': 'this.value = this.value.toUpperCase();'
             }),
         }
         labels = {
@@ -148,9 +134,8 @@ class OrganizationalLevelForm(BaseFormMixin, forms.ModelForm):
         }
 
     def clean_name(self):
-        """Fuerza el nombre del nivel a mayúsculas."""
         name = self.cleaned_data.get('name')
-        return name.upper() if name else name
+        return name.strip().upper() if name else name
 
     def save(self, commit=True):
         """Calcula el siguiente level_order disponible si se trata de un registro nuevo."""
@@ -171,15 +156,8 @@ class OrganizationalLevelForm(BaseFormMixin, forms.ModelForm):
         return instance
 
 
-# ==============================================================================
-# 3. FORMULARIO DE ENTREGABLES (DELIVERABLES)
-# ==============================================================================
 class DeliverableForm(BaseFormMixin, forms.ModelForm):
-    """
-    Formulario de entregables asociados a una unidad administrativa.
-    Inyecta placeholders y estilos de manera explícita en __init__ para
-    asegurar consistencia visual frente al mixin base.
-    """
+    """Formulario de entregables asociados a una unidad administrativa."""
 
     class Meta:
         model = Deliverable
@@ -203,7 +181,6 @@ class DeliverableForm(BaseFormMixin, forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Forzar atributos para evitar que BaseFormMixin los sobrescriba
         self.fields['name'].widget.attrs.update({
             'class': 'input-field',
             'placeholder': 'Ej: Reporte Mensual de Nómina',
@@ -216,9 +193,6 @@ class DeliverableForm(BaseFormMixin, forms.ModelForm):
         })
 
 
-# ==============================================================================
-# 4. FORMULARIO DE ORGANIGRAMA
-# ==============================================================================
 class OrganigramForm(BaseFormMixin, forms.ModelForm):
     """Formulario para la carga del organigrama gráfico institucional."""
 
@@ -227,7 +201,7 @@ class OrganigramForm(BaseFormMixin, forms.ModelForm):
         fields = ['image']
         widgets = {
             'image': forms.FileInput(attrs={
-                'class': 'form-control',
+                'class': 'input-field',
                 'accept': 'image/*',
                 'id': 'file-input-organigram'
             })
@@ -237,22 +211,15 @@ class OrganigramForm(BaseFormMixin, forms.ModelForm):
         }
 
 
-# ==============================================================================
-# 5. FORMULARIO DE ASIGNACIÓN DE JEFE INMEDIATO
-# ==============================================================================
 class AssignBossForm(BaseFormMixin, forms.ModelForm):
-    """
-    Formulario AJAX para asignar el responsable directo a una unidad.
-    Optimiza el queryset cargando únicamente el jefe actual y el seleccionado en POST,
-    evitando la carga en memoria de miles de registros de empleados.
-    """
+    """Formulario AJAX para asignar el responsable directo a una unidad."""
 
     keep_previous_assignment = forms.BooleanField(
         required=False,
         label='Mantener como jefe de otras unidades',
         help_text='Actívelo solo en casos excepcionales en los que la persona dirigirá más de una dependencia.',
         widget=forms.CheckboxInput(attrs={
-            'class': 'form-check-input',
+            'class': 'switch-input switch-blue',
         })
     )
 
@@ -261,13 +228,11 @@ class AssignBossForm(BaseFormMixin, forms.ModelForm):
         fields = ['boss', 'keep_previous_assignment']
         widgets = {
             'boss': forms.Select(attrs={
-                'class': 'form-control select2',
+                'class': 'input-field select2-ajax',
                 'id': 'id_boss_assign',
                 'data-placeholder': 'Buscar empleado...',
-                'data-ajax-url': '/institution/api/employee/search/',
                 'data-minimum-input-length': '3',
                 'data-allow-clear': 'true',
-                'style': 'width: 100%;'
             }),
         }
         labels = {
@@ -276,8 +241,8 @@ class AssignBossForm(BaseFormMixin, forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['boss'].widget.attrs['data-ajax-url'] = reverse_lazy('institution:api_employee_search')
 
-        # Carga optimizada: Si no se está enviando el formulario, solo busca el jefe actual
         boss_ids = []
         if self.instance and self.instance.boss_id:
             boss_ids.append(self.instance.boss_id)
