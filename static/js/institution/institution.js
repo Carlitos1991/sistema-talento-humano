@@ -372,8 +372,8 @@ window.initUnitModal = function () {
     if (!isEditing && codeInput && codeInput.value === '') {
         codeInput.value = 'Calculando...';
         const apiUrl = contextParentId
-            ? '/institution/api/next-code/?parent_id=' + contextParentId
-            : '/institution/api/next-code/?parent_id=null';
+            ? '/institution/ajax/next-code/?parent_id=' + contextParentId
+            : '/institution/ajax/next-code/?parent_id=null';
 
         fetch(apiUrl, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
             .then(res => res.json())
@@ -464,7 +464,7 @@ window.initRelocateUnitModal = function (unitId) {
     if (formElement) formElement.reset();
 
     const errorContainer = document.getElementById('errorContainer');
-    if (errorContainer) errorContainer.style.display = 'none';
+    if (errorContainer) errorContainer.classList.add('hidden');
 
     if (parentSelect) {
         parentSelect.innerHTML = '<option value="">--- Cargando unidades disponibles ---</option>';
@@ -484,7 +484,7 @@ window.initRelocateUnitModal = function (unitId) {
                 if (nameField) nameField.value = res.data.name || '';
                 if (parentField) parentField.value = res.data.parent_name || 'Sin padre (Nivel Raíz)';
 
-                return fetch(`/institution/api/parents/?level_id=${res.data.level}&direct_parent_only=false`, {
+                return fetch(`/institution/ajax/parents/?level_id=${res.data.level}&direct_parent_only=false`, {
                     headers: {'X-Requested-With': 'XMLHttpRequest'}
                 });
             }

@@ -721,7 +721,7 @@
 
     async function loadInitialUnits() {
         try {
-            const res = await fetch('/institution/api/unit-children/');
+            const res = await fetch('/institution/ajax/unit-children/');
             const data = await res.json();
             if (data.success && data.units) {
                 unitLevels = [{options: data.units, selectedId: null}];
@@ -744,7 +744,7 @@
         }
 
         try {
-            const res = await fetch(`/institution/api/unit-children/?parent_id=${selectedId}`);
+            const res = await fetch(`/institution/ajax/unit-children/?parent_id=${selectedId}`);
             const data = await res.json();
             if (data.success && data.units && data.units.length > 0) {
                 unitLevels.push({options: data.units, selectedId: null});
