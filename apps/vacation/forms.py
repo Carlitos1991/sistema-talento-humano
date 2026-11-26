@@ -3,7 +3,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 from django.db.models import Sum
 from django.utils import timezone
-
+from .services import calculate_available_days_for_month
 from core.models import User
 from .models import *
 from .models import VacationScheduleItem
@@ -307,30 +307,30 @@ class VacationSchedulePlanForm(forms.ModelForm):
         fields = ['year', 'title', 'start_submission_date', 'end_submission_date', 'status', 'observation']
         widgets = {
             'year': forms.NumberInput(attrs={
-                'class': 'form-control',
+                'class': 'input-field',
                 'id': 'id_plan_year',
                 'placeholder': 'Ej. 2027',
                 'min': '2000',
                 'max': '2100'
             }),
             'title': forms.TextInput(attrs={
-                'class': 'form-control',
+                'class': 'input-field',
                 'id': 'id_plan_title',
                 'placeholder': 'Ej. Cronograma General de Vacaciones 2027'
             }),
             'start_submission_date': forms.DateInput(attrs={
-                'class': 'form-control',
+                'class': 'input-field',
                 'type': 'date',
                 'id': 'id_plan_start_date'
             }),
             'end_submission_date': forms.DateInput(attrs={
-                'class': 'form-control',
+                'class': 'input-field',
                 'type': 'date',
                 'id': 'id_plan_end_date'
             }),
             'status': forms.Select(attrs={'class': 'input-field'}),
             'observation': forms.Textarea(attrs={
-                'class': 'form-control',
+                'class': 'input-field',
                 'rows': 3,
                 'placeholder': 'Directrices para las jefaturas y funcionarios...'
             }),
@@ -386,15 +386,12 @@ class VacationScheduleItemForm(forms.ModelForm):
         if not plan or not employee:
             return cleaned_data
 
-        # 1. Obtener el límite máximo del empleado para ese año
-        max_allowed_days = get_annual_vacation_entitlement(employee, target_year=plan.year)
+        _, max_allowed_days, _, _ = calculate_available_days_for_month(employee, plan.year, 12)
 
-        # 2. Calcular los días que ya tiene programados en otros ítems del mismo plan
         existing_items = VacationScheduleItem.objects.filter(
             plan=plan,
             employee=employee
         )
-        # Excluir la instancia actual si estamos editando
         if self.instance and self.instance.pk:
             existing_items = existing_items.exclude(pk=self.instance.pk)
 
@@ -402,10 +399,7 @@ class VacationScheduleItemForm(forms.ModelForm):
             total=Sum('days_quantity')
         )['total'] or 0
 
-        total_requested = already_scheduled_days + days_quantity
-
-        # 3. Validación de tope
-        if total_requested > max_allowed_days:
+        if (already_scheduled_days + days_quantity) > max_allowed_days:
             remaining_days = max(0, max_allowed_days - already_scheduled_days)
             raise ValidationError(
                 f"El empleado tiene un límite legal de {max_allowed_days} días para este periodo. "

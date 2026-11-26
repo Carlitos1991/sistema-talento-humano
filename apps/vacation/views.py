@@ -34,7 +34,7 @@ from institution.models import AdministrativeUnit
 from .forms import *
 from .models import *
 from .services import (
-    calculate_available_days_for_month, get_vacation_regime_info
+    calculate_available_days_for_month, get_vacation_regime_info, resolve_schedule_discrepancy
 )
 from .services import resolve_scheduling_hierarchy
 
@@ -1504,20 +1504,18 @@ class VacationSchedulePlanUpdateModalView(LoginRequiredMixin, UpdateView, Permis
         return super().form_invalid(form)
 
 
-class VacationScheduleDetailView(LoginRequiredMixin, TemplateView, PermissionRequiredMixin):
+class VacationScheduleDetailView(LoginRequiredMixin, PermissionRequiredMixin, TemplateView):
     template_name = 'vacation/schedule_detail.html'
     permission_required = 'vacation.view_vacationscheduleplan'
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         plan = get_object_or_404(VacationSchedulePlan, pk=self.kwargs['plan_id'])
-        user = self.request.user
-
-        # 1. Resolver unidad principal ascendente y todos sus descendientes
         base_unit, unit_ids = resolve_scheduling_hierarchy(
-            user=user,
+            user=self.request.user,
             requested_unit_id=self.request.GET.get('unit_id')
         )
+
         unread_notifications_count = ScheduleDiscrepancyRequest.objects.filter(
             plan=plan,
             unit=base_unit,
@@ -1528,7 +1526,6 @@ class VacationScheduleDetailView(LoginRequiredMixin, TemplateView, PermissionReq
             is_viewed_by_unit=False
         ).count()
 
-        # 2. Filtrar todos los empleados que pertenecen a la unidad principal o sus hijas
         employees_qs = Employee.objects.filter(
             is_active=True,
             area_id__in=unit_ids
@@ -1551,26 +1548,25 @@ class VacationScheduleDetailView(LoginRequiredMixin, TemplateView, PermissionReq
             employee__in=employees_qs
         ).select_related('employee__person')
 
-        # 3. Meses del año
-        months_cards = []
-        for m in range(1, 13):
-            items_in_m = [it for it in scheduled_items if it.start_date.month == m]
-            months_cards.append({
+        months_cards = [
+            {
                 'number': m,
                 'name': MONTH_NAMES.get(m, ''),
-                'items': items_in_m
-            })
+                'items': [it for it in scheduled_items if it.start_date.month == m]
+            }
+            for m in range(1, 13)
+        ]
 
-        # 4. Obtener IDs de empleados reportados como "No pertenece"
         reported_emp_ids = set(
             ScheduleDiscrepancyRequest.objects.filter(
                 plan=plan,
+                unit_id__in=unit_ids,
                 request_type=ScheduleDiscrepancyRequest.RequestType.WRONG_UNIT,
                 status=ScheduleDiscrepancyRequest.Status.PENDING
             ).values_list('employee_id', flat=True)
         )
 
-        # 4.1 Obtener empleados SOLICITADOS pendientes de incorporar a esta unidad
+        # Solicitudes de personal faltante en estado PENDING para esta unidad
         requested_discrepancies = ScheduleDiscrepancyRequest.objects.filter(
             plan=plan,
             unit=base_unit,
@@ -1578,37 +1574,29 @@ class VacationScheduleDetailView(LoginRequiredMixin, TemplateView, PermissionReq
             status=ScheduleDiscrepancyRequest.Status.PENDING
         ).select_related('employee__person', 'employee__employment_status')
 
-        # 5. Banquillo con cálculo proporcional y banderas
         employee_cards = []
         for emp in employees_qs:
-            # 1. Obtener los días ya planificados en este cronograma
             emp_items = [it for it in scheduled_items if it.employee_id == emp.id]
             total_planned = sum(it.days_quantity for it in emp_items)
+            eval_month = max([it.start_date.month for it in emp_items], default=12)
 
-            # 2. Obtener el máximo mes en el que tiene asignación (o mes 12 para saber su acumulado al cierre)
-            max_assigned_month = max([it.start_date.month for it in emp_items], default=1)
-            eval_month = max(1, max_assigned_month)
-
-            allowed_days, ceiling, is_proportional, display_val = calculate_available_days_for_month(
+            allowed_days, _, is_proportional, display_val = calculate_available_days_for_month(
                 emp, plan.year, eval_month
             )
-
-            # Calcular el acumulado a diciembre para conocer el límite anual
             annual_allowed, annual_ceiling, annual_is_prop, _ = calculate_available_days_for_month(
                 emp, plan.year, 12
             )
 
             max_assignable_plan = annual_allowed if annual_is_prop else annual_ceiling
             effective_cap = max(max_assignable_plan, total_planned)
-
-            # Calcular saldo remanente
             remaining = effective_cap - total_planned
 
-            # Solo se incluye en el banquillo si le queda AL MENOS 1 día completo por asignar
             if remaining >= 1:
-                display_max = f"{display_val}+" if (
-                        is_proportional and total_planned < effective_cap) else f"{effective_cap}"
-
+                display_max = (
+                    f'{display_val}+'
+                    if (is_proportional and total_planned < effective_cap)
+                    else f'{effective_cap}'
+                )
                 employee_cards.append({
                     'employee': emp,
                     'total_planned_days': total_planned,
@@ -1620,14 +1608,12 @@ class VacationScheduleDetailView(LoginRequiredMixin, TemplateView, PermissionReq
                     'is_requested_ghost': False
                 })
 
-        # 5.1 Agregar las tarjetas "fantasma" solicitadas
         for disc in requested_discrepancies:
             emp = disc.employee
             if not any(c['employee'].id == emp.id for c in employee_cards):
-                allowed_days, ceiling, is_proportional, display_val = calculate_available_days_for_month(
-                    emp, plan.year, 1
+                allowed_days, _, is_proportional, display_val = calculate_available_days_for_month(
+                    emp, plan.year, 12
                 )
-                # Solo mostrar si tiene al menos 1 día disponible
                 if allowed_days >= 1:
                     employee_cards.append({
                         'employee': emp,
@@ -1639,12 +1625,39 @@ class VacationScheduleDetailView(LoginRequiredMixin, TemplateView, PermissionReq
                         'is_reported_wrong': False,
                         'is_requested_ghost': True,
                     })
-        context['plan'] = plan
-        context['base_unit'] = base_unit
-        context['employee_cards'] = employee_cards
-        context['months_cards'] = months_cards
-        context['unread_discrepancies_count'] = unread_notifications_count
+
+        context.update({
+            'plan': plan,
+            'base_unit': base_unit,
+            'employee_cards': employee_cards,
+            'months_cards': months_cards,
+            'unread_discrepancies_count': unread_notifications_count,
+        })
         return context
+
+
+class ResolveDiscrepancyRequestView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    permission_required = 'vacation.change_vacationscheduleplan'
+
+    def post(self, request, pk):
+        discrepancy = get_object_or_404(
+            ScheduleDiscrepancyRequest.objects.select_related('employee__person', 'unit', 'plan'),
+            pk=pk
+        )
+        action = request.POST.get('action')
+        admin_note = request.POST.get('admin_note', '').strip()
+        target_unit_id = request.POST.get('target_unit_id')
+
+        try:
+            message = resolve_schedule_discrepancy(
+                discrepancy=discrepancy,
+                action=action,
+                target_unit_id=target_unit_id,
+                admin_note=admin_note
+            )
+            return JsonResponse({'success': True, 'message': message})
+        except ValueError as exc:
+            return JsonResponse({'success': False, 'message': str(exc)}, status=400)
 
 
 class ScheduleDiscrepancyUnitModalView(LoginRequiredMixin, View):
@@ -2799,24 +2812,44 @@ class VacationScheduleClearMonthView(LoginRequiredMixin, PermissionRequiredMixin
         })
 
 
-class ReportWrongUnitEmployeeView(LoginRequiredMixin, View):
-    """Registra la novedad de que un funcionario no pertenece a la unidad actual."""
+class ReportWrongUnitEmployeeView(LoginRequiredMixin, PermissionRequiredMixin, View):
+    """Registers a discrepancy notice when an employee does not belong to the active unit."""
+    permission_required = 'vacation.view_vacationscheduleplan'
 
     def post(self, request, plan_id, employee_id):
         plan = get_object_or_404(VacationSchedulePlan, pk=plan_id)
-        employee = get_object_or_404(Employee, pk=employee_id)
-        unit_id = request.POST.get('unit_id')
+        employee = get_object_or_404(Employee.objects.select_related('person', 'area'), pk=employee_id)
         observation = request.POST.get('observation', '').strip()
 
-        unit = AdministrativeUnit.objects.filter(pk=unit_id).first() or employee.area
-
         if not observation:
-            return JsonResponse({'success': False, 'message': 'Debe ingresar un motivo para Talento Humano.'},
-                                status=400)
+            return JsonResponse(
+                {'success': False, 'message': 'Debe ingresar un motivo para Talento Humano.'},
+                status=400
+            )
+
+        base_unit, unit_ids = resolve_scheduling_hierarchy(
+            user=request.user,
+            requested_unit_id=request.POST.get('unit_id')
+        )
+        target_unit = base_unit or employee.area
+
+        already_pending = ScheduleDiscrepancyRequest.objects.filter(
+            plan=plan,
+            employee=employee,
+            request_type=ScheduleDiscrepancyRequest.RequestType.WRONG_UNIT,
+            status=ScheduleDiscrepancyRequest.Status.PENDING
+        ).exists()
+
+        if already_pending:
+            return JsonResponse(
+                {'success': False,
+                 'message': 'Este funcionario ya tiene una novedad pendiente en revisión por Talento Humano.'},
+                status=400
+            )
 
         ScheduleDiscrepancyRequest.objects.create(
             plan=plan,
-            unit=unit,
+            unit=target_unit,
             employee=employee,
             request_type=ScheduleDiscrepancyRequest.RequestType.WRONG_UNIT,
             observation=observation,
@@ -3005,11 +3038,12 @@ class VacationScheduleItemMoveMonthView(LoginRequiredMixin, PermissionRequiredMi
 
 
 class ScheduleDiscrepancyManageListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
-    """Bandeja de gestión de novedades y solicitudes de cronograma para Talento Humano."""
+    """HR inbox for managing vacation schedule discrepancies and personnel requests."""
     model = ScheduleDiscrepancyRequest
     template_name = 'vacation/schedule_discrepancies_list.html'
     context_object_name = 'requests_list'
     permission_required = 'vacation.change_vacationscheduleplan'
+    paginate_by = 15
 
     def get_queryset(self):
         plan_id = self.kwargs.get('plan_id')
@@ -3022,74 +3056,43 @@ class ScheduleDiscrepancyManageListView(LoginRequiredMixin, PermissionRequiredMi
             'created_by'
         ).order_by('-created_at')
 
-        status_filter = self.request.GET.get('status')
+        status_filter = self.request.GET.get('status', '').strip()
         if status_filter:
             qs = qs.filter(status=status_filter)
+
+        search_query = self.request.GET.get('q', '').strip()
+        if search_query:
+            for term in search_query.split():
+                qs = qs.filter(
+                    Q(employee__person__first_name__icontains=term) |
+                    Q(employee__person__last_name__icontains=term) |
+                    Q(employee__person__document_number__icontains=term) |
+                    Q(unit__name__icontains=term) |
+                    Q(employee__area__name__icontains=term)
+                )
+
         return qs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         plan = get_object_or_404(VacationSchedulePlan, pk=self.kwargs['plan_id'])
-        context['plan'] = plan
-        context['current_status'] = self.request.GET.get('status', '')
+        base_qs = ScheduleDiscrepancyRequest.objects.filter(plan=plan)
 
-        # Contadores rápidos
-        context['count_total'] = ScheduleDiscrepancyRequest.objects.filter(plan=plan).count()
-        context['count_pending'] = ScheduleDiscrepancyRequest.objects.filter(plan=plan,
-                                                                             status=ScheduleDiscrepancyRequest.Status.PENDING).count()
-        context['count_resolved'] = ScheduleDiscrepancyRequest.objects.filter(plan=plan,
-                                                                              status=ScheduleDiscrepancyRequest.Status.RESOLVED).count()
-        context['count_rejected'] = ScheduleDiscrepancyRequest.objects.filter(plan=plan,
-                                                                              status=ScheduleDiscrepancyRequest.Status.REJECTED).count()
+        context['plan'] = plan
+        context['current_status'] = self.request.GET.get('status', '').strip()
+        context['search_query'] = self.request.GET.get('q', '').strip()
+        context['count_total'] = base_qs.count()
+        context['count_pending'] = base_qs.filter(status=ScheduleDiscrepancyRequest.Status.PENDING).count()
+        context['count_resolved'] = base_qs.filter(status=ScheduleDiscrepancyRequest.Status.RESOLVED).count()
+        context['count_rejected'] = base_qs.filter(status=ScheduleDiscrepancyRequest.Status.REJECTED).count()
         return context
 
-
-class ResolveDiscrepancyRequestView(LoginRequiredMixin, PermissionRequiredMixin, View):
-    permission_required = 'vacation.change_vacationscheduleplan'
-
-    def post(self, request, pk):
-        discrepancy = get_object_or_404(
-            ScheduleDiscrepancyRequest.objects.select_related('employee', 'unit', 'plan'),
-            pk=pk
-        )
-        action = request.POST.get('action')  # 'resolve' o 'reject'
-        admin_note = request.POST.get('admin_note', '').strip()
-        target_unit_id = request.POST.get('target_unit_id')
-
-        if action == 'resolve':
-            emp = discrepancy.employee
-            # Determinar a qué unidad reubicar
-            target_unit = None
-            if target_unit_id:
-                target_unit = AdministrativeUnit.objects.filter(pk=target_unit_id).first()
-            elif discrepancy.request_type == ScheduleDiscrepancyRequest.RequestType.MISSING_EMPLOYEE:
-                target_unit = discrepancy.unit
-
-            if target_unit:
-                emp.area = target_unit
-                emp.save(update_fields=['area'])
-
-            discrepancy.status = ScheduleDiscrepancyRequest.Status.RESOLVED
-            nota_th = f"\n[TH Resuelto]: Reubicado a {emp.area.name}."
-            if admin_note:
-                nota_th += f" Nota: {admin_note}"
-            discrepancy.observation += nota_th
-            discrepancy.save()
-
-            return JsonResponse({
-                'success': True,
-                'message': f'Novedad resuelta con éxito. {emp.person.full_name} reubicado a {emp.area.name}.'
-            })
-
-        elif action == 'reject':
-            discrepancy.status = ScheduleDiscrepancyRequest.Status.REJECTED
-            if admin_note:
-                discrepancy.observation += f"\n[TH Rechazado]: {admin_note}"
-            discrepancy.save()
-
-            return JsonResponse({
-                'success': True,
-                'message': 'La novedad ha sido desestimada.'
-            })
-
-        return JsonResponse({'success': False, 'message': 'Acción no válida.'}, status=400)
+    def render_to_response(self, context, **response_kwargs):
+        if self.request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            html = render_to_string(
+                'vacation/partials/partial_schedule_discrepancies_table.html',
+                context,
+                request=self.request
+            )
+            return JsonResponse({'success': True, 'html': html})
+        return super().render_to_response(context, **response_kwargs)

@@ -1,0 +1,99 @@
+<table class="managed-table exportable-table"
+       data-title="Novedades y Solicitudes de Personal - {{ plan.title }} ({{ plan.year }})"
+       data-filename="Novedades_Cronograma_{{ plan.year }}">
+    <thead>
+    <tr>
+        <th class="width-15">Tipo de Novedad</th>
+        <th class="width-25">Funcionario Afectado</th>
+        <th class="width-20">Dependencia Solicitante</th>
+        <th class="width-25">Motivo / Mensaje</th>
+        <th class="width-10 center">Estado</th>
+        <th class="width-15 no-sort text-center actions"><i class="fas fa-cogs"></i> Acciones</th>
+    </tr>
+    </thead>
+    <tbody id="table-body">
+    {% if requests_list %}
+        {% for req in requests_list %}
+            <tr>
+                <td>
+                    {% if req.request_type == 'WRONG_UNIT' %}
+                        <span class="badge badge-red">
+                            <i class="fa-solid fa-user-minus me-1"></i> No Pertenece
+                        </span>
+                    {% else %}
+                        <span class="badge badge-blue">
+                            <i class="fa-solid fa-user-plus me-1"></i> Falta en Unidad
+                        </span>
+                    {% endif %}
+                    <div class="small text-muted mt-1">{{ req.created_at|date:"d/m/Y H:i" }}</div>
+                </td>
+                <td>
+                    <div class="bold text-muted">{{ req.employee.person.full_name }}</div>
+                    <div class="small text-muted">CI: {{ req.employee.person.document_number }}</div>
+                    <div class="small text-muted">
+                        <i class="fa-solid fa-location-dot me-1"></i>Área actual:
+                        <strong>{{ req.employee.area.name|default:"Sin Dependencia" }}</strong>
+                    </div>
+                </td>
+                <td>
+                    <span class="bold">{{ req.unit.name }}</span>
+                    <div class="small text-muted">
+                        Por: {{ req.created_by.get_full_name|default:req.created_by.username }}
+                    </div>
+                </td>
+                <td class="text-muted small">
+                    {{ req.observation|linebreaksbr }}
+                </td>
+                <td class="text-center">
+                    {% if req.status == 'PENDING' %}
+                        <span class="badge badge-yellow">Pendiente</span>
+                    {% elif req.status == 'RESOLVED' %}
+                        <span class="badge badge-green">Resuelto</span>
+                    {% else %}
+                        <span class="badge badge-gray">Desestimado</span>
+                    {% endif %}
+                </td>
+                <td class="actions text-center">
+                    <div class="actions-wrapper">
+                        {% if req.status == 'PENDING' %}
+                            <button type="button"
+                                    class="btn-green-circle"
+                                    title="Reubicar funcionario y resolver"
+                                    data-action="open-reassign"
+                                    data-req-id="{{ req.id }}"
+                                    data-emp-name="{{ req.employee.person.full_name }}"
+                                    data-req-type="{{ req.request_type }}"
+                                    data-unit-name="{{ req.unit.name }}">
+                                <i class="fa-solid fa-check"></i>
+                            </button>
+                            <button type="button"
+                                    class="btn-red-circle"
+                                    title="Desestimar novedad"
+                                    data-action="reject-request"
+                                    data-req-id="{{ req.id }}"
+                                    data-emp-name="{{ req.employee.person.full_name }}">
+                                <i class="fa-solid fa-xmark"></i>
+                            </button>
+                        {% else %}
+                            <span class="badge badge-gray" title="Gestionado">
+                                <i class="fa-solid fa-lock"></i>
+                            </span>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+        {% endfor %}
+    {% else %}
+        <tr>
+            <td colspan="6" class="center">
+                <div class="empty-state-container">
+                    <i class="fas fa-inbox empty-state-icon"></i>
+                    <div class="empty-state-text">No se encontraron novedades o solicitudes con los criterios
+                        actuales.
+                    </div>
+                </div>
+            </td>
+        </tr>
+    {% endif %}
+    </tbody>
+</table>
