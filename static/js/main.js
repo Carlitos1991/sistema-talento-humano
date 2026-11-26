@@ -404,7 +404,7 @@ window.App.Ajax.submitAjaxForm = function (event, successCallback = null) {
         body: formData,
         headers: {
             'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRFToken': typeof getCSRF === 'function' ? window.App.Security.getCSRF() : ''
+            'X-CSRFToken': window.App.Security.getCSRF()
         }
     })
         .then(async response => {
@@ -430,14 +430,17 @@ window.App.Ajax.submitAjaxForm = function (event, successCallback = null) {
 
             // ÉXITO
             if (response.ok && (data.status === 'success' || data.success)) {
-                if (typeof window.closeModal === 'function') window.closeModal();
-
-                showToast(data.message || 'Operación realizada correctamente.', 'success');
+                window.App.Modal.closeModal();
+                window.App.Toast.showToast(data.message || 'Operación realizada correctamente.', 'success');
 
                 if (typeof successCallback === 'function') {
-                    successCallback(data);
+                    try {
+                        successCallback(data);
+                    } catch (callbackErr) {
+                        console.error('Error en successCallback post-guardado:', callbackErr);
+                    }
                 } else {
-                    refreshCurrentTable();
+                    window.App.Ajax.refreshCurrentTable();
                 }
                 return;
             }
@@ -1779,4 +1782,10 @@ window.toggleStatusAjax = (...args) => window.App.Ajax.toggleStatusAjax(...args)
 window.deleteRecordAjax = (...args) => window.App.Ajax.deleteRecordAjax(...args);
 window.loadTeleworkData = (...args) => window.App.Telework.loadTeleworkData(...args);
 window.markTeleworkAttendance = (...args) => window.App.Telework.markTeleworkAttendance(...args);
+window.refreshCvStats = (...args) => window.App.UI.refreshCvStats(...args);
+window.uploadCvPdf = (...args) => window.App.UI.uploadCvPdf(...args);
+window.handleModalPhotoPreview = (...args) => window.App.UI.handleModalPhotoPreview(...args);
+window.syncToggleView = (...args) => window.App.UI.syncToggleView(...args);
+window.toggleAccordionSection = (...args) => window.App.UI.toggleAccordionSection(...args);
+window.handleLocationCascade = (...args) => window.App.UI.handleLocationCascade(...args);
 window.getCSRF = window.App.Security.getCSRF;
