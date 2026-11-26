@@ -668,7 +668,6 @@ def api_get_administrative_children(request):
         filters['parent_id'] = parent_id
     elif not term:
         filters['parent__isnull'] = True
-        filters['level__level_order'] = 1
 
     units = AdministrativeUnit.objects.filter(**filters).order_by('name')
     if term:
@@ -676,7 +675,7 @@ def api_get_administrative_children(request):
 
     units_data = [
         {'id': u.id, 'name': u.name, 'has_children': u.children.filter(is_active=True).exists()}
-        for u in units[:30]
+        for u in units[:50]
     ]
     select2_results = [{'id': str(item['id']), 'text': item['name']} for item in units_data]
     return JsonResponse({'success': True, 'units': units_data, 'results': select2_results})

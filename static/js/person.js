@@ -178,35 +178,61 @@ window.openRelocateEmployeeModal = function (personId, personFullName, personAre
     window.selectedRelocatePersonArea = personArea;
     $('#relocate-combos-wrapper').empty();
     openModal('modal-relocate-employee');
-    loadUnitLevel(null);
+    loadRelocateUnitLevel(null);
 };
 
-function loadUnitLevel(parentId) {
+function loadRelocateUnitLevel(parentId) {
     $.ajax({
-        url: '/institution/api/unit-children/',
+        url: '/institution/ajax/unit-children/',
         data: parentId ? {parent_id: parentId} : {},
+        headers: {'X-Requested-With': 'XMLHttpRequest'},
         success: function (data) {
-            if (!data.units || data.units.length === 0) return;
+            const units = data.units || [];
+            if (units.length === 0) {
+                if (!parentId) {
+                    $('#relocate-combos-wrapper').html(
+                        '<p class="text-muted small">No se encontraron unidades administrativas disponibles.</p>'
+                    );
+                }
+                return;
+            }
+
             const $select = $('<select>')
-                .addClass('form-control select2-relocate w-full border p-2 rounded')
+                .addClass('input-field select2-relocate')
                 .css('width', '100%')
                 .append('<option value="">-- Seleccione --</option>');
 
-            data.units.forEach(u => $select.append(`<option value="${u.id}" data-has-children="${u.has_children}">${u.name}</option>`));
+            units.forEach(u => {
+                $select.append(
+                    `<option value="${u.id}" data-has-children="${u.has_children}">${u.name}</option>`
+                );
+            });
 
             const $wrapper = $('<div class="form-group mb-3"></div>')
-                .append('<label class="text-xs font-bold text-gray-600 mb-1 block">Seleccione Unidad:</label>')
+                .append(`<label class="form-label">${parentId ? 'Seleccione Subunidad:' : 'Seleccione Unidad Principal:'}</label>`)
                 .append($select);
 
             $('#relocate-combos-wrapper').append($wrapper);
 
-            if ($.fn.select2) $select.select2({dropdownParent: $('#modal-relocate-employee'), width: '100%'});
+            if ($.fn.select2) {
+                $select.select2({
+                    dropdownParent: $('#modal-relocate-employee'),
+                    width: '100%'
+                });
+            }
 
             $select.on('change', function () {
                 const val = $(this).val();
                 $(this).closest('.form-group').nextAll().remove();
-                if (val && $(this).find(':selected').data('has-children')) loadUnitLevel(val);
+                if (val && $(this).find(':selected').data('has-children')) {
+                    loadRelocateUnitLevel(val);
+                }
             });
+        },
+        error: function () {
+            $('#relocate-combos-wrapper').html(
+                '<p class="text-danger small">Error al cargar las unidades administrativas.</p>'
+            );
         }
     });
 }
